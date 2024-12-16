@@ -4,6 +4,7 @@ Pour le projet SUPCHAT, voici une proposition de structure de projet avec les te
 
 La structure est pensée pour séparer l’API (serveur), les clients (web et mobile) et la base de données avec un déploiement avec Docker.
 
+```
 SUPCHAT/
 │
 ├── server/                       # Serveur API (REST ou GraphQL)
@@ -78,6 +79,7 @@ SUPCHAT/
 │   └── architecture_diagram.png
 │
 └── package.json                    # Dépendances de tout le projet
+```
 
 🛠️ Technologies utilisées
 
