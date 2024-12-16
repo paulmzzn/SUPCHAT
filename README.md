@@ -81,34 +81,60 @@ SUPCHAT/
 └── package.json                    # Dépendances de tout le projet
 ```
 
-🛠️ Technologies utilisées
+# 🛠️ Technologies Utilisées
 
-1. Serveur (Node.js / Express ou GraphQL)
-	•	Node.js + Express.js : Pour construire l’API REST.
-	•	MongoDB avec Mongoose : Base de données NoSQL pour stocker les informations utilisateurs, messages, canaux, permissions, etc.
-	•	JWT (JSON Web Token) : Gestion de l’authentification sécurisée.
-	•	OAuth 2.0 (Facebook/Google) : Authentification par compte social.
-	•	Socket.IO : Pour la messagerie en temps réel.
+## 🚀 Serveur
+**Node.js / Express.js**  
+Pour construire l’API REST.
 
-2. Client Web
-	•	React.js : Pour créer une interface utilisateur réactive, rapide et maintenu par la communauté.
-	•	Redux ou Context API : Gestion de l’état global pour la connexion, les canaux, l’authentification.
-	•	CSS / SASS / TailwindCSS : Pour le style responsive et ergonomique.
-	•	React Router : Pour la gestion de navigation côté client.
+### 📊 Base de Données
+- **MongoDB avec Mongoose** : Base de données NoSQL utilisée pour stocker les informations utilisateurs, messages, canaux, permissions, etc.
+- **Redis (optionnel)** : Utilisé pour le cache, notamment pour les sessions utilisateur ou les systèmes de notifications.
 
-3. Client Mobile
-	•	React Native : Pour couvrir les applications mobiles pour iOS/Android avec une base de code unique.
-	•	Expo ou React Navigation : Outils pour le développement mobile simplifié.
+### 🔐 Authentification
+- **JWT (JSON Web Token)** : Gestion de l’authentification sécurisée.
+- **OAuth 2.0 (Facebook/Google)** : Authentification par comptes sociaux.
 
-4. Base de Données
-	•	MongoDB : Base NoSQL adaptée pour les données non-structurées comme les messages, permissions, canaux et données utilisateur.
-	•	Redis (optionnel) : Pour le cache, notamment pour les sessions utilisateur ou les systèmes de notifications.
+### 💬 Messagerie en Temps Réel
+- **Socket.IO** : Permet la messagerie en temps réel.
 
-5. Docker & Conteneurisation
-	•	Docker Compose : Pour orchestrer les trois services (Serveur API, Client Web, Base de Données).
-	•	Node.js : Serveur Express/MongoDB dans un conteneur.
-	•	React Web App : Client dans son propre conteneur.
-	•	MongoDB : Conteneur pour la base de données.
+---
+
+## 💻 Client Web
+**Technologies principales :**  
+- **React.js** : Interface utilisateur réactive, rapide, et maintenue par la communauté.
+- **Redux ou Context API** : Gestion de l’état global pour la connexion, les canaux, l’authentification.
+- **CSS / SASS / TailwindCSS** : Pour un style responsive et ergonomique.
+- **React Router** : Gestion de la navigation côté client.
+
+---
+
+## 📱 Client Mobile
+**Technologies principales :**  
+- **React Native** : Développement d’applications mobiles pour iOS/Android avec une base de code unique.
+- **Expo ou React Navigation** : Outils facilitant le développement mobile.
+
+---
+
+## 🗄️ Base de Données
+- **MongoDB** : Base NoSQL adaptée pour le stockage de données non-structurées comme les messages, permissions, canaux, et données utilisateur.
+
+---
+
+## 🐳 Conteneurisation avec Docker
+- **Docker Compose** : Orchestration de plusieurs services.
+  - **Node.js + Express / MongoDB** dans un conteneur.
+  - **React Web App** dans son propre conteneur.
+  - **MongoDB** comme conteneur pour la base de données.
+
+---
+
+### 🌟 Pourquoi ces choix technologiques ?
+Chaque technologie a été choisie pour répondre aux besoins suivants :  
+- **Scalabilité et rapidité** avec MongoDB.
+- **Sécurité renforcée** grâce à JWT & OAuth.
+- **Expérience utilisateur fluide et rapide** avec React.js.
+- **Développement multi-plateforme simplifié** avec React Native.
 
 🚀 Déploiement
 
