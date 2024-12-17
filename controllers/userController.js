@@ -1,4 +1,4 @@
-import UserModel from '../models/User.js';
+import UserModel from '../models/user.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -121,7 +121,7 @@ const loginUser = async (req, res) => {
     const { id } = req.params;
     try {
       const user = await UserModel.getUserById(id);
-      
+
       if (!user) {
         return res.status(404).json({ message: 'Utilisateur non trouvé.' });
       }
