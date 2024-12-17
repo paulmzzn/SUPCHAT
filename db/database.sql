@@ -3,8 +3,17 @@
  * @company Cloud Temple
  * @created_at 2024-12-17 12:30:16
  * @updated_by GAULT Rudy
- * @updated_at 2024-12-17 12:35:25
+ * @updated_at 2024-12-17 12:41:35
  */
+
+
+-- Créer la base de données supchat
+CREATE DATABASE supchat;
+
+-- Se connecter à la base de données supchat
+\c supchat
+
+-- Activer l'extension uuid-ossp pour générer des UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE statut (
