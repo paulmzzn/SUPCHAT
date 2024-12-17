@@ -1,14 +1,15 @@
 import express from 'express';
 import { connect } from './config/dbConnection.js';
+import http from 'http';
 
 
 const app = express();
 const server = http.createServer(app);
 
 // Applique le middleware d'auth pour toutes les routes API
-app.use('/api' , loginRoutes);
-app.use('/api/columns', columnsRoutes);
-app.use('/api/cards', cardsRoutes);
+// app.use('/api' , loginRoutes);
+// app.use('/api/columns', columnsRoutes);
+// app.use('/api/cards', cardsRoutes);
 
 // Connexion à la base de données
 connect();
