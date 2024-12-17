@@ -1,6 +1,5 @@
 import express from 'express';
-import { Message, User } from '../models/sequelizeInit.js'; // Importez les modèles nécessaires via des exportations nommées
-
+import Message from '../models/message.js';
 const router = express.Router();
 
 // Envoyer un message
