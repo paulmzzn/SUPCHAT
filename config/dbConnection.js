@@ -1,17 +1,14 @@
-// Code to connect to MongoDB
-import mongoose from 'mongoose';
+import pg from 'pg';
 
-const connect = async () => {
-  try {
-    await mongoose.connect('mongodb+srv://admin:admin@cluster0.k0qt4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('Connected to MongoDB');
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error.message);
-    process.exit(1);
-  }
-};
+const { Pool } = pg;
 
-export { connect };
+// Configuration avec vos paramètres PostgreSQL externes
+const pool = new Pool({
+  user: 'admin',               // Nom d'utilisateur PostgreSQL
+  host: '192.168.1.161',       // Adresse IP ou domaine de la BDD PostgreSQL
+  database: 'test_db',         // Nom de votre base de données
+  password: 'root',            // Mot de passe
+  port: 5432,                  // Port par défaut PostgreSQL
+});
+
+export default pool; // Exporter le pool pour l'utiliser dans d'autres parties du backend

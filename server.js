@@ -1,21 +1,25 @@
 import express from 'express';
-import { connect } from './config/dbConnection.js';
-import http from 'http';
-
+import pool from './config/dbConnection.js'; // Importation du pool configuré
 
 const app = express();
-const server = http.createServer(app);
+const PORT = 3000;
 
-// Applique le middleware d'auth pour toutes les routes API
-// app.use('/api' , loginRoutes);
-// app.use('/api/columns', columnsRoutes);
-// app.use('/api/cards', cardsRoutes);
+// Route de test
+app.get('/test', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()'); // Test simple
+    res.status(200).json({ 
+      message: 'Connexion réussie avec PostgreSQL',
+      serverTime: result.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Erreur de connexion', 
+      error: error.message 
+    });
+  }
+});
 
-// Connexion à la base de données
-connect();
-
-// Lancement du serveur
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
