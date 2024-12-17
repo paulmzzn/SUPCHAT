@@ -3,7 +3,7 @@
  * @company Cloud Temple
  * @created_at 2024-12-17 12:30:16
  * @updated_by GAULT Rudy
- * @updated_at 2024-12-17 12:41:35
+ * @updated_at 2024-12-17 14:18:19
  */
 
 
@@ -16,11 +16,13 @@ CREATE DATABASE supchat;
 -- Activer l'extension uuid-ossp pour générer des UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Table statut avec un id incrémental
 CREATE TABLE statut (
-  id_statut UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id_statut SERIAL PRIMARY KEY,
   label VARCHAR(255) NOT NULL
 );
 
+-- Table utilisateur
 CREATE TABLE utilisateur (
   id_utilisateur UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
@@ -28,8 +30,9 @@ CREATE TABLE utilisateur (
   mot_de_passe VARCHAR(255) NOT NULL,
   photo_de_profil VARCHAR(2048),
   date_creation TIMESTAMP DEFAULT current_timestamp,
-  fk_statut UUID NOT NULL
+  fk_statut INT NOT NULL REFERENCES statut(id_statut)
 );
+
 
 CREATE TABLE workspace (
   id_workspace UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -130,3 +133,7 @@ ALTER TABLE message_mention ADD FOREIGN KEY (fk_message) REFERENCES message (id_
 ALTER TABLE message_mention ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
 ALTER TABLE role_permission ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
 ALTER TABLE role_permission ADD FOREIGN KEY (fk_permission) REFERENCES permission (id_permission);
+
+
+INSERT INTO utilisateur (nom, email, mot_de_passe, fk_statut)
+VALUES ('John Doe', 'john@example.com', 'motdepassehash', 1);
