@@ -47,9 +47,9 @@ volumes:
 
 🚀 Lancer les conteneurs
 	1.	Naviguez dans le répertoire contenant le docker-compose.yml.
-
+```
 cd /chemin/vers/votre/docker-compose.yml
-
+```
 
 	2.	Lancez les conteneurs avec Docker Compose :
 ```
@@ -87,12 +87,13 @@ Pour les redémarrer après des changements :
 ```
 docker-compose up -d
 ```
+```
 📌 Variables utilisées
 	•	POSTGRES_USER : Nom d’utilisateur par défaut pour PostgreSQL (admin).
 	•	POSTGRES_PASSWORD : Mot de passe par défaut pour PostgreSQL (root).
 	•	POSTGRES_DB : Base de données par défaut créée au lancement (test_db).
 	•	PGADMIN_DEFAULT_EMAIL & PGADMIN_DEFAULT_PASSWORD : Identifiants pour se connecter à pgAdmin.
-
+```
 🗂️ Volumes
 
 Les données PostgreSQL sont sauvegardées de manière persistante grâce au volume :
