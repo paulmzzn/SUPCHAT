@@ -10,7 +10,7 @@ SUPCHAT/
 ├── server/                       # Serveur API (REST ou GraphQL)
 │   ├── controllers/             # Logique métier
 │   │   ├── authController.js
-│   │   ├── workspaceController.js
+│   │   ├── spaceController.js
 │   │   ├── channelController.js
 │   │   └── messageController.js
 │   │
