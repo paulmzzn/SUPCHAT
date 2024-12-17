@@ -50,6 +50,37 @@ class UserModel {
       throw error;
     }
   }
+
+  // Mettre à jour un utilisateur
+  static async updateUser({ nom, email, mot_de_passe, photo_de_profil, fk_statut }, id_utilisateur) {
+    try {
+      const result = await pool.query(
+        `UPDATE utilisateur
+         SET nom = COALESCE($1, nom), email = COALESCE($2, email), mot_de_passe = COALESCE($3, mot_de_passe), photo_de_profil = COALESCE($4, photo_de_profil), fk_statut = COALESCE($5, fk_statut)
+         WHERE id_utilisateur = $6 RETURNING *`,
+        [nom, email, mot_de_passe, photo_de_profil, fk_statut, id_utilisateur]
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Supprimer un utilisateur
+  static async deleteUser(id_utilisateur) {
+    try {
+      const result = await pool.query(
+        'DELETE FROM utilisateur WHERE id_utilisateur = $1',
+        [id_utilisateur]
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
 }
+
+
 
 export default UserModel;

@@ -84,4 +84,56 @@ const loginUser = async (req, res) => {
   }
 };
 
-export { registerUser, getAllUsers, loginUser };
+  const updateUser = async (req, res) => {
+    const { nom, email, mot_de_passe, photo_de_profil, fk_statut } = req.body;
+    const { id } = req.params;
+
+    try {
+      const user = await UserModel.getUserById(id);
+
+      if (!user) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      }
+
+      const updatedFields = {
+        nom: nom || user.nom,
+        email: email || user.email,
+        mot_de_passe: mot_de_passe ? await bcrypt.hash(mot_de_passe, 10) : user.mot_de_passe,
+        photo_de_profil: photo_de_profil || user.photo_de_profil,
+        fk_statut: fk_statut || user.fk_statut,
+      };
+
+      const updatedUser = await UserModel.updateUser(updatedFields, id);
+
+      res.status(200).json({
+        message: 'Utilisateur mis à jour avec succès.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Erreur lors de la mise à jour de l\'utilisateur.',
+        error: error.message,
+      });
+    }
+  };
+
+  const deleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+      const user = await UserModel.getUserById(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      }
+      await UserModel.deleteUser(id);
+      res.status(200).json({ message: 'Utilisateur supprimé avec succès.' });
+    }
+    catch (error) {
+      res.status(500).json({
+        message: 'Erreur lors de la suppression de l\'utilisateur.',
+        error: error.message,
+      });
+    }
+  }
+
+export { registerUser, getAllUsers, loginUser, updateUser, deleteUser };
