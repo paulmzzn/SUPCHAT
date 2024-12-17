@@ -9,10 +9,10 @@ import {
 
 const router = express.Router();
 
-router.post('/canals', createCanal);
+router.post('/workspace/:id/canals', createCanal); // Mise à jour de la route de création
 router.get('/canals/:id', getCanalById);
 router.get('/canals', getAllCanals);
-router.put('/canals/:id', updateCanal);
-router.delete('/canals/:id', deleteCanal);
+router.put('/workspace/:id/canals/:canalId', updateCanal); // Mise à jour de la route de modification
+router.delete('/workspace/:id/canals/:canalId', deleteCanal); // Mise à jour de la route de suppression
 
 export default router;
