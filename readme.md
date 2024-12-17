@@ -52,9 +52,9 @@ cd /chemin/vers/votre/docker-compose.yml
 
 
 	2.	Lancez les conteneurs avec Docker Compose :
-
+```
 docker-compose up -d
-
+```
 📊 Accéder à pgAdmin
 	1.	Ouvrez votre navigateur et accédez à : http://localhost:5050
 
@@ -69,24 +69,24 @@ docker-compose up -d
 	•	Username : admin
 	•	Password : root
 
-  ```
+
 
 🛑 Vérification
 
 Vérifiez que vos conteneurs tournent avec :
-
+```
 docker ps
-
+```
 🔄 Arrêter les services
 
 Pour arrêter vos conteneurs :
-
+```
 docker-compose down
-
+```
 Pour les redémarrer après des changements :
-
+```
 docker-compose up -d
-
+```
 📌 Variables utilisées
 	•	POSTGRES_USER : Nom d’utilisateur par défaut pour PostgreSQL (admin).
 	•	POSTGRES_PASSWORD : Mot de passe par défaut pour PostgreSQL (root).
