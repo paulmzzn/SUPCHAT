@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 4000
 
 # Étape 7 : Démarrer le serveur Node.js
-CMD ["node", "server-express.js"]
+CMD ["node", "server.js"]

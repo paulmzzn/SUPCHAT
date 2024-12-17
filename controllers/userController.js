@@ -1,5 +1,5 @@
 import UserModel from '../models/user.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
