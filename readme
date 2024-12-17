@@ -10,7 +10,7 @@ Configuration ⚙️
 
 Créez un fichier nommé docker-compose.yml avec le contenu suivant :
 
-```yaml
+```.yaml
 version: '3.8'
 
 services:
