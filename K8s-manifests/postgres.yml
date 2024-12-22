@@ -1,15 +1,8 @@
-#
-# @author GAULT Rudy
-# @company Cloud Temple
-# @created_at 2024-12-22 11:05:12
-# @updated_by GAULT Rudy
-# @updated_at 2024-12-22 11:05:22
-#
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-deployment
+  namespace: supchat
 spec:
   replicas: 1
   selector:
@@ -27,20 +20,19 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_USER
-              value: user
+              value: "admin"
             - name: POSTGRES_PASSWORD
-              value: password
+              value: "root"
             - name: POSTGRES_DB
-              value: mydb
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-spec:
-  selector:
-    app: postgres
-  ports:
-    - protocol: TCP
-      port: 5432
-      targetPort: 5432
+              value: "test_db"
+          volumeMounts:
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init-sql
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+      volumes:
+        - name: init-sql
+          configMap:
+            name: db-init-configmap
+        - name: postgres-storage
+          emptyDir: {}

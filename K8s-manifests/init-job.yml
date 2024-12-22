@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-job
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z postgres-service 5432; do echo waiting for postgres; sleep 2; done;",
+            ]
+      containers:
+        - name: db-init
+          image: postgres:latest
+          command:
+            [
+              "psql",
+              "-h",
+              "postgres-service",
+              "-U",
+              "admin",
+              "-d",
+              "test_db",
+              "-f",
+              "/scripts/database.sql",
+            ]
+          env:
+            - name: PGPASSWORD
+              value: "root"
+          volumeMounts:
+            - mountPath: /scripts
+              name: init-sql
+      restartPolicy: OnFailure
+      volumes:
+        - name: init-sql
+          configMap:
+            name: db-init-configmap
