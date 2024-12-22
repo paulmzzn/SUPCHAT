@@ -1,29 +1,24 @@
-/**
- * @author GAULT Rudy
- * @company Cloud Temple
- * @created_at 2024-12-17 12:30:16
- * @updated_by GAULT Rudy
- * @updated_at 2024-12-17 14:18:19
- */
-
-
--- Créer la base de données supchat
-CREATE DATABASE supchat;
+-- Créer la base de données uniquement si elle n'existe pas
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'supchat') THEN
+      PERFORM dblink_exec('dbname=postgres user=admin password=root', 'CREATE DATABASE supchat');
+   END IF;
+END $$;
 
 -- Se connecter à la base de données supchat
 \c supchat
 
--- Activer l'extension uuid-ossp pour générer des UUID
+-- Activer l'extension uuid-ossp uniquement si elle n'existe pas déjà
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Table statut avec un id incrémental
-CREATE TABLE statut (
+-- Créer les tables uniquement si elles n'existent pas déjà
+CREATE TABLE IF NOT EXISTS statut (
   id_statut SERIAL PRIMARY KEY,
   label VARCHAR(255) NOT NULL
 );
 
--- Table utilisateur
-CREATE TABLE utilisateur (
+CREATE TABLE IF NOT EXISTS utilisateur (
   id_utilisateur UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -33,32 +28,31 @@ CREATE TABLE utilisateur (
   fk_statut INT NOT NULL REFERENCES statut(id_statut)
 );
 
-
-CREATE TABLE workspace (
+CREATE TABLE IF NOT EXISTS workspace (
   id_workspace UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
   is_private BOOLEAN DEFAULT false,
   date_creation TIMESTAMP DEFAULT current_timestamp
 );
 
-CREATE TABLE canal (
+CREATE TABLE IF NOT EXISTS canal (
   id_canal UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
   is_private BOOLEAN DEFAULT false,
   date_creation TIMESTAMP DEFAULT current_timestamp,
-  fk_workspace UUID NOT NULL
+  fk_workspace UUID NOT NULL REFERENCES workspace(id_workspace)
 );
 
-CREATE TABLE message (
+CREATE TABLE IF NOT EXISTS message (
   id_message UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   contenu VARCHAR(255),
   type_message VARCHAR(50),
   date_envoi TIMESTAMP DEFAULT current_timestamp,
-  fk_canal UUID NOT NULL,
-  fk_utilisateur UUID NOT NULL
+  fk_canal UUID NOT NULL REFERENCES canal(id_canal),
+  fk_utilisateur UUID NOT NULL REFERENCES utilisateur(id_utilisateur)
 );
 
-CREATE TABLE fichier (
+CREATE TABLE IF NOT EXISTS fichier (
   id_fichier UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom_fichier VARCHAR(255) NOT NULL,
   url VARCHAR(2048) NOT NULL,
@@ -66,74 +60,56 @@ CREATE TABLE fichier (
   date_upload TIMESTAMP DEFAULT current_timestamp
 );
 
-CREATE TABLE role (
+CREATE TABLE IF NOT EXISTS role (
   id_role UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom_role VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE permission (
+CREATE TABLE IF NOT EXISTS permission (
   id_permission UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   type_permission VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE hashtag (
+CREATE TABLE IF NOT EXISTS hashtag (
   id_hashtag UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   label VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE membre_workspace (
-  fk_utilisateur UUID NOT NULL,
-  fk_workspace UUID NOT NULL,
-  fk_role UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS membre_workspace (
+  fk_utilisateur UUID NOT NULL REFERENCES utilisateur(id_utilisateur),
+  fk_workspace UUID NOT NULL REFERENCES workspace(id_workspace),
+  fk_role UUID NOT NULL REFERENCES role(id_role),
   PRIMARY KEY (fk_utilisateur, fk_workspace)
 );
 
-CREATE TABLE message_fichier (
-  fk_message UUID NOT NULL,
-  fk_fichier UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS message_fichier (
+  fk_message UUID NOT NULL REFERENCES message(id_message),
+  fk_fichier UUID NOT NULL REFERENCES fichier(id_fichier),
   PRIMARY KEY (fk_message, fk_fichier)
 );
 
-CREATE TABLE message_hashtag (
-  fk_message UUID NOT NULL,
-  fk_hashtag UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS message_hashtag (
+  fk_message UUID NOT NULL REFERENCES message(id_message),
+  fk_hashtag UUID NOT NULL REFERENCES hashtag(id_hashtag),
   PRIMARY KEY (fk_message, fk_hashtag)
 );
 
-CREATE TABLE message_mention (
-  fk_message UUID NOT NULL,
-  fk_utilisateur UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS message_mention (
+  fk_message UUID NOT NULL REFERENCES message(id_message),
+  fk_utilisateur UUID NOT NULL REFERENCES utilisateur(id_utilisateur),
   PRIMARY KEY (fk_message, fk_utilisateur)
 );
 
-CREATE TABLE role_permission (
-  fk_role UUID NOT NULL,
-  fk_permission UUID NOT NULL,
+CREATE TABLE IF NOT EXISTS role_permission (
+  fk_role UUID NOT NULL REFERENCES role(id_role),
+  fk_permission UUID NOT NULL REFERENCES permission(id_permission),
   PRIMARY KEY (fk_role, fk_permission)
 );
 
-COMMENT ON TABLE membre_workspace IS 'Relation entre Utilisateur, Workspace et Rôle';
-COMMENT ON TABLE message_fichier IS 'Relation entre Message et Fichier';
-COMMENT ON TABLE message_hashtag IS 'Relation entre Message et Hashtag';
-COMMENT ON TABLE message_mention IS 'Relation entre Message et Utilisateur mentionné';
-COMMENT ON TABLE role_permission IS 'Relation entre Rôle et Permission';
-
-ALTER TABLE utilisateur ADD FOREIGN KEY (fk_statut) REFERENCES statut (id_statut);
-ALTER TABLE canal ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace);
-ALTER TABLE message ADD FOREIGN KEY (fk_canal) REFERENCES canal (id_canal);
-ALTER TABLE message ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
-ALTER TABLE message_fichier ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_fichier ADD FOREIGN KEY (fk_fichier) REFERENCES fichier (id_fichier);
-ALTER TABLE message_hashtag ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_hashtag ADD FOREIGN KEY (fk_hashtag) REFERENCES hashtag (id_hashtag);
-ALTER TABLE message_mention ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_mention ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE role_permission ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
-ALTER TABLE role_permission ADD FOREIGN KEY (fk_permission) REFERENCES permission (id_permission);
-
-
-INSERT INTO utilisateur (nom, email, mot_de_passe, fk_statut)
-VALUES ('John Doe', 'john@example.com', 'motdepassehash', 1);
+-- Ajouter des commentaires si nécessaire
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT obj_description('membre_workspace'::regclass)) THEN
+      COMMENT ON TABLE membre_workspace IS 'Relation entre Utilisateur, Workspace et Rôle';
+   END IF;
+END $$;
