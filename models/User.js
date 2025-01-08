@@ -92,12 +92,12 @@ class UserModel {
         );
         user = result.rows[0];
       } else {
-        console.log('Utilisateur trouvé :', user.rows[0]);
+        console.log('Utilisateur trouvé :', email);
         user = user.rows[0];
       }
       return user;
     } catch (error) {
-      console.error('Erreur dans findOrCreateUser :', error);
+      console.error('Error :', error);
       throw error;
     }
   }
