@@ -3,20 +3,19 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import messageRoutes from './routes/messageRoutes.js';
-import { Sequelize } from './config/sequelizeInit.js'; // Ton instance Sequelize
-import Message from '../models/message.js';
+import db from './config/sequelizeInit.js'; // Ton instance Sequelize
+import { errorHandler } from './middlewares/errorHandler.js'; // Middleware global de gestion des erreurs
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server); // Pour la partie Socket.IO
+const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Exemple : vérifier la connexion à la base
 (async () => {
   try {
-    await sequelize.authenticate();
+    await db.sequelize.authenticate();
     console.log('Connexion à la base réussie');
   } catch (error) {
     console.error('Erreur de connexion :', error);
