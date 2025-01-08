@@ -1,26 +1,57 @@
-module.exports = (sequelize, DataTypes) => {
-    const Workspace = sequelize.define('Workspace', {
-      id_workspace: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-      },
-      nom: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      is_private: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-      },
-      date_creation: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
-      }
-    }, {
-      tableName: 'workspace',
-      timestamps: false
-    });
-  
-    return Workspace;
-  };
+import pool from '../config/dbConnection.js';
+
+class Workspace {
+  static async create({ nom, is_private }) {
+    const query = `
+      INSERT INTO workspace (nom, is_private)
+      VALUES ($1, $2)
+      RETURNING *;
+    `;
+    const values = [nom, is_private];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
+  static async findById(id_workspace) {
+    const query = `
+      SELECT * FROM workspace
+      WHERE id_workspace = $1;
+    `;
+    const values = [id_workspace];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
+  static async findAll() {
+    const query = `
+      SELECT * FROM workspace;
+    `;
+    const { rows } = await pool.query(query);
+    return rows;
+  }
+
+  static async update(id_workspace, { nom, is_private }) {
+    const query = `
+      UPDATE workspace
+      SET nom = $1, is_private = $2
+      WHERE id_workspace = $3
+      RETURNING *;
+    `;
+    const values = [nom, is_private, id_workspace];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
+  static async delete(id_workspace) {
+    const query = `
+      DELETE FROM workspace
+      WHERE id_workspace = $1
+      RETURNING *;
+    `;
+    const values = [id_workspace];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+}
+
+export default Workspace;
