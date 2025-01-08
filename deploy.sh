@@ -1,3 +1,10 @@
+#!/bin/sh
+# @author GAULT Rudy
+# @company Cloud Temple
+# @created_at 2025-01-08 13:49:49
+# @updated_by GAULT Rudy
+# @updated_at 2025-01-08 13:49:52
+
 #!/bin/bash
 
 # Supprimer le namespace existant (si présent)
