@@ -1,0 +1,5 @@
+{
+  "yaml.schemas": {
+    "kubernetes://schema/v1%40service": "file:///c%3A/Users/gault/Documents/supinfo%20code/SUPCHAT/K8s-manifests/pgadmin.yml"
+  }
+}
