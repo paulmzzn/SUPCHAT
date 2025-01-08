@@ -3,15 +3,28 @@ import pool from "./config/dbConnection.js"; // Importation du pool configuré
 import userRoutes from "./routes/userRoutes.js";
 import workspaceRoutes from "./routes/workspaceRoutes.js";
 import canalRoutes from "./routes/canalRoutes.js";
+import passport from "passport";
+import session from "express-session";
+import { googleStrategy } from "./config/passport.js"; // Import Google strategy
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(session({ secret: "REDACTED", resave: false, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(googleStrategy);
 
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/canals", canalRoutes);
+
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get("/api/users/auth/google/callback", passport.authenticate("google", { failureRedirect: "/" }), (req, res) => {
+   res.redirect("/");
+ });
 
 app.listen(PORT, async () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);

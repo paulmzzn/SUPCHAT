@@ -79,8 +79,29 @@ class UserModel {
     }
   }
 
+  static async findOrCreateUser({ nom, email, googleId, photo_de_profil }) {
+    try {
+      console.log('Recherche de l\'utilisateur avec email :', email);
+      let user = await pool.query('SELECT * FROM utilisateur WHERE email = $1', [email]);
+      if (user.rows.length === 0) {
+        console.log('Utilisateur non trouvé, création d\'un nouvel utilisateur.');
+        const result = await pool.query(
+          `INSERT INTO utilisateur (nom, email, google_id, photo_de_profil, mot_de_passe, fk_statut)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [nom, email, googleId, photo_de_profil, 'default_password', 1] // Provide a default password and fk_statut
+        );
+        user = result.rows[0];
+      } else {
+        console.log('Utilisateur trouvé :', user.rows[0]);
+        user = user.rows[0];
+      }
+      return user;
+    } catch (error) {
+      console.error('Erreur dans findOrCreateUser :', error);
+      throw error;
+    }
+  }
+
 }
-
-
 
 export default UserModel;
