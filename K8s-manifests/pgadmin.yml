@@ -7,7 +7,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pgadmin
+      app: "pgadmin"
   template:
     metadata:
       labels:
