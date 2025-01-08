@@ -1,0 +1,3 @@
+
+# ...existing lines...
+.env filter=git-crypt diff=git-crypt
