@@ -1,6 +1,7 @@
 import UserModel from '../models/user.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import sendInvitationEmail from '../config/emailService.js';
 
 const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
 
@@ -135,5 +136,20 @@ const loginUser = async (req, res) => {
       });
     }
   }
+  
+  const sendInvitation = async (req, res) => {
+    const { email, chatRoomName, senderName } = req.body;
 
-export { registerUser, getAllUsers, loginUser, updateUser, deleteUser };
+    if (!email || !chatRoomName || !senderName) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    try {
+        await sendInvitationEmail(email, chatRoomName, senderName);
+        res.status(200).json({ message: 'Invitation sent successfully!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to send invitation', error: error.message });
+    }
+};
+
+export { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation };
