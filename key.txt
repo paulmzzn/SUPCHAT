@@ -1,2 +1,7 @@
+mailjet
 CLÉ API : 869c3107124e8fe05a924c67754b44ae
 CLÉ SECRÈTE : 0849821df2342b4415f277ceb3912daa
+
+google
+CLIENT ID : 976557604598-ooefiik9hsad0nlr1fq41gpn3aj4c5mg.apps.googleusercontent.com 
+CLÉ SECRÈTE : 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
