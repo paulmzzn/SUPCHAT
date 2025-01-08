@@ -1,25 +1,24 @@
-import express from 'express';
-import pool from './config/dbConnection.js'; // Importation du pool configuré
+import express from "express";
+import pool from "./config/dbConnection.js"; // Importation du pool configuré
+import userRoutes from "./routes/userRoutes.js";
+import workspaceRoutes from "./routes/workspaceRoutes.js";
+import canalRoutes from "./routes/canalRoutes.js";
 
 const app = express();
 const PORT = 3000;
 
-// Route de test
-app.get('/test', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT NOW()'); // Test simple
-    res.status(200).json({ 
-      message: 'Connexion réussie avec PostgreSQL',
-      serverTime: result.rows[0]
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      message: 'Erreur de connexion', 
-      error: error.message 
-    });
-  }
-});
+app.use(express.json());
 
-app.listen(PORT, () => {
+app.use("/api/users", userRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/canals", canalRoutes);
+
+app.listen(PORT, async () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
+  try {
+    await pool.query("SELECT NOW()"); // Test simple pour vérifier la connexion
+    console.log("Connexion réussie avec PostgreSQL");
+  } catch (error) {
+    console.error("Erreur de connexion à PostgreSQL:", error.message);
+  }
 });
