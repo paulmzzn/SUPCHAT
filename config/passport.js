@@ -1,3 +1,7 @@
+///QUAND MISE EN LIGNE, CHANGER LE CALLBACK URL 
+///QUAND MISE EN LIGNE, CHANGER LE CALLBACK URL 
+///QUAND MISE EN LIGNE, CHANGER LE CALLBACK URL 
+
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import UserModel from '../models/User.js';
