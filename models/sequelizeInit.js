@@ -1,3 +1,9 @@
+// Exporter les modèles
+export const User = db.User;
+export const Workspace = db.Workspace;
+export const Channel = db.Channel;
+export const Message = db.Message;
+
 const { Sequelize, DataTypes } = require('sequelize');
 const config = require('../config/config.js')[process.env.NODE_ENV || 'development'];
 
@@ -29,3 +35,5 @@ db.User.hasMany(db.Message, { foreignKey: 'fk_utilisateur' });
 db.Message.belongsTo(db.User, { foreignKey: 'fk_utilisateur' });
 
 module.exports = db; // Exportation par défaut
+
+

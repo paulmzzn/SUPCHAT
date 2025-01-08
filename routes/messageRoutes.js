@@ -1,26 +1,27 @@
+// routes/messageRoutes.js
+
 import express from 'express';
-import Message from '../models/message.js';
+import db from '../models/sequelizeInit.js';  // Ajustez le chemin si nécessaire
+
 const router = express.Router();
 
-// Envoyer un message
-router.post('/send', async (req, res) => {
+// GET all messages
+router.get('/', async (req, res) => {
   try {
-    const { contenu, fk_canal, fk_utilisateur } = req.body;
-    const message = await Message.create({ contenu, fk_canal, fk_utilisateur });
-    res.status(201).json(message);
+    const messages = await db.Message.findAll();
+    res.json(messages);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Recevoir les messages d'un canal
-router.get('/:fk_canal', async (req, res) => {
+// POST a new message
+router.post('/', async (req, res) => {
   try {
-    const messages = await Message.findAll({ 
-      where: { fk_canal: req.params.fk_canal },
-      include: User, // Inclure les informations de l'utilisateur
-    });
-    res.status(200).json(messages);
+    const { contenu, fk_canal, fk_utilisateur } = req.body;
+    // Assurez-vous que fk_canal correspond au type de clé primaire de votre Channel
+    const newMessage = await db.Message.create({ contenu, fk_canal, fk_utilisateur });
+    res.json(newMessage);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
