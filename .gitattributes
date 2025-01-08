@@ -1,3 +1,2 @@
-
-# ...existing lines...
-.env filter=git-crypt diff=git-crypt
+*.env filter=git-crypt diff=git-crypt
+secrets/** filter=git-crypt diff=git-crypt
