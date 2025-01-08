@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPCHAT</title>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h1>SUPCHAT</h1>
+    <div id="messages"></div>
+    <input id="messageInput" type="text" placeholder="Type a message..." />
+    <button id="sendButton">Send</button>
+
+    <script>
+        // Connexion au serveur WebSocket
+        const socket = io('http://localhost:3000');
+
+        // Événement de connexion
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            const channelId = '123e4567-e89b-12d3-a456-426614174000'; // Remplacer par un UUID valide
+            socket.emit('joinChannel', channelId);
+        });
+
+        // Envoyer un message
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const messageContent = document.getElementById('messageInput').value;
+            const channelId = '123e4567-e89b-12d3-a456-426614174000'; // Remplacer par un UUID valide
+            const userId = '123e4567-e89b-12d3-a456-426614174001'; // Remplacer par un UUID valide
+            socket.emit('sendMessage', {
+                contenu: messageContent,
+                fk_channel: channelId,
+                fk_user: userId,
+            });
+        });
+
+        // Recevoir un message
+        socket.on('receiveMessage', (message) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message.contenu;
+            document.getElementById('messages').appendChild(messageDiv);
+        });
+
+        // Événement de déconnexion
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        // Événement d'erreur
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+    </script>
+</body>
+</html>
