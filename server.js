@@ -1,59 +1,24 @@
-// server.js
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import messageRoutes from './routes/messageRoutes.js';
-import db from './config/sequelizeInit.js'; // Ton instance Sequelize
-import { errorHandler } from './middlewares/errorHandler.js'; // Middleware global de gestion des erreurs
+import express from "express";
+import pool from "./config/dbConnection.js"; // Importation du pool configuré
+import userRoutes from "./routes/userRoutes.js";
+import workspaceRoutes from "./routes/workspaceRoutes.js";
+import canalRoutes from "./routes/canalRoutes.js";
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 app.use(express.json());
 
-(async () => {
+app.use("/api/users", userRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/canals", canalRoutes);
+
+app.listen(PORT, async () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
   try {
-    await db.sequelize.authenticate();
-    console.log('Connexion à la base réussie');
+    await pool.query("SELECT NOW()"); // Test simple pour vérifier la connexion
+    console.log("Connexion réussie avec PostgreSQL");
   } catch (error) {
-    console.error('Erreur de connexion :', error);
+    console.error("Erreur de connexion à PostgreSQL:", error.message);
   }
-})();
-
-// Route de test
-app.get('/test', (req, res) => {
-  res.send('Test SUPCHAT');
-});
-
-// Attach routes
-app.use('/api/messages', messageRoutes);
-
-// Socket.IO events
-io.on('connection', (socket) => {
-  console.log('Nouveau client connecté');
-
-  socket.on('joinChannel', (channelId) => {
-    socket.join(channelId);
-  });
-
-  socket.on('sendMessage', async (data) => {
-    console.log('Nouveau message reçu :', data);
-    // Ici, tu peux créer le message en base + émettre à tous les connectés
-    // ...
-    io.to(data.fk_channel).emit('receiveMessage', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client déconnecté');
-  });
-});
-
-// Middleware de gestion d’erreurs global (optionnel)
-app.use(errorHandler);
-
-// Lancement du serveur
-server.listen(PORT, () => {
-  console.log(`Serveur SUPCHAT démarré sur le port ${PORT}`);
 });

@@ -3,26 +3,25 @@
  * @company Cloud Temple
  * @created_at 2024-12-17 12:30:16
  * @updated_by GAULT Rudy
- * @updated_at 2024-12-17 14:18:19
+ * @updated_at 2025-01-08 12:01:14
  */
-
-
--- Créer la base de données supchat
-CREATE DATABASE supchat;
-
--- Se connecter à la base de données supchat
-\c supchat
 
 -- Activer l'extension uuid-ossp pour générer des UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Table statut avec un id incrémental
+-- Création de la table statut avec des IDs entiers
 CREATE TABLE statut (
-  id_statut SERIAL PRIMARY KEY,
+  id_statut INT PRIMARY KEY,
   label VARCHAR(255) NOT NULL
 );
 
--- Table utilisateur
+-- Insertion des statuts pré-définis
+INSERT INTO statut (id_statut, label) VALUES
+  (1, 'connecté'),
+  (2, 'hors ligne'),
+  (3, 'occupé');
+
+-- Création de la table utilisateur avec fk_statut en INT
 CREATE TABLE utilisateur (
   id_utilisateur UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
@@ -30,10 +29,10 @@ CREATE TABLE utilisateur (
   mot_de_passe VARCHAR(255) NOT NULL,
   photo_de_profil VARCHAR(2048),
   date_creation TIMESTAMP DEFAULT current_timestamp,
-  fk_statut INT NOT NULL REFERENCES statut(id_statut)
+  fk_statut INT NOT NULL
 );
 
-
+-- Création des autres tables
 CREATE TABLE workspace (
   id_workspace UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
@@ -112,28 +111,41 @@ CREATE TABLE role_permission (
   PRIMARY KEY (fk_role, fk_permission)
 );
 
+-- Ajout des commentaires sur les tables
 COMMENT ON TABLE membre_workspace IS 'Relation entre Utilisateur, Workspace et Rôle';
 COMMENT ON TABLE message_fichier IS 'Relation entre Message et Fichier';
 COMMENT ON TABLE message_hashtag IS 'Relation entre Message et Hashtag';
 COMMENT ON TABLE message_mention IS 'Relation entre Message et Utilisateur mentionné';
 COMMENT ON TABLE role_permission IS 'Relation entre Rôle et Permission';
 
-ALTER TABLE utilisateur ADD FOREIGN KEY (fk_statut) REFERENCES statut (id_statut);
-ALTER TABLE canal ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace);
-ALTER TABLE message ADD FOREIGN KEY (fk_canal) REFERENCES canal (id_canal);
-ALTER TABLE message ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace);
-ALTER TABLE membre_workspace ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
-ALTER TABLE message_fichier ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_fichier ADD FOREIGN KEY (fk_fichier) REFERENCES fichier (id_fichier);
-ALTER TABLE message_hashtag ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_hashtag ADD FOREIGN KEY (fk_hashtag) REFERENCES hashtag (id_hashtag);
-ALTER TABLE message_mention ADD FOREIGN KEY (fk_message) REFERENCES message (id_message);
-ALTER TABLE message_mention ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
-ALTER TABLE role_permission ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
-ALTER TABLE role_permission ADD FOREIGN KEY (fk_permission) REFERENCES permission (id_permission);
+-- Ajout des contraintes de clé étrangère
+ALTER TABLE utilisateur 
+  ADD FOREIGN KEY (fk_statut) REFERENCES statut (id_statut);
 
+ALTER TABLE canal 
+  ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace);
 
-INSERT INTO utilisateur (nom, email, mot_de_passe, fk_statut)
-VALUES ('John Doe', 'john@example.com', 'motdepassehash', 1);
+ALTER TABLE message 
+  ADD FOREIGN KEY (fk_canal) REFERENCES canal (id_canal),
+  ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
+
+ALTER TABLE membre_workspace 
+  ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur),
+  ADD FOREIGN KEY (fk_workspace) REFERENCES workspace (id_workspace),
+  ADD FOREIGN KEY (fk_role) REFERENCES role (id_role);
+
+ALTER TABLE message_fichier 
+  ADD FOREIGN KEY (fk_message) REFERENCES message (id_message),
+  ADD FOREIGN KEY (fk_fichier) REFERENCES fichier (id_fichier);
+
+ALTER TABLE message_hashtag 
+  ADD FOREIGN KEY (fk_message) REFERENCES message (id_message),
+  ADD FOREIGN KEY (fk_hashtag) REFERENCES hashtag (id_hashtag);
+
+ALTER TABLE message_mention 
+  ADD FOREIGN KEY (fk_message) REFERENCES message (id_message),
+  ADD FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur);
+
+ALTER TABLE role_permission 
+  ADD FOREIGN KEY (fk_role) REFERENCES role (id_role),
+  ADD FOREIGN KEY (fk_permission) REFERENCES permission (id_permission);
