@@ -7,12 +7,6 @@
  */
 
 
--- Créer la base de données supchat
-CREATE DATABASE supchat;
-
--- Se connecter à la base de données supchat
-\c supchat
-
 -- Activer l'extension uuid-ossp pour générer des UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
