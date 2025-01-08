@@ -1,51 +1,60 @@
+// server.js
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import db from './models/sequelizeInit.js';
 import messageRoutes from './routes/messageRoutes.js';
+import { Sequelize } from './config/sequelizeInit.js'; // Ton instance Sequelize
+import Message from '../models/message.js';
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-const PORT = 3000;
+const io = new Server(server); // Pour la partie Socket.IO
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Exemple de route de test
-app.get('/test', async (req, res) => {
+// Exemple : vérifier la connexion à la base
+(async () => {
   try {
-    // ...
+    await sequelize.authenticate();
+    console.log('Connexion à la base réussie');
   } catch (error) {
-    // ...
+    console.error('Erreur de connexion :', error);
   }
+})();
+
+// Route de test
+app.get('/test', (req, res) => {
+  res.send('Test SUPCHAT');
 });
 
-// Associer le router de messagerie à /api/messages
+// Attach routes
 app.use('/api/messages', messageRoutes);
 
-// Configuration de Socket.IO
+// Socket.IO events
 io.on('connection', (socket) => {
-  console.log('New client connected');
+  console.log('Nouveau client connecté');
 
-  // Écoute l’événement "joinChannel" pour rejoindre un canal spécifique
-  socket.on('joinChannel', (fk_canal) => {
-    socket.join(fk_canal);
+  socket.on('joinChannel', (channelId) => {
+    socket.join(channelId);
   });
 
-  // Écoute l’événement "sendMessage"
   socket.on('sendMessage', async (data) => {
-    const { contenu, fk_canal, fk_utilisateur } = data;
-    const message = await db.Message.create({ contenu, fk_canal, fk_utilisateur });
-
-    // Émet le nouveau message à tous les utilisateurs du canal
-    io.to(fk_canal).emit('receiveMessage', message);
+    console.log('Nouveau message reçu :', data);
+    // Ici, tu peux créer le message en base + émettre à tous les connectés
+    // ...
+    io.to(data.fk_channel).emit('receiveMessage', data);
   });
 
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    console.log('Client déconnecté');
   });
 });
 
+// Middleware de gestion d’erreurs global (optionnel)
+app.use(errorHandler);
+
+// Lancement du serveur
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Serveur SUPCHAT démarré sur le port ${PORT}`);
 });

@@ -5,7 +5,7 @@ export const Channel = db.Channel;
 export const Message = db.Message;
 
 const { Sequelize, DataTypes } = require('sequelize');
-const config = require('../config/config.js')[process.env.NODE_ENV || 'development'];
+const config = require('./config.js')[process.env.NODE_ENV || 'development'];
 
 const sequelize = new Sequelize(config.database, config.username, config.password, {
   host: config.host,
@@ -19,10 +19,10 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // Importer les modèles
-db.User = require('./user')(sequelize, DataTypes);
-db.Workspace = require('./workspace')(sequelize, DataTypes);
-db.Channel = require('./channel')(sequelize, DataTypes);
-db.Message = require('./message')(sequelize, DataTypes); // Assurez-vous que ceci correspond exactement au nom du fichier
+db.User = require('../models/user.js')(sequelize, DataTypes);
+db.Workspace = require('../models/workspace.js')(sequelize, DataTypes);
+db.Channel = require('../models/channel.js')(sequelize, DataTypes);
+db.Message = require('../models/message.js')(sequelize, DataTypes); // Assurez-vous que ceci correspond exactement au nom du fichier
 
 // Définir les associations
 db.Workspace.hasMany(db.Channel, { foreignKey: 'fk_workspace' });

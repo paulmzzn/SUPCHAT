@@ -1,30 +1,32 @@
 // routes/messageRoutes.js
-
 import express from 'express';
-import db from '../models/sequelizeInit.js';  // Ajustez le chemin si nécessaire
+import {
+  getAllMessages,
+  getMessageById,
+  createMessage,
+  updateMessage,
+  deleteMessage,
+} from '../controllers/messageController.js';
+import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { roleMiddleware } from '../middlewares/roleMiddleware.js';
+import { validateSchemaMiddleware } from '../middlewares/validateSchemaMiddleware.js';
+import { messageSchema } from '../schemas/messageSchema.js';
 
 const router = express.Router();
 
-// GET all messages
-router.get('/', async (req, res) => {
-  try {
-    const messages = await db.Message.findAll();
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Routes publiques (exemple)
+router.get('/', getAllMessages);
+router.get('/:id', getMessageById);
 
-// POST a new message
-router.post('/', async (req, res) => {
-  try {
-    const { contenu, fk_canal, fk_utilisateur } = req.body;
-    // Assurez-vous que fk_canal correspond au type de clé primaire de votre Channel
-    const newMessage = await db.Message.create({ contenu, fk_canal, fk_utilisateur });
-    res.json(newMessage);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Middleware d’authentification
+router.use(authMiddleware);
+
+// Middleware de rôle, ex. seulement ‘admin’ peut créer/éditer/supprimer
+router.use(roleMiddleware(['admin']));
+
+// Routes protégées
+router.post('/', validateSchemaMiddleware(messageSchema), createMessage);
+router.put('/:id', validateSchemaMiddleware(messageSchema), updateMessage);
+router.delete('/:id', deleteMessage);
 
 export default router;
