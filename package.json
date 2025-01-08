@@ -3,7 +3,9 @@
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "node-mailjet": "^6.0.6",
+    "pg": "^8.13.1",
+    "ws": "^8.18.0"
   },
   "name": "supchat",
   "version": "1.0.0",
