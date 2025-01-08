@@ -14,10 +14,15 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: admin
+<<<<<<< HEAD
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: supchat
     ports:
       - "5432:5432"
+=======
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: supchat-db
+>>>>>>> main
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/database.sql:/docker-entrypoint-initdb.d/database.sql
