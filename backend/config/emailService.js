@@ -8,8 +8,8 @@ const sendInvitation = async (toEmail, chatRoomName, senderName) => {
             Messages: [
                 {
                     From: {
-                        Email: "paul.mazzon@gmail.com",
-                        Name: "Chat App",
+                        Email: "no-reply@supchat.com", // Updated email to a generic one
+                        Name: "SUPCHAT", // Updated name
                     },
                     To: [
                         {

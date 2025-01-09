@@ -2,12 +2,13 @@ import UserModel from '../models/user.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendInvitationEmail from '../config/emailService.js';
+import sendValidationEmail from '../config/validationEmailService.js'; // Import the validation email service
 
 const SECRET_KEY = 'your_secret_key'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
 
 // Fonction pour enregistrer un nouvel utilisateur
 const registerUser = async (req, res) => {
-  const { nom, email, mot_de_passe, photo_de_profil, fk_statut } = req.body;
+  const { nom, email, mot_de_passe, photo_de_profil } = req.body;
 
   try {
     const existingUser = await UserModel.getUserByEmail(email);
@@ -21,14 +22,28 @@ const registerUser = async (req, res) => {
       email,
       mot_de_passe: hashedPassword,
       photo_de_profil,
-      fk_statut,
+      is_activated: false, // Account is not activated by default
+      fk_statut: 1 // Default status
     });
 
+    // Send validation code via email
+    await sendValidationEmail(email, user.validation_code);
+
+    // Schedule deletion of non-activated account after 30 minutes
+    setTimeout(async () => {
+      const user = await UserModel.getUserByEmail(email);
+      if (user && !user.is_activated) {
+        await UserModel.deleteUser(user.id_utilisateur);
+        console.log(`Non-activated account with email ${email} has been deleted.`);
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
     res.status(201).json({
-      message: 'Utilisateur enregistré avec succès.',
+      message: 'Utilisateur enregistré avec succès. Un code de validation a été envoyé à votre adresse email.',
       user,
     });
   } catch (error) {
+    console.error('Erreur lors de l\'enregistrement:', error.stack); // Log the error stack trace
     res.status(500).json({
       message: 'Erreur lors de l\'enregistrement',
       error: error.message,
@@ -60,6 +75,10 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Utilisateur non trouvé.' });
     }
 
+    if (!user.is_activated) {
+      return res.status(403).json({ message: 'Compte non activé. Veuillez vérifier votre email pour le code de validation.' });
+    }
+
     const isMatch = await bcrypt.compare(mot_de_passe, user.mot_de_passe);
 
     if (!isMatch) {
@@ -75,6 +94,7 @@ const loginUser = async (req, res) => {
 
     res.status(200).json({
       message: 'Connexion réussie.',
+      user, // Include user data in the response
       token,
     });
   } catch (error) {
@@ -85,71 +105,101 @@ const loginUser = async (req, res) => {
   }
 };
 
-  const updateUser = async (req, res) => {
-    const { nom, email, mot_de_passe, photo_de_profil, fk_statut } = req.body;
-    const { id } = req.params;
+// Fonction pour valider le code
+const validateCode = async (req, res) => {
+  const { email, code } = req.body;
 
-    try {
-      const user = await UserModel.getUserById(id);
+  try {
+    const user = await UserModel.getUserByEmail(email);
 
-      if (!user) {
-        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-      }
-
-      const updatedFields = {
-        nom: nom || user.nom,
-        email: email || user.email,
-        mot_de_passe: mot_de_passe ? await bcrypt.hash(mot_de_passe, 10) : user.mot_de_passe,
-        photo_de_profil: photo_de_profil || user.photo_de_profil,
-        fk_statut: fk_statut || user.fk_statut,
-      };
-
-      const updatedUser = await UserModel.updateUser(updatedFields, id);
-
-      res.status(200).json({
-        message: 'Utilisateur mis à jour avec succès.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: 'Erreur lors de la mise à jour de l\'utilisateur.',
-        error: error.message,
-      });
+    if (!user) {
+      return res.status(401).json({ message: 'Utilisateur non trouvé.' });
     }
-  };
 
-  const deleteUser = async (req, res) => {
-    const { id } = req.params;
-    try {
-      const user = await UserModel.getUserById(id);
+    if (user.validation_code !== code) {
+      return res.status(401).json({ message: 'Code de validation incorrect.' });
+    }
 
-      if (!user) {
-        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-      }
-      await UserModel.deleteUser(id);
-      res.status(200).json({ message: 'Utilisateur supprimé avec succès.' });
-    }
-    catch (error) {
-      res.status(500).json({
-        message: 'Erreur lors de la suppression de l\'utilisateur.',
-        error: error.message,
-      });
-    }
+    // Mettre à jour le statut de l'utilisateur pour indiquer qu'il est validé
+    await UserModel.updateUser({ is_activated: true }, user.id_utilisateur);
+
+    res.status(200).json({
+      message: 'Validation réussie.',
+    });
+  } catch (error) {
+    console.error('Erreur lors de la validation:', error.stack); // Log the error stack trace
+    res.status(500).json({
+      message: 'Erreur lors de la validation',
+      error: error.message,
+    });
   }
-  
-  const sendInvitation = async (req, res) => {
-    const { email, chatRoomName, senderName } = req.body;
-
-    if (!email || !chatRoomName || !senderName) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    try {
-        await sendInvitationEmail(email, chatRoomName, senderName);
-        res.status(200).json({ message: 'Invitation sent successfully!' });
-    } catch (error) {
-        res.status(500).json({ message: 'Failed to send invitation', error: error.message });
-    }
 };
 
-export { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation };
+const updateUser = async (req, res) => {
+  const { nom, email, mot_de_passe, photo_de_profil, fk_statut } = req.body;
+  const { id } = req.params;
+
+  try {
+    const user = await UserModel.getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    const updatedFields = {
+      nom: nom || user.nom,
+      email: email || user.email,
+      mot_de_passe: mot_de_passe ? await bcrypt.hash(mot_de_passe, 10) : user.mot_de_passe,
+      photo_de_profil: photo_de_profil || user.photo_de_profil,
+      fk_statut: fk_statut || user.fk_statut,
+    };
+
+    const updatedUser = await UserModel.updateUser(updatedFields, id);
+
+    res.status(200).json({
+      message: 'Utilisateur mis à jour avec succès.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur lors de la mise à jour de l\'utilisateur.',
+      error: error.message,
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await UserModel.getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    await UserModel.deleteUser(id);
+    res.status(200).json({ message: 'Utilisateur supprimé avec succès.' });
+  }
+  catch (error) {
+    res.status(500).json({
+      message: 'Erreur lors de la suppression de l\'utilisateur.',
+      error: error.message,
+    });
+  }
+}
+
+const sendInvitation = async (req, res) => {
+  const { email, chatRoomName, senderName } = req.body;
+
+  if (!email || !chatRoomName || !senderName) {
+      return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+      await sendInvitationEmail(email, chatRoomName, senderName);
+      res.status(200).json({ message: 'Invitation sent successfully!' });
+  } catch (error) {
+      res.status(500).json({ message: 'Failed to send invitation', error: error.message });
+  }
+};
+
+export { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode };
