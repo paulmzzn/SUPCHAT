@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../styles/account.css';
 
 const Account = () => {
   const location = useLocation();
-  const { user, token } = location.state || {};
+  const [user, setUser] = useState(location.state?.user || null);
+  const [token, setToken] = useState(location.state?.token || null);
+
+  useEffect(() => {
+    if (!user || !token) {
+      const queryParams = new URLSearchParams(location.search);
+      const userParam = queryParams.get('user');
+      const tokenParam = queryParams.get('token');
+      if (userParam && tokenParam) {
+        setUser(JSON.parse(userParam));
+        setToken(tokenParam);
+      }
+    }
+  }, [location.search, user, token]);
 
   if (!user || !token) {
     return <div>No user information available.</div>;
