@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation } from '../controllers/userController.js';
+import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode } from '../controllers/userController.js';
 import passport from 'passport';
 
 const router = express.Router();
@@ -10,10 +10,11 @@ router.post('/login', loginUser);
 router.put('/update/:id', updateUser);
 router.delete('/delete/:id', deleteUser);
 router.post('/send-invitation', sendInvitation);
+router.post('/validate-code', validateCode); // Add validate code route
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
-  res.redirect('/'); // Redirect to the desired route after successful authentication
+  res.redirect('http://localhost:3001/account'); // Redirect to the desired route after successful authentication
 });
 
 export default router;

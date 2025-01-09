@@ -1,47 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
 /* General styling */
 body {
     margin: 0;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
     background-color: #262626;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    position: relative;
+    position: relative; /* Ajouté pour positionner le logo */
+    overflow: hidden; /* Ajouté pour éviter les barres de défilement */
   }
   
   /* Background blur */
   body::before {
     content: '';
     position: absolute;
-    width: 500px;
-    height: 500px;
-    background: #2D55FB;
-    filter: blur(5000px);
+    width: 50vw;
+    height: 50vw;
+    background: rgb(45, 85, 251, 0.3);
+    filter: blur(200px);
     border-radius: 50%;
     z-index: -1;
-    top: 100px;
-    right: -350px;
+    top: -20vh;
+    right: 0vw;
   }
   
   body::after {
     content: '';
     position: absolute;
-    width: 300px;
-    height: 300px;
-    background: #2D55FB;
-    filter: blur(150px);
+    width: 50vw;
+    height: 50vw;
+    background: rgb(45, 85, 251, 0.3);
+    -webkit-filter: blur(50vw); /* Safari */
+    filter: blur(200px);
     border-radius: 50%;
     z-index: -1;
-    bottom: -100px;
-    left: -100px;
+    bottom: 0vh;
+    left: -20vw;
   }
   
   /* Container */
   .login-container {
     text-align: center;
-    width: 100%;
 
   }
   
@@ -50,9 +53,11 @@ body {
     font-size: 2rem;
     font-weight: bold;
     margin-bottom: 20px;
-    position: absolute;
+    position: absolute; /* Changé de fixed à absolute */
     top: 40px;
-    left: 60px;
+    left: 60px; /* Ajouté pour centrer horizontalement */
+    z-index: 1; /* Ajouté pour s'assurer que le logo est au-dessus des autres éléments */
+    margin-top: 0; /* Ajouté pour réduire l'espace au-dessus */
   }
   .login-logo .dot {
     color: #007bff;
@@ -60,17 +65,19 @@ body {
   
   /* Login box */
   .login-box {
-    background-color: rgba(19, 19, 22, 0.4); /* Background color with 60% opacity */
-    padding: 20px;
+    background-color: #13131666; /* Background color with 60% opacity */
+    padding: 20px 60px;
     border-radius: 8px;
-    width: 100%;
+    width: 370px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     margin: 0 auto;
   }
   
   .login-box h2 {
     margin-bottom: 20px;
-    font-size: 1.5rem;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
+    font-weight: 600; /* Semi-bold */
+    font-size: 28px; /* Font size 28 */
   }
   
   /* Form elements */
@@ -82,26 +89,31 @@ body {
   label {
     display: block;
     margin-bottom: 5px;
-    font-size: 0.9rem;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
+    font-weight: 400; /* Regular */
+    font-size: 16px; /* Font size 16 */
   }
   
   input {
     width: calc(100% - 20px);
     padding: 10px;
-    border: none;
+    border: 1px solid #98A2B3;
     border-radius: 5px;
     font-size: 1rem;
-    background: #2b2b3c;
+    background: rgba(19, 19, 22, 0);
     color: white;
   }
   
   input::placeholder {
-    color: #888;
+    color: #98A2B3;
   }
   
   /* Password field */
   .password-field {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .password-field .eye-icon {
@@ -115,21 +127,25 @@ body {
   /* Forgot link */
   .forgot-link {
     display: inline-block;
-    margin-top: 5px;
     font-size: 0.8rem;
     text-decoration: none;
-    color: #007bff;
+    color: #1570EF;
+    align-self: flex-end; /* Ajouté pour aligner à droite */
+    text-align: right; /* Ajouté pour aligner le texte à droite */
+    width: 100%; /* Ajouté pour prendre toute la largeur */
   }
   
   /* Buttons */
   .login-button {
     width: 100%;
     padding: 10px;
-    background: #007bff;
+    background: #1570EF;
     color: white;
     border: none;
     border-radius: 5px;
-    font-size: 1rem;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
+    font-weight: 600; /* Semi-bold */
+    font-size: 16px; /* Font size 16 */
     cursor: pointer;
     margin: 10px 0;
   }
@@ -137,18 +153,39 @@ body {
   .google-login {
     width: 100%;
     padding: 10px;
-    background: #fff;
-    color: black;
+    background: #26272B;
+    color: white;
     border: none;
     border-radius: 5px;
-    font-size: 1rem;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
+    font-weight: 600; /* Semi-bold */
+    font-size: 16px; /* Font size 16 */
     cursor: pointer;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .google-logo {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+  }
+
+  .or-separator {
+    text-align: center;
+    font-family: 'Poppins', Arial, sans-serif; /* Use Poppins font */
+    font-weight: 400; /* Regular */
+    font-size: 16px; /* Font size 16 */
+    color: #98A2B3;
   }
   
   /* Signup link */
   .signup-link {
     font-size: 0.9rem;
-    margin-top: 10px;
+    margin-top: 30px;
+    color: #98A2B3;
   }
   
   .signup-link a {
@@ -159,22 +196,48 @@ body {
   /* Responsive Design */
   @media (max-width: 768px) {
     .login-box {
-      width: 90%;
-      padding: 15px;
+      padding: 20px 60px;
+      width: 350px;
     }
   
     .login-logo {
-      font-size: 1.5rem;
+      font-size: 2.5rem;
+      top: 40px; /* Ajouté pour centrer le logo */
+      left: 50%; /* Ajouté pour centrer horizontalement */
+      transform: translateX(-50%); /* Ajouté pour centrer horizontalement */
     }
   }
   
   @media (max-width: 480px) {
     .login-box {
+      padding: 20px 50px;
+      width: 300px;
+    }
+  
+    .login-logo {
+      font-size: 2.2rem;
+      top: 40px; /* Ajouté pour centrer le logo */
+      margin-top: 0; /* Ajouté pour réduire l'espace au-dessus */
+      left: 50%; /* Ajouté pour centrer horizontalement */
+      transform: translateX(-50%); /* Ajouté pour centrer horizontalement */
+    }
+  
+    .login-button, .google-login {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 350px) {
+    .login-box {
       padding: 10px;
+      min-width: 0px;
     }
   
     .login-logo {
       font-size: 1.2rem;
+      margin-top: 0; /* Ajouté pour réduire l'espace au-dessus */
+      left: 50%; /* Ajouté pour centrer horizontalement */
+      transform: translateX(-50%); /* Ajouté pour centrer horizontalement */
     }
   
     .login-button, .google-login {
