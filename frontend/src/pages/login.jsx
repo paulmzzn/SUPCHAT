@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import googleLogo from '../assets/svg/google-logo.svg'; // Importation du logo Google
 
 const Login = () => {
-  React.useEffect(() => {
-    import('../styles/login.css');
+  const [cssLoaded, setCssLoaded] = useState(false);
+
+  useEffect(() => {
+    import('../styles/login.css').then(() => setCssLoaded(true));
   }, []);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,7 +17,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3000/api/users/login', {
+      const response = await fetch('http://192.168.1.134:3000/api/users/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,11 +46,15 @@ const Login = () => {
     }
   };
 
+  if (!cssLoaded) {
+    return null; // or a loading spinner
+  }
+
   return (
     <div className="login-container">
       <div className="login-logo">SUPCHAT<span className="dot">.</span></div>
       <div className="login-box">
-        <h2>Login to your account</h2>
+        <h2>Se connecter</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email</label>
@@ -59,7 +66,7 @@ const Login = () => {
             />
           </div>
           <div className="form-group">
-            <label>Password</label>
+            <label>Mot de passe</label>
             <div className="password-field">
               <input
                 type="password"
@@ -69,18 +76,18 @@ const Login = () => {
               />
               <span className="eye-icon"></span>
             </div>
-            <a href="#" className="forgot-link">Forgot ?</a>
+            <a href="#" className="forgot-link">Mot de passe oublié ?</a>
           </div>
-          <button type="submit" className="login-button">Login now</button>
+          <button type="submit" className="login-button">Se connecter</button>
         </form>
         {error && <div className="error-popup" style={{ color: 'red' }}>{error}</div>}
         <div className="or-separator">or</div> {/* Ajouté pour le séparateur "or" */}
-        <button className="google-login" onClick={() => window.location.href = 'http://localhost:3000/auth/google'}>
+        <button className="google-login" onClick={() => window.location.href = 'http://192.168.1.134:3000/auth/google'}>
           <img src={googleLogo} alt="Google logo" className="google-logo" />
-          Continue with Google
+          Se connecter avec Google
         </button>
         <div className="signup-link">
-          Don't Have An Account? <a href="/register">Sign Up</a>
+          Pas encore de compte ? <a href="/register">S'inscrire</a>
         </div>
       </div>
     </div>
