@@ -1,32 +1,35 @@
-import Mailjet from 'node-mailjet';
+import nodemailer from 'nodemailer';
 
-const mailjetClient = Mailjet.apiConnect('869c3107124e8fe05a924c67754b44ae', '0849821df2342b4415f277ceb3912daa');
+const transporter = nodemailer.createTransport({
+  host: 'mail86.lwspanel.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: 'noreply@supchat.fr',
+    pass: 'Supchat!2025',
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
 
 const sendInvitation = async (toEmail, chatRoomName, senderName) => {
-    try {
-        const request = await mailjetClient.post("send", { version: "v3.1" }).request({
-            Messages: [
-                {
-                    From: {
-                        Email: "no-reply@supchat.com", // Updated email to a generic one
-                        Name: "SUPCHAT", // Updated name
-                    },
-                    To: [
-                        {
-                            Email: toEmail,
-                            Name: "Recipient",
-                        },
-                    ],
-                    Subject: `Invitation to join ${chatRoomName}`,
-                    TextPart: `${senderName} has invited you to join the chat room: ${chatRoomName}.`,
-                    HTMLPart: `<p>${senderName} has invited you to join the chat room: <strong>${chatRoomName}</strong>.</p><p><a href="https://your-chat-app.com/rooms/${chatRoomName}">Join now</a></p>`,
-                },
-            ],
-        });
-        console.log('Email sent:', request.body);
-    } catch (error) {
-        console.error(`Error sending email: ${error.message}`);
-    }
+  try {
+    const mailOptions = {
+      from: 'noreply@supchat.fr',
+      to: toEmail,
+      subject: `Invitation to join ${chatRoomName}`,
+      text: `${senderName} has invited you to join the chat room: ${chatRoomName}.`,
+      html: `<p>${senderName} has invited you to join the chat room: <strong>${chatRoomName}</strong>.</p>
+             <p><a href="http://localhost:3001/join-room/${encodeURIComponent(chatRoomName)}">Join now</a></p>`
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Invitation email sent successfully');
+  } catch (error) {
+    console.error('Error sending invitation email:', error.stack);
+    throw error;
+  }
 };
 
 export default sendInvitation;
