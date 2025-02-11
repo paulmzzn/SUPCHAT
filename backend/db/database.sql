@@ -3,7 +3,7 @@
  * @company Cloud Temple
  * @created_at 2024-12-17 12:30:16
  * @updated_by GAULT Rudy
- * @updated_at 2025-01-08 12:01:14
+ * @updated_at 2025-02-11 14:18:12
  */
 
 -- Activer l'extension uuid-ossp pour générer des UUID

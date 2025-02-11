@@ -257,4 +257,29 @@ FROM membre_workspace mw
 JOIN workspace w ON mw.fk_workspace = w.id_workspace
 JOIN role r ON mw.fk_role = r.id_role
 LEFT JOIN canal c ON c.fk_workspace = w.id_workspace
-WHERE mw.fk_utilisateur = 'uuid_john_doe';
+WHERE mw.fk_utilisateur = 'd5676903-843f-4017-a534-03d4da4056f3';
+
+
+
+-- Liste des membres de tous les workspaces
+SELECT 
+  w.id_workspace,
+  w.nom AS workspace_name,
+  u.id_utilisateur,
+  u.nom AS utilisateur_name,
+  u.email
+FROM membre_workspace mw
+JOIN workspace w ON mw.fk_workspace = w.id_workspace
+JOIN utilisateur u ON mw.fk_utilisateur = u.id_utilisateur;
+
+
+# Liste des membres d'un workspace
+SELECT 
+  u.id_utilisateur,
+  u.nom,
+  u.email,
+  r.nom_role
+FROM membre_workspace mw
+JOIN utilisateur u ON mw.fk_utilisateur = u.id_utilisateur
+JOIN role r ON mw.fk_role = r.id_role
+WHERE mw.fk_workspace = 'a63c4ea6-6011-43d7-a5b1-32eb5fd86bcb';

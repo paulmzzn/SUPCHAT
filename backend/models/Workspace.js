@@ -1,4 +1,4 @@
-import pool from '../config/dbConnection.js';
+import pool from "../config/dbConnection.js";
 
 class Workspace {
   static async create({ nom, is_private }) {
