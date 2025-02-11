@@ -1,9 +1,16 @@
 {
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.21.2",
+    "express-session": "^1.18.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "node-mailjet": "^6.0.6",
+    "nodemailer": "^6.9.16",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.13.1",
+    "ws": "^8.18.0"
   },
   "name": "supchat",
   "version": "1.0.0",

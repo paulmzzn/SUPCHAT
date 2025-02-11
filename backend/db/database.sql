@@ -29,8 +29,10 @@ CREATE TABLE utilisateur (
   mot_de_passe VARCHAR(255) NOT NULL,
   photo_de_profil VARCHAR(2048),
   date_creation TIMESTAMP DEFAULT current_timestamp,
-  fk_statut INT NOT NULL
+  fk_statut INT NOT NULL,
+  google_id VARCHAR(255) UNIQUE
 );
+
 
 -- Création des autres tables
 CREATE TABLE workspace (
