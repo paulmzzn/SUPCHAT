@@ -24,7 +24,7 @@ const ValidateCode = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3000/api/users/validate-code', {
+      const response = await fetch('http://192.168.1.134:3000/api/users/validate-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
