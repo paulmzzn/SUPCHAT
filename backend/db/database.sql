@@ -88,7 +88,7 @@ CREATE TABLE hashtag (
 CREATE TABLE membre_workspace (
   fk_utilisateur UUID NOT NULL,
   fk_workspace UUID NOT NULL,
-  fk_role UUID NOT NULL,
+  fk_role INT NOT NULL,
   PRIMARY KEY (fk_utilisateur, fk_workspace)
 );
 
