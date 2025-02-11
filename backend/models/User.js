@@ -104,6 +104,54 @@ class UserModel {
     }
   }
 
+  static async validateUser(email, validationCode) {
+    try {
+      const result = await pool.query(
+        `UPDATE utilisateur 
+         SET is_activated = true 
+         WHERE email = $1 AND validation_code = $2
+         RETURNING *`,
+        [email, validationCode]
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async setResetPasswordCode(email) {
+    try {
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiryTime = new Date(Date.now() + 30 * 60000); // 30 minutes from now
+      
+      const result = await pool.query(
+        `UPDATE utilisateur 
+         SET reset_password_code = $1, reset_password_expires = $2
+         WHERE email = $3 RETURNING *`,
+        [resetCode, expiryTime, email]
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async resetPassword(email, resetCode, newPassword) {
+    try {
+      const result = await pool.query(
+        `UPDATE utilisateur 
+         SET mot_de_passe = $1, reset_password_code = NULL, reset_password_expires = NULL
+         WHERE email = $2 
+         AND reset_password_code = $3 
+         AND reset_password_expires > NOW()
+         RETURNING *`,
+        [newPassword, email, resetCode]
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default UserModel;

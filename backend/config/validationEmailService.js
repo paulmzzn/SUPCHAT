@@ -23,7 +23,7 @@ transporter.verify((error, success) => {
 });
 
 const sendValidationEmail = async (email, validationCode) => {
-  const validationLink = `http://localhost:3001/validate-code?email=${encodeURIComponent(email)}&code=${validationCode}`;
+  const validationLink = `http://localhost:3000/api/users/validate?email=${encodeURIComponent(email)}&code=${validationCode}`;
   const mailOptions = {
     from: 'REDACTED',
     to: email,

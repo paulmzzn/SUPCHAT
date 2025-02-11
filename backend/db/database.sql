@@ -30,9 +30,12 @@ CREATE TABLE utilisateur (
   photo_de_profil VARCHAR(2048),
   date_creation TIMESTAMP DEFAULT current_timestamp,
   fk_statut INT NOT NULL,
-  google_id VARCHAR(255) UNIQUE
+  google_id VARCHAR(255) UNIQUE,
+  is_activated BOOLEAN DEFAULT false,
+  validation_code VARCHAR(6),
+  reset_password_code VARCHAR(6),
+  reset_password_expires TIMESTAMP
 );
-
 
 -- Création des autres tables
 CREATE TABLE workspace (
