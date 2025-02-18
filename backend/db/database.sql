@@ -37,7 +37,7 @@ CREATE TABLE utilisateur (
   reset_password_expires TIMESTAMP
 );
 
--- Création des autres tables
+-- Création de la table workspace
 CREATE TABLE workspace (
   id_workspace UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
@@ -45,6 +45,7 @@ CREATE TABLE workspace (
   date_creation TIMESTAMP DEFAULT current_timestamp
 );
 
+-- Création de la table canal
 CREATE TABLE canal (
   id_canal UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
@@ -53,6 +54,7 @@ CREATE TABLE canal (
   fk_workspace UUID NOT NULL
 );
 
+-- Création de la table message
 CREATE TABLE message (
   id_message UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   contenu VARCHAR(255),
@@ -62,6 +64,7 @@ CREATE TABLE message (
   fk_utilisateur UUID NOT NULL
 );
 
+-- Création de la table fichier
 CREATE TABLE fichier (
   id_fichier UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom_fichier VARCHAR(255) NOT NULL,
@@ -70,21 +73,31 @@ CREATE TABLE fichier (
   date_upload TIMESTAMP DEFAULT current_timestamp
 );
 
+-- Modification : Création de la table role avec un identifiant entier et des rôles pré-définis
 CREATE TABLE role (
-  id_role UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id_role INT PRIMARY KEY,
   nom_role VARCHAR(50) NOT NULL
 );
 
+-- Insertion des rôles fixes (1 = owner, 2 = admin, 3 = member)
+INSERT INTO role (id_role, nom_role) VALUES
+  (1, 'owner'),
+  (2, 'admin'),
+  (3, 'member');
+
+-- Création de la table permission
 CREATE TABLE permission (
   id_permission UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   type_permission VARCHAR(50) NOT NULL
 );
 
+-- Création de la table hashtag
 CREATE TABLE hashtag (
   id_hashtag UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   label VARCHAR(255) NOT NULL
 );
 
+-- Modification : Création de la table membre_workspace avec fk_role en entier
 CREATE TABLE membre_workspace (
   fk_utilisateur UUID NOT NULL,
   fk_workspace UUID NOT NULL,
@@ -92,26 +105,30 @@ CREATE TABLE membre_workspace (
   PRIMARY KEY (fk_utilisateur, fk_workspace)
 );
 
+-- Création de la table message_fichier
 CREATE TABLE message_fichier (
   fk_message UUID NOT NULL,
   fk_fichier UUID NOT NULL,
   PRIMARY KEY (fk_message, fk_fichier)
 );
 
+-- Création de la table message_hashtag
 CREATE TABLE message_hashtag (
   fk_message UUID NOT NULL,
   fk_hashtag UUID NOT NULL,
   PRIMARY KEY (fk_message, fk_hashtag)
 );
 
+-- Création de la table message_mention
 CREATE TABLE message_mention (
   fk_message UUID NOT NULL,
   fk_utilisateur UUID NOT NULL,
   PRIMARY KEY (fk_message, fk_utilisateur)
 );
 
+-- Modification : Création de la table role_permission avec fk_role en entier
 CREATE TABLE role_permission (
-  fk_role UUID NOT NULL,
+  fk_role INT NOT NULL,
   fk_permission UUID NOT NULL,
   PRIMARY KEY (fk_role, fk_permission)
 );
