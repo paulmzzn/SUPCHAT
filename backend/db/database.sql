@@ -133,6 +133,14 @@ CREATE TABLE role_permission (
   PRIMARY KEY (fk_role, fk_permission)
 );
 
+-- Table pour les messages simples //!\\ UNIQUEMENT POUR TEST : MANQUE LA GESTION DES CANAUX + WORKSPACES. //!\\
+CREATE TABLE simple_messages (
+  id_message SERIAL PRIMARY KEY,
+  username VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Ajout des commentaires sur les tables
 COMMENT ON TABLE membre_workspace IS 'Relation entre Utilisateur, Workspace et Rôle';
 COMMENT ON TABLE message_fichier IS 'Relation entre Message et Fichier';
