@@ -2,17 +2,18 @@ import express from 'express';
 import {
   createCanal,
   getCanalById,
-  getAllCanals,
+  getAllWorkspaceCanals,
   updateCanal,
   deleteCanal
 } from '../controllers/canalController.js';
 
 const router = express.Router();
 
-router.post('/workspace/:id/canals', createCanal); // Mise à jour de la route de création
-router.get('/canals/:id', getCanalById);
-router.get('/canals', getAllCanals);
-router.put('/workspace/:id/canals/:canalId', updateCanal); // Mise à jour de la route de modification
-router.delete('/workspace/:id/canals/:canalId', deleteCanal); // Mise à jour de la route de suppression
+// Routes pour les canaux dans un workspace
+router.post('/workspace/:workspaceId/canals', createCanal);
+router.get('/workspace/:workspaceId/canals', getAllWorkspaceCanals);
+router.get('/workspace/:workspaceId/canals/:canalId', getCanalById);
+router.put('/workspace/:workspaceId/canals/:canalId', updateCanal);
+router.delete('/workspace/:workspaceId/canals/:canalId', deleteCanal);
 
 export default router;
