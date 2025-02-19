@@ -12,6 +12,7 @@ import { Server } from 'socket.io';
 import MessageModel from './models/Message.js';
 import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from './socket/socketManager.js';
+import reactionRoutes from "./routes/reactionRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -39,6 +40,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api", canalRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api", reactionRoutes);
 
 // Supprimer la configuration socket.io directement dans server.js
 // et utiliser uniquement socketManager
