@@ -272,6 +272,12 @@
                 .join(' ');
         }
 
+        // Ajouter l'écoute des mises à jour de réaction
+        socket.on('reactionUpdate', (data) => {
+            console.log('Mise à jour des réactions pour le message:', data.messageId);
+            loadReactions(data.messageId);
+        });
+
         // Fonction pour ajouter/supprimer une réaction
         async function toggleReaction(messageId, emoji) {
             const userId = document.getElementById('userId').value;
@@ -281,30 +287,21 @@
             }
 
             try {
-                // Vérifier si l'utilisateur a déjà réagi avec cet emoji
                 const reactions = await (await fetch(`/api/messages/${messageId}/reactions`)).json();
                 const hasReacted = reactions.some(r => 
                     r.fk_utilisateur === userId && r.emoji_unicode[0] === emoji
                 );
 
-                if (hasReacted) {
-                    // Supprimer la réaction
-                    await fetch(`/api/messages/${messageId}/reactions`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, emoji })
-                    });
-                } else {
-                    // Ajouter la réaction
-                    await fetch(`/api/messages/${messageId}/reactions`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, emoji })
-                    });
-                }
+                const response = await fetch(`/api/messages/${messageId}/reactions`, {
+                    method: hasReacted ? 'DELETE' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, emoji })
+                });
 
-                // Recharger les réactions
-                loadReactions(messageId);
+                if (response.ok) {
+                    // Émettre l'événement de réaction via socket
+                    socket.emit('reaction', { messageId, emoji, userId });
+                }
             } catch (error) {
                 console.error('Erreur:', error);
             }

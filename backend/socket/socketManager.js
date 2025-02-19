@@ -65,6 +65,17 @@ const socketManager = (io) => {
             }
         });
 
+        // Ajout de la gestion des réactions
+        socket.on('reaction', async (data) => {
+            try {
+                const { messageId, emoji, userId } = data;
+                // Émettre la mise à jour à tous les clients dans le même canal
+                io.emit('reactionUpdate', { messageId });
+            } catch (error) {
+                console.error('Erreur lors de la gestion de la réaction:', error);
+            }
+        });
+
         socket.on('disconnect', () => {
             // Nettoyer les canaux lors de la déconnexion
             if (socket.currentCanal && canals.has(socket.currentCanal)) {
