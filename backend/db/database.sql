@@ -179,3 +179,24 @@ ALTER TABLE message_mention
 ALTER TABLE role_permission 
   ADD FOREIGN KEY (fk_role) REFERENCES role (id_role),
   ADD FOREIGN KEY (fk_permission) REFERENCES permission (id_permission);
+
+-- Modifier la table reaction pour assurer l'unicité
+DROP TABLE IF EXISTS reaction CASCADE;
+CREATE TABLE reaction (
+    id_reaction UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_message UUID NOT NULL,
+    fk_utilisateur UUID NOT NULL,
+    emoji_unicode CHARACTER VARYING(8)[] NOT NULL,
+    date_creation TIMESTAMP DEFAULT current_timestamp,
+    FOREIGN KEY (fk_message) REFERENCES message (id_message),
+    FOREIGN KEY (fk_utilisateur) REFERENCES utilisateur (id_utilisateur),
+    UNIQUE (fk_message, fk_utilisateur, emoji_unicode) -- Garantit une seule réaction par emoji par utilisateur
+);
+
+-- Index pour améliorer les performances des recherches
+CREATE INDEX idx_reaction_message ON reaction(fk_message);
+CREATE INDEX idx_reaction_utilisateur ON reaction(fk_utilisateur);
+
+COMMENT ON TABLE reaction IS 'Stockage optimisé des réactions emoji sur les messages';
+COMMENT ON COLUMN reaction.emoji_unicode IS 'Tableau de codes points Unicode pour supporter les emojis composés';
+
