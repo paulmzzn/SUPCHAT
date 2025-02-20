@@ -299,23 +299,22 @@
             statusDiv.style.color = 'red';
         });
 
-        // Suppression du chargement initial général des messages
+        // Modifier la gestion des messages WebSocket
         socket.on('message', (message) => {
             console.log('Message reçu du serveur:', message);
             
-            // Vérification plus stricte du format du message
             if (!message) {
                 console.error('Message reçu est null ou undefined');
                 return;
             }
 
-            // S'assurer que le message a au moins un contenu ou un username
             if (!message.content && !message.username) {
                 console.error('Message invalide - données manquantes:', message);
                 return;
             }
 
             const formattedMessage = {
+                id: message.id_message || message.id, // Assurez-vous d'avoir l'ID du message
                 content: message.content || '(contenu manquant)',
                 username: message.username || 'Utilisateur inconnu',
                 created_at: message.created_at || new Date().toISOString()
@@ -378,15 +377,22 @@
                 });
         }
 
-        // Modification de la fonction addMessage pour plus de robustesse
+        // Modifier la fonction addMessage pour gérer correctement l'ID
         function addMessage(message) {
             try {
                 console.log('Ajout du message à l\'interface:', message);
                 const messageElement = document.createElement('div');
                 messageElement.className = 'message';
-                messageElement.setAttribute('data-message-id', message.id);
                 
-                // Gestion plus sûre de la date
+                // S'assurer que l'ID est correctement défini
+                const messageId = message.id || message.id_message;
+                if (!messageId) {
+                    console.error('Message sans ID détecté:', message);
+                    return;
+                }
+                
+                messageElement.setAttribute('data-message-id', messageId);
+                
                 let timeStr = 'heure inconnue';
                 if (message.created_at) {
                     try {
@@ -398,18 +404,18 @@
                 
                 messageElement.innerHTML = `
                     <div>[${timeStr}] ${message.username}: ${message.content}</div>
-                    <div class="reactions" id="reactions-${message.id}"></div>
+                    <div class="reactions" id="reactions-${messageId}"></div>
                     <div class="input-group">
                         <input type="text" 
-                               id="emoji-input-${message.id}" 
+                               id="emoji-input-${messageId}" 
                                placeholder="Entrez un emoji" 
                                style="width: 100px;">
-                        <button onclick="reactToMessage('${message.id}')">Réagir</button>
+                        <button onclick="reactToMessage('${messageId}')">Réagir</button>
                     </div>
                 `;
                 
                 messagesDiv.appendChild(messageElement);
-                loadReactions(message.id);
+                loadReactions(messageId);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             } catch (error) {
                 console.error('Erreur lors de l\'ajout du message:', error);
