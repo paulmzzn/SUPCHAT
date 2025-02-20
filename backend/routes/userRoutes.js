@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode } from '../controllers/userController.js';
+import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode, validateUser, requestPasswordReset, resetPassword } from '../controllers/userController.js';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 
@@ -13,6 +13,10 @@ router.put('/update/:id', updateUser);
 router.delete('/delete/:id', deleteUser);
 router.post('/send-invitation', sendInvitation);
 router.post('/validate-code', validateCode); // Add validate code route
+router.get('/validate', validateUser);
+
+router.post('/request-reset', requestPasswordReset);
+router.post('/reset-password', resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {

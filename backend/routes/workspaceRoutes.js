@@ -4,7 +4,8 @@ import {
   getWorkspaceById,
   getAllWorkspaces,
   updateWorkspace,
-  deleteWorkspace
+  deleteWorkspace,
+  sendWorkspaceInvitation
 } from '../controllers/workspaceController.js';
 
 const router = express.Router();
@@ -14,5 +15,6 @@ router.get('/:id', getWorkspaceById);
 router.get('/', getAllWorkspaces);
 router.put('/:id', updateWorkspace);
 router.delete('/:id', deleteWorkspace);
+router.post('/:workspaceId/invite', sendWorkspaceInvitation);
 
 export default router;

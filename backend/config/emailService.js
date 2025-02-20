@@ -1,32 +1,74 @@
-import Mailjet from 'node-mailjet';
+import nodemailer from 'nodemailer';
 
-const mailjetClient = Mailjet.apiConnect('869c3107124e8fe05a924c67754b44ae', '0849821df2342b4415f277ceb3912daa');
+const transporter = nodemailer.createTransport({
+  host: 'mail86.lwspanel.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: 'noreply@supchat.fr',
+    pass: 'Supchat!2025',
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
 
-const sendInvitation = async (toEmail, chatRoomName, senderName) => {
-    try {
-        const request = await mailjetClient.post("send", { version: "v3.1" }).request({
-            Messages: [
-                {
-                    From: {
-                        Email: "no-reply@supchat.com", // Updated email to a generic one
-                        Name: "SUPCHAT", // Updated name
-                    },
-                    To: [
-                        {
-                            Email: toEmail,
-                            Name: "Recipient",
-                        },
-                    ],
-                    Subject: `Invitation to join ${chatRoomName}`,
-                    TextPart: `${senderName} has invited you to join the chat room: ${chatRoomName}.`,
-                    HTMLPart: `<p>${senderName} has invited you to join the chat room: <strong>${chatRoomName}</strong>.</p><p><a href="https://your-chat-app.com/rooms/${chatRoomName}">Join now</a></p>`,
-                },
-            ],
-        });
-        console.log('Email sent:', request.body);
-    } catch (error) {
-        console.error(`Error sending email: ${error.message}`);
-    }
+const sendInvitation = async (toEmail, workspaceId, workspaceName, senderName = 'Un membre de SUPCHAT') => {
+  const inviteLink = `http://localhost:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(toEmail)}`;
+  
+  const mailOptions = {
+    from: '"SUPCHAT" <noreply@supchat.fr>',
+    to: toEmail,
+    subject: `${senderName} vous invite à rejoindre ${workspaceName} sur SUPCHAT`,
+    text: `${senderName} vous invite à rejoindre l'espace de travail ${workspaceName} sur SUPCHAT. Cliquez ici pour rejoindre : ${inviteLink}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://supchat.fr/logo.png" alt="SUPCHAT Logo" style="width: 150px;">
+        </div>
+        
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <h1 style="color: #333; text-align: center; margin-bottom: 20px;">Invitation à rejoindre un espace de travail</h1>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.5; text-align: center;">
+            ${senderName ? `<strong>${senderName}</strong>` : 'Un membre de SUPCHAT'} vous invite à rejoindre l'espace de travail :
+          </p>
+          
+          <div style="background-color: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 5px;">
+            <span style="font-size: 24px; font-weight: bold; color: #333;">${workspaceName}</span>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${inviteLink}" 
+               style="background-color: #4CAF50; color: white; padding: 12px 30px; 
+                      text-decoration: none; border-radius: 5px; font-weight: bold; 
+                      display: inline-block;">
+              Rejoindre l'espace de travail
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; text-align: center; 
+                    margin-top: 20px; padding: 10px; background-color: #fff4e5; border-radius: 5px;">
+            ⚡️ Ce lien d'invitation expirera dans 24 heures
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+          <p>Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet email.</p>
+          <p>&copy; 2024 SUPCHAT. Tous droits réservés.</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Invitation email sent successfully to:', toEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending invitation email:', error.stack);
+    throw error;
+  }
 };
 
 export default sendInvitation;

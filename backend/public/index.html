@@ -1,0 +1,361 @@
+<!-- //!\\ This file is for WebSocket messages testing purposes only //!\\ -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat</title>
+    <style>
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+        .message {
+            margin-bottom: 5px;
+        }
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .reactions {
+            margin-left: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .reaction-button {
+            position: relative;
+            margin: 2px;
+            padding: 2px 5px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .emoji-picker {
+            margin-top: 5px;
+            display: none;
+        }
+        .reaction-users {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        .reaction-button:hover .reaction-users {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="status"></div>
+    <div class="input-group">
+        <input type="text" id="userId" placeholder="User ID (UUID)" />
+        <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
+        <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
+        <button onclick="joinCanal()">Join Canal</button>
+    </div>
+    <div id="messages"></div>
+    <div class="input-group">
+        <input type="text" id="messageInput" placeholder="Type your message" />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    <div class="input-group">
+        <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
+        <button onclick="addReaction()">Ajouter Réaction</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
+
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        let currentCanal = null;
+        let currentWorkspace = null;
+
+        // Gestion des événements de connexion
+        socket.on('connect', () => {
+            console.log('Connecté au serveur');
+            statusDiv.textContent = 'Connecté';
+            statusDiv.style.color = 'green';
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Déconnecté du serveur');
+            statusDiv.textContent = 'Déconnecté';
+            statusDiv.style.color = 'red';
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Erreur de connexion:', error);
+            statusDiv.textContent = 'Erreur de connexion';
+            statusDiv.style.color = 'red';
+        });
+
+        // Suppression du chargement initial général des messages
+        socket.on('message', (message) => {
+            console.log('Message reçu du serveur:', message);
+            
+            // Vérification plus stricte du format du message
+            if (!message) {
+                console.error('Message reçu est null ou undefined');
+                return;
+            }
+
+            // S'assurer que le message a au moins un contenu ou un username
+            if (!message.content && !message.username) {
+                console.error('Message invalide - données manquantes:', message);
+                return;
+            }
+
+            const formattedMessage = {
+                content: message.content || '(contenu manquant)',
+                username: message.username || 'Utilisateur inconnu',
+                created_at: message.created_at || new Date().toISOString()
+            };
+
+            console.log('Message formaté pour affichage:', formattedMessage);
+            addMessage(formattedMessage);
+        });
+
+        function joinCanal() {
+            const canalId = document.getElementById('canalId').value;
+            const workspaceId = document.getElementById('workspaceId').value;
+            
+            if (canalId && workspaceId) {
+                console.log('Tentative de rejoindre le canal:', canalId, 'dans le workspace:', workspaceId);
+                currentCanal = canalId;
+                currentWorkspace = workspaceId;
+                socket.emit('joinCanal', { canalId, workspaceId });
+                loadMessages(workspaceId, canalId);
+                statusDiv.textContent = `Canal ${canalId} rejoint`;
+                statusDiv.style.color = 'green';
+            } else {
+                alert('Veuillez entrer les IDs de workspace et de canal');
+            }
+        }
+
+        socket.on('canalJoined', (data) => {
+            console.log('Canal rejoint:', data);
+            statusDiv.textContent = data.message;
+            statusDiv.style.color = 'green';
+        });
+
+        socket.on('error', (error) => {
+            console.error('Erreur Socket:', error);
+            statusDiv.textContent = error.message;
+            statusDiv.style.color = 'red';
+        });
+
+        function loadMessages(workspaceId, canalId) {
+            console.log('Chargement des messages pour le canal:', canalId, 'workspace:', workspaceId);
+            fetch(`/api/messages/workspace/${workspaceId}/canal/${canalId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(messages => {
+                    console.log('Messages reçus:', messages);
+                    messagesDiv.innerHTML = '';
+                    if (messages && messages.length > 0) {
+                        messages.forEach(addMessage);
+                    } else {
+                        messagesDiv.innerHTML = '<div>Aucun message dans ce canal</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur détaillée:', error);
+                    messagesDiv.innerHTML = '<div class="error">Erreur lors du chargement des messages</div>';
+                });
+        }
+
+        // Modification de la fonction addMessage pour plus de robustesse
+        function addMessage(message) {
+            try {
+                console.log('Ajout du message à l\'interface:', message);
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message';
+                messageElement.setAttribute('data-message-id', message.id);
+                
+                // Gestion plus sûre de la date
+                let timeStr = 'heure inconnue';
+                if (message.created_at) {
+                    try {
+                        timeStr = new Date(message.created_at).toLocaleTimeString();
+                    } catch (e) {
+                        console.error('Erreur parsing date:', e);
+                    }
+                }
+                
+                messageElement.innerHTML = `
+                    <div>[${timeStr}] ${message.username}: ${message.content}</div>
+                    <div class="reactions" id="reactions-${message.id}"></div>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="emoji-input-${message.id}" 
+                               placeholder="Entrez un emoji" 
+                               style="width: 100px;">
+                        <button onclick="reactToMessage('${message.id}')">Réagir</button>
+                    </div>
+                `;
+                
+                messagesDiv.appendChild(messageElement);
+                loadReactions(message.id);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } catch (error) {
+                console.error('Erreur lors de l\'ajout du message:', error);
+            }
+        }
+
+        // Fonction pour charger les réactions d'un message
+        async function loadReactions(messageId) {
+            try {
+                const response = await fetch(`/api/messages/${messageId}/reactions`);
+                const reactions = await response.json();
+                displayReactions(messageId, reactions);
+            } catch (error) {
+                console.error('Erreur lors du chargement des réactions:', error);
+            }
+        }
+
+        // Fonction pour afficher les réactions
+        function displayReactions(messageId, reactions) {
+            const reactionsDiv = document.getElementById(`reactions-${messageId}`);
+            if (!reactionsDiv) return;
+
+            const reactionsByEmoji = reactions.reduce((acc, reaction) => {
+                const emoji = reaction.emoji_unicode[0];
+                if (!acc[emoji]) {
+                    acc[emoji] = {
+                        count: 0,
+                        users: []
+                    };
+                }
+                acc[emoji].count++;
+                acc[emoji].users.push(reaction.username);
+                return acc;
+            }, {});
+
+            reactionsDiv.innerHTML = Object.entries(reactionsByEmoji)
+                .map(([emoji, data]) => `
+                    <span class="reaction-button" onclick="toggleReaction('${messageId}', '${emoji}')">
+                        ${emoji} ${data.count}
+                        <div class="reaction-users">
+                            ${data.users.join(', ')}
+                        </div>
+                    </span>
+                `)
+                .join(' ');
+        }
+
+        // Ajouter l'écoute des mises à jour de réaction
+        socket.on('reactionUpdate', (data) => {
+            console.log('Mise à jour des réactions pour le message:', data.messageId);
+            loadReactions(data.messageId);
+        });
+
+        // Fonction pour ajouter/supprimer une réaction
+        async function toggleReaction(messageId, emoji) {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Veuillez entrer un ID utilisateur');
+                return;
+            }
+
+            try {
+                const reactions = await (await fetch(`/api/messages/${messageId}/reactions`)).json();
+                const hasReacted = reactions.some(r => 
+                    r.fk_utilisateur === userId && r.emoji_unicode[0] === emoji
+                );
+
+                const response = await fetch(`/api/messages/${messageId}/reactions`, {
+                    method: hasReacted ? 'DELETE' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, emoji })
+                });
+
+                if (response.ok) {
+                    // Émettre l'événement de réaction via socket
+                    socket.emit('reaction', { messageId, emoji, userId });
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Nouvelle fonction pour réagir à un message spécifique
+        function reactToMessage(messageId) {
+            const emojiInput = document.getElementById(`emoji-input-${messageId}`);
+            const emoji = emojiInput.value.trim();
+            if (emoji) {
+                toggleReaction(messageId, emoji);
+                emojiInput.value = '';
+            } else {
+                alert('Veuillez entrer un emoji');
+            }
+        }
+
+        // Fonction pour ajouter une nouvelle réaction
+        function addReaction() {
+            const emoji = document.getElementById('emojiInput').value;
+            const messageElement = messagesDiv.lastElementChild;
+            if (messageElement && emoji) {
+                const messageId = messageElement.getAttribute('data-message-id');
+                toggleReaction(messageId, emoji);
+                document.getElementById('emojiInput').value = '';
+            } else {
+                alert('Veuillez sélectionner un message et entrer un emoji');
+            }
+        }
+
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            const userId = document.getElementById('userId').value;
+            
+            if (content && currentCanal && currentWorkspace && userId) {
+                const messageData = {
+                    user_id: userId,
+                    canal_id: currentCanal,
+                    workspace_id: currentWorkspace,
+                    content: content
+                };
+                console.log('Envoi du message:', messageData);
+                socket.emit('message', messageData);
+                messageInput.value = '';
+            } else {
+                alert('Veuillez remplir tous les champs et rejoindre un canal');
+            }
+        }
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
