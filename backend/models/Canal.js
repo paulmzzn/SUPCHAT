@@ -12,6 +12,16 @@ class Canal {
     return rows[0];
   }
 
+  static async findByWorkspaceId(fk_workspace) {
+    const query = `
+      SELECT * FROM canal
+      WHERE fk_workspace = $1;
+    `;
+    const values = [fk_workspace];
+    const { rows } = await pool.query(query, values);
+    return rows;
+  }
+
   static async findById(id_canal) {
     const query = `
       SELECT * FROM canal
