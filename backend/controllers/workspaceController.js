@@ -1,6 +1,7 @@
+import pool from '../config/dbConnection.js';
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
-import sendInvitation from "../config/emailService.js"; // Ajout de l'import
+import sendInvitation from "../config/emailService.js";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -101,5 +102,72 @@ export const sendWorkspaceInvitation = async (req, res) => {
       message: "Erreur lors de l'envoi de l'invitation",
       error: error.message,
     });
+  }
+};
+
+export const checkWorkspaceMember = async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    console.log('Checking membership for:', { workspaceId, userId }); // Debug log
+
+    const result = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+    
+    const isMember = result.rows.length > 0;
+    console.log('Membership result:', { isMember, count: result.rows.length }); // Debug log
+    
+    res.status(200).json({ isMember });
+  } catch (error) {
+    console.error('Erreur checkWorkspaceMember:', error);
+    res.status(500).json({ error: error.message, isMember: false });
+  }
+};
+
+export const getWorkspaceMembers = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const result = await pool.query(
+      `SELECT u.id_utilisateur, u.nom, u.fk_statut as status, 
+              r.nom_role as role
+       FROM utilisateur u
+       JOIN membre_workspace mw ON u.id_utilisateur = mw.fk_utilisateur
+       JOIN role r ON mw.fk_role = r.id_role
+       WHERE mw.fk_workspace = $1`,
+      [workspaceId]
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Erreur getWorkspaceMembers:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const joinWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { userId } = req.body;
+
+    // Vérifier si l'utilisateur n'est pas déjà membre
+    const checkMember = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+
+    if (checkMember.rows.length > 0) {
+      return res.status(400).json({ message: 'Déjà membre de ce workspace' });
+    }
+    
+    // Ajouter l'utilisateur comme membre
+    await pool.query(
+      'INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, 3)',
+      [userId, workspaceId]
+    );
+    
+    res.status(200).json({ message: 'Joined workspace successfully' });
+  } catch (error) {
+    console.error('Erreur joinWorkspace:', error);
+    res.status(500).json({ error: error.message });
   }
 };

@@ -153,6 +153,104 @@
         #messages {
             height: calc(100vh - 200px);
         }
+
+        .right-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            background: #f5f5f5;
+            border-left: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .user-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-role {
+            font-size: 0.8em;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: auto;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #4CAF50;
+        }
+
+        .status-offline {
+            background: #ccc;
+        }
+
+        .confirmation-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .popup-buttons {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .popup-buttons button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .accept-button {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .decline-button {
+            background: #f44336;
+            color: white;
+        }
+
+        /* Ajuster le contenu principal pour la sidebar droite */
+        .main-content {
+            margin-right: 270px;
+        }
     </style>
 </head>
 <body>
@@ -185,6 +283,20 @@
             </div>
 
             <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
+        </div>
+    </div>
+
+    <div class="right-sidebar">
+        <h2>Membres du workspace</h2>
+        <div id="users-list" class="user-list"></div>
+    </div>
+
+    <div id="join-popup" class="confirmation-popup">
+        <h3>Rejoindre le workspace?</h3>
+        <p>Voulez-vous rejoindre ce workspace?</p>
+        <div class="popup-buttons">
+            <button class="accept-button" onclick="acceptJoinWorkspace()">Accepter</button>
+            <button class="decline-button" onclick="declineJoinWorkspace()">Refuser</button>
         </div>
     </div>
 
@@ -228,32 +340,47 @@
         }
 
         // Ajouter une nouvelle fonction pour gérer la sélection du workspace
-        function selectWorkspace(workspaceId) {
-            // Masquer tous les canaux de tous les workspaces
-            document.querySelectorAll('.channels-list').forEach(list => {
-                list.style.display = 'none';
-            });
+        async function selectWorkspace(workspaceId) {
+            try {
+                const isMember = await checkWorkspaceMembership(workspaceId);
+                console.log('Membership check result:', { workspaceId, isMember }); // Debug log
+                
+                if (!isMember) {
+                    pendingWorkspaceId = workspaceId;
+                    document.getElementById('join-popup').style.display = 'block';
+                    return;
+                }
 
-            // Retirer la classe active de tous les workspaces
-            document.querySelectorAll('.workspace-header').forEach(header => {
-                header.classList.remove('active');
-            });
-            
-            // Ajouter la classe active au workspace sélectionné
-            const selectedWorkspace = document.getElementById(`workspace-${workspaceId}`);
-            selectedWorkspace.classList.add('active');
-            
-            // Cacher l'écran de bienvenue et afficher l'interface de chat
-            document.getElementById('welcome-screen').style.display = 'none';
-            document.getElementById('chat-interface').style.display = 'block';
-            
-            // Charger et afficher uniquement les canaux pour ce workspace
-            loadChannels(workspaceId);
+                // Masquer tous les canaux et retirer les sélections actives
+                document.querySelectorAll('.channels-list').forEach(list => {
+                    list.style.display = 'none';
+                });
 
-            // Afficher les canaux du workspace sélectionné
-            const channelsList = document.getElementById(`channels-${workspaceId}`);
-            if (channelsList) {
-                channelsList.style.display = 'block';
+                document.querySelectorAll('.workspace-header').forEach(header => {
+                    header.classList.remove('active');
+                });
+                
+                const selectedWorkspace = document.getElementById(`workspace-${workspaceId}`);
+                if (selectedWorkspace) {
+                    selectedWorkspace.classList.add('active');
+                }
+                
+                document.getElementById('welcome-screen').style.display = 'none';
+                document.getElementById('chat-interface').style.display = 'block';
+                
+                // Charger les canaux seulement si on est membre
+                await loadChannels(workspaceId);
+                await loadWorkspaceUsers(workspaceId);
+
+                const channelsList = document.getElementById(`channels-${workspaceId}`);
+                if (channelsList) {
+                    channelsList.style.display = 'block';
+                }
+
+                // Afficher la sidebar droite
+                document.querySelector('.right-sidebar').style.display = 'block';
+            } catch (error) {
+                console.error('Erreur lors de la sélection du workspace:', error);
             }
         }
 
@@ -672,6 +799,75 @@
                     console.error('Erreur:', error);
                     alert('Erreur lors de l\'envoi de l\'invitation');
                 });
+            }
+        }
+
+        let pendingWorkspaceId = null;
+
+        // Ajouter cette fonction pour vérifier l'appartenance à un workspace
+        async function checkWorkspaceMembership(workspaceId) {
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`);
+                const data = await response.json();
+                return data.isMember; // Maintenant on utilise la valeur booléenne retournée par l'API
+            } catch (error) {
+                console.error('Erreur lors de la vérification du membership:', error);
+                return false;
+            }
+        }
+
+        // Ajouter les fonctions pour gérer la popup
+        async function acceptJoinWorkspace() {
+            if (!pendingWorkspaceId) return;
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${pendingWorkspaceId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (response.ok) {
+                    document.getElementById('join-popup').style.display = 'none';
+                    selectWorkspace(pendingWorkspaceId);
+                } else {
+                    alert('Erreur lors de l\'adhésion au workspace');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'adhésion au workspace');
+            }
+
+            pendingWorkspaceId = null;
+        }
+
+        function declineJoinWorkspace() {
+            document.getElementById('join-popup').style.display = 'none';
+            pendingWorkspaceId = null;
+        }
+
+        // Modifier la fonction loadWorkspaceUsers
+        async function loadWorkspaceUsers(workspaceId) {
+            try {
+                const response = await fetch(`/api/workspaces/${workspaceId}/members`);
+                const users = await response.json();
+                const usersList = document.getElementById('users-list');
+                
+                usersList.innerHTML = users.map(user => `
+                    <div class="user-item">
+                        <div class="user-info">
+                            <span class="user-status ${user.status === 1 ? 'status-online' : 'status-offline'}"></span>
+                            <span>${user.nom}</span>
+                        </div>
+                        <span class="user-role">${user.role}</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
             }
         }
     </script>
