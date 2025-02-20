@@ -460,13 +460,27 @@
                 const response = await fetch('/api/workspaces');
                 const workspaces = await response.json();
                 const workspacesList = document.getElementById('workspaces-list');
+                const userId = document.getElementById('userId').value;
                 
                 if (!workspaces || workspaces.length === 0) {
                     workspacesList.innerHTML = '<div>Aucun workspace disponible</div>';
                     return;
                 }
                 
-                workspacesList.innerHTML = workspaces.map(workspace => `
+                // Créer un tableau de promesses pour vérifier le membership de chaque workspace
+                const membershipChecks = workspaces.map(workspace => 
+                    fetch(`/api/workspaces/${workspace.id_workspace}/members/${userId}`)
+                        .then(res => res.json())
+                        .then(data => ({
+                            ...workspace,
+                            isMember: data.isMember
+                        }))
+                );
+                
+                // Attendre que toutes les vérifications soient terminées
+                const workspacesWithMembership = await Promise.all(membershipChecks);
+                
+                workspacesList.innerHTML = workspacesWithMembership.map(workspace => `
                     <div class="workspace-item">
                         <div class="workspace-header" id="workspace-${workspace.id_workspace}" onclick="selectWorkspace('${workspace.id_workspace}')">
                             <div class="workspace-title-container">
@@ -475,18 +489,16 @@
                                 </div>
                                 ${workspace.is_private ? '<span class="workspace-privacy">🔒</span>' : ''}
                             </div>
-                            <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}'); event.stopPropagation();">
-                                Inviter
-                            </button>
+                            ${workspace.isMember ? `
+                                <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}'); event.stopPropagation();">
+                                    Inviter
+                                </button>
+                            ` : ''}
                         </div>
                         <div class="channels-list" id="channels-${workspace.id_workspace}" style="display: none;"></div>
                     </div>
                 `).join('');
                 
-                // Suppression du chargement automatique des canaux
-                // workspaces.forEach(workspace => {
-                //     loadChannels(workspace.id_workspace);
-                // });
             } catch (error) {
                 console.error('Error loading workspaces:', error);
                 document.getElementById('workspaces-list').innerHTML = 
