@@ -147,7 +147,7 @@ export const getWorkspaceMembers = async (req, res) => {
 export const joinWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { userId } = req.body;
+    const { userId, role = 3 } = req.body; // role par défaut = 3 (member)
 
     // Vérifier si l'utilisateur n'est pas déjà membre
     const checkMember = await pool.query(
@@ -159,15 +159,53 @@ export const joinWorkspace = async (req, res) => {
       return res.status(400).json({ message: 'Déjà membre de ce workspace' });
     }
     
-    // Ajouter l'utilisateur comme membre
+    // Ajouter l'utilisateur comme membre avec le rôle spécifié
     await pool.query(
-      'INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, 3)',
-      [userId, workspaceId]
+      'INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)',
+      [userId, workspaceId, role]
     );
     
     res.status(200).json({ message: 'Joined workspace successfully' });
   } catch (error) {
     console.error('Erreur joinWorkspace:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const removeMember = async (req, res) => {
+  try {
+    const { workspaceId, userId: memberToRemove } = req.params;
+    const { userId: removerId } = req.body; // ID de l'utilisateur qui fait la demande
+
+    // Vérifier si l'utilisateur qui fait la demande est owner
+    const ownerCheck = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1',
+      [workspaceId, removerId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ message: 'Seul le propriétaire peut retirer des membres' });
+    }
+
+    // Vérifier que l'utilisateur à supprimer n'est pas owner
+    const memberCheck = await pool.query(
+      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, memberToRemove]
+    );
+
+    if (memberCheck.rows[0]?.fk_role === 1) {
+      return res.status(403).json({ message: 'Impossible de retirer le propriétaire du workspace' });
+    }
+
+    // Supprimer le membre
+    await pool.query(
+      'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, memberToRemove]
+    );
+
+    res.status(200).json({ message: 'Membre retiré avec succès' });
+  } catch (error) {
+    console.error('Erreur removeMember:', error);
     res.status(500).json({ error: error.message });
   }
 };
