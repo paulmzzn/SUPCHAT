@@ -69,7 +69,8 @@
             background: #f5f5f5;
             border-right: 1px solid #ddd;
             padding: 20px;
-            overflow-y: auto;
+            display: flex;           /* Ajout de flexbox */
+            flex-direction: column;  /* Organisation verticale */
         }
 
         .main-content {
@@ -251,12 +252,83 @@
         .main-content {
             margin-right: 270px;
         }
+
+        .add-workspace-button {
+            position: sticky;
+            bottom: 0;
+            width: 100%;           /* Largeur totale */
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin: 0 auto;        /* Centrage horizontal */
+        }
+
+        .add-workspace-button:hover {
+            background-color: #45a049;
+        }
+
+        .add-workspace-button i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        #workspaces-list {
+            flex-grow: 1;           /* Prend tout l'espace disponible */
+            overflow-y: auto;       /* Permet le défilement si nécessaire */
+            margin-bottom: 20px;    /* Espace avant le bouton */
+        }
+
+        .remove-member-button {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            display: none; /* Caché par défaut */
+        }
+
+        .remove-member-button:hover {
+            background: #d32f2f;
+        }
+
+        .user-item.can-remove .remove-member-button {
+            display: inline-block;
+        }
+
+        .logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .logout-button:hover {
+            background: #d32f2f;
+        }
     </style>
 </head>
 <body>
+    <button onclick="logout()" class="logout-button">Logout</button>
     <div class="sidebar">
         <h2>Workspaces</h2>
         <div id="workspaces-list"></div>
+        <button class="add-workspace-button" onclick="createNewWorkspace()">
+            + Créer un workspace
+        </button>
     </div>
     
     <div class="main-content">
@@ -856,18 +928,110 @@
                 const response = await fetch(`/api/workspaces/${workspaceId}/members`);
                 const users = await response.json();
                 const usersList = document.getElementById('users-list');
+                const currentUserId = document.getElementById('userId').value;
+                
+                // Vérifier si l'utilisateur actuel est owner
+                const isOwner = users.some(user => 
+                    user.id_utilisateur === currentUserId && user.role === 'owner'
+                );
                 
                 usersList.innerHTML = users.map(user => `
-                    <div class="user-item">
+                    <div class="user-item ${isOwner && user.role !== 'owner' ? 'can-remove' : ''}">
                         <div class="user-info">
                             <span class="user-status ${user.status === 1 ? 'status-online' : 'status-offline'}"></span>
                             <span>${user.nom}</span>
                         </div>
-                        <span class="user-role">${user.role}</span>
+                        <div style="display: flex; align-items: center;">
+                            <span class="user-role">${user.role}</span>
+                            ${isOwner && user.role !== 'owner' ? `
+                                <button 
+                                    class="remove-member-button" 
+                                    onclick="removeMember('${workspaceId}', '${user.id_utilisateur}')"
+                                >
+                                    ×
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 `).join('');
             } catch (error) {
                 console.error('Erreur lors du chargement des utilisateurs:', error);
+            }
+        }
+
+        async function removeMember(workspaceId, memberToRemove) {
+            if (!confirm('Êtes-vous sûr de vouloir retirer ce membre ?')) {
+                return;
+            }
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${workspaceId}/members/${memberToRemove}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
+
+                // Recharger la liste des membres
+                await loadWorkspaceUsers(workspaceId);
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert(error.message || 'Erreur lors de la suppression du membre');
+            }
+        }
+
+        // Ajouter la fonction pour créer un nouveau workspace
+        async function createNewWorkspace() {
+            const workspaceName = prompt("Nom du nouveau workspace :");
+            if (!workspaceName) return;
+            
+            const userId = document.getElementById('userId').value;
+            
+            try {
+                // Créer le workspace
+                const createResponse = await fetch('/api/workspaces', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nom: workspaceName,
+                        is_private: false
+                    })
+                });
+
+                if (!createResponse.ok) throw new Error('Erreur lors de la création du workspace');
+                
+                const newWorkspace = await createResponse.json();
+
+                // Ajouter le créateur comme owner
+                await fetch(`/api/workspaces/${newWorkspace.id_workspace}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        role: 1  // 1 = owner
+                    })
+                });
+
+                // Recharger la liste des workspaces
+                loadWorkspaces();
+                
+                // Sélectionner automatiquement le nouveau workspace
+                setTimeout(() => selectWorkspace(newWorkspace.id_workspace), 100);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création du workspace');
             }
         }
     </script>
