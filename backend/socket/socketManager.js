@@ -43,6 +43,15 @@ const socketManager = (io) => {
                     content 
                 });
 
+                // Émettre le message avec l'ID généré par la base de données
+                io.to(messageData.canal_id).emit('message', {
+                    id_message: savedMessage.id_message, // Assurez-vous d'inclure l'ID
+                    content: savedMessage.content,
+                    username: savedMessage.username,
+                    created_at: savedMessage.created_at
+                    // ... autres données du message ...
+                });
+
                 // Récupérer les détails complets du message avec le nom d'utilisateur
                 const messageWithDetails = await MessageModel.getMessageById(savedMessage.id_message);
                 
