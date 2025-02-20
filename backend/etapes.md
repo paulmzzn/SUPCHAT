@@ -50,7 +50,7 @@
 
 9. **Conformité RGPD** ⚖️
 - Implémenter l'export des données
-- Gérer la suppression des comptes
+- Gérer la suppression des comptes (en cascade)
 - Ajouter les mentions légales
 - Sécuriser les données personnelles
 
