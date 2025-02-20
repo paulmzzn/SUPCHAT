@@ -88,6 +88,11 @@
             padding: 8px;
             background: #e0e0e0;
             border-radius: 4px;
+            border: 2px solid transparent; /* Ajout pour la bordure */
+        }
+
+        .workspace-header.active {
+            border-color: #4CAF50; /* Bordure verte pour le workspace actif */
         }
 
         .workspace-title {
@@ -129,6 +134,21 @@
             color: white;
         }
 
+        .welcome-message {
+            text-align: center;
+            margin-top: 20vh;
+            color: #666;
+        }
+
+        .welcome-message h1 {
+            font-size: 2em;
+            margin-bottom: 1em;
+        }
+
+        .welcome-message p {
+            font-size: 1.2em;
+        }
+
         /* Adjust existing styles */
         #messages {
             height: calc(100vh - 200px);
@@ -142,32 +162,37 @@
     </div>
     
     <div class="main-content">
-        <div id="status"></div>
-        <div class="input-group">
-            <input type="text" id="userId" placeholder="User ID (UUID)" />
-            <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
-            <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
-            <button onclick="joinCanal()">Join Canal</button>
+        <div id="welcome-screen" class="welcome-message">
+            <h1>Bienvenue sur SUPCHAT</h1>
+            <p>Veuillez sélectionner un workspace pour commencer</p>
         </div>
-        <div id="messages"></div>
-        <div class="input-group">
-            <input type="text" id="messageInput" placeholder="Type your message" />
-            <button onclick="sendMessage()">Send</button>
-        </div>
-        <div class="input-group">
-            <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
-            <button onclick="addReaction()">Ajouter Réaction</button>
-        </div>
+        <div id="chat-interface" style="display: none;">
+            <div id="status"></div>
+            <div class="input-group">
+                <input type="text" id="userId" placeholder="User ID (UUID)" />
+                <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
+                <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
+                <button onclick="joinCanal()">Join Canal</button>
+            </div>
+            <div id="messages"></div>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Type your message" />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
+                <button onclick="addReaction()">Ajouter Réaction</button>
+            </div>
 
-        <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
+            <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Add these new functions at the beginning of your script section
+        // Modifier la fonction loadWorkspaces pour cacher les canaux par défaut
         async function loadWorkspaces() {
             try {
-                // Changed route to match the backend route for all workspaces
                 const response = await fetch('/api/workspaces');
                 const workspaces = await response.json();
                 const workspacesList = document.getElementById('workspaces-list');
@@ -179,26 +204,56 @@
                 
                 workspacesList.innerHTML = workspaces.map(workspace => `
                     <div class="workspace-item">
-                        <div class="workspace-header">
-                            <div class="workspace-title" onclick="toggleWorkspace('${workspace.id_workspace}')">
+                        <div class="workspace-header" id="workspace-${workspace.id_workspace}" onclick="selectWorkspace('${workspace.id_workspace}')">
+                            <div class="workspace-title">
                                 📁 ${workspace.nom}
                             </div>
-                            <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}')">
+                            <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}'); event.stopPropagation();">
                                 Inviter
                             </button>
                         </div>
-                        <div class="channels-list" id="channels-${workspace.id_workspace}"></div>
+                        <div class="channels-list" id="channels-${workspace.id_workspace}" style="display: none;"></div>
                     </div>
                 `).join('');
-
-                // Load channels for each workspace
-                workspaces.forEach(workspace => {
-                    loadChannels(workspace.id_workspace);
-                });
+                
+                // Suppression du chargement automatique des canaux
+                // workspaces.forEach(workspace => {
+                //     loadChannels(workspace.id_workspace);
+                // });
             } catch (error) {
                 console.error('Error loading workspaces:', error);
                 document.getElementById('workspaces-list').innerHTML = 
                     '<div class="error">Erreur lors du chargement des workspaces</div>';
+            }
+        }
+
+        // Ajouter une nouvelle fonction pour gérer la sélection du workspace
+        function selectWorkspace(workspaceId) {
+            // Masquer tous les canaux de tous les workspaces
+            document.querySelectorAll('.channels-list').forEach(list => {
+                list.style.display = 'none';
+            });
+
+            // Retirer la classe active de tous les workspaces
+            document.querySelectorAll('.workspace-header').forEach(header => {
+                header.classList.remove('active');
+            });
+            
+            // Ajouter la classe active au workspace sélectionné
+            const selectedWorkspace = document.getElementById(`workspace-${workspaceId}`);
+            selectedWorkspace.classList.add('active');
+            
+            // Cacher l'écran de bienvenue et afficher l'interface de chat
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('chat-interface').style.display = 'block';
+            
+            // Charger et afficher uniquement les canaux pour ce workspace
+            loadChannels(workspaceId);
+
+            // Afficher les canaux du workspace sélectionné
+            const channelsList = document.getElementById(`channels-${workspaceId}`);
+            if (channelsList) {
+                channelsList.style.display = 'block';
             }
         }
 
@@ -242,6 +297,7 @@
             }
         }
 
+        // Modifier la fonction toggleWorkspace
         function toggleWorkspace(workspaceId) {
             const channelsList = document.getElementById(`channels-${workspaceId}`);
             if (channelsList) {
