@@ -175,9 +175,18 @@ export const joinWorkspace = async (req, res) => {
 export const removeMember = async (req, res) => {
   try {
     const { workspaceId, userId: memberToRemove } = req.params;
-    const { userId: removerId } = req.body; // ID de l'utilisateur qui fait la demande
+    const { userId: removerId } = req.body;
 
-    // Vérifier si l'utilisateur qui fait la demande est owner
+    // Si l'utilisateur essaie de se retirer lui-même, on autorise
+    if (removerId === memberToRemove) {
+      await pool.query(
+        'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+        [workspaceId, memberToRemove]
+      );
+      return res.status(200).json({ message: 'Vous avez quitté le workspace' });
+    }
+
+    // Sinon, vérifier si l'utilisateur qui fait la demande est owner
     const ownerCheck = await pool.query(
       'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1',
       [workspaceId, removerId]
