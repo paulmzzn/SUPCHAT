@@ -246,19 +246,38 @@
             joinCanal();
         }
 
-        // Modify window.onload to include workspace loading
+        // Modifier la fonction window.onload pour vérifier l'authentification de manière plus robuste
         window.onload = function() {
             const token = localStorage.getItem('userToken');
             const userId = localStorage.getItem('userId');
             
             if (!token || !userId) {
+                console.log('Pas de token ou userId trouvé, redirection vers login');
                 window.location.href = '/login.html';
                 return;
             }
 
-            document.getElementById('userId').value = userId;
-            loadWorkspaces(); // Load workspaces when page loads
-        }
+            // Vérifier la validité du token côté serveur
+            fetch('/api/users/verify-token', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Token invalide');
+                }
+                // Token valide, continuer le chargement normal
+                document.getElementById('userId').value = userId;
+                loadWorkspaces();
+            })
+            .catch(error => {
+                console.error('Erreur de vérification du token:', error);
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userId');
+                window.location.href = '/login.html';
+            });
+        };
 
         // Add logout function
         function logout() {
