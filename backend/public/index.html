@@ -165,8 +165,8 @@
             background: #f5f5f5;
             border-left: 1px solid #ddd;
             padding: 20px;
-            overflow-y: auto;
             display: none;
+            flex-direction: column; /* Déplacer ici */
         }
 
         .user-list {
@@ -378,6 +378,31 @@
             align-items: center;
             gap: 8px;
         }
+
+        .leave-workspace-button {
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin-top: auto;
+        }
+
+        .leave-workspace-button:hover {
+            background-color: #d32f2f;
+        }
+
+        #users-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -420,6 +445,9 @@
     <div class="right-sidebar">
         <h2>Membres du workspace</h2>
         <div id="users-list" class="user-list"></div>
+        <button class="leave-workspace-button" onclick="leaveWorkspace()">
+            Quitter le workspace
+        </button>
     </div>
 
     <div id="join-popup" class="confirmation-popup">
@@ -454,6 +482,9 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Ajouter une variable globale pour stocker le workspace courant
+        let currentWorkspaceId = null;
+
         // Modifier la fonction loadWorkspaces pour cacher les canaux par défaut
         async function loadWorkspaces() {
             try {
@@ -518,6 +549,9 @@
                     return;
                 }
 
+                // Stocker le workspace ID courant
+                currentWorkspaceId = workspaceId;
+
                 // Masquer tous les canaux et retirer les sélections actives
                 document.querySelectorAll('.channels-list').forEach(list => {
                     list.style.display = 'none';
@@ -544,8 +578,9 @@
                     channelsList.style.display = 'block';
                 }
 
-                // Afficher la sidebar droite
-                document.querySelector('.right-sidebar').style.display = 'block';
+                // Afficher la sidebar droite directement avec flex
+                const rightSidebar = document.querySelector('.right-sidebar');
+                rightSidebar.style.display = 'flex';
             } catch (error) {
                 console.error('Erreur lors de la sélection du workspace:', error);
             }
@@ -1147,6 +1182,49 @@
             } catch (error) {
                 console.error('Erreur:', error);
                 alert('Erreur lors de la création du workspace');
+            }
+        }
+
+        // Modifier la fonction leaveWorkspace pour utiliser currentWorkspaceId
+        async function leaveWorkspace() {
+            if (!currentWorkspaceId) {
+                alert('Aucun workspace sélectionné');
+                return;
+            }
+
+            if (!confirm('Êtes-vous sûr de vouloir quitter ce workspace ?')) {
+                return;
+            }
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${currentWorkspaceId}/members/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
+
+                // Réinitialiser le workspace courant
+                currentWorkspaceId = null;
+
+                // Masquer les interfaces de chat et de membres
+                document.getElementById('chat-interface').style.display = 'none';
+                document.querySelector('.right-sidebar').style.display = 'none';
+                document.getElementById('welcome-screen').style.display = 'block';
+
+                // Recharger la liste des workspaces
+                await loadWorkspaces();
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert(error.message || 'Erreur lors de la sortie du workspace');
             }
         }
     </script>
