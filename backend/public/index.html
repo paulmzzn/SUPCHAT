@@ -84,14 +84,29 @@
         .workspace-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 8px;
             background: #e0e0e0;
-            cursor: pointer;
             border-radius: 4px;
         }
 
-        .workspace-header:hover {
-            background: #d0d0d0;
+        .workspace-title {
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        .invite-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .invite-button:hover {
+            background: #45a049;
         }
 
         .channels-list {
@@ -164,8 +179,13 @@
                 
                 workspacesList.innerHTML = workspaces.map(workspace => `
                     <div class="workspace-item">
-                        <div class="workspace-header" onclick="toggleWorkspace('${workspace.id_workspace}')">
-                            📁 ${workspace.nom}
+                        <div class="workspace-header">
+                            <div class="workspace-title" onclick="toggleWorkspace('${workspace.id_workspace}')">
+                                📁 ${workspace.nom}
+                            </div>
+                            <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}')">
+                                Inviter
+                            </button>
                         </div>
                         <div class="channels-list" id="channels-${workspace.id_workspace}"></div>
                     </div>
@@ -566,6 +586,38 @@
                 sendMessage();
             }
         });
+
+        // Ajouter cette nouvelle fonction avant la fermeture de la balise script
+        function inviteToWorkspace(workspaceId, workspaceName) {
+            const email = prompt("Entrez l'adresse email de la personne à inviter :");
+            if (email) {
+                const userId = document.getElementById('userId').value; // Récupérer l'ID de l'utilisateur
+                
+                fetch(`/api/workspaces/${workspaceId}/invite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email,
+                        userId  // Ajouter l'userId dans le body
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de l\'envoi de l\'invitation');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert('Invitation envoyée avec succès !');
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de l\'envoi de l\'invitation');
+                });
+            }
+        }
     </script>
 </body>
 </html>
