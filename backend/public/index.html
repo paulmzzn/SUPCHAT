@@ -59,29 +59,214 @@
         .reaction-button:hover .reaction-users {
             display: block;
         }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            background: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 270px;
+            padding: 20px;
+        }
+
+        .workspace-item {
+            margin-bottom: 10px;
+        }
+
+        .workspace-header {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #e0e0e0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .workspace-header:hover {
+            background: #d0d0d0;
+        }
+
+        .channels-list {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .channel-item {
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .channel-item:hover {
+            background: #e0e0e0;
+        }
+
+        .channel-item.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        /* Adjust existing styles */
+        #messages {
+            height: calc(100vh - 200px);
+        }
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <h2>Workspaces</h2>
+        <div id="workspaces-list"></div>
+    </div>
     
-    <div id="status"></div>
-    <div class="input-group">
-        <input type="text" id="userId" placeholder="User ID (UUID)" />
-        <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
-        <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
-        <button onclick="joinCanal()">Join Canal</button>
-    </div>
-    <div id="messages"></div>
-    <div class="input-group">
-        <input type="text" id="messageInput" placeholder="Type your message" />
-        <button onclick="sendMessage()">Send</button>
-    </div>
-    <div class="input-group">
-        <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
-        <button onclick="addReaction()">Ajouter Réaction</button>
+    <div class="main-content">
+        <div id="status"></div>
+        <div class="input-group">
+            <input type="text" id="userId" placeholder="User ID (UUID)" />
+            <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
+            <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
+            <button onclick="joinCanal()">Join Canal</button>
+        </div>
+        <div id="messages"></div>
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type your message" />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div class="input-group">
+            <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
+            <button onclick="addReaction()">Ajouter Réaction</button>
+        </div>
+
+        <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Add these new functions at the beginning of your script section
+        async function loadWorkspaces() {
+            try {
+                // Changed route to match the backend route for all workspaces
+                const response = await fetch('/api/workspaces');
+                const workspaces = await response.json();
+                const workspacesList = document.getElementById('workspaces-list');
+                
+                if (!workspaces || workspaces.length === 0) {
+                    workspacesList.innerHTML = '<div>Aucun workspace disponible</div>';
+                    return;
+                }
+                
+                workspacesList.innerHTML = workspaces.map(workspace => `
+                    <div class="workspace-item">
+                        <div class="workspace-header" onclick="toggleWorkspace('${workspace.id_workspace}')">
+                            📁 ${workspace.nom}
+                        </div>
+                        <div class="channels-list" id="channels-${workspace.id_workspace}"></div>
+                    </div>
+                `).join('');
+
+                // Load channels for each workspace
+                workspaces.forEach(workspace => {
+                    loadChannels(workspace.id_workspace);
+                });
+            } catch (error) {
+                console.error('Error loading workspaces:', error);
+                document.getElementById('workspaces-list').innerHTML = 
+                    '<div class="error">Erreur lors du chargement des workspaces</div>';
+            }
+        }
+
+        async function loadChannels(workspaceId) {
+            try {
+                // Corrected route to match the backend route in canalRoutes.js
+                const response = await fetch(`/api/workspace/${workspaceId}/canals`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const channels = await response.json();
+                const channelsList = document.getElementById(`channels-${workspaceId}`);
+                
+                if (!channelsList) {
+                    console.error(`Container for channels of workspace ${workspaceId} not found`);
+                    return;
+                }
+
+                if (!channels || channels.length === 0) {
+                    channelsList.innerHTML = '<div>Aucun canal dans ce workspace</div>';
+                    return;
+                }
+                
+                console.log('Channels loaded:', channels); // Debug log
+                
+                channelsList.innerHTML = channels.map(channel => `
+                    <div class="channel-item" 
+                         onclick="selectChannel('${workspaceId}', '${channel.id_canal}')">
+                        # ${channel.nom || 'Canal sans nom'}
+                    </div>
+                `).join('');
+
+                // Show the channels list by default
+                channelsList.style.display = 'block';
+            } catch (error) {
+                console.error('Error loading channels for workspace:', workspaceId, error);
+                const channelsList = document.getElementById(`channels-${workspaceId}`);
+                if (channelsList) {
+                    channelsList.innerHTML = '<div class="error">Erreur lors du chargement des canaux</div>';
+                }
+            }
+        }
+
+        function toggleWorkspace(workspaceId) {
+            const channelsList = document.getElementById(`channels-${workspaceId}`);
+            if (channelsList) {
+                const isDisplayed = channelsList.style.display === 'block';
+                channelsList.style.display = isDisplayed ? 'none' : 'block';
+            }
+        }
+
+        function selectChannel(workspaceId, channelId) {
+            console.log(`Selecting channel: workspaceId=${workspaceId}, channelId=${channelId}`);
+            
+            document.querySelectorAll('.channel-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const channelElement = event.target;
+            channelElement.classList.add('active');
+            
+            document.getElementById('workspaceId').value = workspaceId;
+            document.getElementById('canalId').value = channelId;
+            
+            joinCanal();
+        }
+
+        // Modify window.onload to include workspace loading
+        window.onload = function() {
+            const token = localStorage.getItem('userToken');
+            const userId = localStorage.getItem('userId');
+            
+            if (!token || !userId) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            document.getElementById('userId').value = userId;
+            loadWorkspaces(); // Load workspaces when page loads
+        }
+
+        // Add logout function
+        function logout() {
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userId');
+            window.location.href = '/login.html';
+        }
+
         const socket = io({
             transports: ['websocket', 'polling'],
             reconnection: true,
