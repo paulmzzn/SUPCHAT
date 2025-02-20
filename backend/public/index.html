@@ -90,6 +90,7 @@
             background: #e0e0e0;
             border-radius: 4px;
             border: 2px solid transparent; /* Ajout pour la bordure */
+            padding: 8px 12px; /* Ajuster le padding pour accommoder l'icône */
         }
 
         .workspace-header.active {
@@ -319,6 +320,64 @@
         .logout-button:hover {
             background: #d32f2f;
         }
+
+        .workspace-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .workspace-modal h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .workspace-modal input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .workspace-modal .privacy-options {
+            margin-bottom: 20px;
+        }
+
+        .workspace-modal .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .workspace-privacy {
+            margin-left: 8px;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .workspace-title-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
@@ -372,6 +431,27 @@
         </div>
     </div>
 
+    <div id="workspace-modal" class="workspace-modal" style="display: none;">
+        <h3>Créer un nouveau workspace</h3>
+        <input type="text" id="workspace-name" placeholder="Nom du workspace">
+        <div class="privacy-options">
+            <label>
+                <input type="radio" name="privacy" value="public" checked>
+                Public (visible par tous)
+            </label>
+            <br>
+            <label>
+                <input type="radio" name="privacy" value="private">
+                Privé (sur invitation uniquement)
+            </label>
+        </div>
+        <div class="modal-buttons">
+            <button class="decline-button" onclick="closeWorkspaceModal()">Annuler</button>
+            <button class="accept-button" onclick="confirmCreateWorkspace()">Créer</button>
+        </div>
+    </div>
+    <div id="modal-overlay" class="overlay" style="display: none;"></div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // Modifier la fonction loadWorkspaces pour cacher les canaux par défaut
@@ -389,8 +469,11 @@
                 workspacesList.innerHTML = workspaces.map(workspace => `
                     <div class="workspace-item">
                         <div class="workspace-header" id="workspace-${workspace.id_workspace}" onclick="selectWorkspace('${workspace.id_workspace}')">
-                            <div class="workspace-title">
-                                📁 ${workspace.nom}
+                            <div class="workspace-title-container">
+                                <div class="workspace-title">
+                                    📁 ${workspace.nom}
+                                </div>
+                                ${workspace.is_private ? '<span class="workspace-privacy">🔒</span>' : ''}
                             </div>
                             <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}'); event.stopPropagation();">
                                 Inviter
@@ -987,10 +1070,27 @@
             }
         }
 
-        // Ajouter la fonction pour créer un nouveau workspace
-        async function createNewWorkspace() {
-            const workspaceName = prompt("Nom du nouveau workspace :");
-            if (!workspaceName) return;
+        // Remplacer la fonction createNewWorkspace existante
+        function createNewWorkspace() {
+            document.getElementById('workspace-modal').style.display = 'block';
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('workspace-name').value = '';
+            document.querySelector('input[value="public"]').checked = true;
+        }
+
+        function closeWorkspaceModal() {
+            document.getElementById('workspace-modal').style.display = 'none';
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        async function confirmCreateWorkspace() {
+            const workspaceName = document.getElementById('workspace-name').value.trim();
+            const isPrivate = document.querySelector('input[name="privacy"]:checked').value === 'private';
+            
+            if (!workspaceName) {
+                alert('Veuillez entrer un nom pour le workspace');
+                return;
+            }
             
             const userId = document.getElementById('userId').value;
             
@@ -1003,7 +1103,7 @@
                     },
                     body: JSON.stringify({
                         nom: workspaceName,
-                        is_private: false
+                        is_private: isPrivate
                     })
                 });
 
@@ -1023,8 +1123,11 @@
                     })
                 });
 
+                // Fermer le modal
+                closeWorkspaceModal();
+
                 // Recharger la liste des workspaces
-                loadWorkspaces();
+                await loadWorkspaces();
                 
                 // Sélectionner automatiquement le nouveau workspace
                 setTimeout(() => selectWorkspace(newWorkspace.id_workspace), 100);
