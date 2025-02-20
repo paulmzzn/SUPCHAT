@@ -19,14 +19,41 @@ router.post('/request-reset', requestPasswordReset);
 router.post('/reset-password', resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login.html' }), (req, res) => {
   const user = req.user;
   const token = jwt.sign(
     { id: user.id_utilisateur, email: user.email },
     SECRET_KEY,
-    { expiresIn: '1h' }
+    { expiresIn: '48h' }
   );
-  res.redirect(`http://localhost:3001/account?user=${encodeURIComponent(JSON.stringify(user))}&token=${token}`); // Redirect to the desired route after successful authentication
+  
+  // Envoyer une page HTML avec un script qui stocke le token et redirige
+  const htmlResponse = `
+    <html>
+      <script>
+        localStorage.setItem('userToken', '${token}');
+        localStorage.setItem('userId', '${user.id_utilisateur}');
+        window.location.href = '/index.html';
+      </script>
+    </html>
+  `;
+  res.send(htmlResponse);
+});
+
+// Route pour vérifier la validité du token
+router.get('/verify-token', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        jwt.verify(token, SECRET_KEY);
+        res.status(200).json({ message: 'Token valid' });
+    } catch (error) {
+        res.status(401).json({ message: 'Invalid token' });
+    }
 });
 
 export default router;
