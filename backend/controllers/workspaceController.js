@@ -1,6 +1,6 @@
-import Workspace from '../models/workspace.js';
-import UserModel from '../models/User.js';
-import sendInvitation from '../config/emailService.js'; // Ajout de l'import
+import Workspace from "../models/Workspace.js";
+import UserModel from "../models/User.js";
+import sendInvitation from "../config/emailService.js"; // Ajout de l'import
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -17,7 +17,7 @@ export const getWorkspaceById = async (req, res) => {
     const { id } = req.params;
     const workspace = await Workspace.findById(id);
     if (!workspace) {
-      return res.status(404).json({ message: 'Workspace not found' });
+      return res.status(404).json({ message: "Workspace not found" });
     }
     res.status(200).json(workspace);
   } catch (error) {
@@ -40,7 +40,7 @@ export const updateWorkspace = async (req, res) => {
     const { nom, is_private } = req.body;
     const workspace = await Workspace.update(id, { nom, is_private });
     if (!workspace) {
-      return res.status(404).json({ message: 'Workspace not found' });
+      return res.status(404).json({ message: "Workspace not found" });
     }
     res.status(200).json(workspace);
   } catch (error) {
@@ -53,9 +53,9 @@ export const deleteWorkspace = async (req, res) => {
     const { id } = req.params;
     const workspace = await Workspace.delete(id);
     if (!workspace) {
-      return res.status(404).json({ message: 'Workspace not found' });
+      return res.status(404).json({ message: "Workspace not found" });
     }
-    res.status(200).json({ message: 'Workspace deleted successfully' });
+    res.status(200).json({ message: "Workspace deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -68,21 +68,23 @@ export const sendWorkspaceInvitation = async (req, res) => {
 
     // Vérification des données requises
     if (!workspaceId || !userId || !recipientEmail) {
-      return res.status(400).json({ 
-        message: 'workspaceId, userId et recipientEmail sont requis' 
+      return res.status(400).json({
+        message: "workspaceId, userId et recipientEmail sont requis",
       });
     }
 
     // Récupérer les informations de l'utilisateur qui envoie l'invitation
     const sender = await UserModel.getUserById(userId);
     if (!sender) {
-      return res.status(404).json({ message: 'Utilisateur expéditeur non trouvé' });
+      return res
+        .status(404)
+        .json({ message: "Utilisateur expéditeur non trouvé" });
     }
 
     // Récupérer les informations du workspace
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
-      return res.status(404).json({ message: 'Workspace non trouvé' });
+      return res.status(404).json({ message: "Workspace non trouvé" });
     }
 
     // Envoyer l'invitation avec les bons paramètres
@@ -94,19 +96,18 @@ export const sendWorkspaceInvitation = async (req, res) => {
     );
 
     res.status(200).json({
-      message: 'Invitation envoyée avec succès',
+      message: "Invitation envoyée avec succès",
       details: {
         sender: sender.nom,
         workspace: workspace.nom,
-        recipient: recipientEmail
-      }
+        recipient: recipientEmail,
+      },
     });
-
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'invitation:', error);
-    res.status(500).json({ 
-      message: 'Erreur lors de l\'envoi de l\'invitation', 
-      error: error.message 
+    console.error("Erreur lors de l'envoi de l'invitation:", error);
+    res.status(500).json({
+      message: "Erreur lors de l'envoi de l'invitation",
+      error: error.message,
     });
   }
 };
