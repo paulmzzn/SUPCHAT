@@ -1,8 +1,9 @@
-import UserModel from '../models/user.js';
+import UserModel from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendInvitationEmail from '../config/emailService.js';
 import sendValidationEmail from '../config/validationEmailService.js'; // Import the validation email service
+import sendResetPasswordEmail from '../config/resetPasswordEmailService.js';
 
 const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
 
@@ -202,4 +203,62 @@ const sendInvitation = async (req, res) => {
   }
 };
 
-export { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode };
+export const validateUser = async (req, res) => {
+  try {
+    const { email, code } = req.query;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email et code de validation requis' });
+    }
+
+    const user = await UserModel.validateUser(email, code);
+    if (!user) {
+      return res.status(400).json({ error: 'Code de validation invalide' });
+    }
+
+    res.json({ message: 'Compte validé avec succès', user });
+  } catch (error) {
+    console.error('Erreur lors de la validation:', error);
+    res.status(500).json({ error: 'Erreur lors de la validation du compte' });
+  }
+};
+
+const requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    const user = await UserModel.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'Aucun compte associé à cet email.' });
+    }
+
+    const updatedUser = await UserModel.setResetPasswordCode(email);
+    await sendResetPasswordEmail(email, updatedUser.reset_password_code);
+
+    res.json({ message: 'Instructions de réinitialisation envoyées par email.' });
+  } catch (error) {
+    console.error('Erreur lors de la demande de réinitialisation:', error);
+    res.status(500).json({ error: 'Erreur lors de la demande de réinitialisation.' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await UserModel.resetPassword(email, code, hashedPassword);
+    
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Code invalide ou expiré.' 
+      });
+    }
+
+    res.json({ message: 'Mot de passe réinitialisé avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors de la réinitialisation:', error);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation du mot de passe.' });
+  }
+};
+
+export { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode, requestPasswordReset, resetPassword };
