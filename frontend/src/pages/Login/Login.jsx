@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { FaEye, FaEyeSlash, FaGoogle, FaFacebook } from 'react-icons/fa';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import googleIcon from '../../assets/icons/google-icon.svg';
+import facebookIcon from '../../assets/icons/facebook-icon.svg';
 import './Login.css';
+import { Link } from 'react-router-dom';
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -60,16 +63,16 @@ function Login() {
           
           <div className="social-login">
             <button className="social-button">
-              <FaGoogle /> Google
+              <img src={googleIcon} alt="Google" className="social-icon" /> Google
             </button>
             <button className="social-button">
-              <FaFacebook /> Facebook
+              <img src={facebookIcon} alt="Facebook" className="social-icon" /> Facebook
             </button>
           </div>
           
           <p className="signup-text">
             Vous n'avez pas encore de compte ? 
-            <a href="#" className="signup-link">S'inscrire</a>
+            <Link to="/register" className="signup-link">S'inscrire</Link>
           </p>
         </div>
       </div>

@@ -175,6 +175,7 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
+    margin-top: 0.5rem; /* Augmenté */
     margin-bottom: 1.5rem; /* Augmenté */
     height : 45px; /* Hauteur explicite */
     font-size: 1rem; /* Taille de police plus grande */
@@ -196,7 +197,7 @@ body {
     gap: 0.5rem;
     padding: 0.75rem;
     background-color: #26272B;
-    color: white;
+    color: #A0A0AB;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -207,7 +208,7 @@ body {
   
   .signup-text {
     text-align: center;
-    color: white;
+    color: #A0A0AB;
     font-family: 'Poppins', sans-serif;
     font-weight: 400;
   }
@@ -225,6 +226,12 @@ body {
     text-align: center;
     font-family: 'Poppins', sans-serif;
     font-weight: 400;
+  }
+
+  .social-icon {
+    width: 20px; /* Réduit de 24px à 21.6px (90%) */
+    height: 20px; /* Réduit de 24px à 21.6px (90%) */
+    object-fit: contain;
   }
   
   /* Ajout des media queries pour la responsivité */
@@ -313,6 +320,20 @@ body {
     .glow-circle-left {
       opacity: 0.15;
     }
+
+    .glow-circle-right {
+      width: 600px;
+      height: 600px;
+      top: -150px;
+      right: -200px;
+    }
+  
+    .glow-circle-left {
+      width: 600px;
+      height: 600px;
+      bottom: -150px;
+      left: -200px;
+    }
   }
   
   @media (max-width: 576px) {
@@ -345,6 +366,20 @@ body {
       height: auto;
       grid-template-columns: 1fr;
       gap: 0.75rem;
+    }
+
+    .glow-circle-right {
+      width: 400px;
+      height: 400px;
+      top: -100px;
+      right: -100px;
+    }
+  
+    .glow-circle-left {
+      width: 400px;
+      height: 400px;
+      bottom: -100px;
+      left: -100px;
     }
   }
   
@@ -423,4 +458,3 @@ body {
       }
     }
   }
-  
