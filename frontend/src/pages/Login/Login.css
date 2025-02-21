@@ -1,0 +1,265 @@
+/* Ajout des règles globales */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.login-container {
+  height: 100vh;
+  background-color: #262626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.app-title {
+  position: absolute;
+  top: 2rem;
+  left: 4rem;
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  z-index: 2;
+}
+
+.dot {
+  color: #9348B7;
+}
+
+.glow-circle-right {
+  position: absolute;
+  width: 800px;
+  height: 1000px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.2;
+}
+
+.glow-circle-left {
+    position: absolute;
+    width: 1000px;
+    height: 800px;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.2;
+  }
+
+.top-right {
+  background-color: #9348B7;
+  top: -250px;
+  right: -400px;
+}
+
+.bottom-left {
+  background-color: #9348B7;
+  bottom: -300px;
+  left: -400px;
+}
+
+.login-card {
+    background-color: rgba(19, 19, 22, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 2.5rem 4rem; /* Reduced vertical padding, kept horizontal padding */
+    max-height: none;
+    height: auto;
+    overflow: visible;
+    width: 100%;
+    margin: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.login-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.form-group label {
+  display: block;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #26262600;
+  border: 1px solid #98A2B3;
+  border-radius: 8px;
+  color: white;
+  box-sizing: border-box; /* Ajout crucial pour inclure padding dans width */
+}
+
+.password-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.forgot-link {
+  color: #9348B7;
+  text-decoration: none;
+}
+
+.password-input {
+  position: relative;
+  width: 100%;
+}
+
+.password-input input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 55%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #9348B7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+
+}
+
+.social-login {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: #26272B;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.signup-text {
+  text-align: center;
+  color: white;
+}
+
+.signup-link {
+  color: #9348B7;
+  text-decoration: none;
+  margin-left: 0.5rem;
+}
+
+.or {
+  color: white;
+  text-align: center;
+}
+
+/* Ajout des media queries pour la responsivité */
+@media (max-width: 576px) {
+  .login-card {
+    padding: 1.5rem;
+    margin: 1rem;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+    top: 1rem;
+    left: 1rem;
+  }
+
+  .social-login {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 600px) {
+  .login-card {
+    padding: 1.5rem;
+    max-height: 90vh;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .login-title {
+    margin-bottom: 1rem;
+  }
+
+  .login-button {
+    margin-bottom: 1rem;
+  }
+
+  .social-login {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Pour les très petits écrans */
+@media (max-width: 320px) {
+  .login-card {
+    padding: 1rem;
+  }
+
+  .social-button {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Pour garantir une bonne lisibilité sur les tablettes */
+@media (min-width: 577px) and (max-width: 768px) {
+  .login-card {
+    max-width: 90%;
+    margin: 0 auto;
+  }
+}
+
+/* Ajustement des marges pour les grands écrans */
+@media (min-width: 1200px) {
+  .login-wrapper {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+}
