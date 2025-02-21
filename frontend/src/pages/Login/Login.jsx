@@ -21,7 +21,7 @@ function Login() {
       </h1>
       <div className="login-wrapper">
         <div className="login-card">
-          <h2 className="login-title">Login to your account</h2>
+          <h2 className="login-title">Se connecter à votre compte</h2>
           
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
@@ -34,8 +34,8 @@ function Login() {
             
             <div className="form-group">
               <div className="password-header">
-                <label>Password</label>
-                <a href="#" className="forgot-link">Forgot?</a>
+                <label>Mot de passe</label>
+                <a href="#" className="forgot-link">Oublié?</a>
               </div>
               <div className="password-input">
                 
@@ -54,13 +54,9 @@ function Login() {
             </div>
             
             <button type="submit" className="login-button">
-              Login now
+              Se connecter
             </button>
           </form>
-
-          <p className="or">
-            OR
-          </p>
           
           <div className="social-login">
             <button className="social-button">
@@ -72,8 +68,8 @@ function Login() {
           </div>
           
           <p className="signup-text">
-            Don't Have An Account? 
-            <a href="#" className="signup-link">Sign Up</a>
+            Vous n'avez pas encore de compte ? 
+            <a href="#" className="signup-link">S'inscrire</a>
           </p>
         </div>
       </div>
