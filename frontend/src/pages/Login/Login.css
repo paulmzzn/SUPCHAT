@@ -93,6 +93,8 @@ body {
   .form-group {
     margin-bottom: 1rem; /* Augmenté */
     width: 100%;
+    position: relative;
+    z-index: 1;
   }
   
   .form-group label {
@@ -113,6 +115,7 @@ body {
     box-sizing: border-box; /* Ajout crucial pour inclure padding dans width */
     height: 48px; /* Hauteur explicite */
     font-size: 1rem; /* Taille de police plus grande */
+    transform: translateZ(0);
   }
   
   .form-group input::placeholder {
@@ -457,4 +460,15 @@ body {
         -webkit-credential-container-offset: 40px; /* Déplace le logo de remplissage automatique */
       }
     }
+  }
+
+  /* Styles pour corriger l'auto-complétion */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    position: relative;
+    background-color: #26262600 !important;
+    -webkit-box-shadow: 0 0 0 30px #262626 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white;
   }

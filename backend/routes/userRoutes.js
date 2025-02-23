@@ -19,26 +19,22 @@ router.post('/request-reset', requestPasswordReset);
 router.post('/reset-password', resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login.html' }), (req, res) => {
-  const user = req.user;
-  const token = jwt.sign(
-    { id: user.id_utilisateur, email: user.email },
-    SECRET_KEY,
-    { expiresIn: '48h' }
-  );
-  
-  // Envoyer une page HTML avec un script qui stocke le token et redirige
-  const htmlResponse = `
-    <html>
-      <script>
-        localStorage.setItem('userToken', '${token}');
-        localStorage.setItem('userId', '${user.id_utilisateur}');
-        window.location.href = '/index.html';
-      </script>
-    </html>
-  `;
-  res.send(htmlResponse);
-});
+router.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: 'http://localhost:3001/login' }), 
+  async (req, res) => {
+    const user = req.user;
+    const token = jwt.sign(
+      { id: user.id_utilisateur, email: user.email },
+      SECRET_KEY,
+      { expiresIn: '48h' }
+    );
+
+    // Redirection directe vers le dashboard via AuthCallback
+    res.redirect(
+      `http://localhost:3001/auth/callback?token=${token}&email=${user.email}`
+    );
+  }
+);
 
 // Route pour vérifier la validité du token
 router.get('/verify-token', (req, res) => {

@@ -1,0 +1,95 @@
+.dashboard-container {
+  min-height: 100vh;
+  background-color: #262626;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
+
+.dashboard-content {
+  max-width: 800px;
+  margin: 4rem auto;
+  position: relative;
+  z-index: 1;
+}
+
+.info-card {
+  background-color: rgba(19, 19, 22, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 2rem;
+  color: white;
+}
+
+.info-card h2 {
+  color: white;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.token-section, .decoded-section {
+  margin-bottom: 2rem;
+}
+
+.token-section h3, .decoded-section h3 {
+  color: #9348B7;
+  margin-bottom: 1rem;
+}
+
+.token-display {
+  background-color: #1a1a1a;
+  padding: 1rem;
+  border-radius: 8px;
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #98A2B3;
+}
+
+.decoded-display {
+  background-color: #1a1a1a;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  color: #98A2B3;
+}
+
+.logout-button {
+  background-color: #9348B7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.logout-button:hover {
+  background-color: #7d3c9c;
+}
+
+/* Reprendre les styles des cercles lumineux du Login */
+.glow-circle-right, .glow-circle-left {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.2;
+}
+
+.top-right {
+  background-color: #9348B7;
+  width: 800px;
+  height: 800px;
+  top: -200px;
+  right: -200px;
+}
+
+.bottom-left {
+  background-color: #9348B7;
+  width: 800px;
+  height: 800px;
+  bottom: -200px;
+  left: -200px;
+}
