@@ -27,7 +27,10 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // Enable CORS
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+})); // Enable CORS
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: "REDACTED", resave: false, saveUninitialized: true }));

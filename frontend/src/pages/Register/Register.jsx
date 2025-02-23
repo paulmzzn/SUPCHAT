@@ -7,7 +7,7 @@ import { registerLocale } from "react-datepicker";
 import fr from 'date-fns/locale/fr';
 import "react-datepicker/dist/react-datepicker.css";
 import './Register.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +17,9 @@ function Register() {
     email: '',
     password: '',
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Enregistrer la locale française
   registerLocale('fr', fr);
@@ -36,9 +39,47 @@ function Register() {
   const minDate = new Date();
   minDate.setFullYear(maxDate.getFullYear() - 84);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Implement register logic here
+    setError('');
+    setLoading(true);
+
+    if (!formData.name || !formData.email || !formData.password || !birthDate) {
+      setError('Veuillez remplir tous les champs');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nom: formData.name,
+          email: formData.email,
+          mot_de_passe: formData.password,
+          date_naissance: birthDate.toISOString().split('T')[0], // Format YYYY-MM-DD
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de l\'inscription');
+      }
+
+      // Redirection vers la page de validation avec l'email
+      navigate('/validate', { 
+        state: { email: formData.email }
+      });
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDateChange = (date) => {
@@ -57,6 +98,8 @@ function Register() {
       <div className="login-wrapper">
         <div className="login-card">
           <h2 className="login-title">S'inscrire</h2>
+          
+          {error && <div className="error-message">{error}</div>}
           
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
@@ -87,18 +130,23 @@ function Register() {
               <input
                 type="email"
                 placeholder="exemple@exemple.com"
+                autoComplete="email"
+                name="email"
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                value={formData.email}
               />
             </div>
             
             <div className="form-group">
               <div className="password-header">
                 <label>Mot de passe</label>
-                <a href="#" className="forgot-link">Oublié?</a>
               </div>
               <div className="password-input">
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Entrez votre mot de passe"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
                 />
                 <button
                   type="button"
@@ -132,8 +180,8 @@ function Register() {
               />
             </div>
             
-            <button type="submit" className="login-button">
-              S'inscrire
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Inscription en cours...' : "S'inscrire"}
             </button>
           </form>
           
