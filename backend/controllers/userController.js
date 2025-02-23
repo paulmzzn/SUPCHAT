@@ -301,6 +301,40 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const resendValidationCode = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe
+    const user = await UserModel.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Générer un nouveau code de validation
+    const validationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Mettre à jour le code de validation dans la base de données
+    await UserModel.updateUser({ 
+      validation_code: validationCode 
+    }, user.id_utilisateur);
+
+    // Envoyer le nouveau code par email
+    await sendValidationEmail(email, validationCode);
+
+    res.status(200).json({ 
+      message: 'Nouveau code de validation envoyé avec succès.' 
+    });
+
+  } catch (error) {
+    console.error('Erreur lors du renvoi du code:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors de l\'envoi du nouveau code de validation.' 
+    });
+  }
+};
+
+// Ajouter à l'export
 export { 
   registerUser, 
   getAllUsers, 
@@ -309,7 +343,8 @@ export {
   deleteUser, 
   sendInvitation, 
   validateCode, 
-  validateUser,  // Maintenant exporté une seule fois
+  validateUser,
   requestPasswordReset, 
-  resetPassword 
+  resetPassword,
+  resendValidationCode  // Ajout du nouveau contrôleur
 };
