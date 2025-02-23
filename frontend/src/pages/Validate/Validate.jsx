@@ -57,16 +57,24 @@ function Validate() {
 
   const handleResendCode = async () => {
     const email = location.state?.email;
+    if (!email) {
+      setError('Email non trouvé');
+      return;
+    }
+    
     try {
-      const response = await fetch('http://localhost:3000/api/users/resend-code', {
+      console.log('Sending resend request for:', email); // Debug log
+      const response = await fetch('http://localhost:3000/api/users/resend-validation', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
+      console.log('Resend response:', data); // Debug log
+
       if (response.ok) {
         setError('');
         alert('Un nouveau code a été envoyé à votre email.');
@@ -74,20 +82,34 @@ function Validate() {
         setError(data.message || 'Erreur lors de l\'envoi du code');
       }
     } catch (err) {
+      console.error('Error:', err);
       setError('Erreur de connexion au serveur');
     }
   };
 
   const handleCodeChange = (index, value) => {
-    if (value.length <= 1) {
-      const newCode = [...code];
-      newCode[index] = value;
-      setCode(newCode);
-      
-      if (value && index < 5) {
-        const nextInput = document.getElementById(`validate-${index + 1}`);
-        if (nextInput) nextInput.focus();
+    // Gérer le collage (paste)
+    if (value.length > 1) {
+      const pastedValue = value.replace(/\D/g, '').slice(0, 6); // Ne garde que les chiffres
+      const codeArray = pastedValue.split('').slice(0, 6);
+      // Remplir le reste avec des chaînes vides si nécessaire
+      while (codeArray.length < 6) {
+        codeArray.push('');
       }
+      setCode(codeArray);
+      // Focus sur le dernier input
+      document.getElementById(`validate-5`).focus();
+      return;
+    }
+
+    // Gestion normale pour un seul caractère
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
+    
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`validate-${index + 1}`);
+      if (nextInput) nextInput.focus();
     }
   };
 
@@ -96,6 +118,16 @@ function Validate() {
       const prevInput = document.getElementById(`validate-${index - 1}`);
       if (prevInput) prevInput.focus();
     }
+  };
+
+  const handlePaste = (e, index) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const codeArray = pastedData.split('');
+    while (codeArray.length < 6) {
+      codeArray.push('');
+    }
+    setCode(codeArray);
   };
 
   return (
@@ -125,6 +157,7 @@ function Validate() {
                   value={code[index]}
                   onChange={(e) => handleCodeChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
+                  onPaste={(e) => handlePaste(e, index)}  // Ajout de l'événement onPaste
                   className="code-input"
                 />
               ))}
