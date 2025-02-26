@@ -1,30 +1,94 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #262626;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-left: 100px; /* Match sidebar width */
+}
+
 .dashboard-container {
+  flex: 1;
   min-height: 100vh;
   background-color: #262626;
   position: relative;
   overflow: hidden;
   padding: 2rem;
+  transition: all 0.3s ease;
 }
 
 .dashboard-content {
-  max-width: 800px;
+  max-width: 900px;
   margin: 4rem auto;
   position: relative;
   z-index: 1;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-title {
+  text-align: center;
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.dot {
+  color: #9348B7;
 }
 
 .info-card {
-  background-color: rgba(19, 19, 22, 0.6);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  padding: 2rem;
+  background: linear-gradient(135deg, rgba(25, 25, 30, 0.8), rgba(19, 19, 22, 0.6));
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 2.5rem;
   color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
 }
 
 .info-card h2 {
   color: white;
   margin-bottom: 2rem;
   text-align: center;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  position: relative;
+}
+
+.info-card h2::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(to right, #9348B7, #B05FDF);
+  border-radius: 10px;
 }
 
 .token-section, .decoded-section {
@@ -55,31 +119,41 @@
 }
 
 .logout-button {
-  background-color: #9348B7;
+  background: linear-gradient(135deg, #9348B7, #B05FDF);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  padding: 0.9rem 1.5rem;
   cursor: pointer;
   font-weight: 600;
   width: 100%;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(147, 72, 183, 0.4);
 }
 
 .logout-button:hover {
-  background-color: #7d3c9c;
+  background: linear-gradient(135deg, #8540A5, #9E52CE);
+  box-shadow: 0 6px 20px rgba(147, 72, 183, 0.6);
+  transform: translateY(-2px);
 }
 
-/* Reprendre les styles des cercles lumineux du Login */
+.logout-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(147, 72, 183, 0.4);
+}
+
 .glow-circle-right, .glow-circle-left {
-  position: absolute;
+  position: fixed;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.2;
+  filter: blur(120px);
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .top-right {
-  background-color: #9348B7;
+  background: radial-gradient(circle, #B05FDF, #9348B7);
   width: 800px;
   height: 800px;
   top: -200px;
@@ -87,9 +161,37 @@
 }
 
 .bottom-left {
-  background-color: #9348B7;
+  background: radial-gradient(circle, #9348B7, #6A2F88);
   width: 800px;
   height: 800px;
   bottom: -200px;
   left: -200px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .app-layout {
+    padding-left: 0;
+    padding-bottom: 80px; /* Increased to match the new tab bar height */
+  }
+
+  .dashboard-container {
+    padding: 1.5rem;
+    padding-bottom: 100px; /* Extra padding to avoid content hidden by tab bar */
+  }
+
+  .app-title {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .info-card {
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .glow-circle-right, .glow-circle-left {
+    opacity: 0.1; /* Reduce opacity on mobile */
+    filter: blur(100px); /* Less blur on mobile for performance */
+  }
 }
