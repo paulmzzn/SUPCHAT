@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';  // Modifié ici : utilisation de l'import nommé
+import { jwtDecode } from 'jwt-decode';
+import Sidebar from '../../components/Sidebar/Sidebar';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -16,7 +17,7 @@ function Dashboard() {
     }
 
     try {
-      const decoded = jwtDecode(token);  // Modifié ici : utilisation de jwtDecode au lieu de jwt_decode
+      const decoded = jwtDecode(token);
       setTokenInfo(token);
       setDecodedToken(decoded);
     } catch (error) {
@@ -34,37 +35,40 @@ function Dashboard() {
   if (!decodedToken) return <div>Loading...</div>;
 
   return (
-    <div className="dashboard-container">
-      <h1 className="app-title">
-        SUPCHAT<span className="dot">.</span>
-      </h1>
-      
-      <div className="dashboard-content">
-        <div className="info-card">
-          <h2>Informations du Token</h2>
-          
-          <div className="token-section">
-            <h3>Token JWT :</h3>
-            <div className="token-display">
-              {tokenInfo}
+    <div className="app-layout">
+      <Sidebar />
+      <div className="dashboard-container">
+        <h1 className="app-title">
+          SUPCHAT<span className="dot">.</span>
+        </h1>
+        
+        <div className="dashboard-content">
+          <div className="info-card">
+            <h2>Informations du Token</h2>
+            
+            <div className="token-section">
+              <h3>Token JWT :</h3>
+              <div className="token-display">
+                {tokenInfo}
+              </div>
             </div>
-          </div>
 
-          <div className="decoded-section">
-            <h3>Données décodées :</h3>
-            <pre className="decoded-display">
-              {JSON.stringify(decodedToken, null, 2)}
-            </pre>
-          </div>
+            <div className="decoded-section">
+              <h3>Données décodées :</h3>
+              <pre className="decoded-display">
+                {JSON.stringify(decodedToken, null, 2)}
+              </pre>
+            </div>
 
-          <button onClick={handleLogout} className="logout-button">
-            Se déconnecter
-          </button>
+            <button onClick={handleLogout} className="logout-button">
+              Se déconnecter
+            </button>
+          </div>
         </div>
+        
+        <div className="glow-circle-right top-right"></div>
+        <div className="glow-circle-left bottom-left"></div>
       </div>
-      
-      <div className="glow-circle-right top-right"></div>
-      <div className="glow-circle-left bottom-left"></div>
     </div>
   );
 }
