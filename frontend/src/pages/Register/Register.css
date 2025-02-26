@@ -321,6 +321,13 @@ body {
   background-size: 16px;
 }
 
+/* Ajout des styles spécifiques pour les options des sélecteurs sur Windows */
+.react-datepicker__month-select option,
+.react-datepicker__year-select option {
+  background-color: #262626;
+  color: white;
+}
+
 .react-datepicker__month-select:focus,
 .react-datepicker__year-select:focus {
   outline: none;
