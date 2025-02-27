@@ -23,19 +23,21 @@ transporter.verify((error, success) => {
 });
 
 const sendValidationEmail = async (email, validationCode) => {
-  const validationLink = `http://localhost:3000/api/users/validate?email=${encodeURIComponent(email)}&code=${validationCode}`;
   const mailOptions = {
     from: 'noreply@supchat.fr',
     to: email,
-    subject: 'Validation Code',
-    text: `Your validation code is: ${validationCode}\n\nPlease click the following link to validate your account: ${validationLink}`,
+    subject: 'Code de validation SUPCHAT',
+    html: `
+      <h1>Votre code de validation SUPCHAT</h1>
+      <p>Votre code de validation est : <strong>${validationCode}</strong></p>
+      <p>Ce code est valable pendant 30 minutes.</p>
+    `
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Validation email sent successfully');
   } catch (error) {
-    console.error('Error sending validation email:', error.stack); // Log the error stack trace
+    console.error('Erreur d\'envoi email:', error);
     throw error;
   }
 };

@@ -27,8 +27,12 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // Enable CORS
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+})); // Enable CORS
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: "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", resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -46,10 +50,11 @@ app.use("/api", reactionRoutes);
 // et utiliser uniquement socketManager
 socketManager(io);
 
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-app.get("/api/users/auth/google/callback", passport.authenticate("google", { failureRedirect: "/" }), (req, res) => {
-   res.redirect("http://localhost:3001/account");
- });
+// Supprimer ou modifier cette route car elle n'est plus nécessaire
+// app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+// app.get("/api/users/auth/google/callback", passport.authenticate("google", { failureRedirect: "/" }), (req, res) => {
+//    res.redirect("http://localhost:3000");
+// });
 
 httpServer.listen(PORT, async () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);

@@ -69,7 +69,8 @@
             background: #f5f5f5;
             border-right: 1px solid #ddd;
             padding: 20px;
-            overflow-y: auto;
+            display: flex;           /* Ajout de flexbox */
+            flex-direction: column;  /* Organisation verticale */
         }
 
         .main-content {
@@ -84,14 +85,35 @@
         .workspace-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 8px;
             background: #e0e0e0;
-            cursor: pointer;
             border-radius: 4px;
+            border: 2px solid transparent; /* Ajout pour la bordure */
+            padding: 8px 12px; /* Ajuster le padding pour accommoder l'icône */
         }
 
-        .workspace-header:hover {
-            background: #d0d0d0;
+        .workspace-header.active {
+            border-color: #4CAF50; /* Bordure verte pour le workspace actif */
+        }
+
+        .workspace-title {
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        .invite-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .invite-button:hover {
+            background: #45a049;
         }
 
         .channels-list {
@@ -114,71 +136,453 @@
             color: white;
         }
 
+        .welcome-message {
+            text-align: center;
+            margin-top: 20vh;
+            color: #666;
+        }
+
+        .welcome-message h1 {
+            font-size: 2em;
+            margin-bottom: 1em;
+        }
+
+        .welcome-message p {
+            font-size: 1.2em;
+        }
+
         /* Adjust existing styles */
         #messages {
             height: calc(100vh - 200px);
         }
+
+        .right-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            background: #f5f5f5;
+            border-left: 1px solid #ddd;
+            padding: 20px;
+            display: none;
+            flex-direction: column; /* Déplacer ici */
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .user-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-role {
+            font-size: 0.8em;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: auto;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #4CAF50;
+        }
+
+        .status-offline {
+            background: #ccc;
+        }
+
+        .confirmation-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .popup-buttons {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .popup-buttons button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .accept-button {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .decline-button {
+            background: #f44336;
+            color: white;
+        }
+
+        /* Ajuster le contenu principal pour la sidebar droite */
+        .main-content {
+            margin-right: 270px;
+        }
+
+        .add-workspace-button {
+            position: sticky;
+            bottom: 0;
+            width: 100%;           /* Largeur totale */
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin: 0 auto;        /* Centrage horizontal */
+        }
+
+        .add-workspace-button:hover {
+            background-color: #45a049;
+        }
+
+        .add-workspace-button i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        #workspaces-list {
+            flex-grow: 1;           /* Prend tout l'espace disponible */
+            overflow-y: auto;       /* Permet le défilement si nécessaire */
+            margin-bottom: 20px;    /* Espace avant le bouton */
+        }
+
+        .remove-member-button {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            display: none; /* Caché par défaut */
+        }
+
+        .remove-member-button:hover {
+            background: #d32f2f;
+        }
+
+        .user-item.can-remove .remove-member-button {
+            display: inline-block;
+        }
+
+        .logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .logout-button:hover {
+            background: #d32f2f;
+        }
+
+        .workspace-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .workspace-modal h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .workspace-modal input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .workspace-modal .privacy-options {
+            margin-bottom: 20px;
+        }
+
+        .workspace-modal .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .workspace-privacy {
+            margin-left: 8px;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .workspace-title-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .leave-workspace-button {
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin-top: auto;
+        }
+
+        .leave-workspace-button:hover {
+            background-color: #d32f2f;
+        }
+
+        #users-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
+    <button onclick="logout()" class="logout-button">Logout</button>
     <div class="sidebar">
         <h2>Workspaces</h2>
         <div id="workspaces-list"></div>
+        <button class="add-workspace-button" onclick="createNewWorkspace()">
+            + Créer un workspace
+        </button>
     </div>
     
     <div class="main-content">
-        <div id="status"></div>
-        <div class="input-group">
-            <input type="text" id="userId" placeholder="User ID (UUID)" />
-            <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
-            <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
-            <button onclick="joinCanal()">Join Canal</button>
+        <div id="welcome-screen" class="welcome-message">
+            <h1>Bienvenue sur SUPCHAT</h1>
+            <p>Veuillez sélectionner un workspace pour commencer</p>
         </div>
-        <div id="messages"></div>
-        <div class="input-group">
-            <input type="text" id="messageInput" placeholder="Type your message" />
-            <button onclick="sendMessage()">Send</button>
-        </div>
-        <div class="input-group">
-            <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
-            <button onclick="addReaction()">Ajouter Réaction</button>
-        </div>
+        <div id="chat-interface" style="display: none;">
+            <div id="status"></div>
+            <div class="input-group">
+                <input type="text" id="userId" placeholder="User ID (UUID)" />
+                <input type="text" id="workspaceId" placeholder="Workspace ID (UUID)" />
+                <input type="text" id="canalId" placeholder="Canal ID (UUID)" />
+                <button onclick="joinCanal()">Join Canal</button>
+            </div>
+            <div id="messages"></div>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Type your message" />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="emojiInput" placeholder="Emoji (ex: 👍)" />
+                <button onclick="addReaction()">Ajouter Réaction</button>
+            </div>
 
-        <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
+            <button onclick="logout()" style="position: absolute; top: 10px; right: 10px;">Logout</button>
+        </div>
     </div>
+
+    <div class="right-sidebar">
+        <h2>Membres du workspace</h2>
+        <div id="users-list" class="user-list"></div>
+        <button class="leave-workspace-button" onclick="leaveWorkspace()">
+            Quitter le workspace
+        </button>
+    </div>
+
+    <div id="join-popup" class="confirmation-popup">
+        <h3>Rejoindre le workspace?</h3>
+        <p>Voulez-vous rejoindre ce workspace?</p>
+        <div class="popup-buttons">
+            <button class="accept-button" onclick="acceptJoinWorkspace()">Accepter</button>
+            <button class="decline-button" onclick="declineJoinWorkspace()">Refuser</button>
+        </div>
+    </div>
+
+    <div id="workspace-modal" class="workspace-modal" style="display: none;">
+        <h3>Créer un nouveau workspace</h3>
+        <input type="text" id="workspace-name" placeholder="Nom du workspace">
+        <div class="privacy-options">
+            <label>
+                <input type="radio" name="privacy" value="public" checked>
+                Public (visible par tous)
+            </label>
+            <br>
+            <label>
+                <input type="radio" name="privacy" value="private">
+                Privé (sur invitation uniquement)
+            </label>
+        </div>
+        <div class="modal-buttons">
+            <button class="decline-button" onclick="closeWorkspaceModal()">Annuler</button>
+            <button class="accept-button" onclick="confirmCreateWorkspace()">Créer</button>
+        </div>
+    </div>
+    <div id="modal-overlay" class="overlay" style="display: none;"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Add these new functions at the beginning of your script section
+        // Ajouter une variable globale pour stocker le workspace courant
+        let currentWorkspaceId = null;
+
+        // Modifier la fonction loadWorkspaces pour cacher les canaux par défaut
         async function loadWorkspaces() {
             try {
-                // Changed route to match the backend route for all workspaces
                 const response = await fetch('/api/workspaces');
                 const workspaces = await response.json();
                 const workspacesList = document.getElementById('workspaces-list');
+                const userId = document.getElementById('userId').value;
                 
                 if (!workspaces || workspaces.length === 0) {
                     workspacesList.innerHTML = '<div>Aucun workspace disponible</div>';
                     return;
                 }
                 
-                workspacesList.innerHTML = workspaces.map(workspace => `
+                // Créer un tableau de promesses pour vérifier le membership de chaque workspace
+                const membershipChecks = workspaces.map(workspace => 
+                    fetch(`/api/workspaces/${workspace.id_workspace}/members/${userId}`)
+                        .then(res => res.json())
+                        .then(data => ({
+                            ...workspace,
+                            isMember: data.isMember
+                        }))
+                );
+                
+                // Attendre que toutes les vérifications soient terminées
+                const workspacesWithMembership = await Promise.all(membershipChecks);
+                
+                workspacesList.innerHTML = workspacesWithMembership.map(workspace => `
                     <div class="workspace-item">
-                        <div class="workspace-header" onclick="toggleWorkspace('${workspace.id_workspace}')">
-                            📁 ${workspace.nom}
+                        <div class="workspace-header" id="workspace-${workspace.id_workspace}" onclick="selectWorkspace('${workspace.id_workspace}')">
+                            <div class="workspace-title-container">
+                                <div class="workspace-title">
+                                    📁 ${workspace.nom}
+                                </div>
+                                ${workspace.is_private ? '<span class="workspace-privacy">🔒</span>' : ''}
+                            </div>
+                            ${workspace.isMember ? `
+                                <button class="invite-button" onclick="inviteToWorkspace('${workspace.id_workspace}', '${workspace.nom}'); event.stopPropagation();">
+                                    Inviter
+                                </button>
+                            ` : ''}
                         </div>
-                        <div class="channels-list" id="channels-${workspace.id_workspace}"></div>
+                        <div class="channels-list" id="channels-${workspace.id_workspace}" style="display: none;"></div>
                     </div>
                 `).join('');
-
-                // Load channels for each workspace
-                workspaces.forEach(workspace => {
-                    loadChannels(workspace.id_workspace);
-                });
+                
             } catch (error) {
                 console.error('Error loading workspaces:', error);
                 document.getElementById('workspaces-list').innerHTML = 
                     '<div class="error">Erreur lors du chargement des workspaces</div>';
+            }
+        }
+
+        // Ajouter une nouvelle fonction pour gérer la sélection du workspace
+        async function selectWorkspace(workspaceId) {
+            try {
+                const isMember = await checkWorkspaceMembership(workspaceId);
+                console.log('Membership check result:', { workspaceId, isMember }); // Debug log
+                
+                if (!isMember) {
+                    pendingWorkspaceId = workspaceId;
+                    document.getElementById('join-popup').style.display = 'block';
+                    return;
+                }
+
+                // Stocker le workspace ID courant
+                currentWorkspaceId = workspaceId;
+
+                // Masquer tous les canaux et retirer les sélections actives
+                document.querySelectorAll('.channels-list').forEach(list => {
+                    list.style.display = 'none';
+                });
+
+                document.querySelectorAll('.workspace-header').forEach(header => {
+                    header.classList.remove('active');
+                });
+                
+                const selectedWorkspace = document.getElementById(`workspace-${workspaceId}`);
+                if (selectedWorkspace) {
+                    selectedWorkspace.classList.add('active');
+                }
+                
+                document.getElementById('welcome-screen').style.display = 'none';
+                document.getElementById('chat-interface').style.display = 'block';
+                
+                // Charger les canaux seulement si on est membre
+                await loadChannels(workspaceId);
+                await loadWorkspaceUsers(workspaceId);
+
+                const channelsList = document.getElementById(`channels-${workspaceId}`);
+                if (channelsList) {
+                    channelsList.style.display = 'block';
+                }
+
+                // Afficher la sidebar droite directement avec flex
+                const rightSidebar = document.querySelector('.right-sidebar');
+                rightSidebar.style.display = 'flex';
+            } catch (error) {
+                console.error('Erreur lors de la sélection du workspace:', error);
             }
         }
 
@@ -222,6 +626,7 @@
             }
         }
 
+        // Modifier la fonction toggleWorkspace
         function toggleWorkspace(workspaceId) {
             const channelsList = document.getElementById(`channels-${workspaceId}`);
             if (channelsList) {
@@ -246,19 +651,38 @@
             joinCanal();
         }
 
-        // Modify window.onload to include workspace loading
+        // Modifier la fonction window.onload pour vérifier l'authentification de manière plus robuste
         window.onload = function() {
             const token = localStorage.getItem('userToken');
             const userId = localStorage.getItem('userId');
             
             if (!token || !userId) {
+                console.log('Pas de token ou userId trouvé, redirection vers login');
                 window.location.href = '/login.html';
                 return;
             }
 
-            document.getElementById('userId').value = userId;
-            loadWorkspaces(); // Load workspaces when page loads
-        }
+            // Vérifier la validité du token côté serveur
+            fetch('/api/users/verify-token', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Token invalide');
+                }
+                // Token valide, continuer le chargement normal
+                document.getElementById('userId').value = userId;
+                loadWorkspaces();
+            })
+            .catch(error => {
+                console.error('Erreur de vérification du token:', error);
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userId');
+                window.location.href = '/login.html';
+            });
+        };
 
         // Add logout function
         function logout() {
@@ -547,6 +971,262 @@
                 sendMessage();
             }
         });
+
+        // Ajouter cette nouvelle fonction avant la fermeture de la balise script
+        function inviteToWorkspace(workspaceId, workspaceName) {
+            const email = prompt("Entrez l'adresse email de la personne à inviter :");
+            if (email) {
+                const userId = document.getElementById('userId').value; // Récupérer l'ID de l'utilisateur
+                
+                fetch(`/api/workspaces/${workspaceId}/invite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email,
+                        userId  // Ajouter l'userId dans le body
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de l\'envoi de l\'invitation');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert('Invitation envoyée avec succès !');
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de l\'envoi de l\'invitation');
+                });
+            }
+        }
+
+        let pendingWorkspaceId = null;
+
+        // Ajouter cette fonction pour vérifier l'appartenance à un workspace
+        async function checkWorkspaceMembership(workspaceId) {
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`);
+                const data = await response.json();
+                return data.isMember; // Maintenant on utilise la valeur booléenne retournée par l'API
+            } catch (error) {
+                console.error('Erreur lors de la vérification du membership:', error);
+                return false;
+            }
+        }
+
+        // Ajouter les fonctions pour gérer la popup
+        async function acceptJoinWorkspace() {
+            if (!pendingWorkspaceId) return;
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${pendingWorkspaceId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (response.ok) {
+                    document.getElementById('join-popup').style.display = 'none';
+                    selectWorkspace(pendingWorkspaceId);
+                } else {
+                    alert('Erreur lors de l\'adhésion au workspace');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'adhésion au workspace');
+            }
+
+            pendingWorkspaceId = null;
+        }
+
+        function declineJoinWorkspace() {
+            document.getElementById('join-popup').style.display = 'none';
+            pendingWorkspaceId = null;
+        }
+
+        // Modifier la fonction loadWorkspaceUsers
+        async function loadWorkspaceUsers(workspaceId) {
+            try {
+                const response = await fetch(`/api/workspaces/${workspaceId}/members`);
+                const users = await response.json();
+                const usersList = document.getElementById('users-list');
+                const currentUserId = document.getElementById('userId').value;
+                
+                // Vérifier si l'utilisateur actuel est owner
+                const isOwner = users.some(user => 
+                    user.id_utilisateur === currentUserId && user.role === 'owner'
+                );
+                
+                usersList.innerHTML = users.map(user => `
+                    <div class="user-item ${isOwner && user.role !== 'owner' ? 'can-remove' : ''}">
+                        <div class="user-info">
+                            <span class="user-status ${user.status === 1 ? 'status-online' : 'status-offline'}"></span>
+                            <span>${user.nom}</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <span class="user-role">${user.role}</span>
+                            ${isOwner && user.role !== 'owner' ? `
+                                <button 
+                                    class="remove-member-button" 
+                                    onclick="removeMember('${workspaceId}', '${user.id_utilisateur}')"
+                                >
+                                    ×
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
+            }
+        }
+
+        async function removeMember(workspaceId, memberToRemove) {
+            if (!confirm('Êtes-vous sûr de vouloir retirer ce membre ?')) {
+                return;
+            }
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${workspaceId}/members/${memberToRemove}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
+
+                // Recharger la liste des membres
+                await loadWorkspaceUsers(workspaceId);
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert(error.message || 'Erreur lors de la suppression du membre');
+            }
+        }
+
+        // Remplacer la fonction createNewWorkspace existante
+        function createNewWorkspace() {
+            document.getElementById('workspace-modal').style.display = 'block';
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('workspace-name').value = '';
+            document.querySelector('input[value="public"]').checked = true;
+        }
+
+        function closeWorkspaceModal() {
+            document.getElementById('workspace-modal').style.display = 'none';
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        async function confirmCreateWorkspace() {
+            const workspaceName = document.getElementById('workspace-name').value.trim();
+            const isPrivate = document.querySelector('input[name="privacy"]:checked').value === 'private';
+            
+            if (!workspaceName) {
+                alert('Veuillez entrer un nom pour le workspace');
+                return;
+            }
+            
+            const userId = document.getElementById('userId').value;
+            
+            try {
+                // Créer le workspace
+                const createResponse = await fetch('/api/workspaces', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nom: workspaceName,
+                        is_private: isPrivate
+                    })
+                });
+
+                if (!createResponse.ok) throw new Error('Erreur lors de la création du workspace');
+                
+                const newWorkspace = await createResponse.json();
+
+                // Ajouter le créateur comme owner
+                await fetch(`/api/workspaces/${newWorkspace.id_workspace}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        role: 1  // 1 = owner
+                    })
+                });
+
+                // Fermer le modal
+                closeWorkspaceModal();
+
+                // Recharger la liste des workspaces
+                await loadWorkspaces();
+                
+                // Sélectionner automatiquement le nouveau workspace
+                setTimeout(() => selectWorkspace(newWorkspace.id_workspace), 100);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création du workspace');
+            }
+        }
+
+        // Modifier la fonction leaveWorkspace pour utiliser currentWorkspaceId
+        async function leaveWorkspace() {
+            if (!currentWorkspaceId) {
+                alert('Aucun workspace sélectionné');
+                return;
+            }
+
+            if (!confirm('Êtes-vous sûr de vouloir quitter ce workspace ?')) {
+                return;
+            }
+
+            try {
+                const userId = document.getElementById('userId').value;
+                const response = await fetch(`/api/workspaces/${currentWorkspaceId}/members/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
+
+                // Réinitialiser le workspace courant
+                currentWorkspaceId = null;
+
+                // Masquer les interfaces de chat et de membres
+                document.getElementById('chat-interface').style.display = 'none';
+                document.querySelector('.right-sidebar').style.display = 'none';
+                document.getElementById('welcome-screen').style.display = 'block';
+
+                // Recharger la liste des workspaces
+                await loadWorkspaces();
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert(error.message || 'Erreur lors de la sortie du workspace');
+            }
+        }
     </script>
 </body>
 </html>

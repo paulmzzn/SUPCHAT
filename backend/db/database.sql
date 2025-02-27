@@ -26,7 +26,7 @@ CREATE TABLE utilisateur (
   id_utilisateur UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nom VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  mot_de_passe VARCHAR(255) NOT NULL,
+  mot_de_passe VARCHAR(255),
   photo_de_profil VARCHAR(2048),
   date_creation TIMESTAMP DEFAULT current_timestamp,
   fk_statut INT NOT NULL,
@@ -199,4 +199,18 @@ CREATE INDEX idx_reaction_utilisateur ON reaction(fk_utilisateur);
 
 COMMENT ON TABLE reaction IS 'Stockage optimisé des réactions emoji sur les messages';
 COMMENT ON COLUMN reaction.emoji_unicode IS 'Tableau de codes points Unicode pour supporter les emojis composés';
+
+-- Modifier la contrainte NOT NULL sur mot_de_passe
+ALTER TABLE utilisateur ALTER COLUMN mot_de_passe DROP NOT NULL;
+
+-- Ajouter la colonne date_naissance à la table utilisateur
+ALTER TABLE utilisateur
+ADD COLUMN date_naissance DATE;
+
+-- Définir le fuseau horaire pour la session
+SET timezone = 'UTC';
+
+-- Modifier la colonne date_naissance pour s'assurer qu'elle est stockée comme DATE
+ALTER TABLE utilisateur
+ALTER COLUMN date_naissance TYPE DATE;
 
