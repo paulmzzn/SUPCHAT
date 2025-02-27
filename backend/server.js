@@ -7,11 +7,11 @@ import passport from "passport";
 import session from "express-session";
 import cors from "cors"; // Import CORS
 import { googleStrategy } from "./config/passport.js"; // Import Google strategy
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import MessageModel from './models/Message.js';
+import { createServer } from "http";
+import { Server } from "socket.io";
+import MessageModel from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
-import socketManager from './socket/socketManager.js';
+import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
 
 const app = express();
@@ -20,23 +20,31 @@ const io = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
-    transports: ['websocket', 'polling']
+    transports: ["websocket", "polling"],
   },
-  pingTimeout: 60000
+  pingTimeout: 60000,
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'http://localhost:3001',
-  credentials: true
-})); // Enable CORS
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  })
+); // Enable CORS
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: "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", resave: false, saveUninitialized: true }));
+app.use(
+  session({
+    secret: "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",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static('public'));
+app.use(express.static("public"));
 
 passport.use(googleStrategy);
 
@@ -67,6 +75,6 @@ httpServer.listen(PORT, async () => {
 });
 
 // Gestion des erreurs non capturées
-process.on('unhandledRejection', (error) => {
-  console.error('Erreur non gérée:', error);
+process.on("unhandledRejection", (error) => {
+  console.error("Erreur non gérée:", error);
 });
