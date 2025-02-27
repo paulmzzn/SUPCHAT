@@ -24,7 +24,16 @@ class Workspace {
 
   static async findAll() {
     const query = `
-      SELECT * FROM workspace;
+      SELECT 
+        w.id_workspace,
+        w.nom,
+        w.is_private,
+        w.description,
+        w.emoji,
+        w.banner_url,
+        w.icon_url
+      FROM workspace w
+      ORDER BY w.id_workspace ASC;
     `;
     const { rows } = await pool.query(query);
     return rows;
