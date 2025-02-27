@@ -37,6 +37,42 @@
             cursor: pointer;
             color: blue;
         }
+        .google-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .google-btn img {
+            width: 20px;
+            height: 20px;
+            background: white;
+            padding: 2px;
+            border-radius: 2px;
+        }
+        .or-divider {
+            text-align: center;
+            margin: 15px 0;
+            position: relative;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #ddd;
+        }
+        .or-divider::before { left: 0; }
+        .or-divider::after { right: 0; }
     </style>
 </head>
 <body>
@@ -52,6 +88,11 @@
         </div>
         <div id="loginError" class="error"></div>
         <button onclick="login()">Login</button>
+        <div class="or-divider">OR</div>
+        <button class="google-btn" onclick="loginWithGoogle()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+            Sign in with Google
+        </button>
         <div class="toggle-form" onclick="toggleForm()">Need to register?</div>
     </div>
 
@@ -71,10 +112,37 @@
         </div>
         <div id="registerError" class="error"></div>
         <button onclick="register()">Register</button>
+        <div class="or-divider">OR</div>
+        <button class="google-btn" onclick="loginWithGoogle()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+            Sign up with Google
+        </button>
         <div class="toggle-form" onclick="toggleForm()">Already have an account?</div>
     </div>
 
     <script>
+        window.onload = function() {
+            const token = localStorage.getItem('userToken');
+            const userId = localStorage.getItem('userId');
+            
+            if (token && userId) {
+                fetch('/api/users/verify-token', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/index.html';
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem('userToken');
+                    localStorage.removeItem('userId');
+                });
+            }
+        };
+
         function toggleForm() {
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
@@ -135,6 +203,10 @@
             } catch (error) {
                 document.getElementById('registerError').textContent = 'Error during registration';
             }
+        }
+
+        function loginWithGoogle() {
+            window.location.href = '/api/users/auth/google';
         }
     </script>
 </body>

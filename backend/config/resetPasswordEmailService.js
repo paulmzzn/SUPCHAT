@@ -23,18 +23,7 @@ const sendResetPasswordEmail = async (email, resetCode) => {
     text: `Your password reset code is: ${resetCode}\n\nUse this code with the reset password API endpoint: ${resetLink}`,
     html: `<p>Your password reset code is: <strong>${resetCode}</strong></p>
            <p>Use this code with the reset password API endpoint: <a href="${resetLink}">${resetLink}</a></p>
-           <p>This code will expire in 30 minutes.</p>
-           <p>For testing with Postman:</p>
-           <pre>
-           POST http://localhost:3000/api/users/reset-password
-           Content-Type: application/json
-           
-           {
-             "email": "${email}",
-             "code": "${resetCode}",
-             "newPassword": "your-new-password"
-           }
-           </pre>`
+           <p>This code will expire in 30 minutes.</p>`
   };
 
   try {

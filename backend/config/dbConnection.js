@@ -4,10 +4,10 @@ const { Pool } = pg;
 
 // Configuration avec vos paramètres PostgreSQL externes
 const pool = new Pool({
-  user: "REDACTED", // Nom d'utilisateur PostgreSQL
+  user: "rootmath", // Nom d'utilisateur PostgreSQL
   host: "REDACTED", // Adresse IP ou domaine de la BDD PostgreSQL
   database: "postgres", // Nom de votre base de données
-  password: "rootmath", // Mot de passe
+  password: "?3aPCCzLcKd@tGoS", // Mot de passe
   port: 5432, // Port par défaut PostgreSQL
   ssl: {
     rejectUnauthorized: false,

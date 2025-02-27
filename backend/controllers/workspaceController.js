@@ -1,6 +1,7 @@
+import pool from '../config/dbConnection.js';
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
-import sendInvitation from "../config/emailService.js"; // Ajout de l'import
+import sendInvitation from "../config/emailService.js";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -27,9 +28,41 @@ export const getWorkspaceById = async (req, res) => {
 
 export const getAllWorkspaces = async (req, res) => {
   try {
+    // Get base workspace data
     const workspaces = await Workspace.findAll();
-    res.status(200).json(workspaces);
+    
+    // Enhance workspaces with additional data
+    const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {
+      // Get member count for each workspace
+      const memberResult = await pool.query(
+        'SELECT COUNT(*) as total_members FROM membre_workspace WHERE fk_workspace = $1',
+        [workspace.id_workspace]
+      );
+      
+      // Get online users count (users with status = 1)
+      const onlineResult = await pool.query(
+        `SELECT COUNT(*) as online_users 
+         FROM membre_workspace mw
+         JOIN utilisateur u ON mw.fk_utilisateur = u.id_utilisateur
+         WHERE mw.fk_workspace = $1 AND u.fk_statut = 1`,
+        [workspace.id_workspace]
+      );
+      
+      return {
+        ...workspace,
+        total_members: parseInt(memberResult.rows[0].total_members),
+        online_users: parseInt(onlineResult.rows[0].online_users),
+        // Default values for missing fields
+        description: workspace.description || null,
+        emoji: workspace.emoji || null,
+        banner_url: workspace.banner_url || null,
+        icon_url: workspace.icon_url || null
+      };
+    }));
+    
+    res.status(200).json(enhancedWorkspaces);
   } catch (error) {
+    console.error('Error in getAllWorkspaces:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -64,21 +97,19 @@ export const deleteWorkspace = async (req, res) => {
 export const sendWorkspaceInvitation = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { userId, recipientEmail } = req.body;
+    const { email, userId } = req.body;  // Récupérer userId du body au lieu de req.user
 
     // Vérification des données requises
-    if (!workspaceId || !userId || !recipientEmail) {
+    if (!workspaceId || !email || !userId) {
       return res.status(400).json({
-        message: "workspaceId, userId et recipientEmail sont requis",
+        message: "workspaceId, userId et email sont requis",
       });
     }
 
     // Récupérer les informations de l'utilisateur qui envoie l'invitation
     const sender = await UserModel.getUserById(userId);
     if (!sender) {
-      return res
-        .status(404)
-        .json({ message: "Utilisateur expéditeur non trouvé" });
+      return res.status(404).json({ message: "Utilisateur expéditeur non trouvé" });
     }
 
     // Récupérer les informations du workspace
@@ -87,20 +118,14 @@ export const sendWorkspaceInvitation = async (req, res) => {
       return res.status(404).json({ message: "Workspace non trouvé" });
     }
 
-    // Envoyer l'invitation avec les bons paramètres
-    await sendInvitation(
-      recipientEmail,
-      workspaceId,
-      workspace.nom,
-      sender.nom
-    );
+    // Envoyer l'invitation
+    await sendInvitation(email, workspaceId, workspace.nom, sender.nom);
 
     res.status(200).json({
       message: "Invitation envoyée avec succès",
       details: {
-        sender: sender.nom,
         workspace: workspace.nom,
-        recipient: recipientEmail,
+        recipient: email,
       },
     });
   } catch (error) {
@@ -109,5 +134,119 @@ export const sendWorkspaceInvitation = async (req, res) => {
       message: "Erreur lors de l'envoi de l'invitation",
       error: error.message,
     });
+  }
+};
+
+export const checkWorkspaceMember = async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    console.log('Checking membership for:', { workspaceId, userId }); // Debug log
+
+    const result = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+    
+    const isMember = result.rows.length > 0;
+    console.log('Membership result:', { isMember, count: result.rows.length }); // Debug log
+    
+    res.status(200).json({ isMember });
+  } catch (error) {
+    console.error('Erreur checkWorkspaceMember:', error);
+    res.status(500).json({ error: error.message, isMember: false });
+  }
+};
+
+export const getWorkspaceMembers = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const result = await pool.query(
+      `SELECT u.id_utilisateur, u.nom, u.fk_statut as status, 
+              r.nom_role as role
+       FROM utilisateur u
+       JOIN membre_workspace mw ON u.id_utilisateur = mw.fk_utilisateur
+       JOIN role r ON mw.fk_role = r.id_role
+       WHERE mw.fk_workspace = $1`,
+      [workspaceId]
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Erreur getWorkspaceMembers:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const joinWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { userId, role = 3 } = req.body; // role par défaut = 3 (member)
+
+    // Vérifier si l'utilisateur n'est pas déjà membre
+    const checkMember = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+
+    if (checkMember.rows.length > 0) {
+      return res.status(400).json({ message: 'Déjà membre de ce workspace' });
+    }
+    
+    // Ajouter l'utilisateur comme membre avec le rôle spécifié
+    await pool.query(
+      'INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)',
+      [userId, workspaceId, role]
+    );
+    
+    res.status(200).json({ message: 'Joined workspace successfully' });
+  } catch (error) {
+    console.error('Erreur joinWorkspace:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const removeMember = async (req, res) => {
+  try {
+    const { workspaceId, userId: memberToRemove } = req.params;
+    const { userId: removerId } = req.body;
+
+    // Si l'utilisateur essaie de se retirer lui-même, on autorise
+    if (removerId === memberToRemove) {
+      await pool.query(
+        'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+        [workspaceId, memberToRemove]
+      );
+      return res.status(200).json({ message: 'Vous avez quitté le workspace' });
+    }
+
+    // Sinon, vérifier si l'utilisateur qui fait la demande est owner
+    const ownerCheck = await pool.query(
+      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1',
+      [workspaceId, removerId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ message: 'Seul le propriétaire peut retirer des membres' });
+    }
+
+    // Vérifier que l'utilisateur à supprimer n'est pas owner
+    const memberCheck = await pool.query(
+      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, memberToRemove]
+    );
+
+    if (memberCheck.rows[0]?.fk_role === 1) {
+      return res.status(403).json({ message: 'Impossible de retirer le propriétaire du workspace' });
+    }
+
+    // Supprimer le membre
+    await pool.query(
+      'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, memberToRemove]
+    );
+
+    res.status(200).json({ message: 'Membre retiré avec succès' });
+  } catch (error) {
+    console.error('Erreur removeMember:', error);
+    res.status(500).json({ error: error.message });
   }
 };
