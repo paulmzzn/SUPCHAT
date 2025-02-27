@@ -1,66 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FaSearch, FaHeart } from 'react-icons/fa';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import WorkspaceCard from './WorkspaceCard';
 import './Workspaces.css';
 
 function Workspaces() {
+  const [favoriteWorkspaces, setFavoriteWorkspaces] = useState([]);
+  const [recentWorkspaces, setRecentWorkspaces] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
   
-  // Sample workspace data (would typically come from an API)
-  const workspaces = [
-    {
-      id: 1,
-      name: "Design Team",
-      emoji: "🎨",
-      description: "For all design related projects and discussions",
-      banner: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2574&q=80",
-      icon: "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2574&q=80",
-      onlineUsers: 5,
-      totalMembers: 12,
-      isFavorite: true
-    },
-    {
-      id: 2,
-      name: "Development",
-      emoji: "👨‍💻",
-      description: "Frontend and backend discussions for our projects",
-      banner: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2670&q=80",
-      icon: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2574&q=80",
-      onlineUsers: 8,
-      totalMembers: 15,
-      isFavorite: false
-    },
-    {
-      id: 3,
-      name: "Marketing",
-      emoji: "📊",
-      description: "Campaign planning and analytics for our products",
-      banner: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2426&q=80",
-      icon: "https://images.unsplash.com/photo-1611162617263-4ec3060a058e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2574&q=80",
-      onlineUsers: 3,
-      totalMembers: 8,
-      isFavorite: true
+  // Define fetchWorkspaces as a memoized function to avoid recreating it on each render
+  const fetchWorkspaces = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:3000/api/workspaces');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch workspaces');
+      }
+      
+      const data = await response.json();
+      
+      // Transform backend data to match frontend format
+      const transformedWorkspaces = data.map(workspace => ({
+        id: workspace.id_workspace,
+        name: workspace.nom,
+        description: workspace.description || "No description available",
+        banner: workspace.banner_url || "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        icon: workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        onlineUsers: workspace.online_users || 0,
+        totalMembers: workspace.total_members || 0,
+        isFavorite: workspace.is_favorite || false,
+        isPrivate: workspace.is_private || false
+      }));
+      
+      // Filter for favorites (we'll need to implement proper favorite logic later)
+      // For now, let's assume the first 2 are favorites
+      const favorites = transformedWorkspaces.slice(0, 2);
+      
+      // Recent workspaces - for now, just all of them
+      const recent = [...transformedWorkspaces];
+      
+      setFavoriteWorkspaces(favorites);
+      setRecentWorkspaces(recent);
+      
+    } catch (err) {
+      console.error('Error fetching workspaces:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  }, []); // No dependencies, so this function never changes
+
+  // Fetch workspaces only once when component mounts
+  useEffect(() => {
+    fetchWorkspaces();
+  }, [fetchWorkspaces]); // Only re-run when fetchWorkspaces changes (which it never will)
 
   // Filter workspaces based on search query
   useEffect(() => {
     if (!searchQuery) {
-      setFilteredWorkspaces(workspaces);
+      setFilteredWorkspaces(recentWorkspaces);
       return;
     }
     
-    const filtered = workspaces.filter(workspace => 
+    const filtered = recentWorkspaces.filter(workspace => 
       workspace.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       workspace.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredWorkspaces(filtered);
-  }, [searchQuery, workspaces]);
-
-  // Get favorite workspaces
-  const favoriteWorkspaces = workspaces.filter(workspace => workspace.isFavorite);
+  }, [searchQuery, recentWorkspaces]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -75,7 +87,7 @@ function Workspaces() {
         <div className="glow-circle-left bottom-left"></div>
         
         <div className="workspaces-header">
-          <h1 className="workspaces-title">Workspaces</h1>
+          <h1 className="workspaces-title">Mes Workspaces</h1>
           <div className="search-bar">
             <FaSearch className="search-icon" />
             <input 
@@ -87,44 +99,52 @@ function Workspaces() {
           </div>
         </div>
         
-        {/* Favorites section */}
-        <div className="favorites-section">
-          <div className="section-title">
-            <FaHeart className="section-icon heart-icon" />
-            <h2>Favorites</h2>
-          </div>
-          <div className="favorites-container">
-            {favoriteWorkspaces.map(workspace => (
-              <div key={workspace.id} className="favorite-item">
-                <div className="favorite-icon" style={{ backgroundImage: `url(${workspace.icon})` }}></div>
-                <span className="favorite-name">{workspace.name}</span>
+        {isLoading ? (
+          <div className="loading-state">Loading workspaces...</div>
+        ) : error ? (
+          <div className="error-state">Error: {error}</div>
+        ) : (
+          <>
+            {/* Favorites section */}
+            <div className="favorites-section">
+              <div className="section-title">
+                <FaHeart className="section-icon heart-icon" />
+                <h2>Favorites</h2>
               </div>
-            ))}
-            {/* Empty placeholder slots for future favorites */}
-            {[...Array(3 - favoriteWorkspaces.length)].map((_, i) => (
-              <div key={`empty-${i}`} className="favorite-item empty">
-                <div className="favorite-icon empty"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Workspaces grid */}
-        <div className="workspaces-section">
-          <h2 className="section-title">All Workspaces</h2>
-          <div className="workspaces-grid">
-            {filteredWorkspaces.map(workspace => (
-              <WorkspaceCard key={workspace.id} workspace={workspace} />
-            ))}
-            {/* Add workspace button/card */}
-            <div className="workspace-card add-workspace">
-              <div className="add-workspace-content">
-                <div className="plus-icon">+</div>
-                <p>Create New Workspace</p>
+              <div className="favorites-container">
+                {favoriteWorkspaces.map(workspace => (
+                  <div key={workspace.id} className="favorite-item">
+                    <div className="favorite-icon" style={{ backgroundImage: `url(${workspace.icon})` }}></div>
+                    <span className="favorite-name">{workspace.name}</span>
+                  </div>
+                ))}
+                {/* Empty placeholder slots for future favorites */}
+                {[...Array(3 - favoriteWorkspaces.length)].map((_, i) => (
+                  <div key={`empty-${i}`} className="favorite-item empty">
+                    <div className="favorite-icon empty"></div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
+            
+            {/* Workspaces grid */}
+            <div className="workspaces-section">
+              <h2 className="section-title">All Workspaces</h2>
+              <div className="workspaces-grid">
+                {filteredWorkspaces.map(workspace => (
+                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                ))}
+                {/* Add workspace button/card */}
+                <div className="workspace-card add-workspace">
+                  <div className="add-workspace-content">
+                    <div className="plus-icon">+</div>
+                    <p>Create New Workspace</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
