@@ -12,7 +12,7 @@ function Discover() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Fetch workspaces from backend API
+  // Fetch workspaces from backend API - only run once on component mount
   useEffect(() => {
     const fetchWorkspaces = async () => {
       try {
@@ -30,7 +30,7 @@ function Discover() {
           id: workspace.id_workspace,
           name: workspace.nom,
           description: workspace.description || "No description available",
-          banner: workspace.banner_url || defaultBanner, // Use imported default banner
+          banner: workspace.banner_url || defaultBanner,
           icon: workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
           onlineUsers: workspace.online_users || 0,
           totalMembers: workspace.total_members || 0,
@@ -39,7 +39,7 @@ function Discover() {
         }));
         
         setWorkspaces(transformedWorkspaces);
-        setFilteredWorkspaces(transformedWorkspaces);
+        // Don't set filtered workspaces here - we'll do it in the next useEffect
       } catch (err) {
         console.error('Error fetching workspaces:', err);
         setError(err.message);
@@ -49,9 +49,9 @@ function Discover() {
     };
 
     fetchWorkspaces();
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
-  // Filter workspaces based on search query
+  // Filter workspaces based on search query and when workspaces change
   useEffect(() => {
     if (!searchQuery) {
       setFilteredWorkspaces(workspaces);
@@ -63,7 +63,7 @@ function Discover() {
       (workspace.description && workspace.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
     setFilteredWorkspaces(filtered);
-  }, [searchQuery, workspaces]);
+  }, [searchQuery, workspaces]); // Only re-run when searchQuery or workspaces change
 
   // Handle search input change
   const handleSearchChange = (e) => {
