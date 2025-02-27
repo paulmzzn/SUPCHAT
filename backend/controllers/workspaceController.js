@@ -28,9 +28,41 @@ export const getWorkspaceById = async (req, res) => {
 
 export const getAllWorkspaces = async (req, res) => {
   try {
+    // Get base workspace data
     const workspaces = await Workspace.findAll();
-    res.status(200).json(workspaces);
+    
+    // Enhance workspaces with additional data
+    const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {
+      // Get member count for each workspace
+      const memberResult = await pool.query(
+        'SELECT COUNT(*) as total_members FROM membre_workspace WHERE fk_workspace = $1',
+        [workspace.id_workspace]
+      );
+      
+      // Get online users count (users with status = 1)
+      const onlineResult = await pool.query(
+        `SELECT COUNT(*) as online_users 
+         FROM membre_workspace mw
+         JOIN utilisateur u ON mw.fk_utilisateur = u.id_utilisateur
+         WHERE mw.fk_workspace = $1 AND u.fk_statut = 1`,
+        [workspace.id_workspace]
+      );
+      
+      return {
+        ...workspace,
+        total_members: parseInt(memberResult.rows[0].total_members),
+        online_users: parseInt(onlineResult.rows[0].online_users),
+        // Default values for missing fields
+        description: workspace.description || null,
+        emoji: workspace.emoji || null,
+        banner_url: workspace.banner_url || null,
+        icon_url: workspace.icon_url || null
+      };
+    }));
+    
+    res.status(200).json(enhancedWorkspaces);
   } catch (error) {
+    console.error('Error in getAllWorkspaces:', error);
     res.status(500).json({ error: error.message });
   }
 };

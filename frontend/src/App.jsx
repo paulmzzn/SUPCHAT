@@ -7,6 +7,9 @@ import ProtectedRoute from './utils/ProtectedRoute';
 import PublicRoute from './utils/PublicRoute';
 import AuthCallback from './pages/AuthCallback/AuthCallback';
 import Validate from './pages/Validate/Validate';
+import Workspaces from './pages/Workspaces/Workspaces'; // Add this import
+import Discover from './pages/Discover/Discover';
+
 
 function App() {
   return (
@@ -39,6 +42,8 @@ function App() {
           } 
         />
         <Route path="/validate" element={<Validate />} />
+        <Route path="/workspaces" element={<Workspaces />} /> 
+        <Route path="/discover" element={<Discover />} /> 
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
