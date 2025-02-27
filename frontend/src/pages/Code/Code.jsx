@@ -1,32 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './Code.css';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./Code.css";
+import { API_URL } from "../../config/config";
 
 function Code() {
-  const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [error, setError] = useState('');
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const inputs = Array(6).fill(0);
 
   useEffect(() => {
     // Vérifier si l'utilisateur est authentifié
-    const email = localStorage.getItem('userEmail');
+    const email = localStorage.getItem("userEmail");
     if (!email) {
-      navigate('/login');
+      navigate("/login");
     }
   }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const email = localStorage.getItem('userEmail');
-    const validationCode = code.join('');
-    console.log('Sending validation request:', { email, code: validationCode }); // Debug log
+    const email = localStorage.getItem("userEmail");
+    const validationCode = code.join("");
+    console.log("Sending validation request:", { email, code: validationCode }); // Debug log
 
     try {
-      const response = await fetch('http://localhost:3000/api/users/validate-code', {
-        method: 'POST',
+      const response = await fetch(`${API_URL}/api/users/validate-code`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
@@ -35,58 +36,58 @@ function Code() {
       });
 
       const data = await response.json();
-      console.log('Server response:', data); // Debug log
+      console.log("Server response:", data); // Debug log
 
       if (response.ok) {
         // Mettre à jour le token si un nouveau est fourni
         if (data.token) {
-          localStorage.setItem('userToken', data.token);
+          localStorage.setItem("userToken", data.token);
         }
-        localStorage.setItem('isValidated', 'true');
-        navigate('/dashboard');
+        localStorage.setItem("isValidated", "true");
+        navigate("/dashboard");
       } else {
-        console.error('Erreur:', data.message); // Debug log
-        setError(data.message || 'Code invalide');
+        console.error("Erreur:", data.message); // Debug log
+        setError(data.message || "Code invalide");
       }
     } catch (error) {
-      console.error('Error:', error); // Debug log
-      setError('Erreur de connexion au serveur');
+      console.error("Error:", error); // Debug log
+      setError("Erreur de connexion au serveur");
     }
   };
 
   const handleResendCode = async () => {
-    const email = localStorage.getItem('userEmail');
-    
+    const email = localStorage.getItem("userEmail");
+
     try {
-      const response = await fetch('http://localhost:3000/api/users/resend-validation', {  // Changement de l'endpoint
-        method: 'POST',
+      const response = await fetch(`${API_URL}/api/users/resend-validation`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
       if (response.ok) {
-        setError('');
-        alert('Un nouveau code a été envoyé à votre email.');
+        setError("");
+        alert("Un nouveau code a été envoyé à votre email.");
       } else {
-        setError(data.message || 'Erreur lors de l\'envoi du code');
+        setError(data.message || "Erreur lors de l'envoi du code");
       }
     } catch (error) {
-      console.error('Error:', error);
-      setError('Erreur de connexion au serveur');
+      console.error("Error:", error);
+      setError("Erreur de connexion au serveur");
     }
   };
 
   const handleCodeChange = (index, value) => {
     // Gérer le collage (paste)
     if (value.length > 1) {
-      const pastedValue = value.replace(/\D/g, '').slice(0, 6); // Ne garde que les chiffres
-      const codeArray = pastedValue.split('').slice(0, 6);
+      const pastedValue = value.replace(/\D/g, "").slice(0, 6); // Ne garde que les chiffres
+      const codeArray = pastedValue.split("").slice(0, 6);
       // Remplir le reste avec des chaînes vides si nécessaire
       while (codeArray.length < 6) {
-        codeArray.push('');
+        codeArray.push("");
       }
       setCode(codeArray);
       // Focus sur le dernier input
@@ -98,7 +99,7 @@ function Code() {
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-    
+
     if (value && index < 5) {
       const nextInput = document.getElementById(`code-${index + 1}`);
       if (nextInput) nextInput.focus();
@@ -106,7 +107,7 @@ function Code() {
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
       const prevInput = document.getElementById(`code-${index - 1}`);
       if (prevInput) prevInput.focus();
     }
@@ -114,10 +115,13 @@ function Code() {
 
   const handlePaste = (e, index) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const codeArray = pastedData.split('');
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+    const codeArray = pastedData.split("");
     while (codeArray.length < 6) {
-      codeArray.push('');
+      codeArray.push("");
     }
     setCode(codeArray);
   };
@@ -133,9 +137,13 @@ function Code() {
           <p className="verification-text">
             Veuillez entrer le code à 6 chiffres envoyé à votre adresse email
           </p>
-          
-          {error && <p className="error-message" style={{color: 'red'}}>{error}</p>}
-          
+
+          {error && (
+            <p className="error-message" style={{ color: "red" }}>
+              {error}
+            </p>
+          )}
+
           <form onSubmit={handleSubmit} className="verification-form">
             <div className="code-inputs">
               {inputs.map((_, index) => (
@@ -147,18 +155,18 @@ function Code() {
                   value={code[index]}
                   onChange={(e) => handleCodeChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  onPaste={(e) => handlePaste(e, index)}  // Ajout de l'événement onPaste
+                  onPaste={(e) => handlePaste(e, index)} // Ajout de l'événement onPaste
                   className="code-input"
                 />
               ))}
             </div>
-            
+
             <button type="submit" className="login-button">
               Vérifier
             </button>
 
             <p className="resend-text">
-              Vous n'avez pas reçu de code? 
+              Vous n'avez pas reçu de code?
               <button onClick={handleResendCode} className="resend-link">
                 Renvoyer
               </button>

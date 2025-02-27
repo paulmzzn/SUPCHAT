@@ -1,4 +1,4 @@
-import pool from '../config/dbConnection.js';
+import pool from "../config/dbConnection.js";
 
 class Workspace {
   static async create({ nom, is_private }) {
@@ -24,16 +24,7 @@ class Workspace {
 
   static async findAll() {
     const query = `
-      SELECT 
-        w.id_workspace,
-        w.nom,
-        w.is_private,
-        w.description,
-        w.emoji,
-        w.banner_url,
-        w.icon_url
-      FROM workspace w
-      ORDER BY w.id_workspace ASC;
+      SELECT * FROM workspace;
     `;
     const { rows } = await pool.query(query);
     return rows;

@@ -1,4 +1,4 @@
-import pool from '../config/dbConnection.js';
+import pool from "../config/dbConnection.js";
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
 import sendInvitation from "../config/emailService.js";
@@ -28,41 +28,9 @@ export const getWorkspaceById = async (req, res) => {
 
 export const getAllWorkspaces = async (req, res) => {
   try {
-    // Get base workspace data
     const workspaces = await Workspace.findAll();
-    
-    // Enhance workspaces with additional data
-    const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {
-      // Get member count for each workspace
-      const memberResult = await pool.query(
-        'SELECT COUNT(*) as total_members FROM membre_workspace WHERE fk_workspace = $1',
-        [workspace.id_workspace]
-      );
-      
-      // Get online users count (users with status = 1)
-      const onlineResult = await pool.query(
-        `SELECT COUNT(*) as online_users 
-         FROM membre_workspace mw
-         JOIN utilisateur u ON mw.fk_utilisateur = u.id_utilisateur
-         WHERE mw.fk_workspace = $1 AND u.fk_statut = 1`,
-        [workspace.id_workspace]
-      );
-      
-      return {
-        ...workspace,
-        total_members: parseInt(memberResult.rows[0].total_members),
-        online_users: parseInt(onlineResult.rows[0].online_users),
-        // Default values for missing fields
-        description: workspace.description || null,
-        emoji: workspace.emoji || null,
-        banner_url: workspace.banner_url || null,
-        icon_url: workspace.icon_url || null
-      };
-    }));
-    
-    res.status(200).json(enhancedWorkspaces);
+    res.status(200).json(workspaces);
   } catch (error) {
-    console.error('Error in getAllWorkspaces:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -97,7 +65,7 @@ export const deleteWorkspace = async (req, res) => {
 export const sendWorkspaceInvitation = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { email, userId } = req.body;  // Récupérer userId du body au lieu de req.user
+    const { email, userId } = req.body; // Récupérer userId du body au lieu de req.user
 
     // Vérification des données requises
     if (!workspaceId || !email || !userId) {
@@ -109,7 +77,9 @@ export const sendWorkspaceInvitation = async (req, res) => {
     // Récupérer les informations de l'utilisateur qui envoie l'invitation
     const sender = await UserModel.getUserById(userId);
     if (!sender) {
-      return res.status(404).json({ message: "Utilisateur expéditeur non trouvé" });
+      return res
+        .status(404)
+        .json({ message: "Utilisateur expéditeur non trouvé" });
     }
 
     // Récupérer les informations du workspace
@@ -140,19 +110,19 @@ export const sendWorkspaceInvitation = async (req, res) => {
 export const checkWorkspaceMember = async (req, res) => {
   try {
     const { workspaceId, userId } = req.params;
-    console.log('Checking membership for:', { workspaceId, userId }); // Debug log
+    console.log("Checking membership for:", { workspaceId, userId }); // Debug log
 
     const result = await pool.query(
-      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, userId]
     );
-    
+
     const isMember = result.rows.length > 0;
-    console.log('Membership result:', { isMember, count: result.rows.length }); // Debug log
-    
+    console.log("Membership result:", { isMember, count: result.rows.length }); // Debug log
+
     res.status(200).json({ isMember });
   } catch (error) {
-    console.error('Erreur checkWorkspaceMember:', error);
+    console.error("Erreur checkWorkspaceMember:", error);
     res.status(500).json({ error: error.message, isMember: false });
   }
 };
@@ -171,7 +141,7 @@ export const getWorkspaceMembers = async (req, res) => {
     );
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error('Erreur getWorkspaceMembers:', error);
+    console.error("Erreur getWorkspaceMembers:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -183,23 +153,23 @@ export const joinWorkspace = async (req, res) => {
 
     // Vérifier si l'utilisateur n'est pas déjà membre
     const checkMember = await pool.query(
-      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, userId]
     );
 
     if (checkMember.rows.length > 0) {
-      return res.status(400).json({ message: 'Déjà membre de ce workspace' });
+      return res.status(400).json({ message: "Déjà membre de ce workspace" });
     }
-    
+
     // Ajouter l'utilisateur comme membre avec le rôle spécifié
     await pool.query(
-      'INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)',
+      "INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)",
       [userId, workspaceId, role]
     );
-    
-    res.status(200).json({ message: 'Joined workspace successfully' });
+
+    res.status(200).json({ message: "Joined workspace successfully" });
   } catch (error) {
-    console.error('Erreur joinWorkspace:', error);
+    console.error("Erreur joinWorkspace:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -212,41 +182,47 @@ export const removeMember = async (req, res) => {
     // Si l'utilisateur essaie de se retirer lui-même, on autorise
     if (removerId === memberToRemove) {
       await pool.query(
-        'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+        "DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
         [workspaceId, memberToRemove]
       );
-      return res.status(200).json({ message: 'Vous avez quitté le workspace' });
+      return res.status(200).json({ message: "Vous avez quitté le workspace" });
     }
 
     // Sinon, vérifier si l'utilisateur qui fait la demande est owner
     const ownerCheck = await pool.query(
-      'SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1',
+      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1",
       [workspaceId, removerId]
     );
 
     if (ownerCheck.rows.length === 0) {
-      return res.status(403).json({ message: 'Seul le propriétaire peut retirer des membres' });
+      return res
+        .status(403)
+        .json({ message: "Seul le propriétaire peut retirer des membres" });
     }
 
     // Vérifier que l'utilisateur à supprimer n'est pas owner
     const memberCheck = await pool.query(
-      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, memberToRemove]
     );
 
     if (memberCheck.rows[0]?.fk_role === 1) {
-      return res.status(403).json({ message: 'Impossible de retirer le propriétaire du workspace' });
+      return res
+        .status(403)
+        .json({
+          message: "Impossible de retirer le propriétaire du workspace",
+        });
     }
 
     // Supprimer le membre
     await pool.query(
-      'DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "DELETE FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, memberToRemove]
     );
 
-    res.status(200).json({ message: 'Membre retiré avec succès' });
+    res.status(200).json({ message: "Membre retiré avec succès" });
   } catch (error) {
-    console.error('Erreur removeMember:', error);
+    console.error("Erreur removeMember:", error);
     res.status(500).json({ error: error.message });
   }
 };
