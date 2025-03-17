@@ -2,14 +2,84 @@ import pool from "../config/dbConnection.js";
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
 import sendInvitation from "../config/emailService.js";
+import { uploadToS3, deleteFromS3 } from '../config/s3Config.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 export const createWorkspace = async (req, res) => {
   try {
-    const { nom, is_private } = req.body;
-    const workspace = await Workspace.create({ nom, is_private });
+    const { nom, description, is_private } = req.body;
+    
+    // Create workspace with basic data
+    const workspace = await Workspace.create({ 
+      nom, 
+      description: description || "", 
+      is_private: is_private || false,
+      banner_url: null,
+      icon_url: null
+    });
+    
     res.status(201).json(workspace);
   } catch (error) {
+    console.error("Error creating workspace:", error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// New function to handle S3 image uploads
+export const uploadWorkspaceImages = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const updateFields = {};
+    
+    // Get existing workspace to check if we need to delete old images
+    const existingWorkspace = await Workspace.findById(workspaceId);
+    if (!existingWorkspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+    
+    // Upload banner to S3 if provided
+    if (req.files && req.files.banner && req.files.banner[0]) {
+      // Delete old banner if it exists
+      if (existingWorkspace.banner_url) {
+        try {
+          await deleteFromS3(existingWorkspace.banner_url);
+        } catch (err) {
+          console.warn("Could not delete old banner:", err);
+        }
+      }
+      
+      // Upload new banner to S3
+      const bannerUrl = await uploadToS3(req.files.banner[0], 'workspaces/banners');
+      updateFields.banner_url = bannerUrl;
+    }
+    
+    // Upload icon to S3 if provided
+    if (req.files && req.files.icon && req.files.icon[0]) {
+      // Delete old icon if it exists
+      if (existingWorkspace.icon_url) {
+        try {
+          await deleteFromS3(existingWorkspace.icon_url);
+        } catch (err) {
+          console.warn("Could not delete old icon:", err);
+        }
+      }
+      
+      // Upload new icon to S3
+      const iconUrl = await uploadToS3(req.files.icon[0], 'workspaces/icons');
+      updateFields.icon_url = iconUrl;
+    }
+    
+    // Only update if we have files
+    if (Object.keys(updateFields).length > 0) {
+      const workspace = await Workspace.update(workspaceId, updateFields);
+      res.status(200).json(workspace);
+    } else {
+      res.status(400).json({ message: 'No files were uploaded' });
+    }
+  } catch (error) {
+    console.error('Error uploading workspace images:', error);
+    res.status(500).json({ message: 'Error uploading workspace images', error: error.message });
   }
 };
 
@@ -38,8 +108,8 @@ export const getAllWorkspaces = async (req, res) => {
 export const updateWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nom, is_private } = req.body;
-    const workspace = await Workspace.update(id, { nom, is_private });
+    const { nom, description, is_private } = req.body;
+    const workspace = await Workspace.update(id, { nom, description, is_private });
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
