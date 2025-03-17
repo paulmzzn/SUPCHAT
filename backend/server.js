@@ -13,6 +13,10 @@ import MessageModel from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
+import dotenv from 'dotenv';
+
+// Load environment variables at the start
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
