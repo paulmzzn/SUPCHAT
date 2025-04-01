@@ -1,9 +1,18 @@
 import express from 'express';
-import { getMessagesByCanal, createMessage } from '../controllers/messageController.js';
+import { 
+  createMessage, 
+  getMessagesByChannel,
+  deleteMessage, 
+  updateMessage 
+} from '../controllers/messageController.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/workspace/:workspaceId/canal/:canalId', getMessagesByCanal);
-router.post('/', createMessage);
+// Toutes les routes sont protégées par l'authentification
+router.post('/', verifyToken, createMessage);
+router.get('/canal/:channelId', verifyToken, getMessagesByChannel);
+router.put('/:messageId', verifyToken, updateMessage);
+router.delete('/:messageId', verifyToken, deleteMessage);
 
 export default router;

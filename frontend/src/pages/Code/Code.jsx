@@ -51,17 +51,25 @@ const Code = ({ email }) => {
       console.log("Server response:", data);
 
       if (response.ok) {
-        // IMPORTANT: Stocker le token avec le nom correct
+        // IMPORTANT: Stocker le token correctement et s'assurer qu'il est bien enregistré
         if (data.token) {
           console.log("Sauvegarde du token après validation:", data.token.substring(0, 15) + "...");
+          
+          // Nettoyer d'abord le localStorage pour éviter tout conflit
+          localStorage.removeItem("token");
+          
+          // Stocker le token avec le bon nom
           localStorage.setItem("token", data.token);
           
-          // Petit délai pour s'assurer que localStorage est mis à jour
+          // Vérifier que le token a bien été stocké
+          const storedToken = localStorage.getItem("token");
+          console.log("Token vérifié après stockage:", storedToken ? "Présent" : "Absent");
+          
+          // Ajouter un délai pour s'assurer que le localStorage est mis à jour
           setTimeout(() => {
-            console.log("Redirection vers dashboard avec token sauvegardé");
-            console.log("Token maintenant présent:", localStorage.getItem('token') ? "oui" : "non");
-            navigate("/dashboard", { replace: true });
-          }, 100);
+            console.log("Redirection vers dashboard avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
+            navigate("/dashboard");
+          }, 300);
         } else {
           setError("Token manquant dans la réponse du serveur");
         }
