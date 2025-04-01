@@ -1,45 +1,68 @@
-import ReactionModel from '../models/Reaction.js';
+import MessageModel from '../models/Message.js';
+import Reaction from '../models/Reaction.js';
 
+// Ajouter une réaction à un message
 export const addReaction = async (req, res) => {
-    try {
-        const { messageId } = req.params;
-        const { userId, emoji } = req.body;
-
-        if (!messageId || !userId || !emoji) {
-            return res.status(400).json({ error: 'Tous les champs sont requis' });
-        }
-
-        const reaction = await ReactionModel.addReaction(messageId, userId, emoji);
-        res.status(201).json(reaction);
-    } catch (error) {
-        console.error('Erreur lors de l\'ajout de la réaction:', error);
-        res.status(500).json({ error: 'Erreur lors de l\'ajout de la réaction' });
+  try {
+    const { messageId } = req.params;
+    const { reaction_type } = req.body;
+    const userId = req.user.id;
+    const validReactionTypes = ['thumbsUp', 'heart', 'laugh', 'surprise', 'sad', 'angry'];
+    if (!validReactionTypes.includes(reaction_type)) {
+      return res.status(400).json({ message: 'Type de réaction non valide' });
     }
+    const message = await MessageModel.getById(messageId);
+    if (!message) return res.status(404).json({ message: 'Message non trouvé' });
+
+    // Créer simplement la réaction
+    await Reaction.create({
+      fk_message: messageId,
+      fk_utilisateur: userId,
+      reaction_type
+    });
+    const updatedReactions = await Reaction.getByMessage(messageId, userId);
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`${message.fk_canal}`).emit('messageReaction', { messageId, reactions: updatedReactions });
+    }
+    res.status(201).json({ message: 'Réaction ajoutée', reactions: updatedReactions });
+  } catch (error) {
+    console.error('Erreur lors de l’ajout de la réaction:', error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
+// Supprimer une réaction d'un message
 export const removeReaction = async (req, res) => {
-    try {
-        const { messageId } = req.params;
-        const { userId, emoji } = req.body;
+  try {
+    const { messageId, reactionType } = req.params;
+    const userId = req.user.id;
+    const message = await MessageModel.getById(messageId);
+    if (!message) return res.status(404).json({ message: 'Message non trouvé' });
 
-        const reaction = await ReactionModel.removeReaction(messageId, userId, emoji);
-        if (!reaction) {
-            return res.status(404).json({ error: 'Réaction non trouvée' });
-        }
-        res.json({ message: 'Réaction supprimée avec succès' });
-    } catch (error) {
-        console.error('Erreur lors de la suppression de la réaction:', error);
-        res.status(500).json({ error: 'Erreur lors de la suppression de la réaction' });
+    await Reaction.delete(messageId, userId, reactionType);
+    const updatedReactions = await Reaction.getByMessage(messageId, userId);
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`${message.fk_canal}`).emit('messageReaction', { messageId, reactions: updatedReactions });
     }
+    res.status(200).json({ message: 'Réaction supprimée', reactions: updatedReactions });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la réaction:', error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
+// Obtenir toutes les réactions d'un message
 export const getReactions = async (req, res) => {
-    try {
-        const { messageId } = req.params;
-        const reactions = await ReactionModel.getReactions(messageId);
-        res.json(reactions);
-    } catch (error) {
-        console.error('Erreur lors de la récupération des réactions:', error);
-        res.status(500).json({ error: 'Erreur lors de la récupération des réactions' });
-    }
+  try {
+    const { messageId } = req.params;
+    const message = await MessageModel.getById(messageId);
+    if (!message) return res.status(404).json({ message: 'Message non trouvé' });
+    const reactions = await Reaction.getByMessage(messageId);
+    res.status(200).json(reactions);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des réactions:', error);
+    res.status(500).json({ message: error.message });
+  }
 };

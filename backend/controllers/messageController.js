@@ -4,21 +4,30 @@ import Canal from '../models/Canal.js';
 // Créer un nouveau message
 export const createMessage = async (req, res) => {
   try {
-    const { fk_canal, contenu } = req.body;
+    const { fk_canal, contenu, parent_id } = req.body;
     const userId = req.user.id; // Récupéré du middleware auth
     
-    console.log('Création de message:', { userId, fk_canal, contenu });
+    console.log('Création de message:', { userId, fk_canal, contenu, parent_id });
     
     // Vérifier que le canal existe
     const canal = await Canal.findById(fk_canal);
     if (!canal) {
       return res.status(404).json({ message: 'Canal non trouvé' });
     }
+    
+    // Si parent_id est spécifié, vérifier que le message parent existe
+    if (parent_id) {
+      const parentMessage = await MessageModel.getById(parent_id);
+      if (!parentMessage) {
+        return res.status(404).json({ message: 'Message parent non trouvé' });
+      }
+    }
 
     const message = await MessageModel.create({
       contenu,
       fk_canal,
-      fk_utilisateur: userId
+      fk_utilisateur: userId,
+      parent_id
     });
 
     // Récupérer les informations complètes pour socket.io

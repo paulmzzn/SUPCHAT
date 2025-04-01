@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import MessageModel from '../models/Message.js';
+import Reaction from '../models/Reaction.js';
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -90,6 +91,70 @@ const socketManager = (io) => {
       } catch (error) {
         console.error('Socket.IO: Erreur de traitement de message', error);
         socket.emit('error', { message: 'Erreur lors du traitement du message' });
+      }
+    });
+    
+    // Nouvel événement pour gérer les réactions aux messages
+    socket.on('addReaction', async (data) => {
+      try {
+        console.log('Socket.IO: Réaction reçue', data);
+        const { messageId, reaction_type, canalId } = data;
+        
+        if (!messageId || !reaction_type || !canalId) {
+          console.error('Socket.IO: Données de réaction incomplètes');
+          socket.emit('error', { message: 'Données de réaction incomplètes' });
+          return;
+        }
+        
+        // Ajouter la réaction en base de données
+        await Reaction.create({
+          fk_message: messageId,
+          fk_utilisateur: socket.user.id,
+          reaction_type
+        });
+        
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await Reaction.getByMessage(messageId, socket.user.id);
+        
+        // Diffuser à tous les utilisateurs du canal
+        io.to(`${canalId}`).emit('messageReaction', {
+          messageId,
+          reactions: updatedReactions
+        });
+        
+      } catch (error) {
+        console.error('Socket.IO: Erreur de traitement de réaction', error);
+        socket.emit('error', { message: 'Erreur lors du traitement de la réaction' });
+      }
+    });
+    
+    // Nouvel événement pour gérer la suppression des réactions
+    socket.on('removeReaction', async (data) => {
+      try {
+        console.log('Socket.IO: Suppression de réaction', data);
+        const { messageId, reaction_type, canalId } = data;
+        
+        if (!messageId || !reaction_type || !canalId) {
+          console.error('Socket.IO: Données de suppression de réaction incomplètes');
+          socket.emit('error', { message: 'Données incomplètes' });
+          return;
+        }
+        
+        // Supprimer la réaction en base de données
+        await Reaction.delete(messageId, socket.user.id, reaction_type);
+        
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await Reaction.getByMessage(messageId, socket.user.id);
+        
+        // Diffuser à tous les utilisateurs du canal
+        io.to(`${canalId}`).emit('messageReaction', {
+          messageId,
+          reactions: updatedReactions
+        });
+        
+      } catch (error) {
+        console.error('Socket.IO: Erreur de suppression de réaction', error);
+        socket.emit('error', { message: 'Erreur lors de la suppression de la réaction' });
       }
     });
     
