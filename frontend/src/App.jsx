@@ -21,29 +21,52 @@ function App() {
     setAuthChecked(true);
   }, []);
   
-  // Fonction pour vérifier si l'utilisateur est authentifié
+  // Fonction pour vérifier si l'utilisateur est authentifié avec débogage renforcé
   const isAuthenticated = () => {
     const token = localStorage.getItem('token');
+    
+    // Ajouter du logging détaillé pour le débogage
+    console.log("Vérification d'authentification:");
+    console.log("- Token présent:", token ? "Oui" : "Non");
+    if (token) {
+      console.log("- Début du token:", token.substring(0, 20) + "...");
+      try {
+        // Vérifier si le token est au format JWT valide
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          console.log("- Payload du token:", payload);
+          console.log("- Expiration:", new Date(payload.exp * 1000).toLocaleString());
+          console.log("- Token expiré:", Date.now() > payload.exp * 1000 ? "Oui" : "Non");
+        } else {
+          console.log("- Format du token non valide");
+        }
+      } catch (e) {
+        console.log("- Erreur lors du décodage du token:", e);
+      }
+    }
+    
     const isAuth = token !== null && token !== undefined;
-    console.log("App.jsx - isAuthenticated:", isAuth);
+    console.log("- Résultat final isAuthenticated():", isAuth);
     return isAuth;
   };
 
   // Composant amélioré pour les routes protégées
   const ProtectedRoute = ({ children }) => {
-    // Vérifier directement localStorage à chaque rendu pour éviter les problèmes de synchronisation
-    const isAuth = localStorage.getItem('token') !== null;
+    // Vérifier directement localStorage à chaque rendu
+    const isAuth = isAuthenticated();
     
     if (!authChecked) {
+      console.log("ProtectedRoute - En attente de la vérification d'authentification");
       return <div>Vérification de l'authentification...</div>;
     }
     
     if (!isAuth) {
       console.log("ProtectedRoute - Redirection vers login car non authentifié");
-      console.log("Token trouvé:", localStorage.getItem('token') ? "oui" : "non");
       return <Navigate to="/login" replace />;
     }
     
+    console.log("ProtectedRoute - Utilisateur authentifié, affichage du contenu protégé");
     return children;
   };
 

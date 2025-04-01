@@ -2,14 +2,14 @@ import pool from '../config/dbConnection.js';
 
 class Canal {
   // Créer un canal
-  static async create({ nom, is_private, description, fk_workspace }) {
+  static async create({ nom, is_private, fk_workspace }) {
     try {
-      const result = await pool.query(
-        `INSERT INTO canal (nom, is_private, description, fk_workspace)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [nom, is_private, description, fk_workspace]
-      );
+      const query = `INSERT INTO canal (nom, is_private, fk_workspace)
+                     VALUES ($1, $2, $3)
+                     RETURNING *`;
+      const params = [nom, is_private, fk_workspace];
+      
+      const result = await pool.query(query, params);
       return result.rows[0];
     } catch (error) {
       console.error('Erreur dans Canal.create:', error);
@@ -48,17 +48,16 @@ class Canal {
   }
   
   // Mettre à jour un canal
-  static async update(canalId, { nom, is_private, description }) {
+  static async update(canalId, { nom, is_private }) {
     try {
       const result = await pool.query(
         `UPDATE canal 
          SET nom = COALESCE($1, nom),
              is_private = COALESCE($2, is_private),
-             description = COALESCE($3, description),
              updated_at = NOW()
-         WHERE id_canal = $4
+         WHERE id_canal = $3
          RETURNING *`,
-        [nom, is_private, description, canalId]
+        [nom, is_private, canalId]
       );
       return result.rows[0];
     } catch (error) {

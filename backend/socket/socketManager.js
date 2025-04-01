@@ -1,101 +1,105 @@
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 import MessageModel from '../models/Message.js';
 
+// Charger les variables d'environnement
+dotenv.config();
+
+const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
+
 const socketManager = (io) => {
-    const canals = new Map(); // Pour garder trace des utilisateurs dans chaque canal
+  // Middleware pour authentifier les utilisateurs via socket.io
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        console.log('Socket.IO: Pas de token fourni');
+        return next(new Error('Authentication error: Token required'));
+      }
+      
+      jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) {
+          console.error('Socket.IO: Token invalide', err);
+          return next(new Error('Authentication error: Invalid token'));
+        }
+        console.log('Socket.IO: Utilisateur authentifié', decoded);
+        socket.user = decoded;
+        next();
+      });
+    } catch (error) {
+      console.error('Socket.IO: Erreur d\'authentification', error);
+      next(new Error('Authentication error: ' + error.message));
+    }
+  });
 
-    io.on('connection', (socket) => {
-        console.log('Nouvelle connexion Socket.IO:', socket.id);
-
-        socket.on('joinCanal', async ({ canalId, workspaceId }) => {
-            console.log(`Socket ${socket.id} rejoint le canal ${canalId}`);
-            
-            // Quitter les canaux précédents
-            if (socket.currentCanal) {
-                socket.leave(socket.currentCanal);
-            }
-            
-            // Rejoindre le nouveau canal
-            socket.currentCanal = canalId;
-            await socket.join(canalId);
-            
-            // Ajouter l'utilisateur à la liste du canal
-            if (!canals.has(canalId)) {
-                canals.set(canalId, new Set());
-            }
-            canals.get(canalId).add(socket.id);
-            
-            socket.emit('canalJoined', { 
-                canalId, 
-                message: `Canal ${canalId} rejoint avec succès`,
-                usersCount: canals.get(canalId).size
-            });
-        });
-
-        socket.on('message', async (messageData) => {
-            try {
-                console.log('Message reçu:', messageData);
-                const { user_id, canal_id, content, workspace_id } = messageData;
-                
-                // Sauvegarder le message dans la base de données
-                const savedMessage = await MessageModel.createMessage({ 
-                    user_id, 
-                    canal_id, 
-                    content 
-                });
-
-                // Émettre le message avec l'ID généré par la base de données
-                io.to(messageData.canal_id).emit('message', {
-                    id_message: savedMessage.id_message, // Assurez-vous d'inclure l'ID
-                    content: savedMessage.content,
-                    username: savedMessage.username,
-                    created_at: savedMessage.created_at
-                    // ... autres données du message ...
-                });
-
-                // Récupérer les détails complets du message avec le nom d'utilisateur
-                const messageWithDetails = await MessageModel.getMessageById(savedMessage.id_message);
-                
-                if (messageWithDetails) {
-                    // S'assurer que tous les champs requis sont présents
-                    const formattedMessage = {
-                        id: messageWithDetails.id,
-                        content: messageWithDetails.content,
-                        username: messageWithDetails.username,
-                        created_at: messageWithDetails.created_at || new Date().toISOString()
-                    };
-
-                    console.log('Émission du message formaté:', formattedMessage);
-                    // Émettre à tous les clients dans le canal
-                    io.to(canal_id).emit('message', formattedMessage);
-                }
-            } catch (error) {
-                console.error('Erreur lors du traitement du message:', error);
-                socket.emit('error', { message: 'Erreur lors de l\'envoi du message' });
-            }
-        });
-
-        // Ajout de la gestion des réactions
-        socket.on('reaction', async (data) => {
-            try {
-                const { messageId, emoji, userId } = data;
-                // Émettre la mise à jour à tous les clients dans le même canal
-                io.emit('reactionUpdate', { messageId });
-            } catch (error) {
-                console.error('Erreur lors de la gestion de la réaction:', error);
-            }
-        });
-
-        socket.on('disconnect', () => {
-            // Nettoyer les canaux lors de la déconnexion
-            if (socket.currentCanal && canals.has(socket.currentCanal)) {
-                canals.get(socket.currentCanal).delete(socket.id);
-                if (canals.get(socket.currentCanal).size === 0) {
-                    canals.delete(socket.currentCanal);
-                }
-            }
-            console.log('Client déconnecté:', socket.id);
-        });
+  // Événements de connexion
+  io.on('connection', (socket) => {
+    console.log(`Utilisateur connecté: ${socket.id}, User ID: ${socket.user?.id}`);
+    
+    // Joindre un canal
+    socket.on('joinCanal', (data) => {
+      const { canalId, workspaceId } = data;
+      console.log(`Utilisateur ${socket.user?.id} rejoint le canal ${canalId} du workspace ${workspaceId}`);
+      
+      if (socket.currentRoom) {
+        socket.leave(socket.currentRoom);
+      }
+      
+      socket.currentRoom = `${canalId}`;
+      socket.join(`${canalId}`);
+      
+      // Informer le client que le canal a été rejoint
+      socket.emit('canalJoined', { canalId, status: 'success' });
     });
+    
+    // Recevoir un message
+    socket.on('message', async (data) => {
+      try {
+        console.log('Socket.IO: Message reçu', data);
+        const { canal_id, content, workspace_id } = data;
+        
+        if (!canal_id || !content) {
+          console.error('Socket.IO: Données de message incomplètes');
+          socket.emit('error', { message: 'Données de message incomplètes' });
+          return;
+        }
+        
+        // Enregistrer le message en base de données
+        const message = await MessageModel.create({
+          contenu: content,
+          fk_canal: canal_id,
+          fk_utilisateur: socket.user.id
+        });
+        
+        // Récupérer le message complet avec infos utilisateur
+        const fullMessage = await MessageModel.getById(message.id_message);
+        
+        if (fullMessage) {
+          // Faire correspondre les champs avec ce qui est attendu par le frontend
+          const formattedMessage = {
+            ...fullMessage,
+            // S'assurer que le champ date_creation est bien présent pour le front-end
+            date_creation: fullMessage.date_creation || fullMessage.created_at || new Date().toISOString()
+          };
+          
+          console.log(`Socket.IO: Émission du message formaté:`, formattedMessage);
+          io.to(`${canal_id}`).emit('message', formattedMessage);
+        } else {
+          console.warn('Socket.IO: Message enregistré mais non émis (non trouvé)');
+        }
+      } catch (error) {
+        console.error('Socket.IO: Erreur de traitement de message', error);
+        socket.emit('error', { message: 'Erreur lors du traitement du message' });
+      }
+    });
+    
+    // Déconnexion
+    socket.on('disconnect', () => {
+      console.log(`Utilisateur déconnecté: ${socket.id}`);
+    });
+  });
+  
+  return io;
 };
 
 export default socketManager;

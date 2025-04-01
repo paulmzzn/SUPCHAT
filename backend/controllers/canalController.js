@@ -6,7 +6,7 @@ import Workspace from "../models/Workspace.js";
 export const createCanal = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { nom, is_private, description } = req.body;
+    const { nom, is_private } = req.body;
 
     // Vérifier si le workspace existe
     const workspace = await Workspace.findById(workspaceId);
@@ -17,7 +17,6 @@ export const createCanal = async (req, res) => {
     const canal = await Canal.create({
       nom,
       is_private: is_private || false,
-      description: description || "",
       fk_workspace: workspaceId,
     });
 
@@ -61,12 +60,11 @@ export const getCanal = async (req, res) => {
 export const updateCanal = async (req, res) => {
   try {
     const { canalId } = req.params;
-    const { nom, is_private, description } = req.body;
+    const { nom, is_private } = req.body;
 
     const canal = await Canal.update(canalId, {
       nom,
-      is_private,
-      description,
+      is_private
     });
 
     if (!canal) {

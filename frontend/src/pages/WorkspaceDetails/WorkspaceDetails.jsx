@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip } from 'react-icons/fa';
 import './WorkspaceDetails.css';
 import { API_URL } from '../../config/config';
+import io from 'socket.io-client';
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
@@ -73,6 +74,17 @@ function WorkspaceDetails() {
   const [editingChannel, setEditingChannel] = useState({ id: null, name: '', isPrivate: false });
   const [isUpdatingChannel, setIsUpdatingChannel] = useState(false);
   const [updateChannelError, setUpdateChannelError] = useState('');
+
+  // États pour le chat
+  const [activeChannel, setActiveChannel] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const chatContainerRef = useRef(null);
+  const [socket, setSocket] = useState(null);
+
+  // À ajouter dans la fonction WorkspaceDetails() pour récupérer l'ID de l'utilisateur actuel
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   // Fetch workspace details
   useEffect(() => {
@@ -393,6 +405,209 @@ function WorkspaceDetails() {
     };
   }, [contextMenu.visible]);
 
+  // Établir la connexion socket lorsque le composant est monté
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    const newSocket = io(API_URL, {
+      auth: { token }, // Assurez-vous de passer le token pour l'authentification
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+  
+    newSocket.on('connect', () => {
+      console.log('Socket.IO connecté avec succès');
+      setSocket(newSocket);
+    });
+  
+    newSocket.on('connect_error', (err) => {
+      console.error('Erreur de connexion Socket.IO:', err);
+    });
+  
+    // Nettoyage
+    return () => {
+      if (newSocket) {
+        console.log('Déconnexion de Socket.IO');
+        newSocket.disconnect();
+      }
+    };
+  }, []);
+  
+  // Écouter les nouveaux messages via socket.io
+  useEffect(() => {
+    if (!socket || !activeChannel) return;
+  
+    console.log(`Rejoindre le canal ${activeChannel.id}`);
+    // Rejoindre le canal actif
+    socket.emit('joinCanal', {
+      canalId: activeChannel.id,
+      workspaceId: workspaceId
+    });
+  
+    // Écouter la confirmation de jointure du canal
+    socket.on('canalJoined', (data) => {
+      console.log('Canal rejoint:', data);
+    });
+  
+    // Écouter les nouveaux messages 
+    socket.on('message', (message) => {
+      console.log('Nouveau message reçu:', message);
+      
+      // S'assurer que le message a toutes les propriétés nécessaires pour l'affichage
+      const formattedMessage = {
+        ...message,
+        // S'assurer que la date est dans un format valide
+        date_creation: message.date_creation || message.created_at || new Date().toISOString()
+      };
+      
+      setMessages(prevMessages => [...prevMessages, formattedMessage]);
+    });
+  
+    return () => {
+      // Quitter le canal lorsque l'utilisateur change de canal
+      console.log(`Quitter le canal ${activeChannel.id}`);
+      socket.off('message');
+      socket.off('canalJoined');
+    };
+  }, [socket, activeChannel, workspaceId]);
+
+  // Faire défiler vers le bas lorsque de nouveaux messages sont reçus
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Charger les messages lors de la sélection d'un canal
+  const handleSelectChannel = async (channel) => {
+    try {
+      setActiveChannel(channel);
+      setLoadingMessages(true);
+      
+      const token = localStorage.getItem('token');
+      console.log(`Chargement des messages pour le canal ${channel.id}...`);
+      
+      const response = await fetch(`${API_URL}/api/messages/canal/${channel.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erreur API:', errorData);
+        throw new Error(errorData.message || 'Erreur lors du chargement des messages');
+      }
+  
+      const data = await response.json();
+      console.log('Messages récupérés:', data);
+      setMessages(data);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setMessages([]); // Afficher une liste vide plutôt qu'une erreur
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+  
+  // Envoyer un message
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    
+    if (!newMessage.trim() || !activeChannel) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      console.log('Envoi du message:', {
+        fk_canal: activeChannel.id,
+        contenu: newMessage
+      });
+      
+      // Si le socket est connecté, envoyez directement le message via WebSocket
+      if (socket && socket.connected) {
+        socket.emit('message', {
+          canal_id: activeChannel.id,
+          content: newMessage,
+          workspace_id: workspaceId
+        });
+        
+        setNewMessage(''); // Vider l'input
+        return;
+      }
+      
+      // Fallback à l'API REST si le socket n'est pas disponible
+      const response = await fetch(`${API_URL}/api/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fk_canal: activeChannel.id,
+          contenu: newMessage
+        })
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de l\'envoi du message');
+      }
+  
+      // Réinitialiser le champ de message
+      setNewMessage('');
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert(`Erreur: ${error.message}`);
+    }
+  };
+
+  // Fonction pour formater la date des messages - Ajoutons de la robustesse
+  const formatMessageDate = (dateString) => {
+    if (!dateString) {
+      console.warn('formatMessageDate: date invalide', dateString);
+      return '';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      
+      // Vérifier si la date est valide
+      if (isNaN(date.getTime())) {
+        console.warn('formatMessageDate: date invalide', dateString);
+        return '';
+      }
+      
+      // Si c'est aujourd'hui, afficher l'heure
+      if (date.toDateString() === now.toDateString()) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Sinon, afficher la date et l'heure
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      console.error('Erreur de formatage de date:', error);
+      return '';
+    }
+  };
+
+  useEffect(() => {
+    // Récupérer l'ID de l'utilisateur depuis le token JWT
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUserId(payload.id);
+      } catch (e) {
+        console.error('Erreur lors du décodage du token:', e);
+      }
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="app-layout">
@@ -467,7 +682,8 @@ function WorkspaceDetails() {
                     filteredChannels.map(channel => (
                       <li 
                         key={channel.id} 
-                        className="channel-item"
+                        className={`channel-item ${activeChannel && activeChannel.id === channel.id ? 'active' : ''}`}
+                        onClick={() => handleSelectChannel(channel)}
                         onContextMenu={(e) => handleChannelContextMenu(e, channel)}
                       >
                         {channel.isPrivate ? <FaLock className="channel-icon" /> : <FaHashtag className="channel-icon" />}
@@ -483,15 +699,89 @@ function WorkspaceDetails() {
           </div>
         </div>
         
-        {/* Main Content Area */}
+        {/* Main Content Area - Modified for chat */}
         <div className="workspace-content-area">
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
           
-          <div className="workspace-welcome">
-            <h1>Bienvenue sur {workspace?.name}</h1>
-            <p>Sélectionnez un canal pour commencer à discuter</p>
-          </div>
+          {!activeChannel ? (
+            <div className="workspace-welcome">
+              <h1>Bienvenue sur {workspace?.name}</h1>
+              <p>Sélectionnez un canal pour commencer à discuter</p>
+            </div>
+          ) : (
+            <div className="chat-container">
+              <div className="chat-header">
+                <div className="chat-header-info">
+                  {activeChannel.isPrivate ? <FaLock className="chat-header-icon" /> : <FaHashtag className="chat-header-icon" />}
+                  <h2>{activeChannel.name}</h2>
+                </div>
+                <div className="chat-header-actions">
+                  <button className="header-action-btn">
+                    <FaUserCircle />
+                    <span>Membres</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="chat-messages" ref={chatContainerRef}>
+                {loadingMessages ? (
+                  <div className="chat-loading">Chargement des messages...</div>
+                ) : messages.length > 0 ? (
+                  messages.map((message) => (
+                    <div 
+                      key={message.id_message} 
+                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
+                    >
+                      <div className="message-avatar">
+                        {message.photo_de_profil ? (
+                          <img src={message.photo_de_profil} alt={message.nom} />
+                        ) : (
+                          <div className="avatar-placeholder">{message.nom ? message.nom[0].toUpperCase() : '?'}</div>
+                        )}
+                      </div>
+                      <div className="message-content">
+                        <div className="message-header">
+                          <span className="message-author">{message.nom}</span>
+                          <span className="message-time">{formatMessageDate(message.date_creation)}</span>
+                        </div>
+                        <p className="message-text">{message.contenu}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-messages">
+                    <p>Aucun message dans ce canal.</p>
+                    <p>Envoyez le premier message !</p>
+                  </div>
+                )}
+              </div>
+              
+              <form className="chat-input-container" onSubmit={handleSendMessage}>
+                <div className="chat-input-wrapper">
+                  <button type="button" className="chat-attachment-btn">
+                    <FaPaperclip />
+                  </button>
+                  <input 
+                    type="text" 
+                    placeholder={`Message dans ${activeChannel.name}`}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                  />
+                  <button type="button" className="chat-emoji-btn">
+                    <FaSmile />
+                  </button>
+                </div>
+                <button 
+                  type="submit" 
+                  className="chat-send-btn"
+                  disabled={!newMessage.trim()}
+                >
+                  <FaPaperPlane />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Details Sidebar - UPDATED with role icons */}
