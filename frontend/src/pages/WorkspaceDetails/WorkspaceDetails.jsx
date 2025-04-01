@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaThumbsUp, FaHeart, FaLaugh, FaSurprise, FaSadTear, FaAngry } from 'react-icons/fa';
 import './WorkspaceDetails.css';
 import { API_URL } from '../../config/config';
 import io from 'socket.io-client';
@@ -85,6 +85,31 @@ function WorkspaceDetails() {
 
   // À ajouter dans la fonction WorkspaceDetails() pour récupérer l'ID de l'utilisateur actuel
   const [currentUserId, setCurrentUserId] = useState(null);
+
+  // État pour le menu contextuel des messages
+  const [messageContextMenu, setMessageContextMenu] = useState({
+    visible: false,
+    xPos: 0,
+    yPos: 0,
+    messageId: null,
+    message: null
+  });
+
+  // État pour la fenêtre modale de sélection d'emoji
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // État pour le message en cours de réponse
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  // Liste prédéfinie d'emojis pour les réactions
+  const commonEmojis = [
+    { icon: <FaThumbsUp />, name: 'thumbsUp', label: '👍' },
+    { icon: <FaHeart />, name: 'heart', label: '❤️' },
+    { icon: <FaLaugh />, name: 'laugh', label: '😂' },
+    { icon: <FaSurprise />, name: 'surprise', label: '😮' },
+    { icon: <FaSadTear />, name: 'sad', label: '😢' },
+    { icon: <FaAngry />, name: 'angry', label: '😠' }
+  ];
 
   // Fetch workspace details
   useEffect(() => {
@@ -465,13 +490,70 @@ function WorkspaceDetails() {
       setMessages(prevMessages => [...prevMessages, formattedMessage]);
     });
   
+    // Écouter les réactions aux messages
+    socket.on('messageReaction', ({ messageId, reactions }) => {
+      console.log(`Réaction reçue pour le message ${messageId}:`, reactions);
+      
+      // Débuguer le contenu des réactions reçues
+      console.log("Détail des réactions reçues:", JSON.stringify(reactions));
+      
+      setMessages(prevMessages => 
+        prevMessages.map(msg => {
+          if (msg.id_message === messageId) {
+            // S'assurer que chaque réaction a un emoji valide
+            const formattedReactions = reactions.map(r => {
+              // Si l'emoji est manquant, utiliser la fonction helper
+              if (!r.emoji) {
+                r.emoji = getEmojiForType(r.reaction_type);
+                console.warn(`Emoji manquant pour ${r.reaction_type}, ajouté: ${r.emoji}`);
+              }
+              
+              // Si l'emoji est dans un format PostgreSQL array, l'extraire
+              if (typeof r.emoji === 'string' && r.emoji.startsWith('{') && r.emoji.endsWith('}')) {
+                try {
+                  r.emoji = JSON.parse(r.emoji.substring(1, r.emoji.length - 1));
+                  console.log(`Emoji extrait du format array: ${r.emoji}`);
+                } catch (e) {
+                  console.warn(`Impossible de parser l'emoji: ${r.emoji}`);
+                }
+              }
+              
+              return r;
+            });
+            
+            console.log("Réactions formatées pour UI:", formattedReactions);
+            
+            return { 
+              ...msg, 
+              reactions: formattedReactions 
+            };
+          }
+          return msg;
+        })
+      );
+    });
+  
     return () => {
       // Quitter le canal lorsque l'utilisateur change de canal
       console.log(`Quitter le canal ${activeChannel.id}`);
       socket.off('message');
       socket.off('canalJoined');
+      socket.off('messageReaction');
     };
   }, [socket, activeChannel, workspaceId]);
+
+  // Fonction auxiliaire pour convertir un type de réaction en emoji
+  const getEmojiForType = (reactionType) => {
+    const emojiMap = {
+      'thumbsUp': '👍',
+      'heart': '❤️',
+      'laugh': '😂',
+      'surprise': '😮',
+      'sad': '😢',
+      'angry': '😠'
+    };
+    return emojiMap[reactionType] || reactionType;
+  };
 
   // Faire défiler vers le bas lorsque de nouveaux messages sont reçus
   useEffect(() => {
@@ -521,20 +603,25 @@ function WorkspaceDetails() {
     try {
       const token = localStorage.getItem('token');
       
-      console.log('Envoi du message:', {
+      const messageData = {
         fk_canal: activeChannel.id,
-        contenu: newMessage
-      });
+        contenu: newMessage,
+        parent_id: replyingTo ? replyingTo.id_message : null // Ajouter l'ID du message parent si c'est une réponse
+      };
+      
+      console.log('Envoi du message:', messageData);
       
       // Si le socket est connecté, envoyez directement le message via WebSocket
       if (socket && socket.connected) {
         socket.emit('message', {
           canal_id: activeChannel.id,
           content: newMessage,
-          workspace_id: workspaceId
+          workspace_id: workspaceId,
+          parent_id: replyingTo ? replyingTo.id_message : null
         });
         
         setNewMessage(''); // Vider l'input
+        setReplyingTo(null); // Réinitialiser l'état de réponse
         return;
       }
       
@@ -545,10 +632,7 @@ function WorkspaceDetails() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          fk_canal: activeChannel.id,
-          contenu: newMessage
-        })
+        body: JSON.stringify(messageData)
       });
   
       if (!response.ok) {
@@ -556,8 +640,9 @@ function WorkspaceDetails() {
         throw new Error(errorData.message || 'Erreur lors de l\'envoi du message');
       }
   
-      // Réinitialiser le champ de message
+      // Réinitialiser les champs
       setNewMessage('');
+      setReplyingTo(null);
       
     } catch (error) {
       console.error('Erreur:', error);
@@ -607,6 +692,149 @@ function WorkspaceDetails() {
       }
     }
   }, []);
+
+  // Gestionnaire pour afficher le menu contextuel sur un message
+  const handleMessageContextMenu = (e, message) => {
+    e.preventDefault();
+    setMessageContextMenu({
+      visible: true,
+      xPos: e.pageX,
+      yPos: e.pageY,
+      messageId: message.id_message,
+      message
+    });
+  };
+
+  // Gestionnaire pour fermer le menu contextuel des messages
+  const handleCloseMessageContextMenu = () => {
+    setMessageContextMenu({
+      ...messageContextMenu,
+      visible: false
+    });
+  };
+
+  // Gestionnaire pour répondre à un message
+  const handleReplyMessage = () => {
+    setReplyingTo(messageContextMenu.message);
+    setNewMessage(`@${messageContextMenu.message.nom} `);
+    handleCloseMessageContextMenu();
+    
+    // Focus sur l'input de message
+    const messageInput = document.querySelector('.chat-input-wrapper input');
+    if (messageInput) {
+      messageInput.focus();
+    }
+  };
+
+  // Gestionnaire pour afficher le sélecteur d'emoji
+  const handleShowEmojiPicker = () => {
+    setShowEmojiPicker(true);
+    handleCloseMessageContextMenu();
+  };
+
+  // Gestionnaire pour ajouter une réaction
+  const handleAddReaction = async (emojiName) => {
+    try {
+      if (!messageContextMenu.messageId) return;
+      
+      // Utiliser WebSocket pour envoyer la réaction
+      if (socket && socket.connected) {
+        // Utiliser le type de réaction normalisé
+        socket.emit('addReaction', {
+          messageId: messageContextMenu.messageId,
+          reaction_type: emojiName,
+          canalId: activeChannel.id
+        });
+        
+        // Optimistic UI update - mettre à jour l'interface avant la confirmation du serveur
+        setMessages(prevMessages => 
+          prevMessages.map(msg => {
+            if (msg.id_message === messageContextMenu.messageId) {
+              // Vérifier si cette réaction existe déjà
+              const existingReactionIndex = 
+                (msg.reactions || []).findIndex(r => r.reaction_type === emojiName);
+              
+              let updatedReactions = [...(msg.reactions || [])];
+              
+              if (existingReactionIndex >= 0) {
+                // Incrémenter le compteur si la réaction existe
+                updatedReactions[existingReactionIndex] = {
+                  ...updatedReactions[existingReactionIndex],
+                  count: (parseInt(updatedReactions[existingReactionIndex].count) || 0) + 1,
+                  user_reacted: true
+                };
+              } else {
+                // Ajouter une nouvelle réaction si elle n'existe pas
+                updatedReactions.push({
+                  reaction_type: emojiName,
+                  count: 1,
+                  user_reacted: true,
+                  emoji: getEmojiForType(emojiName)
+                });
+              }
+              
+              return {
+                ...msg,
+                reactions: updatedReactions
+              };
+            }
+            return msg;
+          })
+        );
+        
+        setShowEmojiPicker(false);
+        return;
+      }
+      
+      // Fallback à l'API REST si WebSocket n'est pas disponible
+      const token = localStorage.getItem('token');
+      console.log(`Ajout d'une réaction ${emojiName} au message ${messageContextMenu.messageId}`);
+      
+      const response = await fetch(`${API_URL}/api/messages/${messageContextMenu.messageId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reaction_type: emojiName
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'ajout de la réaction');
+      }
+      
+      // Actualiser les messages pour afficher la nouvelle réaction
+      if (activeChannel) {
+        handleSelectChannel(activeChannel);
+      }
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setShowEmojiPicker(false);
+    }
+  };
+
+  // Gestionnaire pour annuler une réponse
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Effet pour fermer le menu contextuel des messages lors d'un clic ailleurs
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (messageContextMenu.visible) {
+        setMessageContextMenu({ ...messageContextMenu, visible: false });
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [messageContextMenu.visible]);
 
   if (loading) {
     return (
@@ -732,6 +960,7 @@ function WorkspaceDetails() {
                     <div 
                       key={message.id_message} 
                       className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
+                      onContextMenu={(e) => handleMessageContextMenu(e, message)}
                     >
                       <div className="message-avatar">
                         {message.photo_de_profil ? (
@@ -741,11 +970,69 @@ function WorkspaceDetails() {
                         )}
                       </div>
                       <div className="message-content">
+                        {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
+                        {message.parent_message && (
+                          <div className="message-reply-to" onClick={() => {
+                            // Trouver le message parent dans la liste et faire défiler vers lui
+                            const parentMessage = messages.find(m => m.id_message === message.parent_id);
+                            if (parentMessage) {
+                              const element = document.getElementById(`msg-${message.parent_id}`);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // Ajouter une classe pour le mettre en évidence temporairement
+                                element.classList.add('highlight-message');
+                                setTimeout(() => element.classList.remove('highlight-message'), 2000);
+                              }
+                            }
+                          }}>
+                            <FaReply className="reply-icon" />
+                            <div className="reply-content">
+                              <span className="reply-author">@{message.parent_message.nom}</span>
+                              <span className="reply-text">{message.parent_message.contenu}</span>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="message-header">
                           <span className="message-author">{message.nom}</span>
                           <span className="message-time">{formatMessageDate(message.date_creation)}</span>
                         </div>
                         <p className="message-text">{message.contenu}</p>
+                        
+                        {/* Afficher les réactions avec meilleur style */}
+                        {message.reactions && message.reactions.length > 0 && (
+                          <div className="message-reactions">
+                            {message.reactions.map((reaction, index) => (
+                              <div 
+                                key={index} 
+                                className="reaction-badge"
+                                onClick={() => {
+                                  // Toggle de réaction
+                                  if (socket && socket.connected) {
+                                    if (reaction.user_reacted) {
+                                      socket.emit('removeReaction', {
+                                        messageId: message.id_message,
+                                        reaction_type: reaction.reaction_type,
+                                        canalId: activeChannel.id
+                                      });
+                                    } else {
+                                      socket.emit('addReaction', {
+                                        messageId: message.id_message,
+                                        reaction_type: reaction.reaction_type,
+                                        canalId: activeChannel.id
+                                      });
+                                    }
+                                  }
+                                }}
+                              >
+                                <span className="reaction-emoji">
+                                  {reaction.emoji || getEmojiForType(reaction.reaction_type)}
+                                </span>
+                                <span className="reaction-count">{reaction.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -758,6 +1045,19 @@ function WorkspaceDetails() {
               </div>
               
               <form className="chat-input-container" onSubmit={handleSendMessage}>
+                {/* Afficher l'indicateur de réponse si on répond à un message */}
+                {replyingTo && (
+                  <div className="replying-to">
+                    <div className="reply-info">
+                      <FaReply className="reply-icon" />
+                      <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+                    </div>
+                    <button type="button" className="cancel-reply" onClick={handleCancelReply}>
+                      ×
+                    </button>
+                  </div>
+                )}
+                
                 <div className="chat-input-wrapper">
                   <button type="button" className="chat-attachment-btn">
                     <FaPaperclip />
@@ -768,7 +1068,7 @@ function WorkspaceDetails() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                   />
-                  <button type="button" className="chat-emoji-btn">
+                  <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}>
                     <FaSmile />
                   </button>
                 </div>
@@ -1063,6 +1363,53 @@ function WorkspaceDetails() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Menu contextuel pour les messages */}
+        {messageContextMenu.visible && (
+          <div 
+            className="message-context-menu"
+            style={{ top: messageContextMenu.yPos, left: messageContextMenu.xPos }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="context-menu-item" onClick={handleReplyMessage}>
+              <FaReply className="context-menu-icon" />
+              <span>Répondre</span>
+            </div>
+            <div className="context-menu-item" onClick={handleShowEmojiPicker}>
+              <FaRegSmile className="context-menu-icon" />
+              <span>Ajouter une réaction</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Modal pour la sélection d'emoji */}
+        {showEmojiPicker && (
+          <div className="modal-overlay" onClick={() => setShowEmojiPicker(false)}>
+            <div className="emoji-picker-modal" onClick={e => e.stopPropagation()}>
+              <h3>Choisissez une réaction</h3>
+              <div className="emoji-grid">
+                {commonEmojis.map((emoji) => (
+                  <button 
+                    key={emoji.name} 
+                    className="emoji-button"
+                    onClick={() => handleAddReaction(emoji.name)}
+                    title={emoji.name}
+                  >
+                    {emoji.label}
+                  </button>
+                ))}
+              </div>
+              <div className="emoji-picker-actions">
+                <button 
+                  className="cancel-btn" 
+                  onClick={() => setShowEmojiPicker(false)}
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           </div>
         )}
