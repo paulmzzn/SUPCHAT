@@ -4,8 +4,13 @@ import jwt from 'jsonwebtoken';
 import sendInvitationEmail from '../config/emailService.js';
 import sendValidationEmail from '../config/validationEmailService.js'; // Import the validation email service
 import sendResetPasswordEmail from '../config/resetPasswordEmailService.js';
+import dotenv from 'dotenv';
 
-const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
+// Charger les variables d'environnement
+dotenv.config();
+
+// Utiliser une variable d'environnement ou une valeur par défaut
+const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
 
 // Fonction pour enregistrer un nouvel utilisateur
 const registerUser = async (req, res) => {
@@ -106,11 +111,11 @@ const loginUser = async (req, res) => {
       return res.status(500).json({ message: 'Erreur lors de l\'envoi du code de validation' });
     }
 
-    // Générer le token JWT
+    // Générer le token JWT avec une expiration plus longue (7 jours au lieu de 48h)
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
       SECRET_KEY,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' } // Augmenté à 7 jours
     );
 
     res.status(200).json({
@@ -129,24 +134,24 @@ const loginUser = async (req, res) => {
 // Fonction pour valider le code
 const validateCode = async (req, res) => {
   const { email, code } = req.body;
-  console.log('Tentative de validation:', { email, code }); // Debug log
+  console.log('Tentative de validation:', { email, code });
 
   try {
     const user = await UserModel.getUserByEmail(email);
-    console.log('User found:', user); // Debug log
+    console.log('User found:', user);
 
     if (!user) {
-      console.log('Utilisateur non trouvé'); // Debug log
+      console.log('Utilisateur non trouvé');
       return res.status(401).json({ message: 'Utilisateur non trouvé.' });
     }
 
     console.log('Comparing codes:', { 
       provided: code, 
       stored: user.validation_code 
-    }); // Debug log
+    });
 
     if (user.validation_code !== code) {
-      console.log('Code de validation incorrect'); // Debug log
+      console.log('Code de validation incorrect');
       return res.status(401).json({ message: 'Code de validation incorrect.' });
     }
 
@@ -156,12 +161,18 @@ const validateCode = async (req, res) => {
       is_activated: true
     }, user.id_utilisateur);
 
-    // Générer un nouveau token après validation
+    // IMPORTANT: Générer un nouveau token après validation
+    // Utiliser exactement la même structure que celle attendue par le middleware
     const token = jwt.sign(
-      { id: user.id_utilisateur, email: user.email },
+      { 
+        id: user.id_utilisateur,
+        email: user.email 
+      },
       SECRET_KEY,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' } // Augmenté à 7 jours
     );
+
+    console.log('Nouveau token généré:', { userId: user.id_utilisateur, tokenStart: token.substring(0, 15) });
 
     res.status(200).json({
       message: 'Validation réussie.',

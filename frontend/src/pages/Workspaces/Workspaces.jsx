@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { FaSearch, FaHeart, FaCamera, FaImage, FaTimes } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceCard from "./WorkspaceCard";
+import { useNavigate } from "react-router-dom";  // Import useNavigate
 import "./Workspaces.css";
 import { API_URL } from "../../config/config";
 
@@ -25,18 +26,85 @@ function Workspaces() {
   
   const bannerInputRef = useRef(null);
   const iconInputRef = useRef(null);
+  const navigate = useNavigate();  // Pour la redirection
+
+  // Fonction pour vérifier si le token est valide
+  const checkTokenValidity = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log("Pas de token trouvé");
+      return false;
+    }
+
+    try {
+      console.log("Vérification du token:", token.substring(0, 15) + "...");
+      const response = await fetch(`${API_URL}/api/users/verify-token`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Token invalide ou expiré');
+        localStorage.removeItem('token');
+        return false;
+      }
+
+      // Token est valide
+      const data = await response.json();
+      console.log("Token valide, expiration dans:", data.expires_in);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du token:', error);
+      return false;
+    }
+  }, []);
+
+  // Séparons la vérification du token de la redirection
+  useEffect(() => {
+    const verifyAndRedirectIfNeeded = async () => {
+      const isValid = await checkTokenValidity();
+      if (!isValid) {
+        navigate('/login');
+      }
+    };
+    
+    verifyAndRedirectIfNeeded();
+  }, [checkTokenValidity, navigate]);
 
   // Define fetchWorkspaces as a memoized function to avoid recreating it on each render
   const fetchWorkspaces = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_URL}/api/workspaces`);
+      
+      // Récupérer le token depuis le localStorage
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error("Vous devez être connecté pour voir vos workspaces");
+      }
+      
+      console.log("Token récupéré pour fetch:", token.substring(0, 15) + "...");
+      
+      // Utiliser la route authentifiée pour récupérer uniquement les workspaces de l'utilisateur
+      const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
+      console.log("Statut de la réponse workspaces:", response.status);
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch workspaces");
+        const errorText = await response.text();
+        console.error("Réponse d'erreur workspaces:", errorText);
+        
+        // Si le token est expiré, on laissera l'effet de vérification s'en occuper
+        throw new Error(`Failed to fetch workspaces: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log("Workspaces récupérés:", data.length);
 
       // Transform backend data to match frontend format
       const transformedWorkspaces = data.map((workspace) => ({
@@ -53,13 +121,14 @@ function Workspaces() {
         totalMembers: workspace.total_members || 0,
         isFavorite: workspace.is_favorite || false,
         isPrivate: workspace.is_private || false,
+        userRole: workspace.user_role || "member", // Nouveau champ pour le rôle de l'utilisateur
       }));
 
-      // Filter for favorites (we'll need to implement proper favorite logic later)
-      // For now, let's assume the first 2 are favorites
+      // Pour les favoris, nous pourrions implémenter une logique spécifique plus tard
+      // Pour l'instant, utilisons les 2 premiers workspaces comme favoris
       const favorites = transformedWorkspaces.slice(0, 2);
 
-      // Recent workspaces - for now, just all of them
+      // Recent workspaces - all user workspaces
       const recent = [...transformedWorkspaces];
 
       setFavoriteWorkspaces(favorites);
@@ -184,6 +253,13 @@ function Workspaces() {
   const createWorkspace = async (e) => {
     e.preventDefault();
     try {
+      // Get the token for authentication
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error("Vous devez être connecté pour créer un workspace");
+      }
+      
       // First create the workspace with basic data
       const workspaceData = {
         nom: newWorkspace.name,
@@ -194,7 +270,8 @@ function Workspaces() {
       const response = await fetch(`${API_URL}/api/workspaces`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // Ajouter le token pour l'authentification
         },
         body: JSON.stringify(workspaceData)
       });

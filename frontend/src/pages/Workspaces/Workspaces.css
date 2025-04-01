@@ -15,7 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem; /* Réduit de 2rem à 1.5rem */
   flex-wrap: wrap;  /* Add flex-wrap to handle narrow screens */
   gap: 1rem;  /* Add gap between elements when they wrap */
 }
@@ -65,13 +65,13 @@
 
 /* Favorites section */
 .favorites-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem; /* Réduit de 2.5rem à 2rem */
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem; /* Réduit de 1rem à 0.75rem */
   color: rgba(255, 255, 255, 0.9);
   font-size: 1.5rem;
 }
@@ -126,13 +126,13 @@
 
 /* Workspaces grid section */
 .workspaces-section {
-  margin-top: 2rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
 }
 
 .workspaces-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 1.25rem; /* Réduit de 1.5rem à 1.25rem */
 }
 
 /* Create workspace card */
@@ -257,7 +257,7 @@
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem; /* Réduit de 1.5rem à 1.25rem */
   max-width: 100%;
 }
 
@@ -316,7 +316,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
 }
 
 .modal-actions button {
@@ -636,7 +636,7 @@ input:checked + .slider:before {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
 }
 
 .modal-actions button {

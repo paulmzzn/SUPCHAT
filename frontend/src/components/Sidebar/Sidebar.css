@@ -1,7 +1,7 @@
 .sidebar {
   width: 100px;
   height: 100vh;
-  background-color: rgba(32, 32, 32, 0.95);
+  background: rgba(32, 32, 32, 0.95); /* Changé de #3C3C3C à rgba(32, 32, 32, 0.95) */
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;

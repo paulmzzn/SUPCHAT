@@ -1,0 +1,1020 @@
+.workspace-details-container {
+  flex: 1;
+  min-height: 100vh;
+  background-color: #262626;
+  position: relative;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Layout pour la page détaillée du workspace */
+.workspace-detail-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar du workspace */
+.workspace-sidebar {
+  width: 280px;
+  min-width: 280px;
+  height: 100vh;
+  background: #222222; /* Changé de rgba(32, 32, 32, 0.95) à une couleur solide */
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Suppression de backdrop-filter pour s'assurer que la sidebar est opaque */
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.workspace-sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.workspace-profile {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.workspace-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  margin-right: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.workspace-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ajustements pour la barre de recherche de la sidebar */
+.workspace-search {
+  margin-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+  box-sizing: border-box; /* S'assurer que padding est inclus dans la largeur */
+  max-width: 100%; /* S'assurer que l'input ne dépasse pas son conteneur */
+  overflow: hidden; /* Cacher le contenu qui déborde */
+}
+
+.search-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(147, 72, 183, 0.5);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.workspace-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.channels-section {
+  padding: 0 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.section-header h3 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  flex-grow: 1;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.toggle-icon {
+  font-size: 0.8rem;
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.add-channel-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.add-channel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.channels-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background 0.2s ease;
+  position: relative;
+}
+
+.channel-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.channel-icon {
+  font-size: 0.85rem;
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.channel-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-channels {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Styles pour l'état de chargement et d'erreur des canaux */
+.channel-loading, 
+.channel-error {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+.channel-error {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.1);
+  border-radius: 4px;
+}
+
+/* Zone de contenu principal */
+.workspace-content-area {
+  flex: 1;
+  background-color: #262626;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace-welcome {
+  text-align: center;
+  max-width: 600px;
+  padding: 2rem;
+  background: rgba(30, 30, 35, 0.5);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.workspace-welcome h1 {
+  color: white;
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+}
+
+.workspace-welcome p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+}
+
+/* États de chargement et d'erreur */
+.loading, .error {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  color: #ff6b6b;
+}
+
+/* Ambient glow effects */
+.glow-circle-right, .glow-circle-left {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.top-right {
+  background: radial-gradient(circle, #B05FDF, #9348B7);
+  width: 800px;
+  height: 800px;
+  top: -200px;
+  right: -200px;
+}
+
+.bottom-left {
+  background: radial-gradient(circle, #9348B7, #6A2F88);
+  width: 800px;
+  height: 800px;
+  bottom: -200px;
+  left: -200px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .workspace-sidebar {
+    width: 240px;
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-detail-layout {
+    flex-direction: column;
+  }
+  
+  .workspace-sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    max-height: 300px;
+  }
+  
+  .workspace-content-area {
+    height: calc(100vh - 300px);
+  }
+}
+
+/* Details Sidebar - NEW */
+.details-sidebar {
+  width: 280px;
+  min-width: 280px;
+  height: 100vh;
+  background: #222222; /* Même couleur que la sidebar de gauche */
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Sections de la sidebar de détails */
+.details-section {
+  padding: 0 16px;
+  margin-bottom: 12px; /* Réduit de 20px à 12px */
+}
+
+.details-section .section-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 0; /* Réduit de 15px à 10px */
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 6px; /* Réduit de 8px à 6px */
+}
+
+.details-section .section-header h3 {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  flex-grow: 1;
+  font-weight: 600;
+}
+
+/* Liste des membres */
+.members-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  padding-left: 10px; /* Réduit de 15px à 10px */
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  position: relative;
+  gap: 10px;
+}
+
+.member-avatar, .member-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 0; /* Retiré car nous utilisons gap */
+  background-color: rgba(147, 72, 183, 0.2);
+  color: rgba(147, 72, 183, 0.8);
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.member-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+}
+
+.status-indicator.online {
+  background-color: #4CD964;
+  box-shadow: 0 0 5px rgba(76, 217, 100, 0.5);
+}
+
+.status-indicator.offline {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Liste des fichiers */
+.files-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 0; /* Réduit de 8px à 6px */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.file-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-right: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.file-meta {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+/* Grille d'images */
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px; /* Réduit de 8px à 6px */
+  padding: 6px 0; /* Réduit de 8px à 6px */
+}
+
+.image-item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.shared-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image-item:hover .shared-image {
+  transform: scale(1.05);
+}
+
+/* Responsive - ajuster pour inclure la nouvelle sidebar */
+@media (max-width: 1280px) {
+  .details-sidebar {
+    width: 240px;
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 992px) {
+  .workspace-detail-layout {
+    overflow-x: auto; /* Permettre le défilement horizontal */
+  }
+  
+  .details-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 50;
+  }
+  
+  .details-sidebar.visible {
+    transform: translateX(0);
+  }
+  
+  /* Ajouter un bouton pour ouvrir la sidebar sur mobile */
+  .details-toggle-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 10px;
+    background-color: rgba(147, 72, 183, 0.8);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 768px) {
+  /* ...existing code... */
+  
+  .details-sidebar {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* Amélioration des sections pour membres */
+.members-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.members-subsection {
+  margin-top: 0;
+  margin-bottom: 6px; /* Réduit de 10px à 6px */
+}
+
+.subsection-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 0; /* Réduit de 8px à 6px */
+  cursor: pointer;
+  margin-bottom: 3px; /* Réduit de 5px à 3px */
+}
+
+.subsection-header h4 {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  flex-grow: 1;
+  font-weight: 500;
+}
+
+.subsection-header .toggle-icon {
+  font-size: 0.7rem;
+  margin-right: 6px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Réduire l'espace entre les sous-sections */
+.details-section + .details-section {
+  margin-top: 15px; /* Réduit de 25px à 15px */
+}
+
+.members-list {
+  padding-left: 10px; /* Réduit de 15px à 10px */
+}
+
+/* Ajustement des marges pour les éléments imbriqués */
+.members-subsection .members-list {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.members-subsection:last-child {
+  margin-bottom: 0;
+}
+
+/* Styles pour le modal de création de canal - REFONTE COMPLÈTE */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: linear-gradient(145deg, rgba(38, 38, 45, 0.95), rgba(28, 28, 35, 0.98));
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.08),
+              0 0 30px rgba(147, 72, 183, 0.15);
+  color: white;
+  animation: slideUp 0.3s ease;
+  transform-origin: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.98); 
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1); 
+  }
+}
+
+
+
+.modal-content h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1.75rem;
+  color: white;
+  letter-spacing: -0.01em;
+  position: relative;
+}
+
+.modal-content h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -12px;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(to right, #9348B7, transparent);
+  border-radius: 3px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 12px 15px;
+  background-color: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: white;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.form-group input[type="text"]:focus {
+  outline: none;
+  border-color: rgba(147, 72, 183, 0.5);
+  background-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(147, 72, 183, 0.15);
+}
+
+.form-group input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Ajustement du champ de confidentialité pour uniformiser la taille */
+.form-group.checkbox {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 12px 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 1.5rem;
+  width: 100%; /* Assure que le conteneur prend toute la largeur disponible */
+  box-sizing: border-box; /* Inclut padding et border dans la largeur */
+}
+
+.form-group.checkbox input[type="checkbox"] {
+  margin-right: 12px;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(147, 72, 183, 0.5);
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Empêche la case à cocher de rétrécir */
+}
+
+.form-group.checkbox input[type="checkbox"]:checked {
+  background-color: #9348B7;
+  border-color: #9348B7;
+}
+
+.form-group.checkbox input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  display: block;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.form-group.checkbox input[type="checkbox"]:focus {
+  box-shadow: 0 0 0 3px rgba(147, 72, 183, 0.25);
+}
+
+.form-group.checkbox label {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  flex-grow: 1; /* Permet au texte de prendre tout l'espace disponible */
+  padding-right: 10px; /* Ajoute un peu d'espace à droite du texte */
+}
+
+.error-message {
+  background-color: rgba(255, 76, 76, 0.1);
+  color: #ff6b6b;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  border-left: 3px solid #ff6b6b;
+  display: flex;
+  align-items: center;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 2rem;
+}
+
+.modal-actions button {
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.create-btn {
+  background: linear-gradient(to right, #9348B7, #B05FDF);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 15px rgba(147, 72, 183, 0.3);
+}
+
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(147, 72, 183, 0.4);
+}
+
+.create-btn:disabled {
+  background: linear-gradient(to right, #6a4b77, #7a5a87);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.create-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+}
+
+.create-btn:hover::after {
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Nouveau style pour le sélecteur de visibilité du canal */
+.channel-visibility-selector {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.visibility-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+}
+
+.visibility-option:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.visibility-option.selected {
+  background: rgba(147, 72, 183, 0.1);
+  border-color: rgba(147, 72, 183, 0.5);
+  box-shadow: 0 0 0 2px rgba(147, 72, 183, 0.15);
+}
+
+.visibility-icon {
+  font-size: 1.1rem;
+  margin-right: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.visibility-option.selected .visibility-icon {
+  color: #9348B7;
+}
+
+.visibility-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.visibility-title {
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.visibility-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.visibility-option.selected .visibility-title {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.visibility-option.selected .visibility-desc {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Support pour les écrans mobiles */
+@media (max-width: 480px) {
+  .channel-visibility-selector {
+    flex-direction: column;
+  }
+  
+  .visibility-option {
+    width: 100%;
+  }
+}
+
+/* Styles pour les rôles des membres */
+.member-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0; /* Pour que l'élément puisse se rétrécir */
+  overflow: hidden;
+}
+
+.member-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role-icon {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 8px; /* Déplacé de margin-left à margin-right puisque l'icône est maintenant avant le nom */
+}
+
+.role-icon.owner {
+  color: #ffb73f; /* Couleur dorée pour le propriétaire */
+}
+
+.role-icon.admin {
+  color: #e53e3e; /* Changé en rouge pour les admins */
+}
+
+.role-icon.member {
+  color: rgba(255, 255, 255, 0.5); /* Couleur grise/blanche pour les membres normaux */
+}
+
+/* Styles pour le menu contextuel des canaux */
+.channel-context-menu {
+  position: fixed;
+  width: 220px;
+  background: linear-gradient(145deg, rgba(40, 40, 45, 0.98), rgba(30, 30, 35, 0.98));
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  animation: menuFadeIn 0.15s ease forwards;
+  transform-origin: top left;
+}
+
+@keyframes menuFadeIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.context-menu-item:hover {
+  background-color: rgba(147, 72, 183, 0.15);
+}
+
+.context-menu-item.delete {
+  color: #ff6b6b;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.context-menu-item.delete:hover {
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+.context-menu-icon {
+  margin-right: 12px;
+  font-size: 0.9rem;
+}
+
+/* Ajouter un style interactif pour le canal sélectionné */
+.channel-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.channel-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.channel-item:active::after {
+  opacity: 1;
+}
+
+/* Modifier l'apparence du curseur pour indiquer les actions disponibles */
+.channel-item {
+  cursor: context-menu;
+}

@@ -2,9 +2,14 @@ import express from 'express';
 import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode, validateUser, requestPasswordReset, resetPassword, resendValidationCode } from '../controllers/userController.js';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+// Charger les variables d'environnement
+dotenv.config();
 
 const router = express.Router();
-const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
+// Utiliser une variable d'environnement ou une valeur par défaut
+const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
 
 router.post('/register', registerUser);
 router.get('/', getAllUsers);
@@ -27,7 +32,7 @@ router.get('/auth/google/callback',
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
       SECRET_KEY,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' } // Augmenté à 7 jours
     );
 
     // Redirection directe vers le dashboard via AuthCallback
@@ -46,10 +51,25 @@ router.get('/verify-token', (req, res) => {
 
     const token = authHeader.split(' ')[1];
     try {
-        jwt.verify(token, SECRET_KEY);
-        res.status(200).json({ message: 'Token valid' });
+        const decoded = jwt.verify(token, SECRET_KEY);
+        
+        // Calculer l'expiration restante en heures
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeRemaining = decoded.exp - currentTime;
+        const hoursRemaining = Math.floor(timeRemaining / 3600);
+        
+        res.status(200).json({ 
+            message: 'Token valid', 
+            expires_in: hoursRemaining + ' hours',
+            user_id: decoded.id,
+            email: decoded.email
+        });
     } catch (error) {
-        res.status(401).json({ message: 'Invalid token' });
+        res.status(401).json({ 
+            message: 'Invalid token',
+            error: error.message,
+            error_type: error.name
+        });
     }
 });
 

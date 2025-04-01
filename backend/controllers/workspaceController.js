@@ -219,7 +219,8 @@ export const getWorkspaceMembers = async (req, res) => {
 export const joinWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { userId, role = 3 } = req.body; // role par défaut = 3 (member)
+    const userId = req.user.id; // Récupérer l'ID utilisateur du token JWT
+    const { role = 3 } = req.body; // role par défaut = 3 (member)
 
     // Vérifier si l'utilisateur n'est pas déjà membre
     const checkMember = await pool.query(
@@ -228,7 +229,24 @@ export const joinWorkspace = async (req, res) => {
     );
 
     if (checkMember.rows.length > 0) {
-      return res.status(400).json({ message: "Déjà membre de ce workspace" });
+      return res.status(400).json({ message: "Vous êtes déjà membre de ce workspace" });
+    }
+
+    // Vérifier si le workspace existe
+    const workspaceExists = await pool.query(
+      "SELECT * FROM workspace WHERE id_workspace = $1",
+      [workspaceId]
+    );
+
+    if (workspaceExists.rows.length === 0) {
+      return res.status(404).json({ message: "Workspace non trouvé" });
+    }
+
+    // Si le workspace est privé, vérifier si l'utilisateur a une invitation
+    if (workspaceExists.rows[0].is_private) {
+      // Implémenter la vérification des invitations si nécessaire
+      // Pour l'instant, refuser l'accès aux workspaces privés sans invitation
+      return res.status(403).json({ message: "Ce workspace est privé. Une invitation est requise." });
     }
 
     // Ajouter l'utilisateur comme membre avec le rôle spécifié
@@ -237,7 +255,10 @@ export const joinWorkspace = async (req, res) => {
       [userId, workspaceId, role]
     );
 
-    res.status(200).json({ message: "Joined workspace successfully" });
+    res.status(200).json({ 
+      message: "Vous avez rejoint le workspace avec succès",
+      workspace_id: workspaceId 
+    });
   } catch (error) {
     console.error("Erreur joinWorkspace:", error);
     res.status(500).json({ error: error.message });
@@ -293,6 +314,30 @@ export const removeMember = async (req, res) => {
     res.status(200).json({ message: "Membre retiré avec succès" });
   } catch (error) {
     console.error("Erreur removeMember:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUserWorkspaces = async (req, res) => {
+  try {
+    const userId = req.user.id; // Récupère l'ID de l'utilisateur depuis le token décodé
+    
+    // Requête pour obtenir tous les workspaces auxquels l'utilisateur appartient
+    const result = await pool.query(
+      `SELECT w.*, 
+        (SELECT COUNT(*) FROM membre_workspace mw2 WHERE mw2.fk_workspace = w.id_workspace) as total_members,
+        r.nom_role as user_role
+       FROM workspace w
+       JOIN membre_workspace mw ON w.id_workspace = mw.fk_workspace
+       JOIN role r ON mw.fk_role = r.id_role
+       WHERE mw.fk_utilisateur = $1
+       ORDER BY w.id_workspace DESC`,
+      [userId]
+    );
+    
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des workspaces de l'utilisateur:", error);
     res.status(500).json({ error: error.message });
   }
 };
