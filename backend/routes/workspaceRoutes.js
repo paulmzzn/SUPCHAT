@@ -12,8 +12,10 @@ import {
   getWorkspaceMembers,
   joinWorkspace,
   removeMember,
-  uploadWorkspaceImages
+  uploadWorkspaceImages,
+  getUserWorkspaces // Ajout de la nouvelle fonction
 } from '../controllers/workspaceController.js';
+import { verifyToken } from '../middleware/authMiddleware.js'; // Importer le middleware d'authentification
 
 const router = express.Router();
 
@@ -32,17 +34,20 @@ const upload = multer({
   }
 });
 
+// Route pour récupérer les workspaces d'un utilisateur authentifié
+router.get('/user/workspaces', verifyToken, getUserWorkspaces);
+
 // Existing routes
-router.post('/', createWorkspace);
+router.post('/', verifyToken, createWorkspace); // Ajout de verifyToken
 router.get('/:id', getWorkspaceById);
 router.get('/', getAllWorkspaces);
-router.put('/:id', updateWorkspace);
-router.delete('/:id', deleteWorkspace);
-router.post('/:workspaceId/invite', sendWorkspaceInvitation);
+router.put('/:id', verifyToken, updateWorkspace); // Ajout de verifyToken
+router.delete('/:id', verifyToken, deleteWorkspace); // Ajout de verifyToken
+router.post('/:workspaceId/invite', verifyToken, sendWorkspaceInvitation); // Ajout de verifyToken
 router.get('/:workspaceId/members/:userId', checkWorkspaceMember);
 router.get('/:workspaceId/members', getWorkspaceMembers);
-router.post('/:workspaceId/join', joinWorkspace);
-router.delete('/:workspaceId/members/:userId', removeMember);
+router.post('/:workspaceId/join', verifyToken, joinWorkspace); // Ajout de verifyToken
+router.delete('/:workspaceId/members/:userId', verifyToken, removeMember); // Ajout de verifyToken
 
 // Route for image uploads, now using S3
 router.post('/:workspaceId/images', upload.fields([
