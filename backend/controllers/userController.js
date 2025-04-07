@@ -345,7 +345,108 @@ const resendValidationCode = async (req, res) => {
   }
 };
 
-// Ajouter à l'export
+// Récupérer le profil d'un utilisateur
+const getUserProfile = async (req, res) => {
+  try {
+    // Utiliser l'ID d'utilisateur du token JWT
+    const userId = req.user.id;
+    
+    const user = await UserModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Renvoyer les informations de profil sans le mot de passe
+    const userProfile = {
+      id_utilisateur: user.id_utilisateur,
+      nom: user.nom,
+      email: user.email,
+      bio: user.bio || '',
+      photo_url: user.photo_de_profil,
+      status: user.fk_statut,
+      date_inscription: user.date_inscription,
+      date_naissance: user.date_naissance
+    };
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du profil:', error);
+    res.status(500).json({
+      message: 'Erreur lors de la récupération du profil utilisateur',
+      error: error.message
+    });
+  }
+};
+
+// Mettre à jour le profil d'un utilisateur
+const updateUserProfile = async (req, res) => {
+  try {
+    // Utiliser l'ID d'utilisateur du token JWT
+    const userId = req.user.id;
+    
+    const { nom, bio, status } = req.body;
+    let photo_de_profil = null;
+
+    // Traiter l'upload d'avatar si présent
+    if (req.file) {
+      // Si vous avez une fonction pour traiter les fichiers (comme uploadToS3)
+      // photo_de_profil = await uploadToS3(req.file, 'avatars');
+      
+      // Sinon, utiliser le chemin du fichier local ou une URL temporaire
+      photo_de_profil = `/uploads/avatars/${req.file.filename}`;
+    }
+
+    // Préparer les champs à mettre à jour
+    const fieldsToUpdate = {
+      nom: nom || undefined,
+      bio: bio || undefined,
+      fk_statut: status || undefined
+    };
+
+    // Ajouter la photo de profil uniquement si elle a été fournie
+    if (photo_de_profil) {
+      fieldsToUpdate.photo_de_profil = photo_de_profil;
+    }
+
+    // Filtrer les champs non définis
+    const filteredFields = Object.fromEntries(
+      Object.entries(fieldsToUpdate).filter(([_, v]) => v !== undefined)
+    );
+
+    // N'effectuer la mise à jour que s'il y a des champs à mettre à jour
+    if (Object.keys(filteredFields).length > 0) {
+      const updatedUser = await UserModel.updateUser(filteredFields, userId);
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      }
+
+      // Créer un objet de réponse sans le mot de passe
+      const responseUser = {
+        id_utilisateur: updatedUser.id_utilisateur,
+        nom: updatedUser.nom,
+        email: updatedUser.email,
+        bio: updatedUser.bio || '',
+        photo_url: updatedUser.photo_de_profil,
+        status: updatedUser.fk_statut
+      };
+
+      return res.status(200).json({
+        message: 'Profil mis à jour avec succès',
+        user: responseUser
+      });
+    }
+
+    res.status(400).json({ message: 'Aucun champ à mettre à jour.' });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    res.status(500).json({
+      message: 'Erreur lors de la mise à jour du profil utilisateur',
+      error: error.message
+    });
+  }
+};
+
 export { 
   registerUser, 
   getAllUsers, 
@@ -357,5 +458,7 @@ export {
   validateUser,
   requestPasswordReset, 
   resetPassword,
-  resendValidationCode  // Ajout du nouveau contrôleur
+  resendValidationCode,  // Ajout du nouveau contrôleur
+  getUserProfile,
+  updateUserProfile
 };
