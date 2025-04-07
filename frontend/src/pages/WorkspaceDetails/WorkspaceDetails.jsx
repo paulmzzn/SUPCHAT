@@ -6,6 +6,40 @@ import './WorkspaceDetails.css';
 import { API_URL } from '../../config/config';
 import io from 'socket.io-client';
 
+// Nouvelle fonction pour rendre les liens cliquables
+const renderTextWithLinks = (text) => {
+  if (!text) return '';
+  
+  // Regex pour identifier les URLs dans le texte
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // Diviser le texte en parties (texte normal et liens)
+  const parts = text.split(urlRegex);
+  
+  // Trouver tous les liens dans le texte
+  const matches = text.match(urlRegex) || [];
+  
+  // Reconstruire le texte avec les liens cliquables
+  return parts.map((part, i) => {
+    // Si la partie correspond à un lien
+    if (matches.includes(part)) {
+      return (
+        <a 
+          key={i} 
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="message-link"
+        >
+          {part}
+        </a>
+      );
+    }
+    // Sinon, c'est du texte normal
+    return part;
+  });
+};
+
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const [workspace, setWorkspace] = useState(null);
@@ -25,19 +59,14 @@ function WorkspaceDetails() {
   const [showFiles, setShowFiles] = useState(true);
   const [showImages, setShowImages] = useState(true);
 
-  // Données exemples pour la sidebar de droite avec ajout des rôles
+  // État pour le chargement des membres
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [membersError, setMembersError] = useState(null);
+
+  // Remplacer les données de test par un état vide
   const [members, setMembers] = useState({
-    online: [
-      { id: 1, name: 'Alice Martin', avatar: null, status: 'online', role: 'owner' },
-      { id: 2, name: 'Bob Johnson', avatar: null, status: 'online', role: 'admin' },
-      { id: 3, name: 'Charlie Brown', avatar: null, status: 'online', role: 'member' }
-    ],
-    offline: [
-      { id: 4, name: 'David Smith', avatar: null, status: 'offline', role: 'member' },
-      { id: 5, name: 'Emily Davis', avatar: null, status: 'offline', role: 'admin' },
-      { id: 6, name: 'Frank Wilson', avatar: null, status: 'offline', role: 'member' },
-      { id: 7, name: 'Grace Taylor', avatar: null, status: 'offline', role: 'member' }
-    ]
+    online: [],
+    offline: []
   });
 
   const [files, setFiles] = useState([
@@ -140,6 +169,9 @@ function WorkspaceDetails() {
 
         // Récupérer les canaux depuis l'API
         fetchCanals();
+        
+        // Récupérer les membres du workspace
+        fetchWorkspaceMembers();
 
       } catch (err) {
         console.error('Error fetching workspace details:', err);
@@ -189,6 +221,62 @@ function WorkspaceDetails() {
       setChannels([]);
     } finally {
       setCanalsLoading(false);
+    }
+  };
+
+  // Nouvelle fonction pour récupérer les membres du workspace
+  const fetchWorkspaceMembers = async () => {
+    try {
+      setLoadingMembers(true);
+      setMembersError(null);
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch workspace members');
+      }
+
+      const data = await response.json();
+      console.log('Workspace members:', data);
+      
+      // Trier les membres entre en ligne et hors ligne
+      const onlineMembers = data.filter(member => member.status === 1).map(member => ({
+        id: member.id_utilisateur,
+        name: member.nom,
+        avatar: member.photo_de_profil || null,
+        status: 'online',
+        role: member.role.toLowerCase() // Convertir le rôle en minuscules (owner, admin, member)
+      }));
+      
+      const offlineMembers = data.filter(member => member.status !== 1).map(member => ({
+        id: member.id_utilisateur,
+        name: member.nom,
+        avatar: member.photo_de_profil || null,
+        status: 'offline',
+        role: member.role.toLowerCase()
+      }));
+      
+      setMembers({
+        online: onlineMembers,
+        offline: offlineMembers
+      });
+      
+    } catch (err) {
+      console.error('Error fetching workspace members:', err);
+      setMembersError(err.message);
+      
+      // En cas d'erreur, garder la structure mais avec des tableaux vides
+      setMembers({
+        online: [],
+        offline: []
+      });
+    } finally {
+      setLoadingMembers(false);
     }
   };
 
@@ -997,7 +1085,7 @@ function WorkspaceDetails() {
                           <span className="message-author">{message.nom}</span>
                           <span className="message-time">{formatMessageDate(message.date_creation)}</span>
                         </div>
-                        <p className="message-text">{message.contenu}</p>
+                        <p className="message-text">{renderTextWithLinks(message.contenu)}</p>
                         
                         {/* Afficher les réactions avec meilleur style */}
                         {message.reactions && message.reactions.length > 0 && (
