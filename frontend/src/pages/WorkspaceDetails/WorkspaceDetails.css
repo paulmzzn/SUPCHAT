@@ -1226,6 +1226,20 @@
   margin: 0;
   line-height: 1.5;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Nouveaux styles pour les liens cliquables dans les messages */
+.message-link {
+  color: #7abbff;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+  word-break: break-all; /* Permettre la rupture des mots longs pour éviter le dépassement */
+}
+
+.message-link:hover {
+  color: #b77dff;
 }
 
 .chat-input-container {
