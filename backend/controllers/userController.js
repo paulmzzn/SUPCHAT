@@ -345,6 +345,17 @@ const resendValidationCode = async (req, res) => {
   }
 };
 
+// Fonction de conversion des statuts numériques vers les chaînes attendues par le frontend
+const convertStatus = (statusId) => {
+  const statusMap = {
+    1: 'online',
+    2: 'away',
+    3: 'dnd',
+    4: 'invisible'
+  };
+  return statusMap[statusId] || 'online'; // Défaut à 'online' si statusId est inconnu
+};
+
 // Récupérer le profil d'un utilisateur
 const getUserProfile = async (req, res) => {
   try {
@@ -363,7 +374,7 @@ const getUserProfile = async (req, res) => {
       email: user.email,
       bio: user.bio || '',
       photo_url: user.photo_de_profil,
-      status: user.fk_statut,
+      status: convertStatus(user.fk_statut), // Convertir le statut numérique en chaîne
       date_inscription: user.date_inscription,
       date_naissance: user.date_naissance
     };
@@ -383,58 +394,99 @@ const updateUserProfile = async (req, res) => {
   try {
     // Utiliser l'ID d'utilisateur du token JWT
     const userId = req.user.id;
+    console.log('Données reçues pour mise à jour:', req.body);
     
-    const { nom, bio, status } = req.body;
+    // Extraire les données basiques
+    const { nom, bio } = req.body;
     let photo_de_profil = null;
+
+    // Extraire spécifiquement le statut
+    let fk_statut = null;
+    if (req.body.fk_statut) {
+      fk_statut = parseInt(req.body.fk_statut, 10);
+      console.log(`Statut reçu (${typeof req.body.fk_statut}):`, req.body.fk_statut);
+      console.log(`Statut converti (${typeof fk_statut}):`, fk_statut);
+    }
 
     // Traiter l'upload d'avatar si présent
     if (req.file) {
-      // Si vous avez une fonction pour traiter les fichiers (comme uploadToS3)
-      // photo_de_profil = await uploadToS3(req.file, 'avatars');
-      
-      // Sinon, utiliser le chemin du fichier local ou une URL temporaire
       photo_de_profil = `/uploads/avatars/${req.file.filename}`;
+      console.log('Nouvel avatar:', photo_de_profil);
     }
 
-    // Préparer les champs à mettre à jour
-    const fieldsToUpdate = {
-      nom: nom || undefined,
-      bio: bio || undefined,
-      fk_statut: status || undefined
-    };
-
-    // Ajouter la photo de profil uniquement si elle a été fournie
-    if (photo_de_profil) {
-      fieldsToUpdate.photo_de_profil = photo_de_profil;
+    // Préparer les champs à mettre à jour - plus robuste pour éviter les erreurs de colonne manquante
+    const fieldsToUpdate = {};
+    
+    // Ajouter uniquement les champs qui sont présents et valides
+    if (nom) fieldsToUpdate.nom = nom;
+    if (fk_statut !== null && !isNaN(fk_statut)) fieldsToUpdate.fk_statut = fk_statut;
+    if (photo_de_profil) fieldsToUpdate.photo_de_profil = photo_de_profil;
+    
+    // Vérifier si la table utilisateur contient une colonne bio avant de tenter de la mettre à jour
+    try {
+      // Tenter d'ajouter bio au champ si fourni
+      if (bio !== undefined) fieldsToUpdate.bio = bio;
+    } catch (bioError) {
+      console.warn('La colonne bio pourrait ne pas exister:', bioError.message);
+      // On continue sans ajouter le champ bio
     }
 
-    // Filtrer les champs non définis
-    const filteredFields = Object.fromEntries(
-      Object.entries(fieldsToUpdate).filter(([_, v]) => v !== undefined)
-    );
+    console.log('Champs à mettre à jour:', fieldsToUpdate);
 
     // N'effectuer la mise à jour que s'il y a des champs à mettre à jour
-    if (Object.keys(filteredFields).length > 0) {
-      const updatedUser = await UserModel.updateUser(filteredFields, userId);
+    if (Object.keys(fieldsToUpdate).length > 0) {
+      try {
+        const updatedUser = await UserModel.updateUser(fieldsToUpdate, userId);
+        console.log('Résultat de la mise à jour:', updatedUser);
 
-      if (!updatedUser) {
-        return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        if (!updatedUser) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        }
+
+        // Créer un objet de réponse sans le mot de passe
+        const responseUser = {
+          id_utilisateur: updatedUser.id_utilisateur,
+          nom: updatedUser.nom,
+          email: updatedUser.email,
+          bio: updatedUser.bio || '',  // Utiliser chaîne vide par défaut si bio n'existe pas
+          photo_url: updatedUser.photo_de_profil,
+          status: convertStatus(updatedUser.fk_statut) // Convertir le statut numérique en chaîne
+        };
+
+        return res.status(200).json({
+          message: 'Profil mis à jour avec succès',
+          user: responseUser
+        });
+      } catch (updateError) {
+        // Si l'erreur est due à la colonne bio manquante, essayer sans le champ bio
+        if (updateError.message && updateError.message.includes('column "bio"') && fieldsToUpdate.bio !== undefined) {
+          console.warn('Tentative de mise à jour sans le champ bio');
+          delete fieldsToUpdate.bio;
+          
+          // Réessayer sans le champ bio
+          if (Object.keys(fieldsToUpdate).length > 0) {
+            const updatedUser = await UserModel.updateUser(fieldsToUpdate, userId);
+            
+            if (!updatedUser) {
+              return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+            }
+            
+            return res.status(200).json({
+              message: 'Profil partiellement mis à jour (bio ignoré)',
+              user: {
+                id_utilisateur: updatedUser.id_utilisateur,
+                nom: updatedUser.nom,
+                email: updatedUser.email,
+                photo_url: updatedUser.photo_de_profil,
+                status: convertStatus(updatedUser.fk_statut) // Convertir le statut numérique en chaîne
+              }
+            });
+          }
+        }
+        
+        // Si ce n'est pas une erreur de colonne manquante ou si la réessai échoue
+        throw updateError;
       }
-
-      // Créer un objet de réponse sans le mot de passe
-      const responseUser = {
-        id_utilisateur: updatedUser.id_utilisateur,
-        nom: updatedUser.nom,
-        email: updatedUser.email,
-        bio: updatedUser.bio || '',
-        photo_url: updatedUser.photo_de_profil,
-        status: updatedUser.fk_statut
-      };
-
-      return res.status(200).json({
-        message: 'Profil mis à jour avec succès',
-        user: responseUser
-      });
     }
 
     res.status(400).json({ message: 'Aucun champ à mettre à jour.' });
