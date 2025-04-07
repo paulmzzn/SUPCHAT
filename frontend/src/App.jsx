@@ -9,6 +9,7 @@ import Validate from './pages/Validate/Validate';
 import Workspaces from './pages/Workspaces/Workspaces';
 import Discover from './pages/Discover/Discover';
 import WorkspaceDetails from './pages/WorkspaceDetails/WorkspaceDetails';
+import Settings from './pages/Settings/Settings';
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -109,6 +110,12 @@ function App() {
             <Validate />
           </ProtectedRoute>
         } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        
         
         {/* Route par défaut */}
         <Route path="/" element={

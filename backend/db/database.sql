@@ -20,6 +20,7 @@ INSERT INTO statut (id_statut, label) VALUES
   (1, 'connecté'),
   (2, 'hors ligne'),
   (3, 'occupé');
+  (4, 'invisible'); -- Ajout du statut invisible
 
 -- Création de la table utilisateur avec fk_statut en INT
 CREATE TABLE utilisateur (
