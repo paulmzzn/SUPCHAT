@@ -163,12 +163,20 @@ const Settings = () => {
       // Obtenir l'ID du statut ou utiliser 1 (en ligne) par défaut
       const statusId = statusMap[formData.status] || 1;
       console.log('Envoi du statut:', { status: formData.status, statusId });
-      formDataToSend.append('fk_statut', statusId);
+      
+      // S'assurer que le statut est envoyé comme un nombre, pas une chaîne
+      formDataToSend.append('fk_statut', statusId.toString());
+      
+      // Log pour débogage - vérifier ce qui est réellement envoyé
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
       
       if (avatarFile) {
         formDataToSend.append('avatar', avatarFile);
       }
 
+      // S'assurer que nous utilisons l'URL correcte
       const response = await fetch(`${API_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
@@ -177,8 +185,26 @@ const Settings = () => {
         body: formDataToSend
       });
 
+      // Analyser la réponse même en cas d'erreur pour le débogage
+      const responseData = await response.json();
+      console.log('Réponse du serveur:', responseData);
+
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        throw new Error(responseData.message || 'Failed to update profile');
+      }
+
+      // Mise à jour du state local avec les données renvoyées
+      if (responseData.user) {
+        setFormData(prev => ({
+          ...prev,
+          name: responseData.user.nom || prev.name,
+          bio: responseData.user.bio || prev.bio
+        }));
+        
+        // Mettre à jour l'avatar si nécessaire
+        if (responseData.user.photo_url) {
+          setAvatarPreview(responseData.user.photo_url);
+        }
       }
 
       alert('Profile updated successfully');
