@@ -117,6 +117,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     { icon: <FaAngry />, name: 'angry', label: '😠' }
   ];
 
+  const [isMistralTyping, setIsMistralTyping] = useState(false); // State for typing indicator
+
   // Fetch canals function using useCallback
   const fetchCanals = useCallback(async () => {
     try {
@@ -301,7 +303,12 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
   
     socket.on('message', (message) => {
-      console.log('Nouveau message reçu:', message);
+      console.log('Nouveau message reçu (brut):', message); // Log brut
+      // *** Log spécifique pour le contenu du bot ***
+      if (message.isBot) {
+        console.log('Contenu brut du message BOT:', message.contenu);
+      }
+      // *** Fin du log spécifique ***
       const formattedMessage = {
         ...message,
         date_creation: message.date_creation || message.created_at || new Date().toISOString()
@@ -338,12 +345,31 @@ export const useWorkspaceDetails = (workspaceId) => {
         })
       );
     });
+
+    // *** Listen for typing events ***
+    socket.on('typing', ({ userId, username }) => {
+      // Check if it's the Mistral bot typing
+      if (userId === '00000000-0000-0000-0000-000000000001') { // Use the Mistral Bot UUID
+        setIsMistralTyping(true);
+      }
+      // You could extend this to show other users typing too
+    });
+
+    socket.on('stopTyping', ({ userId }) => {
+      if (userId === '00000000-0000-0000-0000-000000000001') { // Use the Mistral Bot UUID
+        setIsMistralTyping(false);
+      }
+    });
+    // *** End typing event listeners ***
   
     return () => {
       console.log(`Quitter le canal ${activeChannel.id}`);
       socket.off('message');
       socket.off('canalJoined');
       socket.off('messageReaction');
+      socket.off('typing'); // Clean up listeners
+      socket.off('stopTyping'); // Clean up listeners
+      setIsMistralTyping(false); // Reset typing state when changing channels
     };
   }, [socket, activeChannel, workspaceId]);
 
@@ -657,7 +683,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     channelError, contextMenu, showEditChannelModal, editingChannel, isUpdatingChannel,
     updateChannelError, activeChannel, messages, newMessage, loadingMessages,
     chatContainerRef, socket, currentUserId, messageContextMenu, showEmojiPicker,
-    replyingTo, commonEmojis,
+    replyingTo, commonEmojis, isMistralTyping, // Return the typing state
     // Handlers
     handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
     handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
