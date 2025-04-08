@@ -20,6 +20,7 @@ INSERT INTO statut (id_statut, label) VALUES
   (1, 'connecté'),
   (2, 'hors ligne'),
   (3, 'occupé');
+  (4, 'invisible'); -- Ajout du statut invisible
 
 -- Création de la table utilisateur avec fk_statut en INT
 CREATE TABLE utilisateur (
@@ -34,7 +35,8 @@ CREATE TABLE utilisateur (
   is_activated BOOLEAN DEFAULT false,
   validation_code VARCHAR(6),
   reset_password_code VARCHAR(6),
-  reset_password_expires TIMESTAMP
+  reset_password_expires TIMESTAMP,
+  bio TEXT  -- Ajout de la colonne bio
 );
 
 -- Création de la table workspace

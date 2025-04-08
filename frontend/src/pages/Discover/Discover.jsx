@@ -109,7 +109,11 @@ function Discover() {
             <div className="workspaces-grid">
               {filteredWorkspaces.length > 0 ? (
                 filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                  <WorkspaceCard 
+                    key={workspace.id} 
+                    workspace={workspace}
+                    showJoinButton={true} // Ajouter cette prop pour afficher le bouton 
+                  />
                 ))
               ) : (
                 <div className="no-results">

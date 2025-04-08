@@ -4,8 +4,13 @@ import jwt from 'jsonwebtoken';
 import sendInvitationEmail from '../config/emailService.js';
 import sendValidationEmail from '../config/validationEmailService.js'; // Import the validation email service
 import sendResetPasswordEmail from '../config/resetPasswordEmailService.js';
+import dotenv from 'dotenv';
 
-const SECRET_KEY = 'REDACTED'; // Remplace avec une clé secrète plus sécurisée dans un environnement variable
+// Charger les variables d'environnement
+dotenv.config();
+
+// Utiliser une variable d'environnement ou une valeur par défaut
+const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
 
 // Fonction pour enregistrer un nouvel utilisateur
 const registerUser = async (req, res) => {
@@ -106,11 +111,11 @@ const loginUser = async (req, res) => {
       return res.status(500).json({ message: 'Erreur lors de l\'envoi du code de validation' });
     }
 
-    // Générer le token JWT
+    // Générer le token JWT avec une expiration plus longue (7 jours au lieu de 48h)
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
       SECRET_KEY,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' } // Augmenté à 7 jours
     );
 
     res.status(200).json({
@@ -129,24 +134,24 @@ const loginUser = async (req, res) => {
 // Fonction pour valider le code
 const validateCode = async (req, res) => {
   const { email, code } = req.body;
-  console.log('Tentative de validation:', { email, code }); // Debug log
+  console.log('Tentative de validation:', { email, code });
 
   try {
     const user = await UserModel.getUserByEmail(email);
-    console.log('User found:', user); // Debug log
+    console.log('User found:', user);
 
     if (!user) {
-      console.log('Utilisateur non trouvé'); // Debug log
+      console.log('Utilisateur non trouvé');
       return res.status(401).json({ message: 'Utilisateur non trouvé.' });
     }
 
     console.log('Comparing codes:', { 
       provided: code, 
       stored: user.validation_code 
-    }); // Debug log
+    });
 
     if (user.validation_code !== code) {
-      console.log('Code de validation incorrect'); // Debug log
+      console.log('Code de validation incorrect');
       return res.status(401).json({ message: 'Code de validation incorrect.' });
     }
 
@@ -156,12 +161,18 @@ const validateCode = async (req, res) => {
       is_activated: true
     }, user.id_utilisateur);
 
-    // Générer un nouveau token après validation
+    // IMPORTANT: Générer un nouveau token après validation
+    // Utiliser exactement la même structure que celle attendue par le middleware
     const token = jwt.sign(
-      { id: user.id_utilisateur, email: user.email },
+      { 
+        id: user.id_utilisateur,
+        email: user.email 
+      },
       SECRET_KEY,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' } // Augmenté à 7 jours
     );
+
+    console.log('Nouveau token généré:', { userId: user.id_utilisateur, tokenStart: token.substring(0, 15) });
 
     res.status(200).json({
       message: 'Validation réussie.',
@@ -334,7 +345,160 @@ const resendValidationCode = async (req, res) => {
   }
 };
 
-// Ajouter à l'export
+// Fonction de conversion des statuts numériques vers les chaînes attendues par le frontend
+const convertStatus = (statusId) => {
+  const statusMap = {
+    1: 'online',
+    2: 'away',
+    3: 'dnd',
+    4: 'invisible'
+  };
+  return statusMap[statusId] || 'online'; // Défaut à 'online' si statusId est inconnu
+};
+
+// Récupérer le profil d'un utilisateur
+const getUserProfile = async (req, res) => {
+  try {
+    // Utiliser l'ID d'utilisateur du token JWT
+    const userId = req.user.id;
+    
+    const user = await UserModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Renvoyer les informations de profil sans le mot de passe
+    const userProfile = {
+      id_utilisateur: user.id_utilisateur,
+      nom: user.nom,
+      email: user.email,
+      bio: user.bio || '',
+      photo_url: user.photo_de_profil,
+      status: convertStatus(user.fk_statut), // Convertir le statut numérique en chaîne
+      date_inscription: user.date_inscription,
+      date_naissance: user.date_naissance
+    };
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du profil:', error);
+    res.status(500).json({
+      message: 'Erreur lors de la récupération du profil utilisateur',
+      error: error.message
+    });
+  }
+};
+
+// Mettre à jour le profil d'un utilisateur
+const updateUserProfile = async (req, res) => {
+  try {
+    // Utiliser l'ID d'utilisateur du token JWT
+    const userId = req.user.id;
+    console.log('Données reçues pour mise à jour:', req.body);
+    
+    // Extraire les données basiques
+    const { nom, bio } = req.body;
+    let photo_de_profil = null;
+
+    // Extraire spécifiquement le statut
+    let fk_statut = null;
+    if (req.body.fk_statut) {
+      fk_statut = parseInt(req.body.fk_statut, 10);
+      console.log(`Statut reçu (${typeof req.body.fk_statut}):`, req.body.fk_statut);
+      console.log(`Statut converti (${typeof fk_statut}):`, fk_statut);
+    }
+
+    // Traiter l'upload d'avatar si présent
+    if (req.file) {
+      photo_de_profil = `/uploads/avatars/${req.file.filename}`;
+      console.log('Nouvel avatar:', photo_de_profil);
+    }
+
+    // Préparer les champs à mettre à jour - plus robuste pour éviter les erreurs de colonne manquante
+    const fieldsToUpdate = {};
+    
+    // Ajouter uniquement les champs qui sont présents et valides
+    if (nom) fieldsToUpdate.nom = nom;
+    if (fk_statut !== null && !isNaN(fk_statut)) fieldsToUpdate.fk_statut = fk_statut;
+    if (photo_de_profil) fieldsToUpdate.photo_de_profil = photo_de_profil;
+    
+    // Vérifier si la table utilisateur contient une colonne bio avant de tenter de la mettre à jour
+    try {
+      // Tenter d'ajouter bio au champ si fourni
+      if (bio !== undefined) fieldsToUpdate.bio = bio;
+    } catch (bioError) {
+      console.warn('La colonne bio pourrait ne pas exister:', bioError.message);
+      // On continue sans ajouter le champ bio
+    }
+
+    console.log('Champs à mettre à jour:', fieldsToUpdate);
+
+    // N'effectuer la mise à jour que s'il y a des champs à mettre à jour
+    if (Object.keys(fieldsToUpdate).length > 0) {
+      try {
+        const updatedUser = await UserModel.updateUser(fieldsToUpdate, userId);
+        console.log('Résultat de la mise à jour:', updatedUser);
+
+        if (!updatedUser) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+        }
+
+        // Créer un objet de réponse sans le mot de passe
+        const responseUser = {
+          id_utilisateur: updatedUser.id_utilisateur,
+          nom: updatedUser.nom,
+          email: updatedUser.email,
+          bio: updatedUser.bio || '',  // Utiliser chaîne vide par défaut si bio n'existe pas
+          photo_url: updatedUser.photo_de_profil,
+          status: convertStatus(updatedUser.fk_statut) // Convertir le statut numérique en chaîne
+        };
+
+        return res.status(200).json({
+          message: 'Profil mis à jour avec succès',
+          user: responseUser
+        });
+      } catch (updateError) {
+        // Si l'erreur est due à la colonne bio manquante, essayer sans le champ bio
+        if (updateError.message && updateError.message.includes('column "bio"') && fieldsToUpdate.bio !== undefined) {
+          console.warn('Tentative de mise à jour sans le champ bio');
+          delete fieldsToUpdate.bio;
+          
+          // Réessayer sans le champ bio
+          if (Object.keys(fieldsToUpdate).length > 0) {
+            const updatedUser = await UserModel.updateUser(fieldsToUpdate, userId);
+            
+            if (!updatedUser) {
+              return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+            }
+            
+            return res.status(200).json({
+              message: 'Profil partiellement mis à jour (bio ignoré)',
+              user: {
+                id_utilisateur: updatedUser.id_utilisateur,
+                nom: updatedUser.nom,
+                email: updatedUser.email,
+                photo_url: updatedUser.photo_de_profil,
+                status: convertStatus(updatedUser.fk_statut) // Convertir le statut numérique en chaîne
+              }
+            });
+          }
+        }
+        
+        // Si ce n'est pas une erreur de colonne manquante ou si la réessai échoue
+        throw updateError;
+      }
+    }
+
+    res.status(400).json({ message: 'Aucun champ à mettre à jour.' });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    res.status(500).json({
+      message: 'Erreur lors de la mise à jour du profil utilisateur',
+      error: error.message
+    });
+  }
+};
+
 export { 
   registerUser, 
   getAllUsers, 
@@ -346,5 +510,7 @@ export {
   validateUser,
   requestPasswordReset, 
   resetPassword,
-  resendValidationCode  // Ajout du nouveau contrôleur
+  resendValidationCode,  // Ajout du nouveau contrôleur
+  getUserProfile,
+  updateUserProfile
 };

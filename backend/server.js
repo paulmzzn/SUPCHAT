@@ -13,14 +13,21 @@ import MessageModel from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
+import dotenv from 'dotenv';
+
+// Load environment variables at the start
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Configuration de Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    transports: ["websocket", "polling"],
+    origin: "http://localhost:3001", // Assurez-vous que cette valeur correspond à l'URL de votre frontend
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Authorization"],
+    credentials: true,
   },
   pingTimeout: 60000,
 });
@@ -54,15 +61,11 @@ app.use("/api", canalRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api", reactionRoutes);
 
-// Supprimer la configuration socket.io directement dans server.js
-// et utiliser uniquement socketManager
-socketManager(io);
+// Assurez-vous que cette ligne est AVANT l'initialisation de socketManager
+app.set('io', io);
 
-// Supprimer ou modifier cette route car elle n'est plus nécessaire
-// app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-// app.get("/api/users/auth/google/callback", passport.authenticate("google", { failureRedirect: "/" }), (req, res) => {
-//    res.redirect("http://localhost:3000");
-// });
+// Initialiser le gestionnaire de socket
+socketManager(io);
 
 httpServer.listen(PORT, async () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
