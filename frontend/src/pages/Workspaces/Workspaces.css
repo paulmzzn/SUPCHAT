@@ -5,6 +5,9 @@
   background-color: #262626;
   position: relative;
   overflow-x: hidden;
+  overflow-y: auto; /* Add this line to enable vertical scrolling */
+  height: 100vh; /* Set fixed height */
+  box-sizing: border-box; /* Include padding in height calculation */
 }
 
 /* Header section */
@@ -12,7 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem; /* Réduit de 2rem à 1.5rem */
   flex-wrap: wrap;  /* Add flex-wrap to handle narrow screens */
   gap: 1rem;  /* Add gap between elements when they wrap */
 }
@@ -62,13 +65,13 @@
 
 /* Favorites section */
 .favorites-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem; /* Réduit de 2.5rem à 2rem */
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem; /* Réduit de 1rem à 0.75rem */
   color: rgba(255, 255, 255, 0.9);
   font-size: 1.5rem;
 }
@@ -123,13 +126,13 @@
 
 /* Workspaces grid section */
 .workspaces-section {
-  margin-top: 2rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
 }
 
 .workspaces-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 1.25rem; /* Réduit de 1.5rem à 1.25rem */
 }
 
 /* Create workspace card */
@@ -175,7 +178,7 @@
   filter: blur(120px);
   opacity: 0.15;
   z-index: 0;
-  pointer-events: none;
+  pointer-events: none; /* Make sure they don't block interaction */
 }
 
 .top-right {
@@ -221,4 +224,491 @@
   .search-bar {
     width: 250px;  /* Slightly narrower on medium screens */
   }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: rgba(30, 30, 35, 0.95);
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-content h2 {
+  color: white;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem; /* Réduit de 1.5rem à 1.25rem */
+  max-width: 100%;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  font-size: 1rem;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 15px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-group textarea:focus {
+  border-color: #9348B7;
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.form-group.checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.form-group.checkbox input {
+  margin-right: 10px;
+}
+
+.form-group.checkbox label {
+  margin-bottom: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
+}
+
+.modal-actions button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.create-btn {
+  background-color: #9348B7;
+  border: none;
+  color: white;
+}
+
+.create-btn:hover {
+  background-color: #B05FDF;
+}
+
+/* Make sure the app layout doesn't constrain scrolling */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden; /* Contain overflow in the layout */
+}
+
+/* Add these styles to your existing Workspaces.css file */
+
+/* Modern modal styles */
+.modal-content.modern {
+  background-color: rgba(25, 25, 30, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-content.modern h2 {
+  color: white;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.8rem;
+}
+
+/* Hidden file input */
+.hidden-file-input {
+  display: none;
+}
+
+/* Banner upload styling */
+.image-upload-container {
+  width: 100%;
+  margin-bottom: 2rem;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.banner-upload {
+  height: 150px;
+}
+
+.upload-placeholder {
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(147, 72, 183, 0.4);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+}
+
+.upload-placeholder:hover {
+  background-color: rgba(147, 72, 183, 0.1);
+}
+
+.upload-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: rgba(147, 72, 183, 0.7);
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(255, 59, 92, 0.8);
+}
+
+/* Workspace identity row - modified to remove emoji */
+.workspace-identity-row {
+  display: flex;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  align-items: flex-start; /* Changed from flex-end to center for vertical alignment */
+}
+
+/* Icon upload styling */
+.icon-upload-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.icon-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(147, 72, 183, 0.4);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(147, 72, 183, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-placeholder:hover {
+  background-color: rgba(147, 72, 183, 0.1);
+}
+
+.icon-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.remove-icon-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+/* Name input - now takes full width */
+.form-group.name-input.full-width {
+  flex-grow: 1;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Adjust label spacing for better vertical balance */
+.form-group.name-input.full-width label {
+  margin-bottom: 8px;
+}
+
+/* Privacy toggle switch */
+.privacy-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.toggle-label {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.privacy-label {
+  font-weight: bold;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.privacy-description {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Switch styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #9348B7;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #9348B7;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Improved form inputs */
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+  border-color: #9348B7;
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Modal actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem; /* Réduit de 2rem à 1.5rem */
+}
+
+.modal-actions button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.create-btn {
+  background-color: #9348B7;
+  border: none;
+  color: white;
+}
+
+.create-btn:hover {
+  background-color: #B05FDF;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(147, 72, 183, 0.3);
+}
+
+/* Container for description to maintain width */
+.description-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Loading animation styles */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  width: 100%;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner-circle {
+  position: absolute;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid #9348B7;
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  animation: spin 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+.spinner-circle-inner {
+  position: absolute;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 4px solid #B05FDF;
+  border-radius: 50%;
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+  animation: spin-reverse 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
 }

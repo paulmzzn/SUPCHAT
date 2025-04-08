@@ -22,37 +22,37 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    console.log("Tentative de connexion..."); // Debug log
-
+    console.log('Tentative de connexion...');
+    
     try {
       const response = await fetch(`${API_URL}/api/users/login`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          mot_de_passe: password,
-        }),
+        body: JSON.stringify({ email, mot_de_passe: password }),
       });
-
+      
       const data = await response.json();
-      console.log("Réponse du serveur:", data); // Debug log
-
+      console.log('Réponse du serveur:', data);
+      
       if (response.ok) {
-        console.log("Connexion réussie, redirection vers /code"); // Debug log
-        localStorage.removeItem("isValidated");
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("userToken", data.token);
-        navigate("/code");
+        // Stocker l'email et le token dans localStorage
+        localStorage.setItem('email', email);
+        localStorage.setItem('token', data.token);
+        
+        console.log('Email et token sauvegardés dans localStorage');
+        console.log('Token présent:', localStorage.getItem('token') ? "oui" : "non");
+        console.log('Connexion réussie, redirection vers /code');
+        
+        // Redirigez l'utilisateur vers la page Code
+        navigate('/code');
       } else {
-        console.error("Erreur:", data.message); // Debug log
-        setError(data.message || "Erreur de connexion");
+        setError(data.message || 'Erreur de connexion');
       }
-    } catch (error) {
-      console.error("Erreur de connexion:", error); // Debug log
-      setError("Erreur de connexion au serveur");
+    } catch (err) {
+      console.error('Erreur lors de la connexion:', err);
+      setError('Erreur de connexion au serveur');
     }
   };
 

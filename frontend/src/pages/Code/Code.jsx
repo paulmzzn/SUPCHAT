@@ -1,27 +1,39 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import "./Code.css";
-import { API_URL } from "../../config/config";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../config/config';
+import './Code.css';
 
-function Code() {
+const Code = ({ email }) => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const inputs = Array(6).fill(0);
 
+  // Vérifier au chargement que nous avons bien un email
   useEffect(() => {
-    // Vérifier si l'utilisateur est authentifié
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      navigate("/login");
+    // S'assurer que nous avons un email stocké
+    const storedEmail = localStorage.getItem('email');
+    if (!storedEmail && email) {
+      localStorage.setItem('email', email);
+      console.log("Email sauvegardé dans localStorage:", email);
     }
-  }, [navigate]);
+    
+    console.log("Code.jsx - Email utilisé:", storedEmail || email || "Non défini");
+    console.log("Code.jsx - Token présent:", localStorage.getItem('token') ? "oui" : "non");
+  }, [email]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const email = localStorage.getItem("userEmail");
+    
+    // Utiliser l'email stocké ou celui passé en props
+    const emailToUse = localStorage.getItem("email") || email;
+    if (!emailToUse) {
+      setError("Email non disponible. Veuillez vous reconnecter.");
+      return;
+    }
+    
     const validationCode = code.join("");
-    console.log("Sending validation request:", { email, code: validationCode }); // Debug log
+    console.log("Sending validation request:", { email: emailToUse, code: validationCode });
 
     try {
       const response = await fetch(`${API_URL}/api/users/validate-code`, {
@@ -30,27 +42,43 @@ function Code() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          email: emailToUse,
           code: validationCode,
         }),
       });
 
       const data = await response.json();
-      console.log("Server response:", data); // Debug log
+      console.log("Server response:", data);
 
       if (response.ok) {
-        // Mettre à jour le token si un nouveau est fourni
+        // IMPORTANT: Stocker le token correctement et s'assurer qu'il est bien enregistré
         if (data.token) {
-          localStorage.setItem("userToken", data.token);
+          console.log("Sauvegarde du token après validation:", data.token.substring(0, 15) + "...");
+          
+          // Nettoyer d'abord le localStorage pour éviter tout conflit
+          localStorage.removeItem("token");
+          
+          // Stocker le token avec le bon nom
+          localStorage.setItem("token", data.token);
+          
+          // Vérifier que le token a bien été stocké
+          const storedToken = localStorage.getItem("token");
+          console.log("Token vérifié après stockage:", storedToken ? "Présent" : "Absent");
+          
+          // Ajouter un délai pour s'assurer que le localStorage est mis à jour
+          setTimeout(() => {
+            console.log("Redirection vers dashboard avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
+            navigate("/dashboard");
+          }, 300);
+        } else {
+          setError("Token manquant dans la réponse du serveur");
         }
-        localStorage.setItem("isValidated", "true");
-        navigate("/dashboard");
       } else {
-        console.error("Erreur:", data.message); // Debug log
+        console.error("Erreur:", data.message);
         setError(data.message || "Code invalide");
       }
     } catch (error) {
-      console.error("Error:", error); // Debug log
+      console.error("Error:", error);
       setError("Erreur de connexion au serveur");
     }
   };

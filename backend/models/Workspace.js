@@ -1,13 +1,13 @@
 import pool from "../config/dbConnection.js";
 
 class Workspace {
-  static async create({ nom, is_private }) {
+  static async create({ nom, description, is_private, banner_url, icon_url }) {
     const query = `
-      INSERT INTO workspace (nom, is_private)
-      VALUES ($1, $2)
+      INSERT INTO workspace (nom, description, is_private, banner_url, icon_url)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const values = [nom, is_private];
+    const values = [nom, description, is_private, banner_url, icon_url];
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
@@ -24,20 +24,35 @@ class Workspace {
 
   static async findAll() {
     const query = `
-      SELECT * FROM workspace;
+      SELECT w.*, 
+        (SELECT COUNT(*) FROM membre_workspace mw WHERE mw.fk_workspace = w.id_workspace) as total_members,
+        0 as online_users
+      FROM workspace w 
+      ORDER BY w.id_workspace DESC;
     `;
     const { rows } = await pool.query(query);
     return rows;
   }
 
-  static async update(id_workspace, { nom, is_private }) {
+  static async update(id_workspace, fields) {
+    // Build the SET clause dynamically based on the fields provided
+    const keys = Object.keys(fields).filter(key => fields[key] !== undefined);
+    if (keys.length === 0) return null;
+    
+    const setClause = keys
+      .map((key, i) => `${key} = $${i + 1}`)
+      .join(', ');
+    
+    const values = keys.map(key => fields[key]);
+    values.push(id_workspace);
+    
     const query = `
       UPDATE workspace
-      SET nom = $1, is_private = $2
-      WHERE id_workspace = $3
+      SET ${setClause}
+      WHERE id_workspace = $${values.length}
       RETURNING *;
     `;
-    const values = [nom, is_private, id_workspace];
+    
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
