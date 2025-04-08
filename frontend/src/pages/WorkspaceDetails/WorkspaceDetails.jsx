@@ -1,10 +1,10 @@
-import React from 'react'; // Removed unused imports like useState, useEffect, useRef
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile } from 'react-icons/fa'; // Removed reaction icons as they are in the hook
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile } from 'react-icons/fa';
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import './WorkspaceDetails.css';
-// Removed API_URL and io imports as they are in the hook
-import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails'; // Import the custom hook
+import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -100,6 +100,7 @@ function WorkspaceDetails() {
     isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
     loadingMessages, chatContainerRef, socket, currentUserId, messageContextMenu, 
     showEmojiPicker, replyingTo, commonEmojis,
+    isMistralTyping, // Get the typing state
     // Handlers
     handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
     handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
@@ -275,7 +276,12 @@ function WorkspaceDetails() {
                           <span className="message-author">{message.nom}</span>
                           <span className="message-time">{formatMessageDate(message.date_creation)}</span> {/* Use helper function */}
                         </div>
-                        <p className="message-text">{renderTextWithLinks(message.contenu)}</p>
+
+                        {/* *** Always use ReactMarkdown for all messages *** */}
+                        <div className="message-text"> {/* Wrap ReactMarkdown */} 
+                          <ReactMarkdown>{message.contenu}</ReactMarkdown>
+                        </div>
+                        {/* *** End Markdown rendering *** */}
                         
                         {/* Afficher les réactions avec meilleur style */}
                         {message.reactions && message.reactions.length > 0 && (
@@ -320,6 +326,22 @@ function WorkspaceDetails() {
                     <p>Envoyez le premier message !</p>
                   </div>
                 )}
+                {/* *** Display Typing Indicator *** */}
+                {isMistralTyping && (
+                  <div className="chat-message bot-message typing-indicator">
+                     <div className="message-avatar">
+                        {/* You might want a specific avatar for the typing indicator */}
+                        <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
+                      </div>
+                      <div className="message-content">
+                         <div className="message-header">
+                            <span className="message-author">Mistral AI</span>
+                         </div>
+                         <p className="message-text"><i>est en train d'écrire...</i></p>
+                      </div>
+                  </div>
+                )}
+                {/* *** End Typing Indicator *** */}
               </div>
               
               <form className="chat-input-container" onSubmit={handleSendMessage}> {/* Use handler from hook */}

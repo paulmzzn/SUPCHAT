@@ -16,6 +16,8 @@ const MISTRAL_USER_ID = '00000000-0000-0000-0000-000000000001'; // <<< UTILISER 
 const MISTRAL_USERNAME = 'Mistral AI';
 const MISTRAL_AVATAR = 'https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp';
 
+const MISTRAL_API_TIMEOUT_MS = 120000; // 120 secondes = 2 minutes
+
 const socketManager = (io) => {
   // Middleware pour authentifier les utilisateurs via socket.io
   io.use((socket, next) => {
@@ -118,8 +120,14 @@ const socketManager = (io) => {
           const question = content.substring('@mistral'.length).trim();
           console.log(`Socket.IO: Question pour Mistral AI: "${question}"`);
 
-          // Optionnel: Envoyer un indicateur "Mistral est en train d'écrire..."
-          // io.to(`${canal_id}`).emit('typing', { userId: MISTRAL_USER_ID, username: MISTRAL_USERNAME });
+          // *** Envoyer l'indicateur "Mistral est en train d'écrire..." ***
+          io.to(`${canal_id}`).emit('typing', { userId: MISTRAL_USER_ID, username: MISTRAL_USERNAME });
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            console.log(`Socket.IO: Timeout API Mistral après ${MISTRAL_API_TIMEOUT_MS}ms`);
+            controller.abort();
+          }, MISTRAL_API_TIMEOUT_MS);
 
           try {
             const mistralResponse = await fetch(MISTRAL_API_URL, {
@@ -130,15 +138,18 @@ const socketManager = (io) => {
                 'Authorization': `Bearer ${MISTRAL_API_KEY}`
               },
               body: JSON.stringify({
-                model: 'mistral-small-latest', // Ou un autre modèle Mistral
+                model: 'mistral-large-latest', // Ou un autre modèle Mistral
                 messages: [{ role: 'user', content: question }],
-                // temperature: 0.7, // Ajustez selon les besoins
-                // max_tokens: 150 // Limitez la longueur de la réponse si nécessaire
-              })
+                // temperature: 0.7,
+                // max_tokens: 1000 // Augmenter si nécessaire, mais attention aux coûts/limites
+              }),
+              signal: controller.signal // Associer l'AbortController
             });
 
-            // Optionnel: Arrêter l'indicateur "Mistral est en train d'écrire..."
-            // io.to(`${canal_id}`).emit('stopTyping', { userId: MISTRAL_USER_ID });
+            clearTimeout(timeoutId); // Annuler le timeout si la réponse arrive à temps
+
+            // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (succès) ***
+            io.to(`${canal_id}`).emit('stopTyping', { userId: MISTRAL_USER_ID });
 
             if (!mistralResponse.ok) {
               const errorBody = await mistralResponse.text();
@@ -179,6 +190,9 @@ const socketManager = (io) => {
               io.to(`${canal_id}`).emit('message', mistralMessageForEmit); // Émettre le message enregistré
 
             } catch (dbError) {
+              // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (erreur DB) ***
+              // (Déjà arrêté avant, mais on s'assure qu'il l'est)
+              io.to(`${canal_id}`).emit('stopTyping', { userId: MISTRAL_USER_ID });
               console.error('Socket.IO: ERREUR FATALE lors de l\'enregistrement de la réponse Mistral en DB. Le message n\'a pas été envoyé.', dbError);
               // NE PAS envoyer de message au client si l'enregistrement échoue.
               // Optionnel : Envoyer un message d'erreur spécifique à l'utilisateur qui a posé la question ?
@@ -186,13 +200,25 @@ const socketManager = (io) => {
             }
 
           } catch (apiError) {
-            console.error('Socket.IO: Erreur lors de l\'appel à l\'API Mistral', apiError);
-            // Envoyer un message d'erreur dans le chat
+            clearTimeout(timeoutId); // Nettoyer le timeout en cas d'erreur aussi
+            // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (erreur API/Timeout) ***
+            io.to(`${canal_id}`).emit('stopTyping', { userId: MISTRAL_USER_ID });
+
+            let errorMessageContent = `Désolé, une erreur est survenue lors de la communication avec Mistral AI.`;
+            if (apiError.name === 'AbortError') {
+              console.error('Socket.IO: L\'appel à l\'API Mistral a dépassé le délai imparti.');
+              errorMessageContent = `Désolé, la génération de la réponse a pris trop de temps.`;
+            } else {
+              console.error('Socket.IO: Erreur lors de l\'appel à l\'API Mistral', apiError);
+              errorMessageContent = `Désolé, une erreur est survenue lors de la communication avec Mistral AI: ${apiError.message}`;
+            }
+
+            // Envoyer un message d'erreur dans le chat (non stocké en DB)
             const errorMessage = {
               id_message: `error-${Date.now()}`,
-              contenu: `Désolé, une erreur est survenue lors de la communication avec Mistral AI: ${apiError.message}`,
+              contenu: errorMessageContent,
               fk_canal: canal_id,
-              fk_utilisateur: MISTRAL_USER_ID, // <<< Utiliser l'UUID ici aussi
+              fk_utilisateur: MISTRAL_USER_ID,
               nom: MISTRAL_USERNAME,
               photo_de_profil: MISTRAL_AVATAR,
               date_creation: new Date().toISOString(),
