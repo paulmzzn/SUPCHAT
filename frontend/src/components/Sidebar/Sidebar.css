@@ -112,6 +112,10 @@
   stroke-width: 2.5px;
   fill: #EDF2F7;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+  outline: none;
+  border: none;
+  background-color: transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .notification-badge {
@@ -148,6 +152,46 @@
   padding: 0;
   margin-top: auto;
   margin-bottom: 25px;
+}
+
+.sidebar-icon {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  outline: none; /* Empêche l'outline au focus */
+  background: transparent; /* Assure que le fond est toujours transparent */
+}
+
+.nav-item:hover .sidebar-icon {
+  transform: scale(1.1);
+}
+
+/* Pour les icônes actives */
+.sidebar-icon.active {
+  color: #EDF2F7;
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Styles pour éviter les cadres blancs sur les icônes React */
+.nav-item svg {
+  outline: none; /* Supprime l'outline lors du focus */
+  box-shadow: none; /* Supprime tout effet d'ombrage potentiel */
+  -webkit-tap-highlight-color: transparent; /* Supprime la surbrillance au tap sur mobile */
+  border: none; /* Supprime toute bordure */
+}
+
+/* Styles spécifiques pour supprimer le cadre blanc des icônes SVG */
+svg path[d="M0 0h24v24H0z"],
+svg rect[width="24"][height="24"] {
+  display: none !important; /* Masque complètement le rectangle de fond */
+}
+
+/* Style spécifique pour l'icône MdWorkspacesFilled */
+.MdWorkspacesFilled path:first-child {
+  display: none !important; /* Cache le premier path qui contient souvent le rectangle */
 }
 
 /* Mobile styles - Convert to bottom tab bar */
@@ -290,11 +334,18 @@
   .nav-item svg {
     stroke-width: 1.5px;
     fill: rgba(255, 255, 255, 0.85);
+    outline: none;
+    border: none;
+    background-color: transparent;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .nav-item.active svg {
     stroke-width: 2px;
     fill: white;
+    outline: none;
+    border: none;
+    background-color: transparent;
   }
 
   .nav-item img.nav-icon {
@@ -339,5 +390,30 @@
     100% {
       transform: scale(1) translateY(0);
     }
+  }
+
+  .sidebar-icon {
+    width: 26px;
+    height: 26px;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: brightness(1.5) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .nav-item:hover .sidebar-icon {
+    transform: scale(1.15);
+    filter: brightness(1.7) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+    opacity: 1;
+  }
+
+  .nav-item.active .sidebar-icon {
+    transform: scale(1.2);
+    filter: brightness(1.8) contrast(1.1) drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
+    opacity: 1;
+    color: white;
+    outline: none;
+    border: none;
+    background-color: transparent;
   }
 }

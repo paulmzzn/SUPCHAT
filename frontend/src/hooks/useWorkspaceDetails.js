@@ -303,16 +303,68 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
   
     socket.on('message', (message) => {
-      console.log('Nouveau message reçu (brut):', message); // Log brut
-      // *** Log spécifique pour le contenu du bot ***
+      console.log('Nouveau message reçu (brut):', message);
+      // Log spécifique pour le contenu du bot
       if (message.isBot) {
         console.log('Contenu brut du message BOT:', message.contenu);
       }
-      // *** Fin du log spécifique ***
+      
+      // Si c'est une réponse, vérifier si nous avons l'accès au message parent
+      if (message.parent_id) {
+        console.log(`Message de réponse reçu, parent_id: ${message.parent_id}`);
+        
+        // Si le message n'a pas de parent_message mais a un parent_id, essayer de trouver le parent dans les messages existants
+        if (!message.parent_message) {
+          console.log(`Le message ${message.id_message} n'a pas de parent_message, recherche dans les messages existants`);
+          
+          setMessages(prevMessages => {
+            // Trouver le message parent parmi les messages existants
+            const parentMessage = prevMessages.find(msg => msg.id_message === message.parent_id);
+            
+            if (parentMessage) {
+              console.log(`Message parent trouvé pour ${message.id_message}:`, parentMessage.nom);
+              // Créer un nouveau message avec le parent_message ajouté
+              const enrichedMessage = {
+                ...message,
+                date_creation: message.date_creation || message.created_at || new Date().toISOString(),
+                fk_utilisateur: message.fk_utilisateur || (message.isBot ? '00000000-0000-0000-0000-000000000001' : null),
+                reactions: message.reactions || [],
+                parent_message: {
+                  id_message: parentMessage.id_message,
+                  nom: parentMessage.nom,
+                  contenu: parentMessage.contenu
+                }
+              };
+              
+              return [...prevMessages, enrichedMessage];
+            } else {
+              console.log(`Message parent non trouvé pour ${message.id_message}`);
+              // Ajouter le message tel quel si le parent n'est pas trouvé
+              const formattedMessage = {
+                ...message,
+                date_creation: message.date_creation || message.created_at || new Date().toISOString(),
+                fk_utilisateur: message.fk_utilisateur || (message.isBot ? '00000000-0000-0000-0000-000000000001' : null),
+                reactions: message.reactions || []
+              };
+              
+              return [...prevMessages, formattedMessage];
+            }
+          });
+          
+          return; // Sortir pour éviter l'ajout en double
+        }
+      }
+      
+      // Ensure the message structure is consistent with those loaded from DB
       const formattedMessage = {
         ...message,
-        date_creation: message.date_creation || message.created_at || new Date().toISOString()
+        date_creation: message.date_creation || message.created_at || new Date().toISOString(),
+        // Make sure fk_utilisateur is always present for CSS styling to work properly
+        fk_utilisateur: message.fk_utilisateur || (message.isBot ? '00000000-0000-0000-0000-000000000001' : null),
+        // Reactions field is required to prevent errors
+        reactions: message.reactions || []
       };
+      
       setMessages(prevMessages => [...prevMessages, formattedMessage]);
     });
   
@@ -326,7 +378,7 @@ export const useWorkspaceDetails = (workspaceId) => {
             const formattedReactions = reactions.map(r => {
               if (!r.emoji) {
                 r.emoji = getEmojiForType(r.reaction_type);
-                console.warn(`Emoji manquant pour ${r.reaction_type}, ajouté: ${r.emoji}`);
+                console.warn(`Emoji manquant pour ${r.reaction_type, ajouté}: ${r.emoji}`);
               }
               if (typeof r.emoji === 'string' && r.emoji.startsWith('{') && r.emoji.endsWith('}')) {
                 try {
@@ -577,6 +629,13 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
       const data = await response.json();
       console.log('Messages récupérés:', data);
+      
+      // Vérifier et logger les messages avec parent_id mais sans parent_message
+      const messagesWithParentId = data.filter(msg => msg.parent_id && !msg.parent_message);
+      if (messagesWithParentId.length > 0) {
+        console.log(`${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`);
+      }
+      
       setMessages(data);
     } catch (error) {
       console.error('Erreur:', error);

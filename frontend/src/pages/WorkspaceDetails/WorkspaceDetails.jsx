@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import './WorkspaceDetails.css';
 import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
@@ -251,30 +251,59 @@ function WorkspaceDetails() {
                       </div>
                       <div className="message-content">
                         {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
-                        {message.parent_message && (
+                        {(message.parent_id || message.parent_message) && (
                           <div className="message-reply-to" onClick={() => {
                             // Find parent message and scroll to it
-                            const parentMessage = messages.find(m => m.id_message === message.parent_id);
-                            if (parentMessage) {
-                              const element = document.getElementById(`msg-${message.parent_id}`);
+                            const parentId = message.parent_id || (message.parent_message && message.parent_message.id_message);
+                            if (parentId) {
+                              const element = document.getElementById(`msg-${parentId}`);
                               if (element) {
                                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 element.classList.add('highlight-message');
                                 setTimeout(() => element.classList.remove('highlight-message'), 2000);
+                              } else {
+                                console.log(`Message parent avec ID ${parentId} non trouvé dans la vue actuelle`);
                               }
                             }
                           }}>
                             <FaReply className="reply-icon" />
                             <div className="reply-content">
-                              <span className="reply-author">@{message.parent_message.nom}</span>
-                              <span className="reply-text">{message.parent_message.contenu}</span>
+                              {message.parent_message ? (
+                                <>
+                                  <span className="reply-author">@{message.parent_message.nom}</span>
+                                  <span className="reply-text">{message.parent_message.contenu}</span>
+                                </>
+                              ) : (
+                                // Si nous n'avons pas le message parent mais nous avons l'ID, chercher dans les messages existants
+                                (() => {
+                                  const parentMessage = messages.find(m => m.id_message === message.parent_id);
+                                  return parentMessage ? (
+                                    <>
+                                      <span className="reply-author">@{parentMessage.nom}</span>
+                                      <span className="reply-text">{parentMessage.contenu}</span>
+                                    </>
+                                  ) : (
+                                    <span className="reply-text">Message original non disponible</span>
+                                  );
+                                })()
+                              )}
                             </div>
                           </div>
                         )}
                         
                         <div className="message-header">
-                          <span className="message-author">{message.nom}</span>
-                          <span className="message-time">{formatMessageDate(message.date_creation)}</span> {/* Use helper function */}
+                          <span className="message-author">
+                            {message.isBot || message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
+                              <>
+                                <span>{message.nom}</span>
+                                <span className="bot-icon-spacer"> </span>
+                                <FaRobot className="bot-icon" />
+                              </>
+                            ) : (
+                              message.nom
+                            )}
+                          </span>
+                          <span className="message-time">{formatMessageDate(message.date_creation)}</span>
                         </div>
 
                         {/* *** Always use ReactMarkdown for all messages *** */}
@@ -333,11 +362,13 @@ function WorkspaceDetails() {
                         {/* You might want a specific avatar for the typing indicator */}
                         <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
                       </div>
-                      <div className="message-content">
-                         <div className="message-header">
-                            <span className="message-author">Mistral AI</span>
-                         </div>
-                         <p className="message-text"><i>est en train d'écrire...</i></p>
+                      <div className="other-message">
+                        <div className="message-content">
+                          <div className="message-header">
+                              <span className="message-author">Mistral AI</span>
+                          </div>
+                          <p className="message-text"><i>est en train d'écrire...</i></p>
+                        </div>
                       </div>
                   </div>
                 )}
