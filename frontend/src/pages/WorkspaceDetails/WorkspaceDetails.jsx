@@ -236,10 +236,12 @@ function WorkspaceDetails() {
                     <div 
                       key={message.id_message} 
                       id={`msg-${message.id_message}`} // Add ID for scrolling to parent
-                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`} // Use currentUserId from hook
+                      // Ajout d'une classe pour le bot si le flag isBot est présent
+                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : (message.isBot ? 'bot-message' : 'other-message')}`} // Use currentUserId from hook
                       onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
                     >
                       <div className="message-avatar">
+                        {/* Cette logique devrait fonctionner pour le bot aussi */}
                         {message.photo_de_profil ? (
                           <img src={message.photo_de_profil} alt={message.nom} />
                         ) : (
