@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot, FaAt } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import './WorkspaceDetails.css';
 import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
@@ -101,6 +101,8 @@ function WorkspaceDetails() {
     loadingMessages, chatContainerRef, socket, currentUserId, messageContextMenu, 
     showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
+    // Mention state and handlers
+    showMentionSuggestions, mentionSuggestions,
     // Handlers
     handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
     handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
@@ -109,7 +111,9 @@ function WorkspaceDetails() {
     handleCloseMessageContextMenu, handleReplyMessage, handleShowEmojiPicker,
     handleAddReaction, handleCancelReply, toggleMembers, toggleOnlineMembers,
     toggleOfflineMembers, toggleFiles, toggleImages, setNewChannel, setEditingChannel,
-    setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType
+    setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType,
+    // New handlers for mentions
+    handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
   } = useWorkspaceDetails(workspaceId);
 
   // Removed all useState, useEffect, and function definitions that were moved to the hook
@@ -375,42 +379,117 @@ function WorkspaceDetails() {
                 {/* *** End Typing Indicator *** */}
               </div>
               
-              <form className="chat-input-container" onSubmit={handleSendMessage}> {/* Use handler from hook */}
-                {/* Afficher l'indicateur de réponse si on répond à un message */}
-                {replyingTo && ( // Use replyingTo from hook
-                  <div className="replying-to">
-                    <div className="reply-info">
-                      <FaReply className="reply-icon" />
-                      <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+              {/* Nouvelle implémentation de l'autocomplétion des mentions avec des IDs uniques */}
+              <div className="chat-input-area">
+                {showMentionSuggestions && (
+                  <div id="supchat-mentions-dropdown">
+                    <div id="supchat-mentions-header">
+                      <FaAt id="supchat-mentions-header-icon" />
+                      <span>Mentionner un utilisateur</span>
                     </div>
-                    <button type="button" className="cancel-reply" onClick={handleCancelReply}> {/* Use handler from hook */}
-                      ×
-                    </button>
+                    <div id="supchat-mentions-list">
+                      {mentionSuggestions.length > 0 ? (
+                        mentionSuggestions.map((user, index) => (
+                          <button
+                            key={user.id}
+                            className={`supchat-mention-item ${index === 0 ? 'active' : ''}`}
+                            onClick={() => handleSelectMention(user)}
+                            type="button"
+                          >
+                            <div className="supchat-mention-avatar-wrapper">
+                              {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="supchat-mention-avatar" />
+                              ) : (
+                                <div className="supchat-mention-avatar">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              {user.isBot && (
+                                <div className="supchat-mention-bot-badge">
+                                  <FaRobot style={{ fontSize: '8px' }} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="supchat-mention-details">
+                              <div className="supchat-mention-name">{user.name}</div>
+                              <div className="supchat-mention-info">
+                                {user.isBot ? (
+                                  <>Assistant IA</>
+                                ) : (
+                                  <>
+                                    <span className={`supchat-mention-status ${user.status || 'offline'}`}></span>
+                                    {user.status === 'online' ? 'En ligne' : 'Hors ligne'}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="supchat-mention-no-results">
+                          Aucun utilisateur ne correspond à votre recherche
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-                
-                <div className="chat-input-wrapper">
-                  <button type="button" className="chat-attachment-btn">
-                    <FaPaperclip />
+
+                <form className="chat-input-container" onSubmit={handleSendMessage}>
+                  {/* Afficher l'indicateur de réponse si on répond à un message */}
+                  {replyingTo && ( // Use replyingTo from hook
+                    <div className="replying-to">
+                      <div className="reply-info">
+                        <FaReply className="reply-icon" />
+                        <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+                      </div>
+                      <button type="button" className="cancel-reply" onClick={handleCancelReply}> {/* Use handler from hook */}
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="chat-input-wrapper">
+                    <button type="button" className="chat-attachment-btn">
+                      <FaPaperclip />
+                    </button>
+                    <input 
+                      type="text" 
+                      placeholder={`Message dans #${activeChannel.name}`}
+                      value={newMessage} // Use newMessage from hook
+                      onChange={(e) => handleNewMessageChange(e.target.value)} // Use new handler from hook
+                      onKeyDown={(e) => {
+                        // Optional: Add keyboard navigation for suggestions (e.g., ArrowUp, ArrowDown, Enter)
+                        if (showMentionSuggestions && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === 'Tab')) {
+                          e.preventDefault(); // Prevent default behavior like moving cursor or submitting form
+                          // Add logic here to handle selection/navigation
+                          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            handleMentionNavigation(e.key === 'ArrowDown' ? 'next' : 'prev');
+                          } else if (e.key === 'Enter' || e.key === 'Tab') {
+                            e.preventDefault();
+                            handleSelectActiveItem();
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setShowMentionSuggestions(false);
+                          }
+                        }
+                      }}
+                    />
+                    <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
+                      <FaSmile />
+                    </button>
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="chat-send-btn"
+                    disabled={!newMessage.trim()} // Use newMessage from hook
+                  >
+                    <FaPaperPlane />
                   </button>
-                  <input 
-                    type="text" 
-                    placeholder={`Message dans ${activeChannel.name}`}
-                    value={newMessage} // Use newMessage from hook
-                    onChange={(e) => setNewMessage(e.target.value)} // Use setter from hook
-                  />
-                  <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
-                    <FaSmile />
-                  </button>
-                </div>
-                <button 
-                  type="submit" 
-                  className="chat-send-btn"
-                  disabled={!newMessage.trim()} // Use newMessage from hook
-                >
-                  <FaPaperPlane />
-                </button>
-              </form>
+                </form>
+              </div>
+              
+              {/* *** End Typing Indicator *** */}
             </div>
           )}
         </div>
