@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaThumbsUp, FaHeart, FaLaugh, FaSurprise, FaSadTear, FaAngry } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot, FaAt } from 'react-icons/fa';
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import './WorkspaceDetails.css';
-import { API_URL } from '../../config/config';
-import io from 'socket.io-client';
+import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
+import { useNavigate } from 'react-router-dom'; // Ajout import
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -40,889 +41,104 @@ const renderTextWithLinks = (text) => {
   });
 };
 
-function WorkspaceDetails() {
-  const { workspaceId } = useParams();
-  const [workspace, setWorkspace] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [channels, setChannels] = useState([]);
-  const [filteredChannels, setFilteredChannels] = useState([]);
-  const [showChannels, setShowChannels] = useState(true);
-  const [canalsLoading, setCanalsLoading] = useState(false);
-  const [canalsError, setCanalsError] = useState(null);
-  
-  // États pour les sections de la sidebar de droite
-  const [showMembers, setShowMembers] = useState(true);
-  const [showOnlineMembers, setShowOnlineMembers] = useState(true);
-  const [showOfflineMembers, setShowOfflineMembers] = useState(true);
-  const [showFiles, setShowFiles] = useState(true);
-  const [showImages, setShowImages] = useState(true);
+// Helper pour afficher le bon icône de fichier
+const getFileIcon = (type) => {
+  switch(type) {
+    case 'pdf': return <FaFilePdf />;
+    case 'word': return <FaFileWord />;
+    case 'excel': return <FaFileExcel />;
+    default: return <FaFileAlt />;
+  }
+};
 
-  // État pour le chargement des membres
-  const [loadingMembers, setLoadingMembers] = useState(false);
-  const [membersError, setMembersError] = useState(null);
+// Function pour obtenir l'icône du rôle
+const getRoleIcon = (role) => {
+  switch(role) {
+    case 'owner': 
+      return <FaCrown className="role-icon owner" title="Propriétaire" />;
+    case 'admin': 
+      return <FaUserShield className="role-icon admin" title="Administrateur" />;
+    case 'member': 
+      return <FaUser className="role-icon member" title="Membre" />;
+    default: 
+      return <FaUser className="role-icon member" title="Membre" />;
+  }
+};
 
-  // Remplacer les données de test par un état vide
-  const [members, setMembers] = useState({
-    online: [],
-    offline: []
-  });
-
-  const [files, setFiles] = useState([
-    { id: 1, name: 'presentation.pptx', type: 'powerpoint', size: '2.4 MB', uploadedBy: 'Alice Martin', uploadedAt: '2023-05-15' },
-    { id: 2, name: 'budget.xlsx', type: 'excel', size: '1.8 MB', uploadedBy: 'Bob Johnson', uploadedAt: '2023-05-14' },
-    { id: 3, name: 'report.pdf', type: 'pdf', size: '3.2 MB', uploadedBy: 'Charlie Brown', uploadedAt: '2023-05-13' },
-    { id: 4, name: 'contract.docx', type: 'word', size: '1.5 MB', uploadedBy: 'David Smith', uploadedAt: '2023-05-12' }
-  ]);
-
-  const [images, setImages] = useState([
-    { id: 1, url: 'https://picsum.photos/200?sig=1', uploadedBy: 'Alice Martin', uploadedAt: '2023-05-15' },
-    { id: 2, url: 'https://picsum.photos/200?sig=2', uploadedBy: 'Bob Johnson', uploadedAt: '2023-05-14' },
-    { id: 3, url: 'https://picsum.photos/200?sig=3', uploadedBy: 'Charlie Brown', uploadedAt: '2023-05-13' },
-    { id: 4, url: 'https://picsum.photos/200?sig=4', uploadedBy: 'David Smith', uploadedAt: '2023-05-12' }
-  ]);
-
-  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
-  const [newChannel, setNewChannel] = useState({ name: '', isPrivate: false });
-  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
-  const [channelError, setChannelError] = useState('');
-
-  // États pour le menu contextuel des canaux
-  const [contextMenu, setContextMenu] = useState({
-    visible: false,
-    xPos: 0,
-    yPos: 0,
-    channelId: null,
-    channelName: '',
-    isPrivate: false
-  });
-  
-  // État pour modal d'édition de canal
-  const [showEditChannelModal, setShowEditChannelModal] = useState(false);
-  const [editingChannel, setEditingChannel] = useState({ id: null, name: '', isPrivate: false });
-  const [isUpdatingChannel, setIsUpdatingChannel] = useState(false);
-  const [updateChannelError, setUpdateChannelError] = useState('');
-
-  // États pour le chat
-  const [activeChannel, setActiveChannel] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const chatContainerRef = useRef(null);
-  const [socket, setSocket] = useState(null);
-
-  // À ajouter dans la fonction WorkspaceDetails() pour récupérer l'ID de l'utilisateur actuel
-  const [currentUserId, setCurrentUserId] = useState(null);
-
-  // État pour le menu contextuel des messages
-  const [messageContextMenu, setMessageContextMenu] = useState({
-    visible: false,
-    xPos: 0,
-    yPos: 0,
-    messageId: null,
-    message: null
-  });
-
-  // État pour la fenêtre modale de sélection d'emoji
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  
-  // État pour le message en cours de réponse
-  const [replyingTo, setReplyingTo] = useState(null);
-
-  // Liste prédéfinie d'emojis pour les réactions
-  const commonEmojis = [
-    { icon: <FaThumbsUp />, name: 'thumbsUp', label: '👍' },
-    { icon: <FaHeart />, name: 'heart', label: '❤️' },
-    { icon: <FaLaugh />, name: 'laugh', label: '😂' },
-    { icon: <FaSurprise />, name: 'surprise', label: '😮' },
-    { icon: <FaSadTear />, name: 'sad', label: '😢' },
-    { icon: <FaAngry />, name: 'angry', label: '😠' }
-  ];
-
-  // Fetch workspace details
-  useEffect(() => {
-    const fetchWorkspaceDetails = async () => {
-      try {
-        setLoading(true);
-        // Fetch workspace data
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch workspace details');
-        }
-
-        const data = await response.json();
-        setWorkspace({
-          id: data.id_workspace,
-          name: data.nom,
-          description: data.description,
-          banner: data.banner_url,
-          icon: data.icon_url,
-          isPrivate: data.is_private
-        });
-
-        // Récupérer les canaux depuis l'API
-        fetchCanals();
-        
-        // Récupérer les membres du workspace
-        fetchWorkspaceMembers();
-
-      } catch (err) {
-        console.error('Error fetching workspace details:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWorkspaceDetails();
-  }, [workspaceId]);
-
-  // Fonction pour récupérer les canaux depuis l'API
-  const fetchCanals = async () => {
-    try {
-      setCanalsLoading(true);
-      setCanalsError(null);
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/workspace/${workspaceId}/canals`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch channels');
-      }
-
-      const data = await response.json();
-      
-      // Transformer les données reçues au format attendu par le composant
-      const formattedChannels = data.map(canal => ({
-        id: canal.id_canal,
-        name: canal.nom,
-        isPrivate: canal.is_private || false,
-        description: canal.description || ''
-      }));
-
-      setChannels(formattedChannels);
-      console.log('Canaux récupérés:', formattedChannels);
-    } catch (err) {
-      console.error('Error fetching channels:', err);
-      setCanalsError(err.message);
-      
-      // En cas d'erreur, définir des canaux vides pour éviter de crasher l'interface
-      setChannels([]);
-    } finally {
-      setCanalsLoading(false);
-    }
-  };
-
-  // Nouvelle fonction pour récupérer les membres du workspace
-  const fetchWorkspaceMembers = async () => {
-    try {
-      setLoadingMembers(true);
-      setMembersError(null);
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch workspace members');
-      }
-
-      const data = await response.json();
-      console.log('Workspace members:', data);
-      
-      // Trier les membres entre en ligne et hors ligne
-      const onlineMembers = data.filter(member => member.status === 1).map(member => ({
-        id: member.id_utilisateur,
-        name: member.nom,
-        avatar: member.photo_de_profil || null,
-        status: 'online',
-        role: member.role.toLowerCase() // Convertir le rôle en minuscules (owner, admin, member)
-      }));
-      
-      const offlineMembers = data.filter(member => member.status !== 1).map(member => ({
-        id: member.id_utilisateur,
-        name: member.nom,
-        avatar: member.photo_de_profil || null,
-        status: 'offline',
-        role: member.role.toLowerCase()
-      }));
-      
-      setMembers({
-        online: onlineMembers,
-        offline: offlineMembers
-      });
-      
-    } catch (err) {
-      console.error('Error fetching workspace members:', err);
-      setMembersError(err.message);
-      
-      // En cas d'erreur, garder la structure mais avec des tableaux vides
-      setMembers({
-        online: [],
-        offline: []
-      });
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
-
-  // Filter channels based on search query
-  useEffect(() => {
-    if (!searchQuery) {
-      setFilteredChannels(channels);
-      return;
-    }
-    
-    const filtered = channels.filter(channel => 
-      channel.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredChannels(filtered);
-  }, [searchQuery, channels]);
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const toggleChannelsVisibility = () => {
-    setShowChannels(!showChannels);
-  };
-
-  const handleChannelInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setNewChannel({
-      ...newChannel,
-      [name]: type === 'checkbox' ? checked : value
-    });
-  };
-
-  // Modifier cette fonction pour éviter la fermeture de la liste des canaux
-  const handleCreateChannel = (e) => {
-    // Empêcher la propagation de l'événement vers le parent (section-header)
-    e.stopPropagation();
-    
-    setShowCreateChannelModal(true);
-    setNewChannel({ name: '', isPrivate: false });
-    setChannelError('');
-  };
-
-  const handleCloseModal = () => {
-    setShowCreateChannelModal(false);
-  };
-
-  const handleSubmitChannel = async (e) => {
-    e.preventDefault();
-    
-    if (!newChannel.name.trim()) {
-      setChannelError('Le nom du canal est requis');
-      return;
-    }
-    
-    try {
-      setIsCreatingChannel(true);
-      setChannelError('');
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/workspace/${workspaceId}/canals`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nom: newChannel.name,
-          is_private: newChannel.isPrivate
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la création du canal');
-      }
-      
-      // Récupérer les canaux mis à jour
-      fetchCanals();
-      
-      // Fermer le modal
-      setShowCreateChannelModal(false);
-      
-    } catch (err) {
-      console.error('Erreur lors de la création du canal:', err);
-      setChannelError(err.message || 'Une erreur est survenue');
-    } finally {
-      setIsCreatingChannel(false);
-    }
-  };
-
-  // Fonctions pour basculer la visibilité des sections
-  const toggleMembers = () => setShowMembers(!showMembers);
-  const toggleOnlineMembers = () => setShowOnlineMembers(!showOnlineMembers);
-  const toggleOfflineMembers = () => setShowOfflineMembers(!showOfflineMembers);
-  const toggleFiles = () => setShowFiles(!showFiles);
-  const toggleImages = () => setShowImages(!showImages);
-  
-  // Helper pour afficher le bon icône de fichier
-  const getFileIcon = (type) => {
-    switch(type) {
-      case 'pdf': return <FaFilePdf />;
-      case 'word': return <FaFileWord />;
-      case 'excel': return <FaFileExcel />;
-      default: return <FaFileAlt />;
-    }
-  };
-
-  // Function pour obtenir l'icône du rôle
-  const getRoleIcon = (role) => {
-    switch(role) {
-      case 'owner': 
-        return <FaCrown className="role-icon owner" title="Propriétaire" />;
-      case 'admin': 
-        return <FaUserShield className="role-icon admin" title="Administrateur" />;
-      case 'member': 
-        return <FaUser className="role-icon member" title="Membre" />;
-      default: 
-        return <FaUser className="role-icon member" title="Membre" />;
-    }
-  };
-
-  // Gestionnaire pour le clic droit sur un canal
-  const handleChannelContextMenu = (e, channel) => {
-    e.preventDefault();
-    setContextMenu({
-      visible: true,
-      xPos: e.pageX,
-      yPos: e.pageY,
-      channelId: channel.id,
-      channelName: channel.name,
-      isPrivate: channel.isPrivate
-    });
-  };
-
-  // Gestionnaire pour fermer le menu contextuel
-  const handleCloseContextMenu = () => {
-    setContextMenu({ ...contextMenu, visible: false });
-  };
-
-  // Gestionnaire pour ouvrir le modal d'édition
-  const handleEditChannel = () => {
-    setEditingChannel({
-      id: contextMenu.channelId,
-      name: contextMenu.channelName,
-      isPrivate: contextMenu.isPrivate
-    });
-    setShowEditChannelModal(true);
-    setContextMenu({ ...contextMenu, visible: false });
-  };
-
-  // Gestionnaire pour la soumission d'édition de canal
-  const handleSubmitEditChannel = async (e) => {
-    e.preventDefault();
-    
-    if (!editingChannel.name.trim()) {
-      setUpdateChannelError('Le nom du canal est requis');
-      return;
-    }
-    
-    try {
-      setIsUpdatingChannel(true);
-      setUpdateChannelError('');
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/workspace/${workspaceId}/canals/${editingChannel.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nom: editingChannel.name,
-          is_private: editingChannel.isPrivate
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la modification du canal');
-      }
-      
-      // Récupérer les canaux mis à jour
-      fetchCanals();
-      
-      // Fermer le modal
-      setShowEditChannelModal(false);
-      
-    } catch (err) {
-      console.error('Erreur lors de la modification du canal:', err);
-      setUpdateChannelError(err.message || 'Une erreur est survenue');
-    } finally {
-      setIsUpdatingChannel(false);
-    }
-  };
-
-  // Gestionnaire pour la suppression d'un canal
-  const handleDeleteChannel = async () => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer le canal "${contextMenu.channelName}" ?`)) {
-      setContextMenu({ ...contextMenu, visible: false });
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/workspace/${workspaceId}/canals/${contextMenu.channelId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la suppression du canal');
-      }
-      
-      // Récupérer les canaux mis à jour
-      fetchCanals();
-      
-    } catch (err) {
-      console.error('Erreur lors de la suppression du canal:', err);
-      alert(`Erreur: ${err.message}`);
-    } finally {
-      setContextMenu({ ...contextMenu, visible: false });
-    }
-  };
-
-  // Ajout d'un effet pour fermer le menu contextuel lors d'un clic ailleurs
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu.visible) {
-        setContextMenu({ ...contextMenu, visible: false });
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [contextMenu.visible]);
-
-  // Établir la connexion socket lorsque le composant est monté
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    
-    const newSocket = io(API_URL, {
-      auth: { token }, // Assurez-vous de passer le token pour l'authentification
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    });
-  
-    newSocket.on('connect', () => {
-      console.log('Socket.IO connecté avec succès');
-      setSocket(newSocket);
-    });
-  
-    newSocket.on('connect_error', (err) => {
-      console.error('Erreur de connexion Socket.IO:', err);
-    });
-  
-    // Nettoyage
-    return () => {
-      if (newSocket) {
-        console.log('Déconnexion de Socket.IO');
-        newSocket.disconnect();
-      }
-    };
-  }, []);
-  
-  // Écouter les nouveaux messages via socket.io
-  useEffect(() => {
-    if (!socket || !activeChannel) return;
-  
-    console.log(`Rejoindre le canal ${activeChannel.id}`);
-    // Rejoindre le canal actif
-    socket.emit('joinCanal', {
-      canalId: activeChannel.id,
-      workspaceId: workspaceId
-    });
-  
-    // Écouter la confirmation de jointure du canal
-    socket.on('canalJoined', (data) => {
-      console.log('Canal rejoint:', data);
-    });
-  
-    // Écouter les nouveaux messages 
-    socket.on('message', (message) => {
-      console.log('Nouveau message reçu:', message);
-      
-      // S'assurer que le message a toutes les propriétés nécessaires pour l'affichage
-      const formattedMessage = {
-        ...message,
-        // S'assurer que la date est dans un format valide
-        date_creation: message.date_creation || message.created_at || new Date().toISOString()
-      };
-      
-      setMessages(prevMessages => [...prevMessages, formattedMessage]);
-    });
-  
-    // Écouter les réactions aux messages
-    socket.on('messageReaction', ({ messageId, reactions }) => {
-      console.log(`Réaction reçue pour le message ${messageId}:`, reactions);
-      
-      // Débuguer le contenu des réactions reçues
-      console.log("Détail des réactions reçues:", JSON.stringify(reactions));
-      
-      setMessages(prevMessages => 
-        prevMessages.map(msg => {
-          if (msg.id_message === messageId) {
-            // S'assurer que chaque réaction a un emoji valide
-            const formattedReactions = reactions.map(r => {
-              // Si l'emoji est manquant, utiliser la fonction helper
-              if (!r.emoji) {
-                r.emoji = getEmojiForType(r.reaction_type);
-                console.warn(`Emoji manquant pour ${r.reaction_type}, ajouté: ${r.emoji}`);
-              }
-              
-              // Si l'emoji est dans un format PostgreSQL array, l'extraire
-              if (typeof r.emoji === 'string' && r.emoji.startsWith('{') && r.emoji.endsWith('}')) {
-                try {
-                  r.emoji = JSON.parse(r.emoji.substring(1, r.emoji.length - 1));
-                  console.log(`Emoji extrait du format array: ${r.emoji}`);
-                } catch (e) {
-                  console.warn(`Impossible de parser l'emoji: ${r.emoji}`);
-                }
-              }
-              
-              return r;
-            });
-            
-            console.log("Réactions formatées pour UI:", formattedReactions);
-            
-            return { 
-              ...msg, 
-              reactions: formattedReactions 
-            };
-          }
-          return msg;
-        })
-      );
-    });
-  
-    return () => {
-      // Quitter le canal lorsque l'utilisateur change de canal
-      console.log(`Quitter le canal ${activeChannel.id}`);
-      socket.off('message');
-      socket.off('canalJoined');
-      socket.off('messageReaction');
-    };
-  }, [socket, activeChannel, workspaceId]);
-
-  // Fonction auxiliaire pour convertir un type de réaction en emoji
-  const getEmojiForType = (reactionType) => {
-    const emojiMap = {
-      'thumbsUp': '👍',
-      'heart': '❤️',
-      'laugh': '😂',
-      'surprise': '😮',
-      'sad': '😢',
-      'angry': '😠'
-    };
-    return emojiMap[reactionType] || reactionType;
-  };
-
-  // Faire défiler vers le bas lorsque de nouveaux messages sont reçus
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  // Charger les messages lors de la sélection d'un canal
-  const handleSelectChannel = async (channel) => {
-    try {
-      setActiveChannel(channel);
-      setLoadingMessages(true);
-      
-      const token = localStorage.getItem('token');
-      console.log(`Chargement des messages pour le canal ${channel.id}...`);
-      
-      const response = await fetch(`${API_URL}/api/messages/canal/${channel.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erreur API:', errorData);
-        throw new Error(errorData.message || 'Erreur lors du chargement des messages');
-      }
-  
-      const data = await response.json();
-      console.log('Messages récupérés:', data);
-      setMessages(data);
-    } catch (error) {
-      console.error('Erreur:', error);
-      setMessages([]); // Afficher une liste vide plutôt qu'une erreur
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-  
-  // Envoyer un message
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    
-    if (!newMessage.trim() || !activeChannel) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      const messageData = {
-        fk_canal: activeChannel.id,
-        contenu: newMessage,
-        parent_id: replyingTo ? replyingTo.id_message : null // Ajouter l'ID du message parent si c'est une réponse
-      };
-      
-      console.log('Envoi du message:', messageData);
-      
-      // Si le socket est connecté, envoyez directement le message via WebSocket
-      if (socket && socket.connected) {
-        socket.emit('message', {
-          canal_id: activeChannel.id,
-          content: newMessage,
-          workspace_id: workspaceId,
-          parent_id: replyingTo ? replyingTo.id_message : null
-        });
-        
-        setNewMessage(''); // Vider l'input
-        setReplyingTo(null); // Réinitialiser l'état de réponse
-        return;
-      }
-      
-      // Fallback à l'API REST si le socket n'est pas disponible
-      const response = await fetch(`${API_URL}/api/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(messageData)
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'envoi du message');
-      }
-  
-      // Réinitialiser les champs
-      setNewMessage('');
-      setReplyingTo(null);
-      
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert(`Erreur: ${error.message}`);
-    }
-  };
-
-  // Fonction pour formater la date des messages - Ajoutons de la robustesse
-  const formatMessageDate = (dateString) => {
-    if (!dateString) {
+// Helper function moved outside the hook for potential reuse or testing
+const formatMessageDate = (dateString) => {
+  if (!dateString) {
+    console.warn('formatMessageDate: date invalide', dateString);
+    return '';
+  }
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    if (isNaN(date.getTime())) {
       console.warn('formatMessageDate: date invalide', dateString);
       return '';
     }
-    
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      
-      // Vérifier si la date est valide
-      if (isNaN(date.getTime())) {
-        console.warn('formatMessageDate: date invalide', dateString);
-        return '';
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (error) {
+    console.error('Erreur de formatage de date:', error);
+    return '';
+  }
+};
+
+
+function WorkspaceDetails() {
+  const { workspaceId } = useParams();
+  const navigate = useNavigate(); // Ajout hook navigation
+  
+  // Use the custom hook to get state and handlers
+  const {
+    workspace, loading, error, searchQuery, channels, showChannels, canalsLoading, 
+    canalsError, showMembers, showOnlineMembers, showOfflineMembers, showFiles, 
+    showImages, members, files, images, showCreateChannelModal, newChannel, 
+    isCreatingChannel, channelError, contextMenu, showEditChannelModal, editingChannel, 
+    isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
+    loadingMessages, chatContainerRef, socket, currentUserId, messageContextMenu, 
+    showEmojiPicker, replyingTo, commonEmojis,
+    isMistralTyping, // Get the typing state
+    // Mention state and handlers
+    showMentionSuggestions, mentionSuggestions, activeMentionIndex,
+    // Handlers
+    handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
+    handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
+    handleEditChannel, handleSubmitEditChannel, handleDeleteChannel,
+    handleSelectChannel, handleSendMessage, handleMessageContextMenu,
+    handleCloseMessageContextMenu, handleReplyMessage, handleShowEmojiPicker,
+    handleAddReaction, handleCancelReply, toggleMembers, toggleOnlineMembers,
+    toggleOfflineMembers, toggleFiles, toggleImages, setNewChannel, setEditingChannel,
+    setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType,
+    // New handlers for mentions
+    handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
+  } = useWorkspaceDetails(workspaceId);
+
+  // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
+  const handleChatInputKeyDown = (e) => {
+    if (showMentionSuggestions && mentionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        handleMentionNavigation('next');
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        handleMentionNavigation('prev');
+      } else if (e.key === "Enter") {
+        // Si la fenêtre de suggestions est ouverte, sélectionne l'élément actif
+        handleSelectActiveItem();
+        e.preventDefault();
       }
-      
-      // Si c'est aujourd'hui, afficher l'heure
-      if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      
-      // Sinon, afficher la date et l'heure
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      console.error('Erreur de formatage de date:', error);
-      return '';
     }
   };
 
-  useEffect(() => {
-    // Récupérer l'ID de l'utilisateur depuis le token JWT
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUserId(payload.id);
-      } catch (e) {
-        console.error('Erreur lors du décodage du token:', e);
-      }
-    }
-  }, []);
-
-  // Gestionnaire pour afficher le menu contextuel sur un message
-  const handleMessageContextMenu = (e, message) => {
-    e.preventDefault();
-    setMessageContextMenu({
-      visible: true,
-      xPos: e.pageX,
-      yPos: e.pageY,
-      messageId: message.id_message,
-      message
-    });
+  // Handler pour ouvrir la page de profil
+  const handleOpenProfile = (member) => {
+    navigate(`/profile/${member.id}`);
   };
-
-  // Gestionnaire pour fermer le menu contextuel des messages
-  const handleCloseMessageContextMenu = () => {
-    setMessageContextMenu({
-      ...messageContextMenu,
-      visible: false
-    });
-  };
-
-  // Gestionnaire pour répondre à un message
-  const handleReplyMessage = () => {
-    setReplyingTo(messageContextMenu.message);
-    setNewMessage(`@${messageContextMenu.message.nom} `);
-    handleCloseMessageContextMenu();
-    
-    // Focus sur l'input de message
-    const messageInput = document.querySelector('.chat-input-wrapper input');
-    if (messageInput) {
-      messageInput.focus();
-    }
-  };
-
-  // Gestionnaire pour afficher le sélecteur d'emoji
-  const handleShowEmojiPicker = () => {
-    setShowEmojiPicker(true);
-    handleCloseMessageContextMenu();
-  };
-
-  // Gestionnaire pour ajouter une réaction
-  const handleAddReaction = async (emojiName) => {
-    try {
-      if (!messageContextMenu.messageId) return;
-      
-      // Utiliser WebSocket pour envoyer la réaction
-      if (socket && socket.connected) {
-        // Utiliser le type de réaction normalisé
-        socket.emit('addReaction', {
-          messageId: messageContextMenu.messageId,
-          reaction_type: emojiName,
-          canalId: activeChannel.id
-        });
-        
-        // Optimistic UI update - mettre à jour l'interface avant la confirmation du serveur
-        setMessages(prevMessages => 
-          prevMessages.map(msg => {
-            if (msg.id_message === messageContextMenu.messageId) {
-              // Vérifier si cette réaction existe déjà
-              const existingReactionIndex = 
-                (msg.reactions || []).findIndex(r => r.reaction_type === emojiName);
-              
-              let updatedReactions = [...(msg.reactions || [])];
-              
-              if (existingReactionIndex >= 0) {
-                // Incrémenter le compteur si la réaction existe
-                updatedReactions[existingReactionIndex] = {
-                  ...updatedReactions[existingReactionIndex],
-                  count: (parseInt(updatedReactions[existingReactionIndex].count) || 0) + 1,
-                  user_reacted: true
-                };
-              } else {
-                // Ajouter une nouvelle réaction si elle n'existe pas
-                updatedReactions.push({
-                  reaction_type: emojiName,
-                  count: 1,
-                  user_reacted: true,
-                  emoji: getEmojiForType(emojiName)
-                });
-              }
-              
-              return {
-                ...msg,
-                reactions: updatedReactions
-              };
-            }
-            return msg;
-          })
-        );
-        
-        setShowEmojiPicker(false);
-        return;
-      }
-      
-      // Fallback à l'API REST si WebSocket n'est pas disponible
-      const token = localStorage.getItem('token');
-      console.log(`Ajout d'une réaction ${emojiName} au message ${messageContextMenu.messageId}`);
-      
-      const response = await fetch(`${API_URL}/api/messages/${messageContextMenu.messageId}/reactions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          reaction_type: emojiName
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'ajout de la réaction');
-      }
-      
-      // Actualiser les messages pour afficher la nouvelle réaction
-      if (activeChannel) {
-        handleSelectChannel(activeChannel);
-      }
-      
-    } catch (error) {
-      console.error('Erreur:', error);
-    } finally {
-      setShowEmojiPicker(false);
-    }
-  };
-
-  // Gestionnaire pour annuler une réponse
-  const handleCancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  // Effet pour fermer le menu contextuel des messages lors d'un clic ailleurs
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (messageContextMenu.visible) {
-        setMessageContextMenu({ ...messageContextMenu, visible: false });
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [messageContextMenu.visible]);
 
   if (loading) {
     return (
@@ -970,7 +186,7 @@ function WorkspaceDetails() {
                   type="text" 
                   placeholder="Rechercher des canaux..." 
                   value={searchQuery}
-                  onChange={handleSearchChange}
+                  onChange={handleSearchChange} // Use handler from hook
                   className="search-input"
                 />
               </div>
@@ -979,11 +195,10 @@ function WorkspaceDetails() {
           
           <div className="workspace-sidebar-content">
             <div className="channels-section">
-              <div className="section-header" onClick={toggleChannelsVisibility}>
+              <div className="section-header" onClick={toggleChannelsVisibility}> {/* Use handler from hook */}
                 {showChannels ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
                 <h3>Canaux</h3>
-                {/* Modifier ici pour éviter la propagation du clic */}
-                <button className="add-channel-btn" onClick={handleCreateChannel}>
+                <button className="add-channel-btn" onClick={handleCreateChannel}> {/* Use handler from hook */}
                   <FaPlus />
                 </button>
               </div>
@@ -994,13 +209,13 @@ function WorkspaceDetails() {
                     <li className="channel-loading">Chargement des canaux...</li>
                   ) : canalsError ? (
                     <li className="channel-error">Erreur: {canalsError}</li>
-                  ) : filteredChannels.length > 0 ? (
-                    filteredChannels.map(channel => (
+                  ) : channels.length > 0 ? ( // Use channels from hook
+                    channels.map(channel => (
                       <li 
                         key={channel.id} 
                         className={`channel-item ${activeChannel && activeChannel.id === channel.id ? 'active' : ''}`}
-                        onClick={() => handleSelectChannel(channel)}
-                        onContextMenu={(e) => handleChannelContextMenu(e, channel)}
+                        onClick={() => handleSelectChannel(channel)} // Use handler from hook
+                        onContextMenu={(e) => handleChannelContextMenu(e, channel)} // Use handler from hook
                       >
                         {channel.isPrivate ? <FaLock className="channel-icon" /> : <FaHashtag className="channel-icon" />}
                         <span className="channel-name">{channel.name}</span>
@@ -1040,17 +255,20 @@ function WorkspaceDetails() {
                 </div>
               </div>
               
-              <div className="chat-messages" ref={chatContainerRef}>
+              <div className="chat-messages" ref={chatContainerRef}> {/* Use ref from hook */}
                 {loadingMessages ? (
                   <div className="chat-loading">Chargement des messages...</div>
-                ) : messages.length > 0 ? (
+                ) : messages.length > 0 ? ( // Use messages from hook
                   messages.map((message) => (
                     <div 
                       key={message.id_message} 
-                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
-                      onContextMenu={(e) => handleMessageContextMenu(e, message)}
+                      id={`msg-${message.id_message}`} // Add ID for scrolling to parent
+                      // Ajout d'une classe pour le bot si le flag isBot est présent
+                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : (message.isBot ? 'bot-message' : 'other-message')}`} // Use currentUserId from hook
+                      onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
                     >
                       <div className="message-avatar">
+                        {/* Cette logique devrait fonctionner pour le bot aussi */}
                         {message.photo_de_profil ? (
                           <img src={message.photo_de_profil} alt={message.nom} />
                         ) : (
@@ -1059,33 +277,66 @@ function WorkspaceDetails() {
                       </div>
                       <div className="message-content">
                         {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
-                        {message.parent_message && (
+                        {(message.parent_id || message.parent_message) && (
                           <div className="message-reply-to" onClick={() => {
-                            // Trouver le message parent dans la liste et faire défiler vers lui
-                            const parentMessage = messages.find(m => m.id_message === message.parent_id);
-                            if (parentMessage) {
-                              const element = document.getElementById(`msg-${message.parent_id}`);
+                            // Find parent message and scroll to it
+                            const parentId = message.parent_id || (message.parent_message && message.parent_message.id_message);
+                            if (parentId) {
+                              const element = document.getElementById(`msg-${parentId}`);
                               if (element) {
                                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                // Ajouter une classe pour le mettre en évidence temporairement
                                 element.classList.add('highlight-message');
                                 setTimeout(() => element.classList.remove('highlight-message'), 2000);
+                              } else {
+                                console.log(`Message parent avec ID ${parentId} non trouvé dans la vue actuelle`);
                               }
                             }
                           }}>
                             <FaReply className="reply-icon" />
                             <div className="reply-content">
-                              <span className="reply-author">@{message.parent_message.nom}</span>
-                              <span className="reply-text">{message.parent_message.contenu}</span>
+                              {message.parent_message ? (
+                                <>
+                                  <span className="reply-author">@{message.parent_message.nom}</span>
+                                  <span className="reply-text">{message.parent_message.contenu}</span>
+                                </>
+                              ) : (
+                                // Si nous n'avons pas le message parent mais nous avons l'ID, chercher dans les messages existants
+                                (() => {
+                                  const parentMessage = messages.find(m => m.id_message === message.parent_id);
+                                  return parentMessage ? (
+                                    <>
+                                      <span className="reply-author">@{parentMessage.nom}</span>
+                                      <span className="reply-text">{parentMessage.contenu}</span>
+                                    </>
+                                  ) : (
+                                    <span className="reply-text">Message original non disponible</span>
+                                  );
+                                })()
+                              )}
                             </div>
                           </div>
                         )}
                         
                         <div className="message-header">
-                          <span className="message-author">{message.nom}</span>
+                          <span className="message-author">
+                            {message.isBot || message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
+                              <>
+                                <span>{message.nom}</span>
+                                <span className="bot-icon-spacer"> </span>
+                                <FaRobot className="bot-icon" />
+                              </>
+                            ) : (
+                              message.nom
+                            )}
+                          </span>
                           <span className="message-time">{formatMessageDate(message.date_creation)}</span>
                         </div>
-                        <p className="message-text">{renderTextWithLinks(message.contenu)}</p>
+
+                        {/* *** Always use ReactMarkdown for all messages *** */}
+                        <div className="message-text"> {/* Wrap ReactMarkdown */} 
+                          <ReactMarkdown>{message.contenu}</ReactMarkdown>
+                        </div>
+                        {/* *** End Markdown rendering *** */}
                         
                         {/* Afficher les réactions avec meilleur style */}
                         {message.reactions && message.reactions.length > 0 && (
@@ -1093,9 +344,9 @@ function WorkspaceDetails() {
                             {message.reactions.map((reaction, index) => (
                               <div 
                                 key={index} 
-                                className="reaction-badge"
+                                className={`reaction-badge ${reaction.user_reacted ? 'user-reacted' : ''}`} // Add class if user reacted
                                 onClick={() => {
-                                  // Toggle de réaction
+                                  // Toggle reaction using socket from hook
                                   if (socket && socket.connected) {
                                     if (reaction.user_reacted) {
                                       socket.emit('removeReaction', {
@@ -1114,7 +365,7 @@ function WorkspaceDetails() {
                                 }}
                               >
                                 <span className="reaction-emoji">
-                                  {reaction.emoji || getEmojiForType(reaction.reaction_type)}
+                                  {reaction.emoji || getEmojiForType(reaction.reaction_type)} {/* Use helper from hook */}
                                 </span>
                                 <span className="reaction-count">{reaction.count}</span>
                               </div>
@@ -1130,44 +381,128 @@ function WorkspaceDetails() {
                     <p>Envoyez le premier message !</p>
                   </div>
                 )}
-              </div>
-              
-              <form className="chat-input-container" onSubmit={handleSendMessage}>
-                {/* Afficher l'indicateur de réponse si on répond à un message */}
-                {replyingTo && (
-                  <div className="replying-to">
-                    <div className="reply-info">
-                      <FaReply className="reply-icon" />
-                      <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+                {/* *** Display Typing Indicator *** */}
+                {isMistralTyping && (
+                  <div 
+                    className="chat-message bot-message typing-indicator"
+                    // Utilise la même structure que les autres messages pour la bulle
+                  >
+                    <div className="message-avatar">
+                      <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
                     </div>
-                    <button type="button" className="cancel-reply" onClick={handleCancelReply}>
-                      ×
-                    </button>
+                    <div className="message-content">
+                      <div className="message-header">
+                        <span className="message-author">
+                          Mistral AI
+                          <span className="bot-icon-spacer"> </span>
+                          <FaRobot className="bot-icon" />
+                        </span>
+                        <span className="message-time"></span>
+                      </div>
+                      <div className="message-text">
+                        <i>est en train d'écrire...</i>
+                      </div>
+                    </div>
                   </div>
                 )}
-                
-                <div className="chat-input-wrapper">
-                  <button type="button" className="chat-attachment-btn">
-                    <FaPaperclip />
+                {/* *** End Typing Indicator *** */}
+              </div>
+              
+              {/* Nouvelle implémentation de l'autocomplétion des mentions avec des IDs uniques */}
+              <div className="chat-input-area">
+                {showMentionSuggestions && (
+                  <div id="supchat-mentions-dropdown">
+                    <div id="supchat-mentions-header">
+                      <FaAt id="supchat-mentions-header-icon" />
+                      <span>Mentionner un utilisateur</span>
+                    </div>
+                    <div id="supchat-mentions-list">
+                      {mentionSuggestions.length > 0 ? (
+                        mentionSuggestions.map((user, index) => (
+                          <button
+                            key={user.id}
+                            className={`supchat-mention-item ${index === activeMentionIndex ? 'active' : ''}`}
+                            onClick={() => handleSelectMention(user)}
+                            type="button"
+                          >
+                            <div className="supchat-mention-avatar-wrapper">
+                              {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="supchat-mention-avatar" />
+                              ) : (
+                                <div className="supchat-mention-avatar">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              {user.isBot && (
+                                <div className="supchat-mention-bot-badge">
+                                  <FaRobot style={{ fontSize: '8px' }} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="supchat-mention-details">
+                              <div className="supchat-mention-name">{user.name}</div>
+                              <div className="supchat-mention-info">
+                                {user.isBot ? (
+                                  <>Assistant IA</>
+                                ) : (
+                                  <>
+                                    <span className={`supchat-mention-status ${user.status || 'offline'}`}></span>
+                                    {user.status === 'online' ? 'En ligne' : 'Hors ligne'}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="supchat-mention-no-results">
+                          Aucun utilisateur ne correspond à votre recherche
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <form className="chat-input-container" onSubmit={handleSendMessage}>
+                  {/* Afficher l'indicateur de réponse si on répond à un message */}
+                  {replyingTo && ( // Use replyingTo from hook
+                    <div className="replying-to">
+                      <div className="reply-info">
+                        <FaReply className="reply-icon" />
+                        <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+                      </div>
+                      <button type="button" className="cancel-reply" onClick={handleCancelReply}> {/* Use handler from hook */}
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="chat-input-wrapper">
+                    <button type="button" className="chat-attachment-btn">
+                      <FaPaperclip />
+                    </button>
+                    <input 
+                      type="text" 
+                      placeholder={`Message dans #${activeChannel.name}`}
+                      value={newMessage} // Use newMessage from hook
+                      onChange={(e) => handleNewMessageChange(e.target.value)} // Use new handler from hook
+                      onKeyDown={handleChatInputKeyDown} // Apply the new handler
+                    />
+                    <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
+                      <FaSmile />
+                    </button>
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="chat-send-btn"
+                    disabled={!newMessage.trim()} // Use newMessage from hook
+                  >
+                    <FaPaperPlane />
                   </button>
-                  <input 
-                    type="text" 
-                    placeholder={`Message dans ${activeChannel.name}`}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                  />
-                  <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}>
-                    <FaSmile />
-                  </button>
-                </div>
-                <button 
-                  type="submit" 
-                  className="chat-send-btn"
-                  disabled={!newMessage.trim()}
-                >
-                  <FaPaperPlane />
-                </button>
-              </form>
+                </form>
+              </div>
+              
+              {/* *** End Typing Indicator *** */}
             </div>
           )}
         </div>
@@ -1176,31 +511,36 @@ function WorkspaceDetails() {
         <div className="details-sidebar">
           {/* Members Section - RESTRUCTURED */}
           <div className="details-section">
-            <div className="section-header" onClick={toggleMembers}>
+            <div className="section-header" onClick={toggleMembers}> {/* Use handler from hook */}
               {showMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
-              <h3>Membres ({members.online.length + members.offline.length})</h3>
+              <h3>Membres ({members.online.length + members.offline.length})</h3> {/* Use members from hook */}
             </div>
             
             {showMembers && (
               <div className="members-container">
                 {/* Online Members Subsection */}
                 <div className="members-subsection">
-                  <div className="subsection-header" onClick={toggleOnlineMembers}>
+                  <div className="subsection-header" onClick={toggleOnlineMembers}> {/* Use handler from hook */}
                     {showOnlineMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
-                    <h4>En ligne ({members.online.length})</h4>
+                    <h4>En ligne ({members.online.length})</h4> {/* Use members from hook */}
                   </div>
                   
                   {showOnlineMembers && (
                     <ul className="members-list">
-                      {members.online.map(member => (
-                        <li key={member.id} className="member-item online">
+                      {members.online.map(member => ( // Use members from hook
+                        <li
+                          key={member.id}
+                          className="member-item online"
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                        >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
                           ) : (
                             <FaUserCircle className="member-avatar-placeholder" />
                           )}
                           <div className="member-info">
-                            {getRoleIcon(member.role)}
+                            {getRoleIcon(member.role)} {/* Use helper function */}
                             <span className="member-name">{member.name}</span>
                           </div>
                           <span className="status-indicator online"></span>
@@ -1212,22 +552,27 @@ function WorkspaceDetails() {
                 
                 {/* Offline Members Subsection */}
                 <div className="members-subsection">
-                  <div className="subsection-header" onClick={toggleOfflineMembers}>
+                  <div className="subsection-header" onClick={toggleOfflineMembers}> {/* Use handler from hook */}
                     {showOfflineMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
-                    <h4>Hors ligne ({members.offline.length})</h4>
+                    <h4>Hors ligne ({members.offline.length})</h4> {/* Use members from hook */}
                   </div>
                   
                   {showOfflineMembers && (
                     <ul className="members-list">
-                      {members.offline.map(member => (
-                        <li key={member.id} className="member-item offline">
+                      {members.offline.map(member => ( // Use members from hook
+                        <li
+                          key={member.id}
+                          className="member-item offline"
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                        >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
                           ) : (
                             <FaUserCircle className="member-avatar-placeholder" />
                           )}
                           <div className="member-info">
-                            {getRoleIcon(member.role)}
+                            {getRoleIcon(member.role)} {/* Use helper function */}
                             <span className="member-name">{member.name}</span>
                           </div>
                           <span className="status-indicator offline"></span>
@@ -1242,17 +587,17 @@ function WorkspaceDetails() {
 
           {/* Files Section - NO CHANGE */}
           <div className="details-section">
-            <div className="section-header" onClick={toggleFiles}>
+            <div className="section-header" onClick={toggleFiles}> {/* Use handler from hook */}
               {showFiles ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
-              <h3>Fichiers ({files.length})</h3>
+              <h3>Fichiers ({files.length})</h3> {/* Use files from hook */}
             </div>
             
             {showFiles && (
               <ul className="files-list">
-                {files.map(file => (
+                {files.map(file => ( // Use files from hook
                   <li key={file.id} className="file-item">
                     <div className="file-icon">
-                      {getFileIcon(file.type)}
+                      {getFileIcon(file.type)} {/* Use helper function */}
                     </div>
                     <div className="file-info">
                       <span className="file-name">{file.name}</span>
@@ -1266,14 +611,14 @@ function WorkspaceDetails() {
 
           {/* Images Section - NO CHANGE */}
           <div className="details-section">
-            <div className="section-header" onClick={toggleImages}>
+            <div className="section-header" onClick={toggleImages}> {/* Use handler from hook */}
               {showImages ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
-              <h3>Images ({images.length})</h3>
+              <h3>Images ({images.length})</h3> {/* Use images from hook */}
             </div>
             
             {showImages && (
               <div className="images-grid">
-                {images.map(image => (
+                {images.map(image => ( // Use images from hook
                   <div key={image.id} className="image-item">
                     <img src={image.url} alt="Shared" className="shared-image" />
                   </div>
@@ -1284,12 +629,12 @@ function WorkspaceDetails() {
         </div>
 
         {/* Modal de création de canal - Structure améliorée */}
-        {showCreateChannelModal && (
-          <div className="modal-overlay" onClick={handleCloseModal}>
+        {showCreateChannelModal && ( // Use state from hook
+          <div className="modal-overlay" onClick={handleCloseModal}> {/* Use handler from hook */}
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Nouveau canal</h2>
               
-              {channelError && (
+              {channelError && ( // Use state from hook
                 <p className="error-message">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginRight: '8px'}}>
                     <path d="M8 15A7 7 0 108 1a7 7 0 000 14z" stroke="#ff6b6b" strokeWidth="1.5" />
@@ -1300,15 +645,15 @@ function WorkspaceDetails() {
                 </p>
               )}
               
-              <form onSubmit={handleSubmitChannel}>
+              <form onSubmit={handleSubmitChannel}> {/* Use handler from hook */}
                 <div className="form-group">
                   <label htmlFor="name">Nom du canal</label>
                   <input
                     type="text"
                     id="name"
                     name="name"
-                    value={newChannel.name}
-                    onChange={handleChannelInputChange}
+                    value={newChannel.name} // Use state from hook
+                    onChange={handleChannelInputChange} // Use handler from hook
                     placeholder="ex: general, marketing, dev..."
                     autoFocus
                   />
@@ -1319,11 +664,11 @@ function WorkspaceDetails() {
                   <div className="channel-visibility-selector">
                     <button
                       type="button"
-                      className={`visibility-option ${!newChannel.isPrivate ? 'selected' : ''}`}
-                      onClick={() => setNewChannel(prev => ({ ...prev, isPrivate: false }))}
+                      className={`visibility-option ${!newChannel.isPrivate ? 'selected' : ''}`} // Use state from hook
+                      onClick={() => setNewChannel(prev => ({ ...prev, isPrivate: false }))} // Use setter from hook
                     >
                       <FaGlobe className="visibility-icon" />
-                      <div className="visibility-info">
+                      <div className="visibility-info"> {/* Corrected nesting */}
                         <span className="visibility-title">Public</span>
                         <span className="visibility-desc">Accessible à tous les membres</span>
                       </div>
@@ -1331,8 +676,8 @@ function WorkspaceDetails() {
                     
                     <button
                       type="button"
-                      className={`visibility-option ${newChannel.isPrivate ? 'selected' : ''}`}
-                      onClick={() => setNewChannel(prev => ({ ...prev, isPrivate: true }))}
+                      className={`visibility-option ${newChannel.isPrivate ? 'selected' : ''}`} // Use state from hook
+                      onClick={() => setNewChannel(prev => ({ ...prev, isPrivate: true }))} // Use setter from hook
                     >
                       <FaLock className="visibility-icon" />
                       <div className="visibility-info">
@@ -1344,15 +689,15 @@ function WorkspaceDetails() {
                 </div>
                 
                 <div className="modal-actions">
-                  <button type="button" onClick={handleCloseModal} className="cancel-btn">
+                  <button type="button" onClick={handleCloseModal} className="cancel-btn"> {/* Use handler from hook */}
                     Annuler
                   </button>
                   <button 
                     type="submit" 
                     className="create-btn"
-                    disabled={isCreatingChannel}
+                    disabled={isCreatingChannel} // Use state from hook
                   >
-                    {isCreatingChannel ? 'Création...' : 'Créer le canal'}
+                    {isCreatingChannel ? 'Création...' : 'Créer le canal'} {/* Use state from hook */}
                   </button>
                 </div>
               </form>
@@ -1361,17 +706,17 @@ function WorkspaceDetails() {
         )}
 
         {/* Menu contextuel pour les canaux */}
-        {contextMenu.visible && (
+        {contextMenu.visible && ( // Use state from hook
           <div 
             className="channel-context-menu"
-            style={{ top: contextMenu.yPos, left: contextMenu.xPos }}
+            style={{ top: contextMenu.yPos, left: contextMenu.xPos }} // Use state from hook
             onClick={e => e.stopPropagation()}
           >
-            <div className="context-menu-item" onClick={handleEditChannel}>
+            <div className="context-menu-item" onClick={handleEditChannel}> {/* Use handler from hook */}
               <FaEdit className="context-menu-icon" />
               <span>Modifier le canal</span>
             </div>
-            <div className="context-menu-item delete" onClick={handleDeleteChannel}>
+            <div className="context-menu-item delete" onClick={handleDeleteChannel}> {/* Use handler from hook */}
               <FaTrashAlt className="context-menu-icon" />
               <span>Supprimer le canal</span>
             </div>
@@ -1379,12 +724,12 @@ function WorkspaceDetails() {
         )}
         
         {/* Modal d'édition de canal */}
-        {showEditChannelModal && (
-          <div className="modal-overlay" onClick={() => setShowEditChannelModal(false)}>
+        {showEditChannelModal && ( // Use state from hook
+          <div className="modal-overlay" onClick={() => setShowEditChannelModal(false)}> {/* Use setter from hook */}
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Modifier le canal</h2>
               
-              {updateChannelError && (
+              {updateChannelError && ( // Use state from hook
                 <p className="error-message">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginRight: '8px'}}>
                     <path d="M8 15A7 7 0 108 1a7 7 0 000 14z" stroke="#ff6b6b" strokeWidth="1.5" />
@@ -1395,15 +740,15 @@ function WorkspaceDetails() {
                 </p>
               )}
               
-              <form onSubmit={handleSubmitEditChannel}>
+              <form onSubmit={handleSubmitEditChannel}> {/* Use handler from hook */}
                 <div className="form-group">
                   <label htmlFor="edit-name">Nom du canal</label>
                   <input
                     type="text"
                     id="edit-name"
                     name="name"
-                    value={editingChannel.name}
-                    onChange={(e) => setEditingChannel({...editingChannel, name: e.target.value})}
+                    value={editingChannel.name} // Use state from hook
+                    onChange={(e) => setEditingChannel({...editingChannel, name: e.target.value})} // Use setter from hook
                     placeholder="ex: general, marketing, dev..."
                     autoFocus
                   />
@@ -1414,8 +759,8 @@ function WorkspaceDetails() {
                   <div className="channel-visibility-selector">
                     <button
                       type="button"
-                      className={`visibility-option ${!editingChannel.isPrivate ? 'selected' : ''}`}
-                      onClick={() => setEditingChannel(prev => ({ ...prev, isPrivate: false }))}
+                      className={`visibility-option ${!editingChannel.isPrivate ? 'selected' : ''}`} // Use state from hook
+                      onClick={() => setEditingChannel(prev => ({ ...prev, isPrivate: false }))} // Use setter from hook
                     >
                       <FaGlobe className="visibility-icon" />
                       <div className="visibility-info">
@@ -1426,8 +771,8 @@ function WorkspaceDetails() {
                     
                     <button
                       type="button"
-                      className={`visibility-option ${editingChannel.isPrivate ? 'selected' : ''}`}
-                      onClick={() => setEditingChannel(prev => ({ ...prev, isPrivate: true }))}
+                      className={`visibility-option ${editingChannel.isPrivate ? 'selected' : ''}`} // Use state from hook
+                      onClick={() => setEditingChannel(prev => ({ ...prev, isPrivate: true }))} // Use setter from hook
                     >
                       <FaLock className="visibility-icon" />
                       <div className="visibility-info">
@@ -1439,15 +784,15 @@ function WorkspaceDetails() {
                 </div>
                 
                 <div className="modal-actions">
-                  <button type="button" onClick={() => setShowEditChannelModal(false)} className="cancel-btn">
+                  <button type="button" onClick={() => setShowEditChannelModal(false)} className="cancel-btn"> {/* Use setter from hook */}
                     Annuler
                   </button>
                   <button 
                     type="submit" 
                     className="create-btn"
-                    disabled={isUpdatingChannel}
+                    disabled={isUpdatingChannel} // Use state from hook
                   >
-                    {isUpdatingChannel ? 'Mise à jour...' : 'Mettre à jour'}
+                    {isUpdatingChannel ? 'Mise à jour...' : 'Mettre à jour'} {/* Use state from hook */}
                   </button>
                 </div>
               </form>
@@ -1456,17 +801,17 @@ function WorkspaceDetails() {
         )}
 
         {/* Menu contextuel pour les messages */}
-        {messageContextMenu.visible && (
+        {messageContextMenu.visible && ( // Use state from hook
           <div 
             className="message-context-menu"
-            style={{ top: messageContextMenu.yPos, left: messageContextMenu.xPos }}
+            style={{ top: messageContextMenu.yPos, left: messageContextMenu.xPos }} // Use state from hook
             onClick={e => e.stopPropagation()}
           >
-            <div className="context-menu-item" onClick={handleReplyMessage}>
+            <div className="context-menu-item" onClick={handleReplyMessage}> {/* Use handler from hook */}
               <FaReply className="context-menu-icon" />
               <span>Répondre</span>
             </div>
-            <div className="context-menu-item" onClick={handleShowEmojiPicker}>
+            <div className="context-menu-item" onClick={handleShowEmojiPicker}> {/* Use handler from hook */}
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
             </div>
@@ -1474,16 +819,16 @@ function WorkspaceDetails() {
         )}
         
         {/* Modal pour la sélection d'emoji */}
-        {showEmojiPicker && (
-          <div className="modal-overlay" onClick={() => setShowEmojiPicker(false)}>
+        {showEmojiPicker && ( // Use state from hook
+          <div className="modal-overlay" onClick={() => setShowEmojiPicker(false)}> {/* Use setter from hook */}
             <div className="emoji-picker-modal" onClick={e => e.stopPropagation()}>
               <h3>Choisissez une réaction</h3>
               <div className="emoji-grid">
-                {commonEmojis.map((emoji) => (
+                {commonEmojis.map((emoji) => ( // Use state from hook
                   <button 
                     key={emoji.name} 
                     className="emoji-button"
-                    onClick={() => handleAddReaction(emoji.name)}
+                    onClick={() => handleAddReaction(emoji.name)} // Use handler from hook
                     title={emoji.name}
                   >
                     {emoji.label}
@@ -1493,7 +838,7 @@ function WorkspaceDetails() {
               <div className="emoji-picker-actions">
                 <button 
                   className="cancel-btn" 
-                  onClick={() => setShowEmojiPicker(false)}
+                  onClick={() => setShowEmojiPicker(false)} // Use setter from hook
                 >
                   Annuler
                 </button>
