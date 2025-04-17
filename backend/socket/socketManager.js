@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import MessageModel from '../models/Message.js';
 import Reaction from '../models/Reaction.js';
+import MessagePrive from '../models/MessagePrive.js'; // Ajout de l'importation de MessagePrive
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
@@ -63,6 +64,77 @@ const socketManager = (io) => {
       socket.emit('canalJoined', { canalId, status: 'success' });
     });
     
+    // Rejoindre la room DM de l'utilisateur (pour recevoir ses messages privés)
+    socket.on('joinPrivate', () => {
+      if (socket.user?.id) {
+        socket.join(`dm:${socket.user.id}`);
+      }
+    });
+
+    // Envoyer un message privé
+    socket.on('privateMessage', async ({ destinataireId, contenu }) => {
+      try {
+        const expediteurId = socket.user.id;
+        if (!destinataireId || !contenu) {
+          socket.emit('error', { message: 'destinataireId et contenu requis' });
+          return;
+        }
+        const message = await MessagePrive.create({
+          contenu,
+          fk_expediteur: expediteurId,
+          fk_destinataire: destinataireId
+        });
+        io.to(`dm:${expediteurId}`).to(`dm:${destinataireId}`).emit('privateMessage', message);
+      } catch (error) {
+        socket.emit('error', { message: 'Erreur lors de l\'envoi du message privé' });
+      }
+    });
+
+    // Edition d'un message privé (seul l'expéditeur)
+    socket.on('editPrivateMessage', async ({ id, contenu }) => {
+      try {
+        const userId = socket.user.id;
+        const updated = await MessagePrive.updateMessage(id, userId, contenu);
+        if (!updated) {
+          socket.emit('error', { message: "Modification refusée" });
+          return;
+        }
+        io.to(`dm:${updated.fk_expediteur}`).to(`dm:${updated.fk_destinataire}`).emit('privateMessageUpdated', updated);
+      } catch (error) {
+        socket.emit('error', { message: "Erreur lors de la modification du message privé" });
+      }
+    });
+
+    // Suppression d'un message privé (seul l'expéditeur)
+    socket.on('deletePrivateMessage', async ({ id }) => {
+      try {
+        const userId = socket.user.id;
+        const deleted = await MessagePrive.deleteMessage(id, userId);
+        if (!deleted) {
+          socket.emit('error', { message: "Suppression refusée" });
+          return;
+        }
+        io.to(`dm:${deleted.fk_expediteur}`).to(`dm:${deleted.fk_destinataire}`).emit('privateMessageDeleted', { id });
+      } catch (error) {
+        socket.emit('error', { message: "Erreur lors de la suppression du message privé" });
+      }
+    });
+
+    // Accusé de lecture (seul le destinataire)
+    socket.on('readPrivateMessage', async ({ id }) => {
+      try {
+        const userId = socket.user.id;
+        const updated = await MessagePrive.markAsRead(id, userId);
+        if (!updated) {
+          socket.emit('error', { message: "Non autorisé" });
+          return;
+        }
+        io.to(`dm:${updated.fk_expediteur}`).emit('privateMessageRead', { id, date_lecture: updated.date_lecture });
+      } catch (error) {
+        socket.emit('error', { message: "Erreur lors de l'accusé de lecture" });
+      }
+    });
+
     // Recevoir un message
     socket.on('message', async (data) => {
       try {

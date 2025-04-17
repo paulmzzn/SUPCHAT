@@ -57,7 +57,7 @@ router.post('/reset-password', resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.63:3001/login' }), 
+  passport.authenticate('google', { failureRedirect: '192.168.1.54login' }), 
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
@@ -68,7 +68,7 @@ router.get('/auth/google/callback',
 
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
+      `192.168.1.54auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
