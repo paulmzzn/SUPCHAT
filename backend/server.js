@@ -68,7 +68,7 @@ app.set('io', io);
 socketManager(io);
 
 httpServer.listen(PORT, async () => {
-  console.log(`Serveur démarré sur http://192.168.1.125:${PORT}`);
+  console.log(`Serveur démarré sur http://192.168.1.63:${PORT}`);
   try {
     await pool.query("SELECT NOW()"); // Test simple pour vérifier la connexion
     console.log("Connexion réussie avec PostgreSQL");

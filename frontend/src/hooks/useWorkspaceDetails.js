@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import { API_URL } from '../config/config';
-import { FaThumbsUp, FaHeart, FaLaugh, FaSurprise, FaSadTear, FaAngry } from 'react-icons/fa';
+import { FaThumbsUp, FaHeart, FaLaugh, FaSurprise, FaSadTear, FaAngry, FaRobot } from 'react-icons/fa'; // Added FaRobot for consistency
 
 // Helper function to get emoji for reaction type
 const getEmojiForType = (reactionType) => {
@@ -15,6 +15,10 @@ const getEmojiForType = (reactionType) => {
   };
   return emojiMap[reactionType] || reactionType;
 };
+
+const MISTRAL_USER_ID = '00000000-0000-0000-0000-000000000001';
+const MISTRAL_USERNAME = 'Mistral AI';
+const MISTRAL_AVATAR = 'https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp';
 
 export const useWorkspaceDetails = (workspaceId) => {
   const [workspace, setWorkspace] = useState(null);
@@ -118,6 +122,13 @@ export const useWorkspaceDetails = (workspaceId) => {
   ];
 
   const [isMistralTyping, setIsMistralTyping] = useState(false); // State for typing indicator
+
+  // Mention state
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState([]);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionableUsers, setMentionableUsers] = useState([]);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
 
   // Fetch canals function using useCallback
   const fetchCanals = useCallback(async () => {
@@ -462,6 +473,40 @@ export const useWorkspaceDetails = (workspaceId) => {
     };
   }, [contextMenu.visible, messageContextMenu.visible]);
 
+  // Update mentionable users when members change
+  useEffect(() => {
+    const mistralUser = {
+      id: MISTRAL_USER_ID,
+      name: MISTRAL_USERNAME,
+      avatar: MISTRAL_AVATAR,
+      role: 'bot',
+      isBot: true,
+      status: 'online'
+    };
+    
+    // Format online members
+    const onlineUsers = members.online.map(member => ({
+      ...member,
+      status: 'online'
+    }));
+    
+    // Format offline members
+    const offlineUsers = members.offline.map(member => ({
+      ...member,
+      status: 'offline'
+    }));
+    
+    const allUsers = [
+      mistralUser,
+      ...onlineUsers,
+      ...offlineUsers,
+    ];
+    
+    // Remove duplicates
+    const uniqueUsers = Array.from(new Map(allUsers.map(user => [user.id, user])).values());
+    setMentionableUsers(uniqueUsers);
+  }, [members]);
+
   // Handlers
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
   const toggleChannelsVisibility = () => setShowChannels(!showChannels);
@@ -733,6 +778,109 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   const handleCancelReply = () => setReplyingTo(null);
 
+  // Handler for chat input changes to detect mentions
+  const handleNewMessageChange = (value) => {
+    setNewMessage(value);
+
+    const inputElement = document.querySelector('.chat-input-wrapper input');
+    if (!inputElement) return;
+    
+    const cursorPos = inputElement.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    // Check if we're inside a word
+    const lastSpaceIndex = textBeforeCursor.lastIndexOf(' ');
+    const lastNewlineIndex = textBeforeCursor.lastIndexOf('\n');
+    const lastBreakIndex = Math.max(lastSpaceIndex, lastNewlineIndex);
+    
+    // Detect if @ is at the start of a word
+    if (lastAtIndex !== -1 && (lastAtIndex > lastBreakIndex || lastBreakIndex === -1)) {
+      const query = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+      setMentionQuery(query);
+
+      if (mentionableUsers.length > 0) {
+        // Filter users by query
+        const filtered = mentionableUsers.filter(user =>
+          user.name.toLowerCase().includes(query)
+        );
+        
+        // Sort results: online first, then alphabetically, bot always at the top
+        const sorted = [...filtered].sort((a, b) => {
+          // Bots first
+          if (a.isBot && !b.isBot) return -1;
+          if (!a.isBot && b.isBot) return 1;
+          
+          // Online users before offline
+          if (a.status === 'online' && b.status !== 'online') return -1;
+          if (a.status !== 'online' && b.status === 'online') return 1;
+          
+          // Alphabetical sort
+          return a.name.localeCompare(b.name);
+        });
+        
+        setMentionSuggestions(sorted.slice(0, 5)); // Limit suggestions
+        setShowMentionSuggestions(sorted.length > 0);
+        setActiveMentionIndex(0); // Reset active index
+      } else {
+        setShowMentionSuggestions(false);
+      }
+    } else {
+      setShowMentionSuggestions(false);
+      setMentionQuery('');
+    }
+  };
+
+  // Handler for keyboard navigation in mention suggestions
+  const handleMentionNavigation = (direction) => {
+    if (mentionSuggestions.length === 0) return;
+    
+    setActiveMentionIndex(currentIndex => {
+      if (direction === 'next') {
+        return (currentIndex + 1) % mentionSuggestions.length;
+      } else {
+        return (currentIndex - 1 + mentionSuggestions.length) % mentionSuggestions.length;
+      }
+    });
+  };
+
+  // Handler for selecting the current active mention
+  const handleSelectActiveItem = () => {
+    if (mentionSuggestions.length === 0) return;
+    handleSelectMention(mentionSuggestions[activeMentionIndex]);
+  };
+
+  // Handler for selecting a mention suggestion
+  const handleSelectMention = (user) => {
+    const currentMessage = newMessage;
+    const inputElement = document.querySelector('.chat-input-wrapper input');
+    if (!inputElement) return;
+    
+    const cursorPos = inputElement.selectionStart;
+    const textBeforeCursor = currentMessage.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex !== -1) {
+      const textAfterCursor = currentMessage.substring(cursorPos);
+      const mentionText = `@${user.name} `;
+      const newMessageValue = currentMessage.substring(0, lastAtIndex) + mentionText + textAfterCursor;
+
+      setNewMessage(newMessageValue);
+      setShowMentionSuggestions(false);
+      setMentionQuery('');
+
+      // Focus input and set cursor position after the mention
+      if (inputElement) {
+        inputElement.focus();
+        // Use setTimeout to ensure the cursor position is set after the state update renders
+        setTimeout(() => {
+          const newCursorPos = lastAtIndex + mentionText.length;
+          inputElement.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+      }
+    }
+  };
+
   // Return all state and handlers needed by the component
   return {
     workspace, loading, error, searchQuery, channels: filteredChannels, // Use filteredChannels for display
@@ -743,6 +891,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     updateChannelError, activeChannel, messages, newMessage, loadingMessages,
     chatContainerRef, socket, currentUserId, messageContextMenu, showEmojiPicker,
     replyingTo, commonEmojis, isMistralTyping, // Return the typing state
+    // Mention state and handlers
+    showMentionSuggestions, mentionSuggestions, activeMentionIndex,
     // Handlers
     handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
     handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
@@ -752,6 +902,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleAddReaction, handleCancelReply, toggleMembers, toggleOnlineMembers,
     toggleOfflineMembers, toggleFiles, toggleImages, setNewChannel, setEditingChannel,
     setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType, // Export helper if needed in component
+    // New handlers for mentions
+    handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
   };
 };
 

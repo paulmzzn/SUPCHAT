@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 import { useEffect, useState } from 'react';
-import { FaComment, FaBullhorn, FaCompass, FaCog } from 'react-icons/fa';
+import { FaComment, FaCompass, FaCog } from 'react-icons/fa';
 import { MdWorkspacesFilled } from "react-icons/md";
 
 // Import logo

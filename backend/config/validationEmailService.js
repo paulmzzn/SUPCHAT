@@ -33,7 +33,7 @@ const sendValidationEmail = async (email, validationCode) => {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="http://192.168.1.125:3000/logo_supchat.svg" alt="SUPCHAT Logo" style="width: 150px;">
+          <img src="http://192.168.1.63:3000/logo_supchat.svg" alt="SUPCHAT Logo" style="width: 150px;">
         </div>
         
         <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
