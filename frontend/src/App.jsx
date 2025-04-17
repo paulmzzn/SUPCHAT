@@ -11,6 +11,7 @@ import Discover from './pages/Discover/Discover';
 import WorkspaceDetails from './pages/WorkspaceDetails/WorkspaceDetails';
 import Settings from './pages/Settings/Settings';
 import Profile from './pages/Profile/Profile';
+import DirectMessages from './pages/DirectMessages/DirectMessages';
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -121,6 +122,7 @@ function App() {
             <Profile />
           </ProtectedRoute>
         } />
+        <Route path="/direct-messages" element={<DirectMessages />} />
         
         {/* Route par défaut */}
         <Route path="/" element={
