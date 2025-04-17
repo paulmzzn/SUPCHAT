@@ -7,6 +7,7 @@ import { verifyToken } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import pool from "../config/dbConnection.js"; // Ajout de l'import de pool
 
 // Configuration de multer pour le stockage des avatars
 const storage = multer.diskStorage({
@@ -106,5 +107,55 @@ router.get('/verify-token', (req, res) => {
 // Routes pour le profil utilisateur
 router.get('/profile', verifyToken, getUserProfile);
 router.put('/profile', verifyToken, upload.single('avatar'), updateUserProfile);
+
+// Route pour récupérer un utilisateur par ID (publique ou protégée selon besoin)
+router.get('/:id', async (req, res) => {
+  try {
+    // Vous pouvez ajouter verifyToken ici si vous voulez protéger la route
+    // ex: router.get('/:id', verifyToken, async (req, res) => { ... }
+    const { id } = req.params;
+    const user = await (await import('../models/User.js')).default.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    // Adapter la structure pour le frontend
+    res.status(200).json({
+      id: user.id_utilisateur,
+      name: user.nom,
+      email: user.email,
+      avatar: user.photo_de_profil,
+      status: user.fk_statut === 1 ? 'online' : 'offline',
+      role: user.role || 'member'
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de l\'utilisateur.', error: error.message });
+  }
+});
+
+// Route pour récupérer les workspaces d'un utilisateur spécifique
+router.get('/:id/workspaces', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Récupération des workspaces pour l'utilisateur: ${id}`);
+    
+    const result = await pool.query(
+      `SELECT w.*, 
+        r.nom_role as user_role,
+        (SELECT COUNT(*) FROM membre_workspace mw2 WHERE mw2.fk_workspace = w.id_workspace) as total_members
+       FROM workspace w
+       JOIN membre_workspace mw ON w.id_workspace = mw.fk_workspace
+       JOIN role r ON mw.fk_role = r.id_role
+       WHERE mw.fk_utilisateur = $1
+       ORDER BY w.date_creation DESC`,
+      [id]
+    );
+    
+    console.log(`Workspaces trouvés: ${result.rows.length}`);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des workspaces de l'utilisateur:", error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des workspaces', error: error.message });
+  }
+});
 
 export default router;

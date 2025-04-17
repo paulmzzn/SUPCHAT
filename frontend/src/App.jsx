@@ -10,6 +10,7 @@ import Workspaces from './pages/Workspaces/Workspaces';
 import Discover from './pages/Discover/Discover';
 import WorkspaceDetails from './pages/WorkspaceDetails/WorkspaceDetails';
 import Settings from './pages/Settings/Settings';
+import Profile from './pages/Profile/Profile';
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -115,7 +116,11 @@ function App() {
             <Settings />
           </ProtectedRoute>
         } />
-        
+        <Route path="/profile/:userId" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
         
         {/* Route par défaut */}
         <Route path="/" element={

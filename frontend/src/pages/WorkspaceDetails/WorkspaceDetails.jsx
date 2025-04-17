@@ -5,6 +5,7 @@ import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaU
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import './WorkspaceDetails.css';
 import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
+import { useNavigate } from 'react-router-dom'; // Ajout import
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -90,6 +91,7 @@ const formatMessageDate = (dateString) => {
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
+  const navigate = useNavigate(); // Ajout hook navigation
   
   // Use the custom hook to get state and handlers
   const {
@@ -131,6 +133,11 @@ function WorkspaceDetails() {
         e.preventDefault();
       }
     }
+  };
+
+  // Handler pour ouvrir la page de profil
+  const handleOpenProfile = (member) => {
+    navigate(`/profile/${member.id}`);
   };
 
   if (loading) {
@@ -521,7 +528,12 @@ function WorkspaceDetails() {
                   {showOnlineMembers && (
                     <ul className="members-list">
                       {members.online.map(member => ( // Use members from hook
-                        <li key={member.id} className="member-item online">
+                        <li
+                          key={member.id}
+                          className="member-item online"
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                        >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
                           ) : (
@@ -548,7 +560,12 @@ function WorkspaceDetails() {
                   {showOfflineMembers && (
                     <ul className="members-list">
                       {members.offline.map(member => ( // Use members from hook
-                        <li key={member.id} className="member-item offline">
+                        <li
+                          key={member.id}
+                          className="member-item offline"
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                        >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
                           ) : (
