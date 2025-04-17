@@ -248,7 +248,6 @@ function Workspaces() {
     }
   };
   
-  
   // Updated function to create a new workspace
   const createWorkspace = async (e) => {
     e.preventDefault();
@@ -311,6 +310,13 @@ function Workspaces() {
       console.error("Error creating workspace:", err);
       setError(err.message);
     }
+  };
+
+  // Ajoutez cette fonction pour gérer le départ d'un workspace
+  const handleLeaveWorkspace = (workspaceId) => {
+    console.log(`Workspace ${workspaceId} quitté, rafraîchissement de la liste...`);
+    // Rafraîchir la liste des workspaces
+    fetchWorkspaces();
   };
 
   return (
@@ -383,7 +389,11 @@ function Workspaces() {
                 
                 {/* Existing workspaces */}
                 {filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                  <WorkspaceCard 
+                    key={workspace.id} 
+                    workspace={workspace} 
+                    onWorkspaceLeave={handleLeaveWorkspace}
+                  />
                 ))}
               </div>
             </div>
