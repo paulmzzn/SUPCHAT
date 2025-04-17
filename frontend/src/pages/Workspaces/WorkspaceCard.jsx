@@ -5,7 +5,7 @@ import JoinWorkspaceButton from "../../components/JoinWorkspaceButton/JoinWorksp
 import { API_URL } from "../../config/config";
 import "./WorkspaceCard.css";
 
-function WorkspaceCard({ workspace, showJoinButton = false, onWorkspaceLeave }) {
+function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, onWorkspaceLeave }) {
   const [showOptions, setShowOptions] = useState(false);
   const navigate = useNavigate();
   const optionsRef = useRef(null);
@@ -204,11 +204,12 @@ function WorkspaceCard({ workspace, showJoinButton = false, onWorkspaceLeave }) 
             </div>
           </div>
           
-          {/* Bouton rejoindre si nécessaire */}
+          {/* Bouton rejoindre si nécessaire, avec l'état hasJoined */}
           {showJoinButton && (
             <JoinWorkspaceButton 
               workspaceId={workspace.id} 
-              isPrivate={workspace.isPrivate} 
+              isPrivate={workspace.isPrivate}
+              hasJoined={hasJoined} 
             />
           )}
         </div>
