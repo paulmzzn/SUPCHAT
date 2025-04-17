@@ -9,7 +9,8 @@ import path from 'path';
 export const createWorkspace = async (req, res) => {
   try {
     const { nom, description, is_private } = req.body;
-    
+    const userId = req.user.id; // Récupérer l'ID de l'utilisateur à partir du token JWT
+
     // Create workspace with basic data
     const workspace = await Workspace.create({ 
       nom, 
@@ -18,6 +19,12 @@ export const createWorkspace = async (req, res) => {
       banner_url: null,
       icon_url: null
     });
+    
+    // Ajouter automatiquement l'utilisateur comme propriétaire (rôle 1 = owner)
+    await pool.query(
+      "INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)",
+      [userId, workspace.id_workspace, 1] // 1 = rôle Owner/Propriétaire
+    );
     
     res.status(201).json(workspace);
   } catch (error) {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode, validateUser, requestPasswordReset, resetPassword, resendValidationCode, getUserProfile, updateUserProfile } from '../controllers/userController.js';
+import { registerUser, getAllUsers, loginUser, updateUser, deleteUser, sendInvitation, validateCode, validateUser, requestPasswordReset, resetPassword, resendValidationCode, getUserProfile, updateUserProfile, getUserById } from '../controllers/userController.js';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -108,29 +108,8 @@ router.get('/verify-token', (req, res) => {
 router.get('/profile', verifyToken, getUserProfile);
 router.put('/profile', verifyToken, upload.single('avatar'), updateUserProfile);
 
-// Route pour récupérer un utilisateur par ID (publique ou protégée selon besoin)
-router.get('/:id', async (req, res) => {
-  try {
-    // Vous pouvez ajouter verifyToken ici si vous voulez protéger la route
-    // ex: router.get('/:id', verifyToken, async (req, res) => { ... }
-    const { id } = req.params;
-    const user = await (await import('../models/User.js')).default.getUserById(id);
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    }
-    // Adapter la structure pour le frontend
-    res.status(200).json({
-      id: user.id_utilisateur,
-      name: user.nom,
-      email: user.email,
-      avatar: user.photo_de_profil,
-      status: user.fk_statut === 1 ? 'online' : 'offline',
-      role: user.role || 'member'
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la récupération de l\'utilisateur.', error: error.message });
-  }
-});
+// Route pour récupérer un utilisateur par ID
+router.get('/:id', getUserById);
 
 // Route pour récupérer les workspaces d'un utilisateur spécifique
 router.get('/:id/workspaces', async (req, res) => {

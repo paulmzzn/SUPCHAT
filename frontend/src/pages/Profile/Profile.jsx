@@ -82,6 +82,13 @@ function Profile() {
       });
   }, [userId]);
 
+  // Vérifier la structure des données reçues
+  useEffect(() => {
+    if (user) {
+      console.log("Données utilisateur reçues:", user);
+    }
+  }, [user]);
+
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
     try {
@@ -125,10 +132,19 @@ function Profile() {
 
   // Fonction pour afficher la date d'inscription formatée
   const formatJoinDate = (dateString) => {
-    if (!dateString) return "Date inconnue";
+    if (!dateString) {
+      console.log("Date manquante:", dateString);
+      return "Date inconnue";
+    }
     
+    console.log("Date reçue:", dateString, typeof dateString);
+    
+    // Essayer de traiter différents formats de date
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Date invalide";
+    if (isNaN(date.getTime())) {
+      console.log("Date invalide après conversion:", date);
+      return "Date invalide";
+    }
     
     return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
@@ -192,7 +208,9 @@ function Profile() {
             )}
             
             <div className="profile-info">
-              <h1 className="profile-name">{user.name}</h1>
+              <h1 className="profile-name">
+                {user.name || user.nom || "Utilisateur"}
+              </h1>
               <div className="profile-meta">
                 <div className="profile-status">
                   <span className={`status-indicator ${user.status === 'online' ? 'status-online' : 'status-offline'}`}></span>
@@ -227,10 +245,25 @@ function Profile() {
               </div>
               
               <div className="info-row">
-                <div className="info-label">Membre depuis</div>
+                <div className="info-label">Inscrit le</div>
                 <div className="info-value">
-                  <FaUserClock className="info-icon" />
-                  {formatJoinDate(user.date_creation || user.joinedAt)}
+                  {user.date_creation ? (
+                    <>
+                      {formatJoinDate(user.date_creation)}
+                      <div className="date-raw">
+                        {user.date_creation}
+                      </div>
+                    </>
+                  ) : user.joinedAt ? (
+                    <>
+                      {formatJoinDate(user.joinedAt)}
+                      <div className="date-raw">
+                        {user.joinedAt}
+                      </div>
+                    </>
+                  ) : (
+                    "Date non disponible"
+                  )}
                 </div>
               </div>
               
