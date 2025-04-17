@@ -102,7 +102,7 @@ function WorkspaceDetails() {
     showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
     // Mention state and handlers
-    showMentionSuggestions, mentionSuggestions,
+    showMentionSuggestions, mentionSuggestions, activeMentionIndex,
     // Handlers
     handleSearchChange, toggleChannelsVisibility, handleChannelInputChange,
     handleCreateChannel, handleCloseModal, handleSubmitChannel, handleChannelContextMenu,
@@ -116,7 +116,22 @@ function WorkspaceDetails() {
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
   } = useWorkspaceDetails(workspaceId);
 
-  // Removed all useState, useEffect, and function definitions that were moved to the hook
+  // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
+  const handleChatInputKeyDown = (e) => {
+    if (showMentionSuggestions && mentionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        handleMentionNavigation('next');
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        handleMentionNavigation('prev');
+      } else if (e.key === "Enter") {
+        // Si la fenêtre de suggestions est ouverte, sélectionne l'élément actif
+        handleSelectActiveItem();
+        e.preventDefault();
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -361,19 +376,26 @@ function WorkspaceDetails() {
                 )}
                 {/* *** Display Typing Indicator *** */}
                 {isMistralTyping && (
-                  <div className="chat-message bot-message typing-indicator">
-                     <div className="message-avatar">
-                        {/* You might want a specific avatar for the typing indicator */}
-                        <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
+                  <div 
+                    className="chat-message bot-message typing-indicator"
+                    // Utilise la même structure que les autres messages pour la bulle
+                  >
+                    <div className="message-avatar">
+                      <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
+                    </div>
+                    <div className="message-content">
+                      <div className="message-header">
+                        <span className="message-author">
+                          Mistral AI
+                          <span className="bot-icon-spacer"> </span>
+                          <FaRobot className="bot-icon" />
+                        </span>
+                        <span className="message-time"></span>
                       </div>
-                      <div className="other-message">
-                        <div className="message-content">
-                          <div className="message-header">
-                              <span className="message-author">Mistral AI</span>
-                          </div>
-                          <p className="message-text"><i>est en train d'écrire...</i></p>
-                        </div>
+                      <div className="message-text">
+                        <i>est en train d'écrire...</i>
                       </div>
+                    </div>
                   </div>
                 )}
                 {/* *** End Typing Indicator *** */}
@@ -392,7 +414,7 @@ function WorkspaceDetails() {
                         mentionSuggestions.map((user, index) => (
                           <button
                             key={user.id}
-                            className={`supchat-mention-item ${index === 0 ? 'active' : ''}`}
+                            className={`supchat-mention-item ${index === activeMentionIndex ? 'active' : ''}`}
                             onClick={() => handleSelectMention(user)}
                             type="button"
                           >
@@ -457,23 +479,7 @@ function WorkspaceDetails() {
                       placeholder={`Message dans #${activeChannel.name}`}
                       value={newMessage} // Use newMessage from hook
                       onChange={(e) => handleNewMessageChange(e.target.value)} // Use new handler from hook
-                      onKeyDown={(e) => {
-                        // Optional: Add keyboard navigation for suggestions (e.g., ArrowUp, ArrowDown, Enter)
-                        if (showMentionSuggestions && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === 'Tab')) {
-                          e.preventDefault(); // Prevent default behavior like moving cursor or submitting form
-                          // Add logic here to handle selection/navigation
-                          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            handleMentionNavigation(e.key === 'ArrowDown' ? 'next' : 'prev');
-                          } else if (e.key === 'Enter' || e.key === 'Tab') {
-                            e.preventDefault();
-                            handleSelectActiveItem();
-                          } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setShowMentionSuggestions(false);
-                          }
-                        }
-                      }}
+                      onKeyDown={handleChatInputKeyDown} // Apply the new handler
                     />
                     <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
                       <FaSmile />
