@@ -5,7 +5,7 @@ import JoinWorkspaceButton from "../../components/JoinWorkspaceButton/JoinWorksp
 import { API_URL } from "../../config/config";
 import "./WorkspaceCard.css";
 
-function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, onWorkspaceLeave }) {
+function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, onWorkspaceLeave, onFavoriteToggle }) {
   const [showOptions, setShowOptions] = useState(false);
   const navigate = useNavigate();
   const optionsRef = useRef(null);
@@ -48,14 +48,30 @@ function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, o
     setShowOptions(!showOptions);
   };
 
-  const handleOptionClick = async (action, e) => {
-    e.stopPropagation();
-    setShowOptions(false);
+  const handleOptionClick = async (option, e) => {
+    e.stopPropagation(); // Prevent card click
     
-    switch (action) {
+    switch (option) {
       case 'favorite':
-        console.log('Toggle favorite:', workspace.id);
-        // Implémentation à faire
+        try {
+          const token = localStorage.getItem('token');
+          const method = workspace.isFavorite ? 'DELETE' : 'POST';
+          
+          const response = await fetch(`${API_URL}/api/workspaces/${workspace.id}/favorites`, {
+            method: method,
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) throw new Error('Failed to update favorite status');
+          
+          // Toggle favorite status locally and call parent callback
+          const updatedWorkspace = { ...workspace, isFavorite: !workspace.isFavorite };
+          if (onFavoriteToggle) onFavoriteToggle(updatedWorkspace);
+        } catch (error) {
+          console.error('Error updating favorite:', error);
+        }
         break;
       case 'leave':
         try {
@@ -123,6 +139,8 @@ function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, o
       default:
         break;
     }
+    
+    setShowOptions(false);
   };
 
   return (
