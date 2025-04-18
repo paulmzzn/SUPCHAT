@@ -3,10 +3,21 @@ import { API_URL } from '../../config/config';
 import { useNavigate } from 'react-router-dom';
 import './JoinWorkspaceButton.css';
 
-const JoinWorkspaceButton = ({ workspaceId, isPrivate, onSuccess }) => {
+const JoinWorkspaceButton = ({ workspaceId, isPrivate, onSuccess, hasJoined }) => {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Si l'utilisateur a déjà rejoint, afficher un bouton désactivé
+  if (hasJoined) {
+    return (
+      <div className="join-button-container">
+        <button className="join-button joined" disabled>
+          Rejoint
+        </button>
+      </div>
+    );
+  }
 
   const handleJoin = async () => {
     try {

@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot, FaAt } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import './WorkspaceDetails.css';
 import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
 import { useNavigate } from 'react-router-dom'; // Ajout import
@@ -39,6 +41,12 @@ const renderTextWithLinks = (text) => {
     // Sinon, c'est du texte normal
     return part;
   });
+};
+
+// Simplified function that no longer adds highlighting
+const processMessageContent = (text) => {
+  if (!text) return '';
+  return text; // Simply return the original text without any modifications
 };
 
 // Helper pour afficher le bon icône de fichier
@@ -100,8 +108,8 @@ function WorkspaceDetails() {
     showImages, members, files, images, showCreateChannelModal, newChannel, 
     isCreatingChannel, channelError, contextMenu, showEditChannelModal, editingChannel, 
     isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
-    loadingMessages, chatContainerRef, socket, currentUserId, messageContextMenu, 
-    showEmojiPicker, replyingTo, commonEmojis,
+    loadingMessages, chatContainerRef, socket, currentUserId, currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
+    messageContextMenu, showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
     // Mention state and handlers
     showMentionSuggestions, mentionSuggestions, activeMentionIndex,
@@ -116,6 +124,8 @@ function WorkspaceDetails() {
     setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType,
     // New handlers for mentions
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
+    // New handler for deleting messages
+    handleDeleteMessage,
   } = useWorkspaceDetails(workspaceId);
 
   // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
@@ -333,8 +343,16 @@ function WorkspaceDetails() {
                         </div>
 
                         {/* *** Always use ReactMarkdown for all messages *** */}
-                        <div className="message-text"> {/* Wrap ReactMarkdown */} 
-                          <ReactMarkdown>{message.contenu}</ReactMarkdown>
+                        <div className="message-text"> 
+                          <ReactMarkdown components={{
+                            p: ({node, ...props}) => <p {...props} className="message-paragraph" />,
+                            span: ({node, ...props}) => <span {...props} />,
+                          }} 
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]} 
+                          >
+                            {processMessageContent(message.contenu, currentUserName)}
+                          </ReactMarkdown>
                         </div>
                         {/* *** End Markdown rendering *** */}
                         
@@ -815,6 +833,13 @@ function WorkspaceDetails() {
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
             </div>
+            {/* Ajouter l'option de suppression uniquement pour les messages de l'utilisateur actuel */}
+            {messageContextMenu.message && messageContextMenu.message.fk_utilisateur === currentUserId && (
+              <div className="context-menu-item delete" onClick={handleDeleteMessage}> {/* Use new handler */}
+                <FaTrashAlt className="context-menu-icon" />
+                <span>Supprimer</span>
+              </div>
+            )}
           </div>
         )}
         
