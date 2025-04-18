@@ -4,28 +4,30 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Configure AWS SDK with explicit credentials
+// Configure AWS SDK with explicit credentials for Scaleway
 const s3Config = {
-  region: process.env.AWS_REGION || 'eu-west-3',
+  region: process.env.SCW_REGION || 'fr-par',
+  endpoint: process.env.SCW_ENDPOINT || 'https://s3.fr-par.scw.cloud/',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
+    accessKeyId: process.env.SCW_ACCESS_KEY_ID || 'REDACTED',
+    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY || 'REDACTED'
+  },
+  s3ForcePathStyle: true // Required for Scaleway S3 compatibility
 };
 
 // Create S3 service object with explicit configuration
 const s3 = new AWS.S3(s3Config);
 
-// S3 bucket name - CHANGED TO MATCH YOUR ENV VARIABLE
+// S3 bucket name
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
 // Log configuration status (without revealing sensitive data)
-console.log(`S3 Configuration: Region=${s3Config.region}, Bucket=${BUCKET_NAME}, Credentials: ${process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set'}`);
+console.log(`S3 Configuration: Region=${s3Config.region}, Bucket=${BUCKET_NAME}, Endpoint=${s3Config.endpoint}, Credentials: ${s3Config.credentials.accessKeyId ? 'Set' : 'Not set'}`);
 
-// Update the uploadToS3 function to return the correct URL format
+// Update the uploadToS3 function to return the correct URL format for Scaleway
 export const uploadToS3 = async (file, folder = 'workspaces') => {
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !BUCKET_NAME) {
-    throw new Error("AWS credentials or bucket name not configured");
+  if (!s3Config.credentials.accessKeyId || !s3Config.credentials.secretAccessKey || !BUCKET_NAME) {
+    throw new Error("Scaleway S3 credentials or bucket name not configured");
   }
 
   try {
@@ -40,24 +42,23 @@ export const uploadToS3 = async (file, folder = 'workspaces') => {
       ContentType: file.mimetype
     };
     
-    console.log(`Attempting to upload to S3 bucket: ${BUCKET_NAME}`);
+    console.log(`Attempting to upload to Scaleway S3 bucket: ${BUCKET_NAME}`);
     
     // Upload to S3
     await s3.upload(params).promise();
     
-    // Construct the correct URL format with region
-    const region = process.env.AWS_REGION || 'us-east-1';
-    const correctUrl = `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${fileName}`;
+    // Construct the correct URL format for Scaleway S3
+    const correctUrl = `${s3Config.endpoint}${BUCKET_NAME}/${fileName}`.replace(/([^:])\/\/+/g, '$1/');
     
-    console.log(`Generated S3 URL: ${correctUrl}`);
+    console.log(`Generated Scaleway S3 URL: ${correctUrl}`);
     return correctUrl;
   } catch (error) {
-    console.error("Error uploading to S3:", error);
+    console.error("Error uploading to Scaleway S3:", error);
     throw error;
   }
 };
 
-// Also update the deleteFromS3 function to handle the correct URL format
+// Update the deleteFromS3 function to handle Scaleway S3 URL format
 export const deleteFromS3 = async (url) => {
   if (!url) {
     console.warn("No URL provided, skipping delete");
@@ -65,23 +66,33 @@ export const deleteFromS3 = async (url) => {
   }
   
   try {
-    // Extract the key from the region-specific URL format
-    // Example: https://REDACTED.s3.us-east-1.amazonaws.com/workspaces/banners/file.png
+    // Extract the key from Scaleway S3 URL format
+    // Example: https://s3.fr-par.scw.cloud/bucket-name/workspaces/file.png
+    let key;
     
-    // Find the position after the bucket name and region in the URL
-    const bucketWithRegionPattern = `${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/`;
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
     
-    // Extract the key (everything after the bucket and region)
-    const startPos = url.indexOf(bucketWithRegionPattern);
-    if (startPos === -1) {
-      throw new Error("Invalid S3 URL format");
+    // Extract the part after the bucket name
+    const bucketPrefix = `/${BUCKET_NAME}/`;
+    if (pathname.startsWith(bucketPrefix)) {
+      key = pathname.substring(bucketPrefix.length);
+    } else {
+      // Alternative approach: try to find the key after the last occurrence of bucket name
+      const pathParts = pathname.split('/').filter(Boolean);
+      const bucketIndex = pathParts.findIndex(part => part === BUCKET_NAME);
+      if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
+        key = pathParts.slice(bucketIndex + 1).join('/');
+      } else {
+        throw new Error(`Could not extract key from URL: ${url}`);
+      }
     }
-    
-    const key = url.substring(startPos + bucketWithRegionPattern.length);
     
     if (!key) {
-      throw new Error("Invalid S3 URL - could not extract key");
+      throw new Error("Invalid Scaleway S3 URL - could not extract key");
     }
+    
+    console.log(`Deleting object with key: ${key} from bucket: ${BUCKET_NAME}`);
     
     const params = {
       Bucket: BUCKET_NAME,
@@ -91,7 +102,7 @@ export const deleteFromS3 = async (url) => {
     await s3.deleteObject(params).promise();
     return true;
   } catch (error) {
-    console.error("Error deleting from S3:", error);
+    console.error("Error deleting from Scaleway S3:", error);
     return false;
   }
 };

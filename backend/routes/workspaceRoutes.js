@@ -15,6 +15,12 @@ import {
   uploadWorkspaceImages,
   getUserWorkspaces // Ajout de la nouvelle fonction
 } from '../controllers/workspaceController.js';
+import {
+  addFavorite,
+  removeFavorite,
+  getFavorites,
+  checkFavorite
+} from '../controllers/workspaceFavorisController.js';
 import { verifyToken } from '../middleware/authMiddleware.js'; // Importer le middleware d'authentification
 
 const router = express.Router();
@@ -36,6 +42,12 @@ const upload = multer({
 
 // Route pour récupérer les workspaces d'un utilisateur authentifié
 router.get('/user/workspaces', verifyToken, getUserWorkspaces);
+
+// Routes pour les favoris
+router.post('/:workspaceId/favorites', verifyToken, addFavorite);
+router.delete('/:workspaceId/favorites', verifyToken, removeFavorite);
+router.get('/favorites', verifyToken, getFavorites);
+router.get('/:workspaceId/favorites/check', verifyToken, checkFavorite);
 
 // Existing routes
 router.post('/', verifyToken, createWorkspace); // Ajout de verifyToken
