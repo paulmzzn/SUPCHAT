@@ -316,7 +316,7 @@ function WorkspaceDetails() {
                     <div 
                       key={message.id_message} 
                       id={`msg-${message.id_message}`} // Add ID for scrolling to parent
-                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : (message.isBot ? 'bot-message' : 'other-message')}`} // Use currentUserId from hook
+                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
                       onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
                     >
                       <div className="message-avatar">
@@ -371,7 +371,7 @@ function WorkspaceDetails() {
                         
                         <div className="message-header">
                           <span className="message-author">
-                            {message.isBot || message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
+                            {message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
                               <>
                                 <span>{message.nom}</span>
                                 <span className="bot-icon-spacer"> </span>
@@ -508,7 +508,7 @@ function WorkspaceDetails() {
                 {/* *** Display Typing Indicator *** */}
                 {isMistralTyping && (
                   <div 
-                    className="chat-message bot-message typing-indicator"
+                    className="chat-message other-message typing-indicator"
                   >
                     <div className="message-avatar">
                       <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
