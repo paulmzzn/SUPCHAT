@@ -336,8 +336,11 @@ const socketManager = (io) => {
             date_creation: fullUserMessage.date_creation || fullUserMessage.created_at || new Date().toISOString()
           });
           
-          // Indiquer que Mistral est en train d'écrire
-          io.to(`${channelId}`).emit('botTyping', { isTyping: true });
+          // Indiquer que Mistral est en train d'écrire avec l'événement 'typing'
+          io.to(`${channelId}`).emit('typing', { 
+            userId: MISTRAL_USER_ID, 
+            username: MISTRAL_USERNAME 
+          });
           
           // Extraire le contenu réel de la question (enlever @Mistral)
           const question = content.replace(/@Mistral(\s+AI)?/gi, '').trim();
@@ -385,8 +388,10 @@ const socketManager = (io) => {
             // Récupérer le message complet avec infos utilisateur
             const fullBotMessage = await MessageModel.getById(botMessage.id_message);
             
-            // Indiquer que Mistral a fini d'écrire
-            io.to(`${channelId}`).emit('botTyping', { isTyping: false });
+            // Après avoir reçu la réponse, arrêter l'indication de frappe
+            io.to(`${channelId}`).emit('stopTyping', { 
+              userId: MISTRAL_USER_ID 
+            });
             
             // Diffuser le message de Mistral aux membres du canal
             io.to(`${channelId}`).emit('message', {
@@ -397,8 +402,10 @@ const socketManager = (io) => {
               date_creation: fullBotMessage.date_creation || fullBotMessage.created_at || new Date().toISOString()
             });
           } catch (error) {
-            // Indiquer que Mistral a fini d'écrire (en cas d'erreur)
-            io.to(`${channelId}`).emit('botTyping', { isTyping: false });
+            // En cas d'erreur, arrêter également l'indication de frappe
+            io.to(`${channelId}`).emit('stopTyping', { 
+              userId: MISTRAL_USER_ID 
+            });
             
             console.error('Erreur lors de la communication avec Mistral:', error);
             

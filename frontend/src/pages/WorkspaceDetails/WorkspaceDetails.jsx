@@ -125,6 +125,7 @@ function WorkspaceDetails() {
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
     // New handler for deleting messages
     handleDeleteMessage,
+    handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
   } = useWorkspaceDetails(workspaceId);
 
   // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
@@ -150,31 +151,6 @@ function WorkspaceDetails() {
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
-  };
-
-  // Modifier le handler d'envoi de message pour traiter spécifiquement les mentions de Mistral
-  const handleMistralMention = (message) => {
-    // Vérifier si le message contient une mention de Mistral
-    const mistralMentionPattern = /@Mistral/i;
-    if (mistralMentionPattern.test(message)) {
-      debugMistralInteraction("Mention de Mistral détectée");
-      
-      if (socket && socket.connected && activeChannel) {
-        debugMistralInteraction("Socket connecté, tentative d'envoi directement à Mistral");
-        socket.emit('mistralRequest', {
-          content: message,
-          channelId: activeChannel.id
-        });
-        
-        // Réinitialiser à la fois newMessage et handleNewMessageChange
-        // pour s'assurer que les deux états sont mis à jour
-        setNewMessage('');
-        handleNewMessageChange('');
-        
-        return true; // Indique que la mention a été gérée
-      }
-    }
-    return false; // Indique que ce n'était pas une mention de Mistral
   };
 
   // Utiliser le handler original pour l'envoi normal
@@ -507,9 +483,7 @@ function WorkspaceDetails() {
                 )}
                 {/* *** Display Typing Indicator *** */}
                 {isMistralTyping && (
-                  <div 
-                    className="chat-message other-message typing-indicator"
-                  >
+                  <div className="chat-message other-message typing-indicator">
                     <div className="message-avatar">
                       <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
                     </div>
@@ -523,7 +497,10 @@ function WorkspaceDetails() {
                         <span className="message-time"></span>
                       </div>
                       <div className="message-text">
-                        <i>est en train d'écrire...</i>
+                        <p className="message-paragraph">
+                          <i>est en train d'écrire...</i>
+                          <span className="typing-animation"></span>
+                        </p>
                       </div>
                     </div>
                   </div>
