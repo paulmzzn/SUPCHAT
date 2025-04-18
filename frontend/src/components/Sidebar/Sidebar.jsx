@@ -39,8 +39,8 @@ function Sidebar() {
         </Link>
         
         <div className="sidebar-nav">
-          <Link to="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}>
-            <FaComment className={getIconClasses('/dashboard')} />
+          <Link to="/direct-messages" className={`nav-item ${isActive('/direct-messages') ? 'active' : ''}`}>
+            <FaComment className={getIconClasses('/direct-messages')} />
             <span className="notification-badge">12</span>
           </Link>
           
