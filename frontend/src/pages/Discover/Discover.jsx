@@ -13,13 +13,17 @@ function Discover() {
   const [userWorkspaces, setUserWorkspaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userWorkspacesLoaded, setUserWorkspacesLoaded] = useState(false); // Nouvel état pour suivre le chargement
 
   // Fetch user's workspaces to check membership
   useEffect(() => {
     const fetchUserWorkspaces = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          setUserWorkspacesLoaded(true); // Marquer comme chargé même si pas de token
+          return;
+        }
         
         const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
           headers: {
@@ -33,8 +37,11 @@ function Discover() {
           const userWorkspaceIds = data.map(ws => ws.id_workspace);
           setUserWorkspaces(userWorkspaceIds);
         }
+        
+        setUserWorkspacesLoaded(true); // Marquer comme chargé dans tous les cas
       } catch (err) {
         console.error("Error fetching user workspaces:", err);
+        setUserWorkspacesLoaded(true); // Marquer comme chargé même en cas d'erreur
       }
     };
 
@@ -81,11 +88,11 @@ function Discover() {
       }
     };
 
-    // Attendre que userWorkspaces soit chargé
-    if (userWorkspaces.length > 0 || localStorage.getItem('token') === null) {
+    // Modifier la condition pour charger les workspaces dès que userWorkspaces est chargé
+    if (userWorkspacesLoaded) {
       fetchWorkspaces();
     }
-  }, [userWorkspaces]); 
+  }, [userWorkspaces, userWorkspacesLoaded]); 
 
   // Filter workspaces based on search query
   useEffect(() => {
