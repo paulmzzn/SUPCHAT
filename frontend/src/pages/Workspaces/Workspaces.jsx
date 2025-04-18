@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { FaSearch, FaHeart, FaCamera, FaImage, FaTimes } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceCard from "./WorkspaceCard";
-import { useNavigate } from "react-router-dom";  // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import "./Workspaces.css";
 import { API_URL } from "../../config/config";
 
@@ -23,12 +23,11 @@ function Workspaces() {
     iconFile: null,
     iconPreview: null
   });
-  
+
   const bannerInputRef = useRef(null);
   const iconInputRef = useRef(null);
-  const navigate = useNavigate();  // Pour la redirection
+  const navigate = useNavigate();
 
-  // Fonction pour vérifier si le token est valide
   const checkTokenValidity = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -50,7 +49,6 @@ function Workspaces() {
         return false;
       }
 
-      // Token est valide
       const data = await response.json();
       console.log("Token valide, expiration dans:", data.expires_in);
       return true;
@@ -60,7 +58,6 @@ function Workspaces() {
     }
   }, []);
 
-  // Séparons la vérification du token de la redirection
   useEffect(() => {
     const verifyAndRedirectIfNeeded = async () => {
       const isValid = await checkTokenValidity();
@@ -68,85 +65,108 @@ function Workspaces() {
         navigate('/login');
       }
     };
-    
+
     verifyAndRedirectIfNeeded();
   }, [checkTokenValidity, navigate]);
 
-  // Define fetchWorkspaces as a memoized function to avoid recreating it on each render
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error("Vous devez être connecté pour voir vos favoris");
+      }
+
+      const response = await fetch(`${API_URL}/api/workspaces/favorites`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error("Erreur lors de la récupération des favoris:", response.status);
+        return [];
+      }
+
+      const data = await response.json();
+      console.log("Favoris récupérés:", data);
+
+      return data.map((workspace) => ({
+        id: workspace.id_workspace,
+        name: workspace.nom,
+        description: workspace.description || "No description available",
+        banner: workspace.banner_url || "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        icon: workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        onlineUsers: workspace.online_users || 0,
+        totalMembers: workspace.total_members || 0,
+        isFavorite: true,
+        isPrivate: workspace.is_private || false,
+        userRole: workspace.user_role || "member",
+        date_ajout_favoris: workspace.date_ajout_favoris
+      }));
+    } catch (err) {
+      console.error("Error fetching favorite workspaces:", err);
+      return [];
+    }
+  }, []);
+
   const fetchWorkspaces = useCallback(async () => {
     try {
       setIsLoading(true);
-      
-      // Récupérer le token depuis le localStorage
+
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         throw new Error("Vous devez être connecté pour voir vos workspaces");
       }
-      
-      console.log("Token récupéré pour fetch:", token.substring(0, 15) + "...");
-      
-      // Utiliser la route authentifiée pour récupérer uniquement les workspaces de l'utilisateur
+
       const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      console.log("Statut de la réponse workspaces:", response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Réponse d'erreur workspaces:", errorText);
-        
-        // Si le token est expiré, on laissera l'effet de vérification s'en occuper
-        throw new Error(`Failed to fetch workspaces: ${response.status} ${errorText}`);
+        throw new Error(`Failed to fetch workspaces: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("Workspaces récupérés:", data.length);
 
-      // Transform backend data to match frontend format
       const transformedWorkspaces = data.map((workspace) => ({
         id: workspace.id_workspace,
         name: workspace.nom,
         description: workspace.description || "No description available",
-        banner:
-          workspace.banner_url ||
-          "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
-        icon:
-          workspace.icon_url ||
-          "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        banner: workspace.banner_url || "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        icon: workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
         onlineUsers: workspace.online_users || 0,
         totalMembers: workspace.total_members || 0,
-        isFavorite: workspace.is_favorite || false,
+        isFavorite: false,
         isPrivate: workspace.is_private || false,
-        userRole: workspace.user_role || "member", // Nouveau champ pour le rôle de l'utilisateur
+        userRole: workspace.user_role || "member",
       }));
 
-      // Pour les favoris, nous pourrions implémenter une logique spécifique plus tard
-      // Pour l'instant, utilisons les 2 premiers workspaces comme favoris
-      const favorites = transformedWorkspaces.slice(0, 2);
+      const favorites = await fetchFavorites();
 
-      // Recent workspaces - all user workspaces
-      const recent = [...transformedWorkspaces];
+      const workspacesWithFavorites = transformedWorkspaces.map(workspace => {
+        const isFavorite = favorites.some(f => f.id === workspace.id);
+        return { ...workspace, isFavorite };
+      });
 
+      setRecentWorkspaces(workspacesWithFavorites);
       setFavoriteWorkspaces(favorites);
-      setRecentWorkspaces(recent);
+
     } catch (err) {
       console.error("Error fetching workspaces:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, []); // No dependencies, so this function never changes
+  }, [fetchFavorites]);
 
-  // Fetch workspaces only once when component mounts
   useEffect(() => {
     fetchWorkspaces();
-  }, [fetchWorkspaces]); // Only re-run when fetchWorkspaces changes (which it never will)
+  }, [fetchWorkspaces]);
 
-  // Filter workspaces based on search query
   useEffect(() => {
     if (!searchQuery) {
       setFilteredWorkspaces(recentWorkspaces);
@@ -161,23 +181,19 @@ function Workspaces() {
     setFilteredWorkspaces(filtered);
   }, [searchQuery, recentWorkspaces]);
 
-  // Handle search input change
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
-  // Function to handle adding a new workspace
   const handleAddWorkspace = () => {
     setShowCreateModal(true);
   };
 
-  // Function to handle modal close
   const handleCloseModal = () => {
     setShowCreateModal(false);
-    setNewWorkspace({ name: "", description: "", isPrivate: false, bannerFile: null, bannerPreview: null, iconFile: null, iconPreview: null});
+    setNewWorkspace({ name: "", description: "", isPrivate: false, bannerFile: null, bannerPreview: null, iconFile: null, iconPreview: null });
   };
 
-  // Function to handle form input change
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setNewWorkspace({
@@ -186,23 +202,20 @@ function Workspaces() {
     });
   };
 
-  // Function to handle image uploads
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    // Check if file is an image
+
     if (!file.type.match('image.*')) {
       alert('Please select an image file');
       return;
     }
-    
-    // Check if file is too large (5MB max)
+
     if (file.size > 5 * 1024 * 1024) {
       alert('Image must be less than 5MB');
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = () => {
       if (type === 'banner') {
@@ -221,8 +234,7 @@ function Workspaces() {
     };
     reader.readAsDataURL(file);
   };
-  
-  // Function to remove an uploaded image
+
   const removeImage = (type) => {
     if (type === 'banner') {
       setNewWorkspace(prev => ({
@@ -238,8 +250,7 @@ function Workspaces() {
       }));
     }
   };
-  
-  // Updated function to trigger file inputs
+
   const triggerFileInput = (type) => {
     if (type === 'banner' && bannerInputRef.current) {
       bannerInputRef.current.click();
@@ -247,20 +258,16 @@ function Workspaces() {
       iconInputRef.current.click();
     }
   };
-  
-  
-  // Updated function to create a new workspace
+
   const createWorkspace = async (e) => {
     e.preventDefault();
     try {
-      // Get the token for authentication
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         throw new Error("Vous devez être connecté pour créer un workspace");
       }
-      
-      // First create the workspace with basic data
+
       const workspaceData = {
         nom: newWorkspace.name,
         description: newWorkspace.description || "",
@@ -271,7 +278,7 @@ function Workspaces() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // Ajouter le token pour l'authentification
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(workspaceData)
       });
@@ -279,39 +286,67 @@ function Workspaces() {
       if (!response.ok) {
         throw new Error("Failed to create workspace");
       }
-      
+
       const createdWorkspace = await response.json();
       const workspaceId = createdWorkspace.id_workspace;
-      
-      // If we have images, upload them in a second request
+
       if (newWorkspace.bannerFile || newWorkspace.iconFile) {
         const formData = new FormData();
-        
+
         if (newWorkspace.bannerFile) {
           formData.append('banner', newWorkspace.bannerFile);
         }
-        
+
         if (newWorkspace.iconFile) {
           formData.append('icon', newWorkspace.iconFile);
         }
-        
+
         const imageResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/images`, {
           method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`  // Ajout du token d'autorisation
+          },
           body: formData
         });
-        
+
         if (!imageResponse.ok) {
           console.warn("Workspace created successfully, but images couldn't be saved");
         }
       }
 
-      fetchWorkspaces();
+      // Fermer le modal et nettoyer le formulaire
       handleCloseModal();
+      
+      // Rediriger l'utilisateur vers le workspace nouvellement créé
+      navigate(`/workspace/${workspaceId}`);
     } catch (err) {
       console.error("Error creating workspace:", err);
       setError(err.message);
     }
   };
+
+  const handleLeaveWorkspace = (workspaceId) => {
+    console.log(`Workspace ${workspaceId} quitté, rafraîchissement de la liste...`);
+    fetchWorkspaces();
+  };
+
+  const handleFavoriteToggle = useCallback((updatedWorkspace) => {
+    setRecentWorkspaces(prev =>
+      prev.map(workspace =>
+        workspace.id === updatedWorkspace.id ?
+          { ...workspace, isFavorite: updatedWorkspace.isFavorite } :
+          workspace
+      )
+    );
+
+    if (updatedWorkspace.isFavorite) {
+      setFavoriteWorkspaces(prev => [...prev, updatedWorkspace]);
+    } else {
+      setFavoriteWorkspaces(prev =>
+        prev.filter(workspace => workspace.id !== updatedWorkspace.id)
+      );
+    }
+  }, []);
 
   return (
     <div className="app-layout">
@@ -344,73 +379,76 @@ function Workspaces() {
           <div className="error-state">Error: {error}</div>
         ) : (
           <>
-            {/* Favorites section */}
             <div className="favorites-section">
               <div className="section-title">
                 <FaHeart className="section-icon heart-icon" />
                 <h2>Favorites</h2>
               </div>
               <div className="favorites-container">
-                {favoriteWorkspaces.map((workspace) => (
-                  <div key={workspace.id} className="favorite-item">
+                {favoriteWorkspaces.length > 0 ? (
+                  favoriteWorkspaces.map((workspace) => (
                     <div
-                      className="favorite-icon"
-                      style={{ backgroundImage: `url(${workspace.icon})` }}
-                    ></div>
-                    <span className="favorite-name">{workspace.name}</span>
+                      key={workspace.id}
+                      className="favorite-item"
+                      onClick={() => navigate(`/workspace/${workspace.id}`)}
+                    >
+                      <div
+                        className="favorite-icon"
+                        style={{ backgroundImage: `url(${workspace.icon})` }}
+                      ></div>
+                      <span className="favorite-name">{workspace.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="favorite-empty-message">
+                    Ajoutez des workspaces à vos favoris
                   </div>
-                ))}
-                {/* Empty placeholder slots for future favorites */}
-                {[...Array(3 - favoriteWorkspaces.length)].map((_, i) => (
-                  <div key={`empty-${i}`} className="favorite-item empty">
-                    <div className="favorite-icon empty"></div>
-                  </div>
-                ))}
+                )}
               </div>
             </div>
 
-            {/* Workspaces grid */}
             <div className="workspaces-section">
               <h2 className="section-title">All Workspaces</h2>
               <div className="workspaces-grid">
-                {/* Add workspace button/card - NOW FIRST */}
                 <div className="workspace-card add-workspace" onClick={handleAddWorkspace}>
                   <div className="add-workspace-content">
                     <div className="plus-icon">+</div>
                     <p>Create New Workspace</p>
                   </div>
                 </div>
-                
-                {/* Existing workspaces */}
+
                 {filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                  <WorkspaceCard
+                    key={workspace.id}
+                    workspace={workspace}
+                    onWorkspaceLeave={handleLeaveWorkspace}
+                    onFavoriteToggle={handleFavoriteToggle}
+                  />
                 ))}
               </div>
             </div>
 
-            {/* Create Workspace Modal */}
             {showCreateModal && (
               <div className="modal-overlay" onClick={handleCloseModal}>
                 <div className="modal-content modern" onClick={e => e.stopPropagation()}>
                   <h2>Create New Workspace</h2>
-                  
+
                   <form onSubmit={createWorkspace}>
-                    {/* Banner Image Upload */}
                     <div className="image-upload-container banner-upload">
-                      <input 
+                      <input
                         type="file"
                         ref={bannerInputRef}
                         onChange={(e) => handleImageUpload(e, 'banner')}
                         accept="image/*"
                         className="hidden-file-input"
                       />
-                      
+
                       {newWorkspace.bannerPreview ? (
                         <div className="image-preview banner-preview">
                           <img src={newWorkspace.bannerPreview} alt="Banner preview" />
-                          <button 
-                            type="button" 
-                            className="remove-image-btn" 
+                          <button
+                            type="button"
+                            className="remove-image-btn"
                             onClick={() => removeImage('banner')}
                           >
                             <FaTimes />
@@ -423,25 +461,23 @@ function Workspaces() {
                         </div>
                       )}
                     </div>
-                    
-                    {/* Icon and Name Row */}
+
                     <div className="workspace-identity-row">
-                      {/* Icon Upload */}
                       <div className="icon-upload-container">
-                        <input 
+                        <input
                           type="file"
                           ref={iconInputRef}
                           onChange={(e) => handleImageUpload(e, 'icon')}
                           accept="image/*"
                           className="hidden-file-input"
                         />
-                        
+
                         {newWorkspace.iconPreview ? (
                           <div className="icon-preview">
                             <img src={newWorkspace.iconPreview} alt="Icon preview" />
-                            <button 
-                              type="button" 
-                              className="remove-icon-btn" 
+                            <button
+                              type="button"
+                              className="remove-icon-btn"
                               onClick={() => removeImage('icon')}
                             >
                               <FaTimes />
@@ -453,9 +489,8 @@ function Workspaces() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="workspace-name-emoji">
-                        {/* Workspace Name */}
                         <div className="form-group name-input">
                           <label htmlFor="name">Workspace Name</label>
                           <input
@@ -470,8 +505,7 @@ function Workspaces() {
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Description */}
+
                     <div className="form-group">
                       <label htmlFor="description">Description</label>
                       <textarea
@@ -482,18 +516,17 @@ function Workspaces() {
                         placeholder="What's this workspace about?"
                       ></textarea>
                     </div>
-                    
-                    {/* Privacy Toggle */}
+
                     <div className="privacy-toggle">
                       <label htmlFor="isPrivate" className="toggle-label">
                         <span className="privacy-label">Privacy</span>
                         <span className="privacy-description">
-                          {newWorkspace.isPrivate ? 
-                            "Private - Only invited members can join" : 
+                          {newWorkspace.isPrivate ?
+                            "Private - Only invited members can join" :
                             "Public - Anyone with the link can join"}
                         </span>
                       </label>
-                      
+
                       <label className="switch">
                         <input
                           type="checkbox"
@@ -505,8 +538,7 @@ function Workspaces() {
                         <span className="slider round"></span>
                       </label>
                     </div>
-                    
-                    {/* Form Actions */}
+
                     <div className="modal-actions">
                       <button type="button" onClick={handleCloseModal} className="cancel-btn">
                         Cancel

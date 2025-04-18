@@ -389,6 +389,39 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Ajouter cette fonction pour récupérer un utilisateur par ID
+const getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await UserModel.getUserById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    
+    // Préparer l'objet de réponse avec le champ date_creation inclus
+    const userData = {
+      id_utilisateur: user.id_utilisateur,
+      nom: user.nom,
+      email: user.email,
+      photo_de_profil: user.photo_de_profil,
+      bio: user.bio || '',
+      status: convertStatus(user.fk_statut),
+      date_creation: user.date_creation, // S'assurer que ce champ est inclus
+      // Inclure d'autres champs si nécessaire
+    };
+    
+    res.status(200).json(userData);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+    res.status(500).json({
+      message: 'Erreur lors de la récupération de l\'utilisateur',
+      error: error.message
+    });
+  }
+};
+
 // Mettre à jour le profil d'un utilisateur
 const updateUserProfile = async (req, res) => {
   try {
@@ -512,5 +545,6 @@ export {
   resetPassword,
   resendValidationCode,  // Ajout du nouveau contrôleur
   getUserProfile,
+  getUserById,
   updateUserProfile
 };

@@ -98,12 +98,26 @@
   align-items: center;
   cursor: pointer;
   min-width: 80px;
+  transition: transform 0.2s ease;
+}
+
+.favorite-item:hover {
+  transform: translateY(-3px);
+}
+
+.favorite-item .favorite-icon {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
+.favorite-item:hover .favorite-icon {
+  box-shadow: 0 5px 15px rgba(147, 72, 183, 0.3);
 }
 
 .favorite-icon {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
+  border-radius: 12px; /* Changé de 50% (cercle) à 12px pour avoir un carré avec coins arrondis */
   background-size: cover;
   background-position: center;
   margin-bottom: 8px;
@@ -112,6 +126,7 @@
 .favorite-icon.empty {
   background-color: rgba(255, 255, 255, 0.1);
   border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px; /* Changé de 50% (cercle) à 12px pour avoir un carré avec coins arrondis */
 }
 
 .favorite-name {
@@ -122,6 +137,21 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.favorite-empty-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 1rem;
+  width: 100%;
+  min-height: 60px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 /* Workspaces grid section */
