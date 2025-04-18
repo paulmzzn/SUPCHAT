@@ -2,9 +2,12 @@
   flex: 1;
   min-height: 100vh;
   padding: 2rem;
+  padding-bottom: 100px; /* Augmente l'espace en bas de la page */
   background-color: #262626;
   position: relative;
   overflow-x: hidden;
+  overflow-y: auto; /* Assure que le défilement vertical est activé */
+  box-sizing: border-box;
 }
 
 /* Header section */
@@ -72,12 +75,14 @@
 /* Workspaces grid section */
 .workspaces-section {
   margin-top: 2rem;
+  margin-bottom: 0px; /* Ajoute de l'espace après la dernière section */
 }
 
 .workspaces-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
+  padding-bottom: 50px; /* Ajoute de l'espace après la grille */
 }
 
 /* Create workspace card */
@@ -147,7 +152,7 @@
   .discover-container {
     margin-left: 0;
     padding: 1.5rem;
-    padding-bottom: 90px;
+    padding-bottom: 120px; /* Encore plus d'espace en bas sur mobile */
   }
   
   .discover-header {
@@ -169,4 +174,16 @@
   .search-bar {
     width: 250px;  /* Slightly narrower on medium screens */
   }
+}
+
+/* Assure que le contenu puisse défiler dans le conteneur principal */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-layout > div:last-child {
+  flex: 1;
+  overflow-y: auto;
 }

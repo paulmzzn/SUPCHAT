@@ -95,6 +95,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   // Current User ID state
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserName, setCurrentUserName] = useState('');
 
   // Message Context Menu state
   const [messageContextMenu, setMessageContextMenu] = useState({
@@ -257,6 +258,31 @@ export const useWorkspaceDetails = (workspaceId) => {
     fetchWorkspaceDetails();
   }, [workspaceId, fetchCanals, fetchWorkspaceMembers]);
 
+  // Fetch current user details effect
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch(`${API_URL}/api/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch user info');
+        
+        const userData = await response.json();
+        setCurrentUserName(userData.nom || userData.name);
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+      }
+    };
+    
+    fetchCurrentUser();
+  }, []);
+
   // Filter channels effect
   useEffect(() => {
     if (!searchQuery) {
@@ -409,6 +435,22 @@ export const useWorkspaceDetails = (workspaceId) => {
       );
     });
 
+    // Add listener for deleted messages
+    socket.on('messageDeleted', ({ messageId }) => {
+      console.log(`Socket event 'messageDeleted' received for message ${messageId}`);
+      setMessages(prevMessages => 
+        prevMessages.filter(message => message.id_message !== messageId)
+      );
+    });
+
+    // Add another listener for 'deleteMessage' event (in case server uses this instead)
+    socket.on('deleteMessage', ({ messageId }) => {
+      console.log(`Socket event 'deleteMessage' received for message ${messageId}`);
+      setMessages(prevMessages => 
+        prevMessages.filter(message => message.id_message !== messageId)
+      );
+    });
+
     // *** Listen for typing events ***
     socket.on('typing', ({ userId, username }) => {
       // Check if it's the Mistral bot typing
@@ -430,6 +472,8 @@ export const useWorkspaceDetails = (workspaceId) => {
       socket.off('message');
       socket.off('canalJoined');
       socket.off('messageReaction');
+      socket.off('messageDeleted'); // Remove the listener
+      socket.off('deleteMessage'); // Make sure to remove both listeners
       socket.off('typing'); // Clean up listeners
       socket.off('stopTyping'); // Clean up listeners
       setIsMistralTyping(false); // Reset typing state when changing channels
@@ -778,6 +822,73 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   const handleCancelReply = () => setReplyingTo(null);
 
+  const handleDeleteMessage = async () => {
+    try {
+      if (!messageContextMenu.messageId || !socket || !socket.connected) return;
+      
+      // Verify the message belongs to the current user
+      const message = messages.find(m => m.id_message === messageContextMenu.messageId);
+      if (!message || message.fk_utilisateur !== currentUserId) {
+        console.error("Vous ne pouvez pas supprimer les messages d'autres utilisateurs");
+        return;
+      }
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error("Token d'authentification manquant");
+        return;
+      }
+      
+      // Store message ID before closing context menu
+      const messageIdToDelete = messageContextMenu.messageId;
+      const channelId = activeChannel.id;
+      
+      // Close context menu first for better UX
+      handleCloseMessageContextMenu();
+      
+      // Update UI immediately (optimistic update)
+      setMessages(prevMessages => 
+        prevMessages.filter(m => m.id_message !== messageIdToDelete)
+      );
+      
+      // Delete on server via REST API first
+      console.log(`Suppression du message ${messageIdToDelete} via API REST`);
+      const response = await fetch(`${API_URL}/api/messages/${messageIdToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error deleting message: ${response.status}`);
+      }
+      
+      // If API call succeeds, broadcast deletion via socket
+      console.log(`Message ${messageIdToDelete} supprimé avec succès`);
+      
+      // Use consistent event name - ONLY use deleteMessage (not messageDeleted)
+      console.log(`Émission de l'événement deleteMessage pour le message ${messageIdToDelete}`);
+      socket.emit('deleteMessage', {
+        messageId: messageIdToDelete,
+        canalId: channelId,
+        workspaceId: workspaceId // Add workspace ID to help with routing
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors de la suppression du message:', error);
+      
+      // If error occurs, notify user
+      alert("Erreur lors de la suppression: " + error.message);
+      
+      // Refresh the channel to ensure UI is in sync with the server
+      if (activeChannel) {
+        handleSelectChannel(activeChannel);
+      }
+    }
+  };
+
   // Handler for chat input changes to detect mentions
   const handleNewMessageChange = (value) => {
     setNewMessage(value);
@@ -889,7 +1000,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     members, files, images, showCreateChannelModal, newChannel, isCreatingChannel,
     channelError, contextMenu, showEditChannelModal, editingChannel, isUpdatingChannel,
     updateChannelError, activeChannel, messages, newMessage, loadingMessages,
-    chatContainerRef, socket, currentUserId, messageContextMenu, showEmojiPicker,
+    chatContainerRef, socket, currentUserId, currentUserName, messageContextMenu, showEmojiPicker,
     replyingTo, commonEmojis, isMistralTyping, // Return the typing state
     // Mention state and handlers
     showMentionSuggestions, mentionSuggestions, activeMentionIndex,
@@ -902,6 +1013,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleAddReaction, handleCancelReply, toggleMembers, toggleOnlineMembers,
     toggleOfflineMembers, toggleFiles, toggleImages, setNewChannel, setEditingChannel,
     setShowEditChannelModal, setShowEmojiPicker, setNewMessage, getEmojiForType, // Export helper if needed in component
+    handleDeleteMessage, // Add the new handler
     // New handlers for mentions
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
   };

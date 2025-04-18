@@ -5,7 +5,7 @@ class Workspace {
     const query = `
       INSERT INTO workspace (nom, description, is_private, banner_url, icon_url)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING *;
+      RETURNING *; 
     `;
     const values = [nom, description, is_private, banner_url, icon_url];
     const { rows } = await pool.query(query, values);
