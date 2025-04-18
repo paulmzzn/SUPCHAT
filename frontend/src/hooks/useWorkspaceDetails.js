@@ -453,18 +453,26 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
 
     // *** Listen for typing events ***
-    socket.on('typing', ({ userId, username }) => {
-      // Check if it's the Mistral bot typing
-      if (userId === '00000000-0000-0000-0000-000000000001') { // Use the Mistral Bot UUID
+    socket.on('typing', (data) => {
+      console.log('Événement typing reçu:', data);
+      if (data.userId === MISTRAL_USER_ID) {
+        console.log('Mistral commence à écrire');
         setIsMistralTyping(true);
       }
-      // You could extend this to show other users typing too
     });
 
-    socket.on('stopTyping', ({ userId }) => {
-      if (userId === '00000000-0000-0000-0000-000000000001') { // Use the Mistral Bot UUID
+    socket.on('stopTyping', (data) => {
+      console.log('Événement stopTyping reçu:', data);
+      if (data.userId === MISTRAL_USER_ID) {
+        console.log('Mistral arrête d\'écrire');
         setIsMistralTyping(false);
       }
+    });
+
+    // Ajouter aussi un écouteur pour botTyping (au cas où l'ancien nom d'événement est utilisé)
+    socket.on('botTyping', (data) => {
+      console.log('Événement botTyping reçu:', data);
+      setIsMistralTyping(data.isTyping);
     });
     // *** End typing event listeners ***
   
@@ -477,6 +485,7 @@ export const useWorkspaceDetails = (workspaceId) => {
       socket.off('deleteMessage'); // Make sure to remove both listeners
       socket.off('typing'); // Clean up listeners
       socket.off('stopTyping'); // Clean up listeners
+      socket.off('botTyping'); // N'oubliez pas de supprimer aussi cet écouteur
       setIsMistralTyping(false); // Reset typing state when changing channels
     };
   }, [socket, activeChannel, workspaceId]);
@@ -975,6 +984,33 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
+  const handleMistralMention = useCallback((message) => {
+    // Vérifier si le message contient une mention de Mistral
+    const mistralMentionPattern = /@Mistral/i;
+    if (mistralMentionPattern.test(message)) {
+      console.log("Mention de Mistral détectée");
+      
+      if (socket && socket.connected && activeChannel) {
+        console.log("Socket connecté, tentative d'envoi directement à Mistral");
+        
+        // Activer manuellement l'indicateur de frappe avant l'envoi
+        setIsMistralTyping(true);
+        
+        socket.emit('mistralRequest', {
+          content: message,
+          channelId: activeChannel.id
+        });
+        
+        // Réinitialiser newMessage et displayMessage
+        setNewMessage('');
+        setDisplayMessage('');
+        
+        return true;
+      }
+    }
+    return false;
+  }, [socket, activeChannel, setNewMessage, setDisplayMessage, setIsMistralTyping]);
+
   // Return all state and handlers needed by the component
   return {
     workspace, loading, error, searchQuery, channels: filteredChannels, // Use filteredChannels for display
@@ -999,6 +1035,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleDeleteMessage, // Add the new handler
     // New handlers for mentions
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
+    handleMistralMention, // Exposer cette fonction
   };
 };
 
