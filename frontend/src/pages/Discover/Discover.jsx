@@ -10,10 +10,38 @@ function Discover() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [userWorkspaces, setUserWorkspaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch workspaces from backend API - only run once on component mount
+  // Fetch user's workspaces to check membership
+  useEffect(() => {
+    const fetchUserWorkspaces = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Extraire juste les IDs des workspaces de l'utilisateur
+          const userWorkspaceIds = data.map(ws => ws.id_workspace);
+          setUserWorkspaces(userWorkspaceIds);
+        }
+      } catch (err) {
+        console.error("Error fetching user workspaces:", err);
+      }
+    };
+
+    fetchUserWorkspaces();
+  }, []); 
+
+  // Fetch all workspaces from backend API
   useEffect(() => {
     const fetchWorkspaces = async () => {
       try {
@@ -39,6 +67,8 @@ function Discover() {
           totalMembers: workspace.total_members || 0,
           isFavorite: workspace.is_favorite || false,
           isPrivate: workspace.is_private || false,
+          // Ajouter la propriété hasJoined pour chaque workspace
+          hasJoined: userWorkspaces.includes(workspace.id_workspace)
         }));
 
         setWorkspaces(transformedWorkspaces);
@@ -51,10 +81,13 @@ function Discover() {
       }
     };
 
-    fetchWorkspaces();
-  }, []); // Empty dependency array means this runs once on mount
+    // Attendre que userWorkspaces soit chargé
+    if (userWorkspaces.length > 0 || localStorage.getItem('token') === null) {
+      fetchWorkspaces();
+    }
+  }, [userWorkspaces]); 
 
-  // Filter workspaces based on search query and when workspaces change
+  // Filter workspaces based on search query
   useEffect(() => {
     if (!searchQuery) {
       setFilteredWorkspaces(workspaces);
@@ -70,7 +103,7 @@ function Discover() {
             .includes(searchQuery.toLowerCase()))
     );
     setFilteredWorkspaces(filtered);
-  }, [searchQuery, workspaces]); // Only re-run when searchQuery or workspaces change
+  }, [searchQuery, workspaces]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -112,7 +145,8 @@ function Discover() {
                   <WorkspaceCard 
                     key={workspace.id} 
                     workspace={workspace}
-                    showJoinButton={true} // Ajouter cette prop pour afficher le bouton 
+                    showJoinButton={true} 
+                    hasJoined={workspace.hasJoined} // Passer l'information si l'utilisateur est membre
                   />
                 ))
               ) : (
@@ -120,14 +154,6 @@ function Discover() {
                   No workspaces found matching your search.
                 </div>
               )}
-
-              {/* Add workspace button/card */}
-              <div className="workspace-card add-workspace">
-                <div className="add-workspace-content">
-                  <div className="plus-icon">+</div>
-                  <p>Create New Workspace</p>
-                </div>
-              </div>
             </div>
           )}
         </div>

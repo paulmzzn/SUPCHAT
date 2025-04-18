@@ -59,3 +59,5 @@
 - Configurer CI/CD
 - Préparer l'environnement de production
 - Mettre en place les backups
+- Migration d'AWS S3 vers Scaleway S3 (Object Storage)
+- Sécuriser les données dans le cloud
