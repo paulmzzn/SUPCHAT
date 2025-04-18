@@ -254,7 +254,7 @@ const socketManager = (io) => {
                 // Récupérer la date de création réelle de la DB si possible, sinon utiliser new Date()
                 date_creation: savedMistralMessage.date_creation || savedMistralMessage.created_at || new Date().toISOString(),
                 reactions: [], // Initialement vide
-                isBot: true,
+                isBot: false,
                 // parent_id: userMessage.id_message // Optionnel
               };
 
@@ -295,7 +295,7 @@ const socketManager = (io) => {
               photo_de_profil: MISTRAL_AVATAR,
               date_creation: new Date().toISOString(),
               reactions: [],
-              isBot: true
+              isBot: false
             };
             io.to(`${canal_id}`).emit('message', errorMessage);
           }
@@ -393,7 +393,7 @@ const socketManager = (io) => {
               ...fullBotMessage,
               nom: MISTRAL_USERNAME,
               photo_de_profil: MISTRAL_AVATAR,
-              isBot: true,
+              isBot: false,
               date_creation: fullBotMessage.date_creation || fullBotMessage.created_at || new Date().toISOString()
             });
           } catch (error) {
@@ -416,7 +416,7 @@ const socketManager = (io) => {
               ...fullErrorMessage,
               nom: MISTRAL_USERNAME,
               photo_de_profil: MISTRAL_AVATAR,
-              isBot: true,
+              isBot: false,
               date_creation: fullErrorMessage.date_creation || fullErrorMessage.created_at || new Date().toISOString()
             });
           }
