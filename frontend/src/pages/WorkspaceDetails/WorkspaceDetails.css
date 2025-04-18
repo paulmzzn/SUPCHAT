@@ -1275,298 +1275,184 @@
 
 .chat-input-container {
   display: flex;
-  padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 25, 30, 0.7);
-  gap: 10px;
+  flex-direction: column; /* Stack reply banner and input wrapper */
+}
+
+.replying-to {
+  background-color: rgba(0, 0, 0, 0.15); /* Slightly adjust background */
+  margin-bottom: 8px; /* Ensure space below reply banner */
 }
 
 .chat-input-wrapper {
-  flex: 1;
   display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.08);
+  align-items: center; /* Align items vertically */
+  background-color: rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  padding: 0 8px;
-  transition: all 0.2s ease;
+  padding: 0 8px; /* Padding horizontal only */
 }
 
-.chat-input-wrapper:focus-within {
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 2px rgba(147, 72, 183, 0.3);
-}
-
-.chat-input-wrapper input {
-  flex: 1;
+.chat-input-wrapper input[type="text"] {
+  /* Target the text input specifically */
+  flex-grow: 1;
   background: transparent;
   border: none;
-  padding: 12px;
   color: white;
+  padding: 10px; /* Padding inside the input */
+  resize: none;
+  outline: none;
   font-size: 0.95rem;
 }
 
-.chat-input-wrapper input:focus {
-  outline: none;
+.chat-input-wrapper input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.chat-input-wrapper input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+.chat-input-wrapper input[type="text"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .chat-attachment-btn,
 .chat-emoji-btn {
-  background: transparent;
+  background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
   cursor: pointer;
+  padding: 8px; /* Padding around icons */
   transition: color 0.2s ease;
 }
 
 .chat-attachment-btn:hover,
 .chat-emoji-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: white;
+}
+
+.chat-attachment-btn:disabled,
+.chat-emoji-btn:disabled {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
 }
 
 .chat-send-btn {
-  background: linear-gradient(to right, #9348b7, #b05fdf);
+  background: none;
   border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
+  color: #7289da; /* Discord purple */
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 8px 12px; /* Padding around send icon */
+  margin-left: 8px;
+  transition: color 0.2s ease;
+  display: flex; /* To center spinner */
   align-items: center;
   justify-content: center;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
 }
 
 .chat-send-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 10px rgba(147, 72, 183, 0.3);
+  color: #5f73bc;
 }
 
 .chat-send-btn:disabled {
-  background: rgba(147, 72, 183, 0.3);
+  color: rgba(114, 137, 218, 0.4);
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
-/* Styles pour la zone de prévisualisation de fichier - AMÉLIORÉS */
-.file-preview-container {
-  background-color: rgba(255, 255, 255, 0.04); /* Fond plus subtil */
-  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Bordure supérieure plus visible */
-  padding: 12px 16px; /* Espacement interne ajusté */
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: relative;
-  margin: 0 16px 8px 16px; /* Marge pour l'intégrer au-dessus de l'input */
-  border-radius: 8px; /* Coins arrondis */
-  animation: slideInFromTop 0.3s ease forwards; /* Animation d'apparition */
+.chat-send-btn .spinner-icon {
+  font-size: 1.1rem; /* Adjust spinner size if needed */
+  animation: spin 1s linear infinite;
 }
 
-@keyframes slideInFromTop {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.file-preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8em; /* Texte plus petit */
-  color: rgba(255, 255, 255, 0.5); /* Couleur plus discrète */
-  margin-bottom: 0; /* Moins d'espace en bas */
-  padding-bottom: 5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Ligne de séparation subtile */
-}
-
-.cancel-preview-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  font-size: 1.1em;
-  padding: 3px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s, color 0.2s;
-}
-.cancel-preview-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.file-preview-content {
-  display: flex;
-  align-items: center;
-  gap: 12px; /* Espace augmenté */
-}
-
-.file-preview-details {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* Espace augmenté */
-  background-color: rgba(0, 0, 0, 0.15); /* Fond plus sombre pour contraste */
-  padding: 6px 10px;
-  border-radius: 6px;
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.file-preview-image {
-  width: 36px; /* Taille ajustée */
-  height: 36px;
+/* Styles pour l'état de l'upload de fichier */
+.file-upload-status {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 6px 12px;
   border-radius: 4px;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.file-preview-icon {
-  font-size: 1.4em; /* Taille ajustée */
-  color: rgba(255, 255, 255, 0.7); /* Couleur ajustée */
-  width: 36px;
-  height: 36px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.file-preview-name {
-  font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.9); /* Couleur ajustée */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px; /* Largeur max ajustée */
-}
-
-.file-preview-message-input {
-  flex-grow: 1;
-  background-color: rgba(
-    255,
-    255,
-    255,
-    0.08
-  ); /* Cohérent avec l'input principal */
-  border: 1px solid transparent; /* Pas de bordure par défaut */
-  border-radius: 6px;
-  padding: 10px 14px; /* Padding ajusté */
-  color: white;
-  font-size: 0.95em;
-  transition: all 0.2s ease;
-}
-.file-preview-message-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-.file-preview-message-input:focus {
-  outline: none;
-  border-color: rgba(147, 72, 183, 0.4); /* Bordure focus */
-  background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 2px rgba(147, 72, 183, 0.15); /* Ombre focus */
-}
-
-.file-preview-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px; /* Espace ajusté */
-}
-
-.replying-to-preview {
-  font-size: 0.8em; /* Taille ajustée */
-  color: rgba(255, 255, 255, 0.6); /* Couleur ajustée */
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.replying-to-preview .reply-icon {
-  font-size: 0.8em; /* Taille ajustée */
-  color: rgba(147, 72, 183, 0.7);
-}
-.replying-to-preview strong {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.send-preview-btn {
-  background: linear-gradient(
-    to right,
-    #9348b7,
-    #b05fdf
-  ); /* Cohérent avec le bouton d'envoi principal */
-  color: white;
+.file-upload-status .spinner-icon {
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+.file-upload-status .selected-file-icon {
+  margin-right: 8px;
+  color: #7289da; /* Discord purple */
+}
+
+.file-upload-status .selected-file-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+
+.file-upload-status .upload-error-text {
+  color: #ff6b6b; /* Red for error */
+  flex-grow: 1;
+  margin-right: 8px;
+}
+
+.file-upload-status .cancel-upload-btn {
+  background: none;
   border: none;
-  border-radius: 8px; /* Moins rond */
-  width: auto; /* Largeur auto */
-  height: 38px; /* Hauteur ajustée */
-  padding: 0 16px; /* Padding horizontal */
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  font-size: 1.1em; /* Icône un peu plus grande */
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(147, 72, 183, 0.2);
+  padding: 2px;
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.send-preview-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(147, 72, 183, 0.3);
+.file-upload-status .cancel-upload-btn:hover {
+  color: white;
 }
 
-.send-preview-btn:disabled {
-  background: rgba(147, 72, 183, 0.3);
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-  opacity: 0.7;
+/* Styles pour l'aperçu d'image dans les messages */
+.message-attachment .attachment-image-preview {
+  max-width: 300px; /* Limiter la largeur */
+  max-height: 200px; /* Limiter la hauteur */
+  border-radius: 8px;
+  margin-top: 8px;
+  cursor: pointer; /* Optionnel: pour ouvrir en grand */
+  object-fit: cover;
 }
 
-/* Ajustement pour la zone de saisie principale quand la prévisualisation est active */
-.chat-input-area {
-  position: relative; /* Pour positionner la prévisualisation correctement */
+/* Styles pour le lien de fichier */
+.message-attachment .attachment-link {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8);
+  transition: background-color 0.2s ease;
 }
 
-.chat-input-container {
-  /* Transition pour une apparition/disparition douce si on masque */
-  transition: opacity 0.3s ease, transform 0.3s ease;
+.message-attachment .attachment-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
-/* Optionnel: Masquer l'input normal quand la prévisualisation est active */
-/*
-.chat-input-container:has(+ .file-preview-container) {
-  opacity: 0;
-  transform: translateY(10px);
-  pointer-events: none;
+.message-attachment .attachment-icon {
+  margin-right: 8px;
+  font-size: 1.1rem;
 }
-*/
 
-/* Ajuster la position de la prévisualisation pour qu'elle soit bien au-dessus */
-.file-preview-container {
-  /* Si on ne masque pas l'input normal, on peut laisser la marge */
-  margin: 0 16px 8px 16px;
-  /* Si on masque l'input normal, on peut la positionner absolument */
-  /* position: absolute;
-  bottom: 100%;
-  left: 16px;
-  right: 16px;
-  margin-bottom: 8px; */
+/* Keyframes pour l'animation de spin */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive adjustments for chat */
@@ -2053,29 +1939,6 @@
   margin-left: 6px;
 }
 
-/* Style pour les mentions dans les messages */
-.mention-highlight {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.mention-highlight:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Style spécial pour la mention de l'utilisateur actuel */
-.mention-highlight.current-user-mention {
-  background-color: rgba(147, 72, 183, 0.3);
-  color: #b05fdf;
-  font-weight: 600;
-}
-
-.mention-highlight.current-user-mention:hover {
-  background-color: rgba(147, 72, 183, 0.4);
 /* Style pour les mentions dans les messages - SANS ::before */
 .mention-highlight,
 a.mention-highlight, /* Garder au cas où */
@@ -2084,7 +1947,7 @@ span.mention-highlight,
 .message-paragraph span.mention-highlight {
   display: inline-flex !important;
   align-items: center !important;
-  background: linear-gradient(90deg, #9348B7 0%, #B05FDF 100%) !important;
+  background: linear-gradient(90deg, #9348b7 0%, #b05fdf 100%) !important;
   color: #fff !important;
   /* Ajustement potentiel du padding si le '@' interne change l'espacement */
   padding: 2px 8px !important; /* Simplifié, ajustez si besoin */
@@ -2095,7 +1958,7 @@ span.mention-highlight,
   box-shadow: 0 2px 8px rgba(147, 72, 183, 0.15) !important;
   cursor: pointer !important;
   text-decoration: none !important;
-  border: none !important; 
+  border: none !important;
 }
 
 .mention-highlight:hover,
@@ -2115,7 +1978,7 @@ span.mention-highlight.current-user-mention {
   background: linear-gradient(90deg, #ff9e2a 0%, #ffb357 100%) !important;
   color: #222 !important;
   box-shadow: 0 2px 8px rgba(255, 158, 42, 0.3) !important;
-  border: none !important; 
+  border: none !important;
 }
 
 .mention-highlight.current-user-mention:hover,
@@ -2125,24 +1988,31 @@ span.mention-highlight.current-user-mention:hover {
   color: #222 !important;
 }
 
-/* Style spécial pour la mention de l'utilisateur actuel */
-.mention-highlight.current-user-mention {
-  background-color: rgba(147, 72, 183, 0.3);
-  font-weight: 600;
-  color: #7d32a8;
-}
-
-.mention-highlight.current-user-mention:hover {
-  background-color: rgba(147, 72, 183, 0.4);
 /* Règle de spécificité maximale - Cible maintenant les spans */
-body .chat-messages .chat-message .message-content .message-text p span.mention-highlight,
-body .chat-messages .chat-message .message-content .message-text span.mention-highlight {
+body
+  .chat-messages
+  .chat-message
+  .message-content
+  .message-text
+  p
+  span.mention-highlight,
+body
+  .chat-messages
+  .chat-message
+  .message-content
+  .message-text
+  span.mention-highlight {
   text-decoration: none !important;
-  border: none !important; 
+  border: none !important;
 }
 
-body .chat-messages .chat-message .message-content .message-text span.mention-highlight.current-user-mention {
-    border: none !important; 
+body
+  .chat-messages
+  .chat-message
+  .message-content
+  .message-text
+  span.mention-highlight.current-user-mention {
+  border: none !important;
 }
 
 /* Force de supprimer tout style de lien dans les mentions */
@@ -2174,9 +2044,18 @@ body .chat-messages .chat-message .message-content .message-text span.mention-hi
 }
 
 @keyframes typingDots {
-  0%, 20% { content: "."; }
-  40%, 60% { content: ".."; }
-  80%, 100% { content: "..."; }
+  0%,
+  20% {
+    content: ".";
+  }
+  40%,
+  60% {
+    content: "..";
+  }
+  80%,
+  100% {
+    content: "...";
+  }
 }
 
 /* Assurer que l'indicateur est bien visible */

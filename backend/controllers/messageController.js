@@ -241,6 +241,8 @@ export const uploadMessageFile = async (req, res) => {
     );
 
     // 5. Récupérer le message complet (avec jointures utilisateur ET fichier)
+    // **** IMPORTANT **** : Assurez-vous que MessageModel.getById effectue une jointure
+    //                     pour inclure les informations du fichier associé (url, nom_fichier, type).
     const messageComplet = await MessageModel.getById(messageId);
     if (!messageComplet) {
       console.error(

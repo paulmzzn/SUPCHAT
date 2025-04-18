@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from "react"; // Ajout useEffect
-import { useParams } from "react-router-dom";
+import React, { useRef } from "react"; // Ajout de useRef
+import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import {
   FaSearch,
@@ -28,16 +28,14 @@ import {
   FaRegSmile,
   FaRobot,
   FaAt,
-  FaTimes, // Ajouter icône pour fermer
+  FaTimes, // Pour annuler le fichier
+  FaSpinner, // Pour l'indicateur de chargement
 } from "react-icons/fa";
-import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
-import { useNavigate } from "react-router-dom"; // Ajout import
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -71,12 +69,6 @@ const renderTextWithLinks = (text) => {
     // Sinon, c'est du texte normal
     return part;
   });
-};
-
-// Simplified function that no longer adds highlighting
-const processMessageContent = (text) => {
-  if (!text) return "";
-  return text; // Simply return the original text without any modifications
 };
 
 // Helper pour afficher le bon icône de fichier
@@ -146,9 +138,11 @@ const debugMistralInteraction = (message) => {
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
-  const navigate = useNavigate(); // Ajout hook navigation
+  const navigate = useNavigate();
+  const chatContainerRef = useRef(null); // Ref pour le conteneur de messages
+  const inputRef = useRef(null); // Ref pour l'input texte
+  const fileInputRef = useRef(null); // Ref pour l'input fichier caché
 
-  // Use the custom hook to get state and handlers
   const {
     workspace,
     loading,
@@ -178,29 +172,19 @@ function WorkspaceDetails() {
     activeChannel,
     messages,
     newMessage,
+    displayMessage,
     loadingMessages,
-    chatContainerRef,
     socket,
     currentUserId,
-    currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
+    currentUserName,
     messageContextMenu,
     showEmojiPicker,
     replyingTo,
     commonEmojis,
-    workspace, loading, error, searchQuery, channels, showChannels, canalsLoading, 
-    canalsError, showMembers, showOnlineMembers, showOfflineMembers, showFiles, 
-    showImages, members, files, images, showCreateChannelModal, newChannel, 
-    isCreatingChannel, channelError, contextMenu, showEditChannelModal, editingChannel, 
-    isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
-    displayMessage, // <-- Ajouté
-    loadingMessages, chatContainerRef, socket, currentUserId, currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
-    messageContextMenu, showEmojiPicker, replyingTo, commonEmojis,
-    isMistralTyping, // Get the typing state
-    // Mention state and handlers
+    isMistralTyping,
     showMentionSuggestions,
     mentionSuggestions,
     activeMentionIndex,
-    // Handlers
     handleSearchChange,
     toggleChannelsVisibility,
     handleChannelInputChange,
@@ -230,70 +214,42 @@ function WorkspaceDetails() {
     setShowEmojiPicker,
     setNewMessage,
     getEmojiForType,
-    // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
     handleMentionNavigation,
     handleSelectActiveItem,
-    // New handler for deleting messages
+    handleChatInputKeyDown, // <-- Assurez-vous que cette ligne est présente
     handleDeleteMessage,
-    handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
+    handleMistralMention,
+    selectedFile,
+    uploadingFile,
+    uploadError,
+    handleFileSelect,
+    handleCancelFile,
   } = useWorkspaceDetails(workspaceId);
 
-  const fileInputRef = useRef(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-
-  // Nouveaux états pour la prévisualisation de fichier
-  const [fileToSend, setFileToSend] = useState(null);
-  const [filePreviewUrl, setFilePreviewUrl] = useState(null);
-  const [messageWithFile, setMessageWithFile] = useState("");
-  const [showFilePreview, setShowFilePreview] = useState(false);
-
-  // Effet pour nettoyer l'URL d'aperçu lorsque le composant est démonté ou que filePreviewUrl change
-  useEffect(() => {
-    return () => {
-      if (filePreviewUrl) {
-        URL.revokeObjectURL(filePreviewUrl);
-      }
-    };
-  }, [filePreviewUrl]);
-
-  // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
-  const handleChatInputKeyDown = (e) => {
-    if (showMentionSuggestions && mentionSuggestions.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        handleMentionNavigation("next");
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        handleMentionNavigation("prev");
-      } else if (e.key === "Enter") {
-        // Si la fenêtre de suggestions est ouverte, sélectionne l'élément actif
-        handleSelectActiveItem();
-        e.preventDefault();
-      }
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
-  // Helper pour vérifier si une chaîne est un UUID (pour identifier les user IDs dans les href)
-  const isUuid = (str) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    handleFileSelect(file);
+    if (e.target) {
+      e.target.value = null;
+    }
+  };
 
-  // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
   };
 
-  // Utiliser le handler original pour l'envoi normal
   const handleSendMessageWithMistralCheck = (e) => {
     if (e) e.preventDefault();
-    
-    // Ne pas procéder si le message est vide
     if (!displayMessage.trim()) return;
-    
-    // Vérifier si c'est une mention de Mistral et la traiter en priorité
     const isMistralMention = handleMistralMention(displayMessage);
-    
-    // Si ce n'est pas une mention de Mistral, utiliser le handler original
     if (!isMistralMention) {
       handleSendMessage(e);
     }
@@ -326,7 +282,6 @@ function WorkspaceDetails() {
       <Sidebar />
 
       <div className="workspace-detail-layout">
-        {/* Workspace Sidebar */}
         <div className="workspace-sidebar">
           <div className="workspace-sidebar-header">
             <div className="workspace-profile">
@@ -348,7 +303,7 @@ function WorkspaceDetails() {
                   type="text"
                   placeholder="Rechercher des canaux..."
                   value={searchQuery}
-                  onChange={handleSearchChange} // Use handler from hook
+                  onChange={handleSearchChange}
                   className="search-input"
                 />
               </div>
@@ -361,8 +316,6 @@ function WorkspaceDetails() {
                 className="section-header"
                 onClick={toggleChannelsVisibility}
               >
-                {" "}
-                {/* Use handler from hook */}
                 {showChannels ? (
                   <FaChevronDown className="toggle-icon" />
                 ) : (
@@ -373,8 +326,6 @@ function WorkspaceDetails() {
                   className="add-channel-btn"
                   onClick={handleCreateChannel}
                 >
-                  {" "}
-                  {/* Use handler from hook */}
                   <FaPlus />
                 </button>
               </div>
@@ -387,7 +338,7 @@ function WorkspaceDetails() {
                     </li>
                   ) : canalsError ? (
                     <li className="channel-error">Erreur: {canalsError}</li>
-                  ) : channels.length > 0 ? ( // Use channels from hook
+                  ) : channels.length > 0 ? (
                     channels.map((channel) => (
                       <li
                         key={channel.id}
@@ -396,10 +347,10 @@ function WorkspaceDetails() {
                             ? "active"
                             : ""
                         }`}
-                        onClick={() => handleSelectChannel(channel)} // Use handler from hook
+                        onClick={() => handleSelectChannel(channel)}
                         onContextMenu={(e) =>
                           handleChannelContextMenu(e, channel)
-                        } // Use handler from hook
+                        }
                       >
                         {channel.isPrivate ? (
                           <FaLock className="channel-icon" />
@@ -418,7 +369,6 @@ function WorkspaceDetails() {
           </div>
         </div>
 
-        {/* Main Content Area - Modified for chat */}
         <div className="workspace-content-area">
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
@@ -448,31 +398,23 @@ function WorkspaceDetails() {
               </div>
 
               <div className="chat-messages" ref={chatContainerRef}>
-                {" "}
-                {/* Use ref from hook */}
                 {loadingMessages ? (
                   <div className="chat-loading">Chargement des messages...</div>
-                ) : messages.length > 0 ? ( // Use messages from hook
+                ) : messages.length > 0 ? (
                   messages.map((message) => (
                     <div
                       key={message.id_message}
-                      id={`msg-${message.id_message}`} // Add ID for scrolling to parent
-                      // Ajout d'une classe pour le bot si le flag isBot est présent
+                      id={`msg-${message.id_message}`}
                       className={`chat-message ${
                         message.fk_utilisateur === currentUserId
                           ? "own-message"
-                          : message.isBot
-                          ? "bot-message"
                           : "other-message"
-                      }`} // Use currentUserId from hook
+                      }`}
                       onContextMenu={(e) =>
                         handleMessageContextMenu(e, message)
-                      } // Use handler from hook
-                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
-                      onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
+                      }
                     >
                       <div className="message-avatar">
-                        {/* Cette logique devrait fonctionner pour le bot aussi */}
                         {message.photo_de_profil ? (
                           <img
                             src={message.photo_de_profil}
@@ -485,12 +427,10 @@ function WorkspaceDetails() {
                         )}
                       </div>
                       <div className="message-content">
-                        {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
                         {(message.parent_id || message.parent_message) && (
                           <div
                             className="message-reply-to"
                             onClick={() => {
-                              // Find parent message and scroll to it
                               const parentId =
                                 message.parent_id ||
                                 (message.parent_message &&
@@ -532,7 +472,6 @@ function WorkspaceDetails() {
                                   </span>
                                 </>
                               ) : (
-                                // Si nous n'avons pas le message parent mais nous avons l'ID, chercher dans les messages existants
                                 (() => {
                                   const parentMessage = messages.find(
                                     (m) => m.id_message === message.parent_id
@@ -559,10 +498,8 @@ function WorkspaceDetails() {
 
                         <div className="message-header">
                           <span className="message-author">
-                            {message.isBot ||
-                            message.fk_utilisateur ===
-                              "00000000-0000-0000-0000-000000000001" ? (
-                            {message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
+                            {message.fk_utilisateur ===
+                            "00000000-0000-0000-0000-000000000001" ? (
                               <>
                                 <span>{message.nom}</span>
                                 <span className="bot-icon-spacer"> </span>
@@ -577,76 +514,114 @@ function WorkspaceDetails() {
                           </span>
                         </div>
 
-                        {/* *** Approche avec vérification de null/undefined sur message.contenu *** */}
-                        <div className="message-text"> 
+                        <div className="message-text">
                           {(() => {
-                            // Vérifier si message.contenu est null ou undefined
                             if (!message.contenu) {
-                              return <p className="message-paragraph"></p>; // Retourner un paragraphe vide
+                              return <p className="message-paragraph"></p>;
                             }
-                            
-                            // Prétraiter le contenu pour retirer les @ avant les mentions
-                            // Recherche les motifs de type @[nom](uuid)
-                            const mentionRegex = /@\[([^\]]+)\]\(([0-9a-fA-F-]+)\)/g;
-                            
-                            // Remplacer par [nom](uuid) sans le @ initial
-                            const processedContent = message.contenu.replace(mentionRegex, (match, name, uuid) => {
-                              if (isUuid(uuid)) {
-                                return `[${name}](${uuid})`;
+
+                            const mentionRegex =
+                              /@\[([^\]]+)\]\(([0-9a-fA-F-]+)\)/g;
+
+                            const processedContent = message.contenu.replace(
+                              mentionRegex,
+                              (match, name, uuid) => {
+                                if (
+                                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+                                    uuid
+                                  )
+                                ) {
+                                  return `[${name}](${uuid})`;
+                                }
+                                return match;
                               }
-                              return match; // Si ce n'est pas un UUID valide, laisser tel quel
-                            });
-                            
+                            );
+
                             return (
                               <ReactMarkdown
                                 components={{
-                                  p: ({node, ...props}) => <p {...props} className="message-paragraph" />,
-                                  a: ({node, href, children, ...props}) => {
+                                  p: ({ node, ...props }) => (
+                                    <p
+                                      {...props}
+                                      className="message-paragraph"
+                                    />
+                                  ),
+                                  a: ({ node, href, children, ...props }) => {
                                     const potentialUserId = href;
-                                    
-                                    // Extraire le texte complet du lien plus efficacement
+
                                     let fullText = "";
                                     if (children && children.length) {
-                                      // Parcourir tous les éléments enfants et extraire leur texte
-                                      React.Children.forEach(children, child => {
-                                        if (typeof child === 'string') {
-                                          fullText += child;
-                                        } else if (child && child.props && child.props.children) {
-                                          // Traiter les enfants qui sont des éléments React
-                                          if (typeof child.props.children === 'string') {
-                                            fullText += child.props.children;
-                                          } else if (Array.isArray(child.props.children)) {
-                                            // Aplatir les tableaux d'enfants
-                                            fullText += child.props.children
-                                              .filter(c => typeof c === 'string')
-                                              .join('');
+                                      React.Children.forEach(
+                                        children,
+                                        (child) => {
+                                          if (typeof child === "string") {
+                                            fullText += child;
+                                          } else if (
+                                            child &&
+                                            child.props &&
+                                            child.props.children
+                                          ) {
+                                            if (
+                                              typeof child.props.children ===
+                                              "string"
+                                            ) {
+                                              fullText += child.props.children;
+                                            } else if (
+                                              Array.isArray(
+                                                child.props.children
+                                              )
+                                            ) {
+                                              fullText += child.props.children
+                                                .filter(
+                                                  (c) => typeof c === "string"
+                                                )
+                                                .join("");
+                                            }
                                           }
                                         }
-                                      });
+                                      );
                                     }
-                                    
-                                    // Si le href est un UUID, c'est une mention
-                                    if (isUuid(potentialUserId)) {
-                                      const isCurrentUser = potentialUserId === currentUserId;
+
+                                    if (
+                                      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+                                        potentialUserId
+                                      )
+                                    ) {
+                                      const isCurrentUser =
+                                        potentialUserId === currentUserId;
                                       return (
                                         <span
-                                          className={`mention-highlight ${isCurrentUser ? 'current-user-mention' : ''}`}
+                                          className={`mention-highlight ${
+                                            isCurrentUser
+                                              ? "current-user-mention"
+                                              : ""
+                                          }`}
                                           data-userid={potentialUserId}
                                         >
-                                          @{fullText} {/* Utilise le texte complet extrait */}
+                                          @{fullText}
                                         </span>
                                       );
                                     }
-                                    
-                                    return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
+
+                                    return (
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="message-link"
+                                      >
+                                        {children}
+                                      </a>
+                                    );
                                   },
-                                  // Version simplifiée du gestionnaire de texte
-                                  text: ({node, ...props}) => {
-                                    return <>{renderTextWithLinks(node.value)}</>; 
-                                  }
+                                  text: ({ node, ...props }) => {
+                                    return (
+                                      <>{renderTextWithLinks(node.value)}</>
+                                    );
+                                  },
                                 }}
                                 remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]} 
+                                rehypePlugins={[rehypeRaw]}
                               >
                                 {processedContent}
                               </ReactMarkdown>
@@ -654,7 +629,28 @@ function WorkspaceDetails() {
                           })()}
                         </div>
 
-                        {/* Afficher les réactions avec meilleur style */}
+                        {message.fichier && (
+                          <div className="message-attachment">
+                            {message.fichier.type.startsWith("image/") ? (
+                              <img
+                                src={message.fichier.url}
+                                alt={message.fichier.nom_fichier}
+                                className="attachment-image-preview"
+                              />
+                            ) : (
+                              <a
+                                href={message.fichier.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="attachment-link"
+                              >
+                                <FaFileAlt className="attachment-icon" />
+                                <span>{message.fichier.nom_fichier}</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+
                         {message.reactions && message.reactions.length > 0 && (
                           <div className="message-reactions">
                             {message.reactions.map((reaction, index) => (
@@ -662,9 +658,8 @@ function WorkspaceDetails() {
                                 key={index}
                                 className={`reaction-badge ${
                                   reaction.user_reacted ? "user-reacted" : ""
-                                }`} // Add class if user reacted
+                                }`}
                                 onClick={() => {
-                                  // Toggle reaction using socket from hook
                                   if (socket && socket.connected) {
                                     if (reaction.user_reacted) {
                                       socket.emit("removeReaction", {
@@ -684,10 +679,7 @@ function WorkspaceDetails() {
                               >
                                 <span className="reaction-emoji">
                                   {reaction.emoji ||
-                                    getEmojiForType(
-                                      reaction.reaction_type
-                                    )}{" "}
-                                  {/* Use helper from hook */}
+                                    getEmojiForType(reaction.reaction_type)}
                                 </span>
                                 <span className="reaction-count">
                                   {reaction.count}
@@ -705,12 +697,7 @@ function WorkspaceDetails() {
                     <p>Envoyez le premier message !</p>
                   </div>
                 )}
-                {/* *** Display Typing Indicator *** */}
                 {isMistralTyping && (
-                  <div
-                    className="chat-message bot-message typing-indicator"
-                    // Utilise la même structure que les autres messages pour la bulle
-                  >
                   <div className="chat-message other-message typing-indicator">
                     <div className="message-avatar">
                       <img
@@ -736,12 +723,9 @@ function WorkspaceDetails() {
                     </div>
                   </div>
                 )}
-                {/* *** End Typing Indicator *** */}
               </div>
 
-              {/* Zone de saisie du chat */}
               <div className="chat-input-area">
-                {/* Nouvelle implémentation de l'autocomplétion des mentions avec des IDs uniques */}
                 {showMentionSuggestions && (
                   <div id="supchat-mentions-dropdown">
                     <div id="supchat-mentions-header">
@@ -809,41 +793,113 @@ function WorkspaceDetails() {
                   </div>
                 )}
 
-                <form className="chat-input-container" onSubmit={handleSendMessageWithMistralCheck}>
-                  {/* Afficher l'indicateur de réponse si on répond à un message */}
-                  {replyingTo && ( // Use replyingTo from hook
+                {(selectedFile || uploadingFile || uploadError) && (
+                  <div className="file-upload-status">
+                    {uploadingFile ? (
+                      <>
+                        <FaSpinner className="spinner-icon" />
+                        <span>Envoi de {selectedFile?.name}...</span>
+                      </>
+                    ) : uploadError ? (
+                      <>
+                        <span className="upload-error-text">
+                          Erreur: {uploadError}
+                        </span>
+                        <button
+                          onClick={handleCancelFile}
+                          className="cancel-upload-btn"
+                          title="Annuler"
+                        >
+                          <FaTimes />
+                        </button>
+                      </>
+                    ) : selectedFile ? (
+                      <>
+                        <FaFileAlt className="selected-file-icon" />
+                        <span className="selected-file-name">
+                          {selectedFile.name}
+                        </span>
+                        <button
+                          onClick={handleCancelFile}
+                          className="cancel-upload-btn"
+                          title="Retirer le fichier"
+                        >
+                          <FaTimes />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                <form
+                  className="chat-input-container"
+                  onSubmit={handleSendMessageWithMistralCheck}
+                >
+                  {replyingTo && (
                     <div className="replying-to">
                       <div className="reply-info">
                         <FaReply className="reply-icon" />
-                        <span>Réponse à <strong>{replyingTo.nom}</strong></span>
+                        <span>
+                          Réponse à <strong>{replyingTo.nom}</strong>
+                        </span>
                       </div>
-                      <button type="button" className="cancel-reply" onClick={handleCancelReply}> {/* Use handler from hook */}
+                      <button
+                        type="button"
+                        className="cancel-reply"
+                        onClick={handleCancelReply}
+                      >
                         ×
                       </button>
                     </div>
                   )}
-                  
+
                   <div className="chat-input-wrapper">
-                    <button type="button" className="chat-attachment-btn">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: "none" }}
+                      onChange={handleFileInputChange}
+                      accept=".pdf,.png,.jpg,.jpeg,.gif"
+                    />
+                    <button
+                      type="button"
+                      className="chat-attachment-btn"
+                      onClick={handleAttachmentClick}
+                      disabled={uploadingFile}
+                      title="Joindre un fichier"
+                    >
                       <FaPaperclip />
                     </button>
-                    <input 
-                      type="text" 
+                    <input
+                      ref={inputRef}
+                      type="text"
                       placeholder={`Message dans #${activeChannel.name}`}
-                      value={displayMessage} // <-- Utilise displayMessage
-                      onChange={(e) => handleNewMessageChange(e.target.value)} // <-- Utilise handleNewMessageChange
-                      onKeyDown={handleChatInputKeyDown} // Apply the new handler
+                      value={displayMessage}
+                      onChange={(e) => handleNewMessageChange(e.target.value)}
+                      onKeyDown={handleChatInputKeyDown} // <-- Vérifier que c'est bien le handler du hook qui est utilisé ici
+                      disabled={uploadingFile}
                     />
-                    <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
+                    <button
+                      type="button"
+                      className="chat-emoji-btn"
+                      onClick={() => setShowEmojiPicker(true)}
+                      disabled={uploadingFile}
+                    >
                       <FaSmile />
                     </button>
                   </div>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="chat-send-btn"
-                    disabled={!displayMessage.trim()} // <-- Utilise displayMessage
+                    disabled={
+                      (!displayMessage.trim() && !selectedFile) || uploadingFile
+                    }
                   >
-                    <FaPaperPlane />
+                    {uploadingFile ? (
+                      <FaSpinner className="spinner-icon" />
+                    ) : (
+                      <FaPaperPlane />
+                    )}
                   </button>
                 </form>
               </div>
@@ -851,9 +907,7 @@ function WorkspaceDetails() {
           )}
         </div>
 
-        {/* Details Sidebar */}
         <div className="details-sidebar">
-          {/* Members Section */}
           <div className="details-section">
             <div className="section-header" onClick={toggleMembers}>
               {showMembers ? (
@@ -868,7 +922,6 @@ function WorkspaceDetails() {
 
             {showMembers && (
               <div className="members-container">
-                {/* Online Members Subsection */}
                 <div className="members-subsection">
                   <div
                     className="subsection-header"
@@ -911,7 +964,6 @@ function WorkspaceDetails() {
                   )}
                 </div>
 
-                {/* Offline Members Subsection */}
                 <div className="members-subsection">
                   <div
                     className="subsection-header"
@@ -957,7 +1009,6 @@ function WorkspaceDetails() {
             )}
           </div>
 
-          {/* Files Section */}
           <div className="details-section">
             <div className="section-header" onClick={toggleFiles}>
               {showFiles ? (
@@ -985,7 +1036,6 @@ function WorkspaceDetails() {
             )}
           </div>
 
-          {/* Images Section */}
           <div className="details-section">
             <div className="section-header" onClick={toggleImages}>
               {showImages ? (
@@ -1012,7 +1062,6 @@ function WorkspaceDetails() {
           </div>
         </div>
 
-        {/* Modal de création de canal */}
         {showCreateChannelModal && (
           <div className="modal-overlay" onClick={handleCloseModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1119,7 +1168,6 @@ function WorkspaceDetails() {
           </div>
         )}
 
-        {/* Menu contextuel pour les canaux */}
         {contextMenu.visible && (
           <div
             className="channel-context-menu"
@@ -1140,7 +1188,6 @@ function WorkspaceDetails() {
           </div>
         )}
 
-        {/* Modal d'édition de canal */}
         {showEditChannelModal && (
           <div
             className="modal-overlay"
@@ -1261,7 +1308,6 @@ function WorkspaceDetails() {
           </div>
         )}
 
-        {/* Menu contextuel pour les messages */}
         {messageContextMenu.visible && (
           <div
             className="message-context-menu"
@@ -1292,7 +1338,6 @@ function WorkspaceDetails() {
           </div>
         )}
 
-        {/* Modal pour la sélection d'emoji */}
         {showEmojiPicker && (
           <div
             className="modal-overlay"

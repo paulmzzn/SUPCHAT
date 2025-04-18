@@ -1,442 +1,631 @@
-import MessageModel from "./models/Message.js";
-import UserModel from "./models/User.js"; // Assurez-vous que UserModel est importé
-import axios from "axios";
+import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import MessageModel from "../models/Message.js";
+import Reaction from "../models/Reaction.js";
+import MessagePrive from "../models/MessagePrive.js"; // Ajout de l'importation de MessagePrive
+// Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
+// import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
+// Charger les variables d'environnement
 dotenv.config();
 
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
-const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
-const MISTRAL_USER_ID =
-  process.env.MISTRAL_USER_ID || "00000000-0000-0000-0000-000000000001"; // ID du bot Mistral standard
-const MISTRAL_BOT_NAME = "Mistral AI";
-// --- Nouveau pour OCR ---
-const MISTRAL_OCR_USER_ID =
-  process.env.MISTRAL_OCR_USER_ID || "00000000-0000-0000-0000-000000000002"; // ID spécifique pour le bot OCR
-const MISTRAL_OCR_BOT_NAME = "MistralOCR";
-const MISTRAL_OCR_MODEL = "mistral-ocr-latest"; // Modèle OCR
-// --- Fin Nouveau pour OCR ---
+const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY; // Charger la clé API Mistral
+const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"; // URL de l'API Mistral
 
-const setupSocketIO = (io) => {
-  io.use(async (socket, next) => {
-    // ... (code d'authentification existant) ...
+const MISTRAL_USER_ID = "00000000-0000-0000-0000-000000000001"; // <<< UTILISER L'UUID FIXE
+const MISTRAL_USERNAME = "Mistral AI";
+const MISTRAL_AVATAR =
+  "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
+
+const MISTRAL_API_TIMEOUT_MS = 120000; // 120 secondes = 2 minutes
+
+const socketManager = (io) => {
+  // Middleware pour authentifier les utilisateurs via socket.io
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        console.log("Socket.IO: Pas de token fourni");
+        return next(new Error("Authentication error: Token required"));
+      }
+
+      jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) {
+          console.error("Socket.IO: Token invalide", err);
+          return next(new Error("Authentication error: Invalid token"));
+        }
+        console.log("Socket.IO: Utilisateur authentifié", decoded);
+        socket.user = decoded;
+        next();
+      });
+    } catch (error) {
+      console.error("Socket.IO: Erreur d'authentification", error);
+      next(new Error("Authentication error: " + error.message));
+    }
   });
 
+  // Événements de connexion
   io.on("connection", (socket) => {
-    console.log(`Utilisateur connecté: ${socket.user.id} (${socket.id})`);
+    console.log(
+      `Utilisateur connecté: ${socket.id}, User ID: ${socket.user?.id}`
+    );
 
-    // Mettre à jour le statut de l'utilisateur à 'en ligne' (si nécessaire)
-    UserModel.updateStatus(socket.user.id, 1) // 1 pour 'en ligne'
-      .then(() =>
-        console.log(`Statut mis à jour pour ${socket.user.id}: en ligne`)
-      )
-      .catch((err) =>
-        console.error("Erreur mise à jour statut (connexion):", err)
+    // Joindre un canal
+    socket.on("joinCanal", (data) => {
+      const { canalId, workspaceId } = data;
+      console.log(
+        `Utilisateur ${socket.user?.id} rejoint le canal ${canalId} du workspace ${workspaceId}`
       );
 
-    socket.on("joinCanal", ({ canalId, workspaceId }) => {
-      // ... (code existant pour rejoindre un canal) ...
+      if (socket.currentRoom) {
+        socket.leave(socket.currentRoom);
+      }
+
+      socket.currentRoom = `${canalId}`;
+      socket.join(`${canalId}`);
+
+      // Informer le client que le canal a été rejoint
+      socket.emit("canalJoined", { canalId, status: "success" });
     });
 
-    socket.on("message", async (messageData) => {
+    // Rejoindre la room DM de l'utilisateur (pour recevoir ses messages privés)
+    socket.on("joinPrivate", () => {
+      if (socket.user?.id) {
+        socket.join(`dm:${socket.user.id}`);
+      }
+    });
+
+    // Envoyer un message privé
+    socket.on("privateMessage", async ({ destinataireId, contenu }) => {
       try {
-        console.log("Message reçu du client:", messageData);
-        const userId = socket.user.id; // Assurez-vous que l'ID utilisateur est bien dans socket.user
+        const expediteurId = socket.user.id;
+        if (!destinataireId || !contenu) {
+          socket.emit("error", { message: "destinataireId et contenu requis" });
+          return;
+        }
+        const message = await MessagePrive.create({
+          contenu,
+          fk_expediteur: expediteurId,
+          fk_destinataire: destinataireId,
+        });
+        io.to(`dm:${expediteurId}`)
+          .to(`dm:${destinataireId}`)
+          .emit("privateMessage", message);
+      } catch (error) {
+        socket.emit("error", {
+          message: "Erreur lors de l'envoi du message privé",
+        });
+      }
+    });
 
-        // Vérifier si le message est une mention pour Mistral AI standard
-        if (
-          messageData.contenu &&
-          messageData.contenu.startsWith(`@${MISTRAL_BOT_NAME}`)
-        ) {
-          console.log("Mention Mistral AI détectée");
-          const userPrompt = messageData.contenu
-            .substring(`@${MISTRAL_BOT_NAME}`.length)
-            .trim();
-          const canalId = messageData.fk_canal;
+    // Edition d'un message privé (seul l'expéditeur)
+    socket.on("editPrivateMessage", async ({ id, contenu }) => {
+      try {
+        const userId = socket.user.id;
+        const updated = await MessagePrive.updateMessage(id, userId, contenu);
+        if (!updated) {
+          socket.emit("error", { message: "Modification refusée" });
+          return;
+        }
+        io.to(`dm:${updated.fk_expediteur}`)
+          .to(`dm:${updated.fk_destinataire}`)
+          .emit("privateMessageUpdated", updated);
+      } catch (error) {
+        socket.emit("error", {
+          message: "Erreur lors de la modification du message privé",
+        });
+      }
+    });
 
-          // 1. Sauvegarder le message de l'utilisateur
-          const userMessage = await MessageModel.create({
-            ...messageData,
-            fk_utilisateur: userId,
-          });
-          const fullUserMessage = await MessageModel.getById(
-            userMessage.id_message
+    // Suppression d'un message privé (seul l'expéditeur)
+    socket.on("deletePrivateMessage", async ({ id }) => {
+      try {
+        const userId = socket.user.id;
+        const deleted = await MessagePrive.deleteMessage(id, userId);
+        if (!deleted) {
+          socket.emit("error", { message: "Suppression refusée" });
+          return;
+        }
+        io.to(`dm:${deleted.fk_expediteur}`)
+          .to(`dm:${deleted.fk_destinataire}`)
+          .emit("privateMessageDeleted", { id });
+      } catch (error) {
+        socket.emit("error", {
+          message: "Erreur lors de la suppression du message privé",
+        });
+      }
+    });
+
+    // Accusé de lecture (seul le destinataire)
+    socket.on("readPrivateMessage", async ({ id }) => {
+      try {
+        const userId = socket.user.id;
+        const updated = await MessagePrive.markAsRead(id, userId);
+        if (!updated) {
+          socket.emit("error", { message: "Non autorisé" });
+          return;
+        }
+        io.to(`dm:${updated.fk_expediteur}`).emit("privateMessageRead", {
+          id,
+          date_lecture: updated.date_lecture,
+        });
+      } catch (error) {
+        socket.emit("error", { message: "Erreur lors de l'accusé de lecture" });
+      }
+    });
+
+    // Recevoir un message
+    socket.on("message", async (data) => {
+      try {
+        console.log("Socket.IO: Message reçu", data);
+        const { canal_id, content, workspace_id, parent_id } = data; // Ajout de parent_id
+
+        if (!canal_id || !content) {
+          console.error("Socket.IO: Données de message incomplètes");
+          socket.emit("error", { message: "Données de message incomplètes" });
+          return;
+        }
+
+        // Enregistrer le message de l'utilisateur en base de données
+        const userMessage = await MessageModel.create({
+          contenu: content,
+          fk_canal: canal_id,
+          fk_utilisateur: socket.user.id,
+          parent_id: parent_id, // Sauvegarder le parent_id si présent
+        });
+
+        // Récupérer le message complet avec infos utilisateur
+        const fullUserMessage = await MessageModel.getById(
+          userMessage.id_message
+        );
+
+        if (fullUserMessage) {
+          const formattedUserMessage = {
+            ...fullUserMessage,
+            date_creation:
+              fullUserMessage.date_creation ||
+              fullUserMessage.created_at ||
+              new Date().toISOString(),
+          };
+          console.log(
+            `Socket.IO: Émission du message utilisateur formaté:`,
+            formattedUserMessage
           );
-          io.to(`${canalId}`).emit("message", fullUserMessage); // Diffuser le message de l'utilisateur
+          io.to(`${canal_id}`).emit("message", formattedUserMessage); // Émettre le message de l'utilisateur
+        } else {
+          console.warn(
+            "Socket.IO: Message utilisateur enregistré mais non émis (non trouvé)"
+          );
+        }
 
-          // 2. Envoyer l'indicateur de frappe
-          io.to(`${canalId}`).emit("typing", {
+        // Vérifier si le message mentionne @mistral
+        if (content.toLowerCase().startsWith("@mistral")) {
+          if (!MISTRAL_API_KEY) {
+            console.error("Clé API Mistral non configurée.");
+            // Envoyer un message d'erreur dans le chat si la clé n'est pas configurée
+            const errorMessage = {
+              id_message: `error-${Date.now()}`, // ID unique pour le message d'erreur
+              contenu:
+                "Désolé, l'intégration Mistral AI n'est pas configurée correctement (clé API manquante).",
+              fk_canal: canal_id,
+              fk_utilisateur: MISTRAL_USER_ID, // Utiliser l'UUID du bot
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              date_creation: new Date().toISOString(),
+              reactions: [],
+              isBot: true, // Indicateur pour le frontend
+            };
+            io.to(`${canal_id}`).emit("message", errorMessage);
+            return;
+          }
+
+          const question = content.substring("@mistral".length).trim();
+          console.log(`Socket.IO: Question pour Mistral AI: "${question}"`);
+
+          // *** Envoyer l'indicateur "Mistral est en train d'écrire..." ***
+          io.to(`${canal_id}`).emit("typing", {
             userId: MISTRAL_USER_ID,
-            userName: MISTRAL_BOT_NAME,
+            username: MISTRAL_USERNAME,
           });
 
-          // 3. Appeler l'API Mistral standard
-          try {
-            const response = await axios.post(
-              MISTRAL_API_URL,
-              {
-                model: "mistral-large-latest", // ou un autre modèle approprié
-                messages: [{ role: "user", content: userPrompt }],
-                // safe_prompt: true // Optionnel
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${MISTRAL_API_KEY}`,
-                  "Content-Type": "application/json",
-                  Accept: "application/json",
-                },
-                timeout: 60000, // Timeout de 60 secondes
-              }
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            console.log(
+              `Socket.IO: Timeout API Mistral après ${MISTRAL_API_TIMEOUT_MS}ms`
             );
+            controller.abort();
+          }, MISTRAL_API_TIMEOUT_MS);
 
-            const botResponseContent = response.data.choices[0].message.content;
-
-            // 4. Arrêter l'indicateur de frappe
-            io.to(`${canalId}`).emit("stopTyping", { userId: MISTRAL_USER_ID });
-
-            // 5. Sauvegarder la réponse du bot
-            const botMessage = await MessageModel.create({
-              contenu: botResponseContent,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_USER_ID, // Utiliser l'ID du bot
-              parent_id: userMessage.id_message, // Répondre au message de l'utilisateur
+          try {
+            const mistralResponse = await fetch(MISTRAL_API_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${MISTRAL_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "mistral-large-latest", // Ou un autre modèle Mistral
+                messages: [{ role: "user", content: question }],
+                // temperature: 0.7,
+                // max_tokens: 1000 // Augmenter si nécessaire, mais attention aux coûts/limites
+              }),
+              signal: controller.signal, // Associer l'AbortController
             });
 
-            // 6. Récupérer et diffuser la réponse complète du bot
+            clearTimeout(timeoutId); // Annuler le timeout si la réponse arrive à temps
+
+            // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (succès) ***
+            io.to(`${canal_id}`).emit("stopTyping", {
+              userId: MISTRAL_USER_ID,
+            });
+
+            if (!mistralResponse.ok) {
+              const errorBody = await mistralResponse.text();
+              console.error(
+                `Erreur API Mistral (${mistralResponse.status}): ${errorBody}`
+              );
+              throw new Error(
+                `Erreur de l'API Mistral: ${mistralResponse.statusText}`
+              );
+            }
+
+            const mistralData = await mistralResponse.json();
+            const mistralAnswer =
+              mistralData.choices && mistralData.choices[0]
+                ? mistralData.choices[0].message.content
+                : "Désolé, je n'ai pas pu générer de réponse.";
+
+            // *** Enregistrer la réponse de Mistral en base de données ***
+            let savedMistralMessage;
+            try {
+              savedMistralMessage = await MessageModel.create({
+                contenu: mistralAnswer,
+                fk_canal: canal_id,
+                fk_utilisateur: MISTRAL_USER_ID, // <<< Utiliser l'UUID ici aussi
+                // parent_id: userMessage.id_message // Optionnel: Lier la réponse à la question
+              });
+              console.log(
+                "Socket.IO: Réponse de Mistral enregistrée en DB:",
+                savedMistralMessage
+              );
+
+              // Créer l'objet message pour l'émission UNIQUEMENT si l'enregistrement a réussi
+              const mistralMessageForEmit = {
+                id_message: savedMistralMessage.id_message, // Utiliser l'ID réel de la DB
+                contenu: mistralAnswer,
+                fk_canal: canal_id,
+                fk_utilisateur: MISTRAL_USER_ID, // <<< Utiliser l'UUID ici aussi
+                nom: MISTRAL_USERNAME,
+                photo_de_profil: MISTRAL_AVATAR,
+                // Récupérer la date de création réelle de la DB si possible, sinon utiliser new Date()
+                date_creation:
+                  savedMistralMessage.date_creation ||
+                  savedMistralMessage.created_at ||
+                  new Date().toISOString(),
+                reactions: [], // Initialement vide
+                isBot: false,
+                // parent_id: userMessage.id_message // Optionnel
+              };
+
+              console.log(
+                `Socket.IO: Émission de la réponse de Mistral enregistrée:`,
+                mistralMessageForEmit
+              );
+              io.to(`${canal_id}`).emit("message", mistralMessageForEmit); // Émettre le message enregistré
+            } catch (dbError) {
+              // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (erreur DB) ***
+              // (Déjà arrêté avant, mais on s'assure qu'il l'est)
+              io.to(`${canal_id}`).emit("stopTyping", {
+                userId: MISTRAL_USER_ID,
+              });
+              console.error(
+                "Socket.IO: ERREUR FATALE lors de l'enregistrement de la réponse Mistral en DB. Le message n'a pas été envoyé.",
+                dbError
+              );
+              // NE PAS envoyer de message au client si l'enregistrement échoue.
+              // Optionnel : Envoyer un message d'erreur spécifique à l'utilisateur qui a posé la question ?
+              // socket.emit('error', { message: 'Erreur interne: Impossible d\'enregistrer la réponse du bot.' });
+            }
+          } catch (apiError) {
+            clearTimeout(timeoutId); // Nettoyer le timeout en cas d'erreur aussi
+            // *** Arrêter l'indicateur "Mistral est en train d'écrire..." (erreur API/Timeout) ***
+            io.to(`${canal_id}`).emit("stopTyping", {
+              userId: MISTRAL_USER_ID,
+            });
+
+            let errorMessageContent = `Désolé, une erreur est survenue lors de la communication avec Mistral AI.`;
+            if (apiError.name === "AbortError") {
+              console.error(
+                "Socket.IO: L'appel à l'API Mistral a dépassé le délai imparti."
+              );
+              errorMessageContent = `Désolé, la génération de la réponse a pris trop de temps.`;
+            } else {
+              console.error(
+                "Socket.IO: Erreur lors de l'appel à l'API Mistral",
+                apiError
+              );
+              errorMessageContent = `Désolé, une erreur est survenue lors de la communication avec Mistral AI: ${apiError.message}`;
+            }
+
+            // Envoyer un message d'erreur dans le chat (non stocké en DB)
+            const errorMessage = {
+              id_message: `error-${Date.now()}`,
+              contenu: errorMessageContent,
+              fk_canal: canal_id,
+              fk_utilisateur: MISTRAL_USER_ID,
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              date_creation: new Date().toISOString(),
+              reactions: [],
+              isBot: false,
+            };
+            io.to(`${canal_id}`).emit("message", errorMessage);
+          }
+        }
+      } catch (error) {
+        console.error("Socket.IO: Erreur de traitement de message", error);
+        socket.emit("error", {
+          message: "Erreur lors du traitement du message",
+        });
+      }
+    });
+
+    // Nouvel événement pour gérer directement les requêtes adressées à Mistral
+    socket.on("mistralRequest", async (data) => {
+      try {
+        console.log("Requête directe à Mistral reçue:", data);
+        const { content, channelId } = data;
+
+        if (!channelId || !content) {
+          console.error("Socket.IO: Données de message Mistral incomplètes");
+          socket.emit("error", { message: "Données de message incomplètes" });
+          return;
+        }
+
+        // Enregistrer le message de l'utilisateur en base de données
+        const userMessage = await MessageModel.create({
+          contenu: content,
+          fk_canal: channelId,
+          fk_utilisateur: socket.user.id,
+        });
+
+        // Récupérer le message complet avec infos utilisateur
+        const fullUserMessage = await MessageModel.getById(
+          userMessage.id_message
+        );
+
+        if (fullUserMessage) {
+          // Diffuser le message aux membres du canal
+          io.to(`${channelId}`).emit("message", {
+            ...fullUserMessage,
+            date_creation:
+              fullUserMessage.date_creation ||
+              fullUserMessage.created_at ||
+              new Date().toISOString(),
+          });
+
+          // Indiquer que Mistral est en train d'écrire avec l'événement 'typing'
+          io.to(`${channelId}`).emit("typing", {
+            userId: MISTRAL_USER_ID,
+            username: MISTRAL_USERNAME,
+          });
+
+          // Extraire le contenu réel de la question (enlever @Mistral)
+          const question = content.replace(/@Mistral(\s+AI)?/gi, "").trim();
+
+          try {
+            if (!MISTRAL_API_KEY) {
+              throw new Error("Clé API Mistral manquante");
+            }
+
+            // Faire la requête à l'API Mistral avec timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(
+              () => controller.abort(),
+              MISTRAL_API_TIMEOUT_MS
+            );
+
+            const response = await fetch(MISTRAL_API_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${MISTRAL_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "mistral-large-latest",
+                messages: [{ role: "user", content: question }],
+                temperature: 0.7,
+                max_tokens: 800,
+              }),
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              throw new Error(
+                `Erreur API Mistral: ${response.status} ${response.statusText}`
+              );
+            }
+
+            const result = await response.json();
+            const answer = result.choices[0].message.content;
+
+            // Créer un message de réponse de Mistral dans la base de données
+            const botMessage = await MessageModel.create({
+              contenu: answer,
+              fk_canal: channelId,
+              fk_utilisateur: MISTRAL_USER_ID,
+            });
+
+            // Récupérer le message complet avec infos utilisateur
             const fullBotMessage = await MessageModel.getById(
               botMessage.id_message
             );
-            io.to(`${canalId}`).emit("message", fullBotMessage);
-          } catch (apiError) {
-            console.error("Erreur API Mistral:", apiError.message);
-            io.to(`${canalId}`).emit("stopTyping", { userId: MISTRAL_USER_ID });
-            // Envoyer un message d'erreur dans le chat
+
+            // Après avoir reçu la réponse, arrêter l'indication de frappe
+            io.to(`${channelId}`).emit("stopTyping", {
+              userId: MISTRAL_USER_ID,
+            });
+
+            // Diffuser le message de Mistral aux membres du canal
+            io.to(`${channelId}`).emit("message", {
+              ...fullBotMessage,
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              isBot: false,
+              date_creation:
+                fullBotMessage.date_creation ||
+                fullBotMessage.created_at ||
+                new Date().toISOString(),
+            });
+          } catch (error) {
+            // En cas d'erreur, arrêter également l'indication de frappe
+            io.to(`${channelId}`).emit("stopTyping", {
+              userId: MISTRAL_USER_ID,
+            });
+
+            console.error(
+              "Erreur lors de la communication avec Mistral:",
+              error
+            );
+
+            // Créer un message d'erreur de Mistral
             const errorMessage = await MessageModel.create({
-              contenu: `Désolé, je n'ai pas pu traiter votre demande. Erreur: ${
-                apiError.response?.data?.message || apiError.message
-              }`,
-              fk_canal: canalId,
+              contenu:
+                "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer plus tard.",
+              fk_canal: channelId,
               fk_utilisateur: MISTRAL_USER_ID,
-              parent_id: userMessage.id_message,
             });
+
             const fullErrorMessage = await MessageModel.getById(
               errorMessage.id_message
             );
-            io.to(`${canalId}`).emit("message", fullErrorMessage);
+
+            // Diffuser le message d'erreur
+            io.to(`${channelId}`).emit("message", {
+              ...fullErrorMessage,
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              isBot: false,
+              date_creation:
+                fullErrorMessage.date_creation ||
+                fullErrorMessage.created_at ||
+                new Date().toISOString(),
+            });
           }
         }
-        // --- Nouveau : Gérer la mention pour Mistral OCR ---
-        else if (
-          messageData.contenu &&
-          messageData.contenu.startsWith(`@${MISTRAL_OCR_BOT_NAME}`)
-        ) {
-          console.log("Mention Mistral OCR détectée");
-          const userPrompt = messageData.contenu
-            .substring(`@${MISTRAL_OCR_BOT_NAME}`.length)
-            .trim();
-          const canalId = messageData.fk_canal;
-          const parentId = messageData.parent_id; // ID du message auquel on répond
-
-          // 1. Sauvegarder le message de l'utilisateur demandant l'OCR
-          const userOcrRequestMessage = await MessageModel.create({
-            ...messageData,
-            fk_utilisateur: userId,
-          });
-          const fullUserOcrRequestMessage = await MessageModel.getById(
-            userOcrRequestMessage.id_message
-          );
-          io.to(`${canalId}`).emit("message", fullUserOcrRequestMessage);
-
-          // 2. Vérifier si c'est une réponse et récupérer le message parent
-          if (!parentId) {
-            // Envoyer un message d'erreur si ce n'est pas une réponse
-            const errorReply = await MessageModel.create({
-              contenu: `Pour utiliser l'OCR, veuillez répondre au message contenant le fichier PDF ou image que vous souhaitez analyser.`,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_OCR_USER_ID,
-              parent_id: userOcrRequestMessage.id_message, // Répondre à la demande de l'utilisateur
-            });
-            const fullErrorReply = await MessageModel.getById(
-              errorReply.id_message
-            );
-            io.to(`${canalId}`).emit("message", fullErrorReply);
-            return; // Arrêter le traitement
-          }
-
-          const parentMessage = await MessageModel.getById(parentId);
-
-          // 3. Vérifier si le message parent contient un fichier compatible
-          if (!parentMessage || !parentMessage.file_url) {
-            const errorReply = await MessageModel.create({
-              contenu: `Le message auquel vous répondez ne semble pas contenir de fichier à analyser.`,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_OCR_USER_ID,
-              parent_id: userOcrRequestMessage.id_message,
-            });
-            const fullErrorReply = await MessageModel.getById(
-              errorReply.id_message
-            );
-            io.to(`${canalId}`).emit("message", fullErrorReply);
-            return;
-          }
-
-          // Vérification simple du type (peut être affinée)
-          const isImage = parentMessage.file_type?.startsWith("image/");
-          const isPdf = parentMessage.file_type === "application/pdf";
-
-          if (!isImage && !isPdf) {
-            const errorReply = await MessageModel.create({
-              contenu: `Je ne peux analyser que les fichiers PDF et les images pour le moment.`,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_OCR_USER_ID,
-              parent_id: userOcrRequestMessage.id_message,
-            });
-            const fullErrorReply = await MessageModel.getById(
-              errorReply.id_message
-            );
-            io.to(`${canalId}`).emit("message", fullErrorReply);
-            return;
-          }
-
-          // 4. Envoyer l'indicateur de frappe OCR
-          io.to(`${canalId}`).emit("typing", {
-            userId: MISTRAL_OCR_USER_ID,
-            userName: MISTRAL_OCR_BOT_NAME,
-          });
-
-          // 5. Appeler l'API Mistral OCR
-          try {
-            const ocrPayload = {
-              model: MISTRAL_OCR_MODEL,
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    // Fournir l'URL de l'image/PDF
-                    {
-                      type: isImage ? "image_url" : "document_url", // Ajuster le type si nécessaire basé sur l'API Mistral
-                      [isImage ? "image_url" : "document_url"]: {
-                        url: parentMessage.file_url,
-                      },
-                    },
-                    // Fournir la requête textuelle de l'utilisateur
-                    {
-                      type: "text",
-                      text: userPrompt || "Analyse ce document.",
-                    }, // Prompt par défaut si vide
-                  ],
-                },
-              ],
-            };
-
-            console.log("Payload OCR:", JSON.stringify(ocrPayload, null, 2));
-
-            const response = await axios.post(MISTRAL_API_URL, ocrPayload, {
-              headers: {
-                Authorization: `Bearer ${MISTRAL_API_KEY}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              timeout: 120000, // Timeout plus long pour l'OCR (120 secondes)
-            });
-
-            const ocrResponseContent = response.data.choices[0].message.content;
-
-            // 6. Arrêter l'indicateur de frappe OCR
-            io.to(`${canalId}`).emit("stopTyping", {
-              userId: MISTRAL_OCR_USER_ID,
-            });
-
-            // 7. Sauvegarder la réponse OCR
-            const ocrBotMessage = await MessageModel.create({
-              contenu: ocrResponseContent,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_OCR_USER_ID, // Utiliser l'ID du bot OCR
-              parent_id: userOcrRequestMessage.id_message, // Répondre à la demande de l'utilisateur
-            });
-
-            // 8. Récupérer et diffuser la réponse complète du bot OCR
-            const fullOcrBotMessage = await MessageModel.getById(
-              ocrBotMessage.id_message
-            );
-            io.to(`${canalId}`).emit("message", fullOcrBotMessage);
-          } catch (apiError) {
-            console.error("Erreur API Mistral OCR:", apiError.message);
-            io.to(`${canalId}`).emit("stopTyping", {
-              userId: MISTRAL_OCR_USER_ID,
-            });
-            // Envoyer un message d'erreur dans le chat
-            const errorMessage = await MessageModel.create({
-              contenu: `Désolé, je n'ai pas pu analyser le fichier. Erreur: ${
-                apiError.response?.data?.message || apiError.message
-              }`,
-              fk_canal: canalId,
-              fk_utilisateur: MISTRAL_OCR_USER_ID,
-              parent_id: userOcrRequestMessage.id_message,
-            });
-            const fullErrorMessage = await MessageModel.getById(
-              errorMessage.id_message
-            );
-            io.to(`${canalId}`).emit("message", fullErrorMessage);
-          }
-        }
-        // --- Fin : Gérer la mention pour Mistral OCR ---
-        // Si ce n'est pas une mention spéciale, traiter comme un message normal
-        else {
-          const newMessage = await MessageModel.create({
-            ...messageData,
-            fk_utilisateur: userId,
-          });
-          const fullMessage = await MessageModel.getById(newMessage.id_message);
-          console.log("Message normal sauvegardé et diffusé:", fullMessage);
-          io.to(`${messageData.fk_canal}`).emit("message", fullMessage);
-        }
-      } catch (error) {
-        console.error("Erreur lors de la gestion du message:", error);
-        // Envoyer une notification d'erreur à l'utilisateur qui a envoyé le message ?
-        socket.emit("messageError", {
-          message: "Erreur lors de l'envoi du message.",
-          error: error.message,
-        });
-      }
-    });
-
-    socket.on("addReaction", async ({ messageId, reaction_type, canalId }) => {
-      try {
-        const userId = socket.user.id;
-        console.log(
-          `Ajout réaction: user=${userId}, msg=${messageId}, type=${reaction_type}, canal=${canalId}`
-        );
-
-        // 1. Ajouter la réaction dans la base de données
-        // Assurez-vous que MessageModel.addReaction gère l'ajout ou l'incrémentation
-        await MessageModel.addReaction(messageId, userId, reaction_type);
-
-        // 2. Récupérer le message mis à jour avec toutes les réactions groupées
-        const updatedMessage = await MessageModel.getById(messageId);
-        if (!updatedMessage) {
-          console.error(
-            `Message ${messageId} non trouvé après ajout réaction.`
-          );
-          return;
-        }
-
-        // 3. Diffuser la mise à jour des réactions à tous dans le canal
-        io.to(`${canalId}`).emit("messageReaction", {
-          messageId: messageId,
-          reactions: updatedMessage.reactions || [], // Envoyer le tableau complet des réactions
-        });
-        console.log(`Réaction ajoutée et diffusée pour msg ${messageId}`);
-      } catch (error) {
-        console.error("Erreur lors de l'ajout de la réaction:", error);
-        socket.emit("reactionError", { messageId, error: error.message });
-      }
-    });
-
-    socket.on(
-      "removeReaction",
-      async ({ messageId, reaction_type, canalId }) => {
-        try {
-          const userId = socket.user.id;
-          console.log(
-            `Suppression réaction: user=${userId}, msg=${messageId}, type=${reaction_type}, canal=${canalId}`
-          );
-
-          // 1. Supprimer la réaction dans la base de données
-          // Assurez-vous que MessageModel.removeReaction gère la suppression ou la décrémentation
-          await MessageModel.removeReaction(messageId, userId, reaction_type);
-
-          // 2. Récupérer le message mis à jour avec toutes les réactions groupées
-          const updatedMessage = await MessageModel.getById(messageId);
-          if (!updatedMessage) {
-            // Si le message n'existe plus (rare), on ne fait rien de plus
-            console.warn(
-              `Message ${messageId} non trouvé après suppression réaction.`
-            );
-            // On pourrait envoyer un événement spécial si nécessaire, mais souvent on ignore
-            return;
-          }
-
-          // 3. Diffuser la mise à jour des réactions à tous dans le canal
-          io.to(`${canalId}`).emit("messageReaction", {
-            messageId: messageId,
-            reactions: updatedMessage.reactions || [], // Envoyer le tableau complet des réactions
-          });
-          console.log(`Réaction supprimée et diffusée pour msg ${messageId}`);
-        } catch (error) {
-          console.error("Erreur lors de la suppression de la réaction:", error);
-          socket.emit("reactionError", { messageId, error: error.message });
-        }
-      }
-    );
-
-    socket.on("deleteMessage", async ({ messageId, canalId, workspaceId }) => {
-      try {
-        const userId = socket.user.id;
-        console.log(
-          `Tentative de suppression message: user=${userId}, msg=${messageId}, canal=${canalId}`
-        );
-
-        // 1. Vérifier si l'utilisateur est autorisé à supprimer (optionnel mais recommandé)
-        const message = await MessageModel.getByIdSimple(messageId); // Méthode simple sans jointures
-        if (!message) {
-          console.warn(`Message ${messageId} non trouvé pour suppression.`);
-          return; // Message déjà supprimé ou inexistant
-        }
-        if (message.fk_utilisateur !== userId) {
-          // Ici, vous pourriez vérifier si l'utilisateur est admin/owner du workspace
-          // Pour l'instant, on suppose que seuls les auteurs peuvent supprimer
-          console.warn(
-            `Utilisateur ${userId} non autorisé à supprimer le message ${messageId}`
-          );
-          socket.emit("deleteMessageError", {
-            messageId,
-            error: "Non autorisé",
-          });
-          return;
-        }
-
-        // 2. Supprimer le message dans la base de données (déjà fait via API REST normalement, mais on peut le refaire ici par sécurité ou si l'API n'est pas utilisée)
-        // await MessageModel.delete(messageId); // Décommentez si la suppression via socket est la source principale
-
-        // 3. Diffuser l'événement de suppression aux autres utilisateurs dans le canal
-        // L'événement est émis par le client qui a initié la suppression via l'API REST,
-        // mais on peut le re-diffuser ici si nécessaire (attention aux boucles).
-        // Normalement, le client qui supprime reçoit la confirmation de l'API et met à jour son UI.
-        // Les autres clients reçoivent l'événement 'messageDeleted' (ou 'deleteMessage') émis par le client initiateur ou par le serveur après confirmation API.
-        // Si le serveur doit être la source de vérité unique pour la diffusion :
-        console.log(
-          `Diffusion de la suppression du message ${messageId} au canal ${canalId}`
-        );
-        io.to(`${canalId}`).emit("messageDeleted", { messageId }); // Utiliser 'messageDeleted' pour la cohérence avec le frontend
       } catch (error) {
         console.error(
-          "Erreur lors de la gestion de la suppression du message via socket:",
+          "Erreur lors du traitement de la requête Mistral:",
           error
         );
-        socket.emit("deleteMessageError", { messageId, error: error.message });
+        socket.emit("error", {
+          message: "Erreur lors du traitement de la requête",
+        });
       }
     });
 
-    socket.on("disconnect", (reason) => {
-      console.log(
-        `Utilisateur déconnecté: ${socket.user.id} (${socket.id}). Raison: ${reason}`
-      );
-      // Mettre à jour le statut de l'utilisateur à 'hors ligne'
-      UserModel.updateStatus(socket.user.id, 0) // 0 pour 'hors ligne'
-        .then(() =>
-          console.log(`Statut mis à jour pour ${socket.user.id}: hors ligne`)
-        )
-        .catch((err) =>
-          console.error("Erreur mise à jour statut (déconnexion):", err)
+    // Nouvel événement pour gérer les réactions aux messages
+    socket.on("addReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Réaction reçue", data);
+        const { messageId, reaction_type, canalId } = data;
+
+        if (!messageId || !reaction_type || !canalId) {
+          console.error("Socket.IO: Données de réaction incomplètes");
+          socket.emit("error", { message: "Données de réaction incomplètes" });
+          return;
+        }
+
+        // Ajouter la réaction en base de données
+        await Reaction.create({
+          fk_message: messageId,
+          fk_utilisateur: socket.user.id,
+          reaction_type,
+        });
+
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await Reaction.getByMessage(
+          messageId,
+          socket.user.id
         );
 
-      // Optionnel: Diffuser le statut hors ligne aux autres utilisateurs
-      // Vous devrez déterminer quels workspaces/canaux informer.
-      // Exemple simple:
-      // io.emit('userStatusUpdate', { userId: socket.user.id, status: 'offline' });
+        // Diffuser à tous les utilisateurs du canal
+        io.to(`${canalId}`).emit("messageReaction", {
+          messageId,
+          reactions: updatedReactions,
+        });
+      } catch (error) {
+        // Gérer l'erreur si la réaction existe déjà (contrainte unique)
+        if (error.code === "23505") {
+          // Code d'erreur PostgreSQL pour violation d'unicité
+          console.log(
+            `L'utilisateur ${socket.user.id} a déjà réagi avec ${reaction_type} au message ${messageId}`
+          );
+          // Optionnel: renvoyer les réactions actuelles pour synchroniser le client
+          const currentReactions = await Reaction.getByMessage(
+            messageId,
+            socket.user.id
+          );
+          socket.emit("messageReaction", {
+            messageId,
+            reactions: currentReactions,
+          });
+        } else {
+          console.error("Socket.IO: Erreur de traitement de réaction", error);
+          socket.emit("error", {
+            message: "Erreur lors du traitement de la réaction",
+          });
+        }
+      }
+    });
+
+    // Nouvel événement pour gérer la suppression des réactions
+    socket.on("removeReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Suppression de réaction", data);
+        const { messageId, reaction_type, canalId } = data;
+
+        if (!messageId || !reaction_type || !canalId) {
+          console.error(
+            "Socket.IO: Données de suppression de réaction incomplètes"
+          );
+          socket.emit("error", { message: "Données incomplètes" });
+          return;
+        }
+
+        // Supprimer la réaction en base de données
+        await Reaction.delete(messageId, socket.user.id, reaction_type);
+
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await Reaction.getByMessage(
+          messageId,
+          socket.user.id
+        );
+
+        // Diffuser à tous les utilisateurs du canal
+        io.to(`${canalId}`).emit("messageReaction", {
+          messageId,
+          reactions: updatedReactions,
+        });
+      } catch (error) {
+        console.error("Socket.IO: Erreur de suppression de réaction", error);
+        socket.emit("error", {
+          message: "Erreur lors de la suppression de la réaction",
+        });
+      }
+    });
+
+    // Déconnexion
+    socket.on("disconnect", () => {
+      console.log(`Utilisateur déconnecté: ${socket.id}`);
     });
   });
+
+  return io;
 };
 
-export default setupSocketIO;
+export default socketManager;
