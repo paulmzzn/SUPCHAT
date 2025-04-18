@@ -90,6 +90,11 @@ const formatMessageDate = (dateString) => {
   }
 };
 
+// Ajouter une fonction d'aide pour logger les interactions avec Mistral
+const debugMistralInteraction = (message) => {
+  console.log(`[Mistral Debug] ${message}`);
+};
+
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const navigate = useNavigate(); // Ajout hook navigation
@@ -145,6 +150,47 @@ function WorkspaceDetails() {
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
+  };
+
+  // Modifier le handler d'envoi de message pour traiter spécifiquement les mentions de Mistral
+  const handleMistralMention = (message) => {
+    // Vérifier si le message contient une mention de Mistral
+    const mistralMentionPattern = /@Mistral/i;
+    if (mistralMentionPattern.test(message)) {
+      debugMistralInteraction("Mention de Mistral détectée");
+      
+      if (socket && socket.connected && activeChannel) {
+        debugMistralInteraction("Socket connecté, tentative d'envoi directement à Mistral");
+        socket.emit('mistralRequest', {
+          content: message,
+          channelId: activeChannel.id
+        });
+        
+        // Réinitialiser à la fois newMessage et handleNewMessageChange
+        // pour s'assurer que les deux états sont mis à jour
+        setNewMessage('');
+        handleNewMessageChange('');
+        
+        return true; // Indique que la mention a été gérée
+      }
+    }
+    return false; // Indique que ce n'était pas une mention de Mistral
+  };
+
+  // Utiliser le handler original pour l'envoi normal
+  const handleSendMessageWithMistralCheck = (e) => {
+    if (e) e.preventDefault();
+    
+    // Ne pas procéder si le message est vide
+    if (!displayMessage.trim()) return;
+    
+    // Vérifier si c'est une mention de Mistral et la traiter en priorité
+    const isMistralMention = handleMistralMention(displayMessage);
+    
+    // Si ce n'est pas une mention de Mistral, utiliser le handler original
+    if (!isMistralMention) {
+      handleSendMessage(e);
+    }
   };
 
   if (loading) {
@@ -540,7 +586,7 @@ function WorkspaceDetails() {
                   </div>
                 )}
 
-                <form className="chat-input-container" onSubmit={handleSendMessage}>
+                <form className="chat-input-container" onSubmit={handleSendMessageWithMistralCheck}>
                   {/* Afficher l'indicateur de réponse si on répond à un message */}
                   {replyingTo && ( // Use replyingTo from hook
                     <div className="replying-to">
