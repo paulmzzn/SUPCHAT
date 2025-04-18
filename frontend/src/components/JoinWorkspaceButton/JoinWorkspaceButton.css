@@ -52,6 +52,19 @@
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }
 
+/* Style pour le bouton quand l'utilisateur est déjà membre */
+.join-button.joined {
+  background-color: #666;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.join-button.joined:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .join-error {
   color: #ff6b6b;
   font-size: 0.85rem;
