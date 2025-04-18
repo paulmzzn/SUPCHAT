@@ -9,7 +9,7 @@ import UserModel from '../models/User.js';
 export const googleStrategy = new GoogleStrategy({
   clientID: '976557604598-ooefiik9hsad0nlr1fq41gpn3aj4c5mg.apps.googleusercontent.com',
   clientSecret: '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',
-  callbackURL: 'http://192.168.1.54:3000/api/users/auth/google/callback'
+  callbackURL: 'http://192.168.1.48:3000/api/users/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     console.log('Google profile:', profile); // Pour le débogage
