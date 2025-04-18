@@ -43,12 +43,6 @@ const renderTextWithLinks = (text) => {
   });
 };
 
-// Simplified function that no longer adds highlighting
-const processMessageContent = (text) => {
-  if (!text) return '';
-  return text; // Simply return the original text without any modifications
-};
-
 // Helper pour afficher le bon icône de fichier
 const getFileIcon = (type) => {
   switch(type) {
@@ -96,7 +90,6 @@ const formatMessageDate = (dateString) => {
   }
 };
 
-
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const navigate = useNavigate(); // Ajout hook navigation
@@ -108,6 +101,7 @@ function WorkspaceDetails() {
     showImages, members, files, images, showCreateChannelModal, newChannel, 
     isCreatingChannel, channelError, contextMenu, showEditChannelModal, editingChannel, 
     isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
+    displayMessage, // <-- Ajouté
     loadingMessages, chatContainerRef, socket, currentUserId, currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
     messageContextMenu, showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
@@ -144,6 +138,9 @@ function WorkspaceDetails() {
       }
     }
   };
+
+  // Helper pour vérifier si une chaîne est un UUID (pour identifier les user IDs dans les href)
+  const isUuid = (str) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
@@ -273,7 +270,6 @@ function WorkspaceDetails() {
                     <div 
                       key={message.id_message} 
                       id={`msg-${message.id_message}`} // Add ID for scrolling to parent
-                      // Ajout d'une classe pour le bot si le flag isBot est présent
                       className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : (message.isBot ? 'bot-message' : 'other-message')}`} // Use currentUserId from hook
                       onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
                     >
@@ -342,17 +338,81 @@ function WorkspaceDetails() {
                           <span className="message-time">{formatMessageDate(message.date_creation)}</span>
                         </div>
 
-                        {/* *** Always use ReactMarkdown for all messages *** */}
+                        {/* *** Approche avec vérification de null/undefined sur message.contenu *** */}
                         <div className="message-text"> 
-                          <ReactMarkdown components={{
-                            p: ({node, ...props}) => <p {...props} className="message-paragraph" />,
-                            span: ({node, ...props}) => <span {...props} />,
-                          }} 
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeRaw]} 
-                          >
-                            {processMessageContent(message.contenu, currentUserName)}
-                          </ReactMarkdown>
+                          {(() => {
+                            // Vérifier si message.contenu est null ou undefined
+                            if (!message.contenu) {
+                              return <p className="message-paragraph"></p>; // Retourner un paragraphe vide
+                            }
+                            
+                            // Prétraiter le contenu pour retirer les @ avant les mentions
+                            // Recherche les motifs de type @[nom](uuid)
+                            const mentionRegex = /@\[([^\]]+)\]\(([0-9a-fA-F-]+)\)/g;
+                            
+                            // Remplacer par [nom](uuid) sans le @ initial
+                            const processedContent = message.contenu.replace(mentionRegex, (match, name, uuid) => {
+                              if (isUuid(uuid)) {
+                                return `[${name}](${uuid})`;
+                              }
+                              return match; // Si ce n'est pas un UUID valide, laisser tel quel
+                            });
+                            
+                            return (
+                              <ReactMarkdown
+                                components={{
+                                  p: ({node, ...props}) => <p {...props} className="message-paragraph" />,
+                                  a: ({node, href, children, ...props}) => {
+                                    const potentialUserId = href;
+                                    
+                                    // Extraire le texte complet du lien plus efficacement
+                                    let fullText = "";
+                                    if (children && children.length) {
+                                      // Parcourir tous les éléments enfants et extraire leur texte
+                                      React.Children.forEach(children, child => {
+                                        if (typeof child === 'string') {
+                                          fullText += child;
+                                        } else if (child && child.props && child.props.children) {
+                                          // Traiter les enfants qui sont des éléments React
+                                          if (typeof child.props.children === 'string') {
+                                            fullText += child.props.children;
+                                          } else if (Array.isArray(child.props.children)) {
+                                            // Aplatir les tableaux d'enfants
+                                            fullText += child.props.children
+                                              .filter(c => typeof c === 'string')
+                                              .join('');
+                                          }
+                                        }
+                                      });
+                                    }
+                                    
+                                    // Si le href est un UUID, c'est une mention
+                                    if (isUuid(potentialUserId)) {
+                                      const isCurrentUser = potentialUserId === currentUserId;
+                                      return (
+                                        <span
+                                          className={`mention-highlight ${isCurrentUser ? 'current-user-mention' : ''}`}
+                                          data-userid={potentialUserId}
+                                        >
+                                          @{fullText} {/* Utilise le texte complet extrait */}
+                                        </span>
+                                      );
+                                    }
+                                    
+                                    return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
+                                  },
+                                  // Version simplifiée du gestionnaire de texte
+                                  text: ({node, ...props}) => {
+                                    return <>{renderTextWithLinks(node.value)}</>; 
+                                  }
+                                }}
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]} 
+                              >
+                                {processedContent}
+                              </ReactMarkdown>
+                            );
+                          })()}
                         </div>
                         {/* *** End Markdown rendering *** */}
                         
@@ -403,7 +463,6 @@ function WorkspaceDetails() {
                 {isMistralTyping && (
                   <div 
                     className="chat-message bot-message typing-indicator"
-                    // Utilise la même structure que les autres messages pour la bulle
                   >
                     <div className="message-avatar">
                       <img src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp" alt="Mistral AI" />
@@ -502,8 +561,8 @@ function WorkspaceDetails() {
                     <input 
                       type="text" 
                       placeholder={`Message dans #${activeChannel.name}`}
-                      value={newMessage} // Use newMessage from hook
-                      onChange={(e) => handleNewMessageChange(e.target.value)} // Use new handler from hook
+                      value={displayMessage} // <-- Utilise displayMessage
+                      onChange={(e) => handleNewMessageChange(e.target.value)} // <-- Utilise handleNewMessageChange
                       onKeyDown={handleChatInputKeyDown} // Apply the new handler
                     />
                     <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
@@ -513,7 +572,7 @@ function WorkspaceDetails() {
                   <button 
                     type="submit" 
                     className="chat-send-btn"
-                    disabled={!newMessage.trim()} // Use newMessage from hook
+                    disabled={!displayMessage.trim()} // <-- Utilise displayMessage
                   >
                     <FaPaperPlane />
                   </button>

@@ -1787,40 +1787,71 @@
   margin-left: 6px;
 }
 
-/* Style pour les mentions dans les messages */
-.mention-highlight {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
+/* Style pour les mentions dans les messages - SANS ::before */
+.mention-highlight,
+a.mention-highlight, /* Garder au cas où */
+span.mention-highlight,
+.message-text span.mention-highlight,
+.message-paragraph span.mention-highlight {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: linear-gradient(90deg, #9348B7 0%, #B05FDF 100%) !important;
+  color: #fff !important;
+  /* Ajustement potentiel du padding si le '@' interne change l'espacement */
+  padding: 2px 8px !important; /* Simplifié, ajustez si besoin */
+  border-radius: 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.97em !important;
+  margin: 0 2px !important;
+  box-shadow: 0 2px 8px rgba(147, 72, 183, 0.15) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  border: none !important; 
 }
 
-.mention-highlight:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+.mention-highlight:hover,
+a.mention-highlight:hover,
+span.mention-highlight:hover,
+.message-text span.mention-highlight:hover,
+.message-paragraph span.mention-highlight:hover {
+  background: linear-gradient(90deg, #a65bd1 0%, #c47ef2 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.3) !important;
+  text-decoration: none !important;
 }
 
-/* Style spécial pour la mention de l'utilisateur actuel */
-.mention-highlight.current-user-mention {
-  background-color: rgba(147, 72, 183, 0.3);
-  color: #B05FDF;
-  font-weight: 600;
+.mention-highlight.current-user-mention,
+a.mention-highlight.current-user-mention,
+span.mention-highlight.current-user-mention {
+  background: linear-gradient(90deg, #ff9e2a 0%, #ffb357 100%) !important;
+  color: #222 !important;
+  box-shadow: 0 2px 8px rgba(255, 158, 42, 0.3) !important;
+  border: none !important; 
 }
 
-.mention-highlight.current-user-mention:hover {
-  background-color: rgba(147, 72, 183, 0.4);
+.mention-highlight.current-user-mention:hover,
+a.mention-highlight.current-user-mention:hover,
+span.mention-highlight.current-user-mention:hover {
+  background: linear-gradient(90deg, #ffae4a 0%, #ffc277 100%) !important;
+  color: #222 !important;
 }
 
-/* Style spécial pour la mention de l'utilisateur actuel */
-.mention-highlight.current-user-mention {
-  background-color: rgba(147, 72, 183, 0.3);
-  font-weight: 600;
-  color: #7D32A8;
+/* Règle de spécificité maximale - Cible maintenant les spans */
+body .chat-messages .chat-message .message-content .message-text p span.mention-highlight,
+body .chat-messages .chat-message .message-content .message-text span.mention-highlight {
+  text-decoration: none !important;
+  border: none !important; 
 }
 
-.mention-highlight.current-user-mention:hover {
-  background-color: rgba(147, 72, 183, 0.4);
+body .chat-messages .chat-message .message-content .message-text span.mention-highlight.current-user-mention {
+    border: none !important; 
+}
+
+/* Force de supprimer tout style de lien dans les mentions */
+.message-text a:not(.message-link),
+.message-paragraph a:not(.message-link) {
+  color: inherit !important;
+  text-decoration: none !important;
 }
 
 /* Message paragraph style */
