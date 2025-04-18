@@ -13,7 +13,7 @@ import MessageModel from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 
 // Load environment variables at the start
@@ -64,13 +64,13 @@ app.use("/api", reactionRoutes);
 app.use("/api/private-messages", privateMessageRoutes);
 
 // Assurez-vous que cette ligne est AVANT l'initialisation de socketManager
-app.set('io', io);
+app.set("io", io);
 
 // Initialiser le gestionnaire de socket
 socketManager(io);
 
 httpServer.listen(PORT, async () => {
-  console.log(`Serveur démarré sur http://192.168.1.48:${PORT}`);
+  console.log(`Serveur démarré sur http://192.168.1.58:${PORT}`);
   try {
     await pool.query("SELECT NOW()"); // Test simple pour vérifier la connexion
     console.log("Connexion réussie avec PostgreSQL");

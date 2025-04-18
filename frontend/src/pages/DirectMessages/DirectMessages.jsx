@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { 
-  FaUserCircle, 
-  FaPaperPlane, 
-  FaPaperclip, 
-  FaSmile, 
+import {
+  FaUserCircle,
+  FaPaperPlane,
+  FaPaperclip,
+  FaSmile,
   FaSearch,
   FaPlus,
   FaTimes,
   FaReply,
-  FaRegSmile
+  FaRegSmile,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
@@ -24,7 +24,11 @@ const formatMessageDate = (dateString) => {
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
-  return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    date.toLocaleDateString() +
+    " " +
+    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
 };
 
 function DirectMessages() {
@@ -40,7 +44,8 @@ function DirectMessages() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const messagesContainerRef = useRef(null);
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] =
+    useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [availableUsers, setAvailableUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -51,19 +56,24 @@ function DirectMessages() {
     yPos: 0,
     messageId: null,
     isOwnMessage: false,
-    message: null
+    message: null,
   });
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editMessageContent, setEditMessageContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiPickerPosition, setEmojiPickerPosition] = useState({ top: 0, left: 0 });
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
+    top: 0,
+    left: 0,
+  });
   const emojiPickerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Récupère l'ID utilisateur courant
   const currentUserId = (() => {
     try {
-      return JSON.parse(atob(localStorage.getItem("token").split('.')[1])).id;
+      return JSON.parse(atob(localStorage.getItem("token").split(".")[1])).id;
     } catch {
       return null;
     }
@@ -92,67 +102,74 @@ function DirectMessages() {
   // Réception des nouveaux messages privés en temps réel
   useEffect(() => {
     if (!socket) return;
-    
+
     const handlePrivateMessage = (msg) => {
       console.log("Received private message:", msg);
       // Ajoute le message seulement si la conversation affichée est concernée
       if (
         selectedUser &&
-        (msg.fk_expediteur === selectedUser || msg.fk_destinataire === selectedUser)
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
       ) {
         setMessages((prev) => [...prev, msg]);
         scrollToBottom();
       }
-      
+
       // Si c'est un nouveau message, rafraîchir la liste des conversations
-      if (!conversations.includes(msg.fk_expediteur) && msg.fk_expediteur !== currentUserId) {
+      if (
+        !conversations.includes(msg.fk_expediteur) &&
+        msg.fk_expediteur !== currentUserId
+      ) {
         fetchConversations();
       }
     };
-    
+
     const handlePrivateMessageUpdated = (msg) => {
       console.log("Message updated:", msg);
       if (
         selectedUser &&
-        (msg.fk_expediteur === selectedUser || msg.fk_destinataire === selectedUser)
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
       ) {
-        setMessages((prev) => 
-          prev.map((m) => (m.id_message_prive === msg.id_message_prive ? msg : m))
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === msg.id_message_prive ? msg : m
+          )
         );
       }
     };
-    
+
     const handlePrivateMessageDeleted = (data) => {
       console.log("Message deleted:", data);
       if (selectedUser) {
-        setMessages((prev) => 
-          prev.map((m) => 
-            m.id_message_prive === data.id 
-              ? { ...m, is_deleted: true, contenu: "[message supprimé]" } 
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.id
+              ? { ...m, is_deleted: true, contenu: "[message supprimé]" }
               : m
           )
         );
       }
     };
-    
+
     const handlePrivateMessageRead = (data) => {
       console.log("Message read:", data);
       if (selectedUser) {
-        setMessages((prev) => 
-          prev.map((m) => 
-            m.id_message_prive === data.id 
-              ? { ...m, date_lecture: data.date_lecture } 
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.id
+              ? { ...m, date_lecture: data.date_lecture }
               : m
           )
         );
       }
     };
-    
+
     socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageRead", handlePrivateMessageRead);
-    
+
     return () => {
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
@@ -164,7 +181,8 @@ function DirectMessages() {
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   };
 
@@ -178,9 +196,9 @@ function DirectMessages() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
         const err = await res.text();
         setError(`Erreur lors de la récupération des conversations: ${err}`);
@@ -188,11 +206,11 @@ function DirectMessages() {
         setConversations([]);
         return;
       }
-      
+
       const data = await res.json();
       console.log("Conversations reçues:", data);
       setConversations(data);
-      
+
       // Précharge les infos utilisateurs
       for (const userId of data) {
         fetchUserInfo(userId);
@@ -213,23 +231,28 @@ function DirectMessages() {
   // Récupère les infos d'un utilisateur
   const fetchUserInfo = async (userId) => {
     if (usersInfo[userId]) return usersInfo[userId];
-    
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
-        console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
+        console.error(
+          `Erreur lors de la récupération des infos utilisateur ${userId}`
+        );
         return null;
       }
-      
+
       const data = await res.json();
       setUsersInfo((prev) => ({ ...prev, [userId]: data }));
       return data;
     } catch (e) {
-      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
+      console.error(
+        `Erreur lors de la récupération des infos utilisateur ${userId}:`,
+        e
+      );
       return null;
     }
   };
@@ -239,32 +262,33 @@ function DirectMessages() {
     try {
       setLoadingMessages(true);
       setSelectedUser(userId);
-      
+
       // Récupérer les informations de l'utilisateur sélectionné
       let userInfo = usersInfo[userId];
       if (!userInfo) {
         userInfo = await fetchUserInfo(userId);
       }
       setSelectedUserInfo(userInfo);
-      
+
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
-        setError(`Erreur lors de la récupération des messages: ${await res.text()}`);
+        setError(
+          `Erreur lors de la récupération des messages: ${await res.text()}`
+        );
         setMessages([]);
         return;
       }
-      
+
       const data = await res.json();
       console.log("Messages récupérés:", data);
       setMessages(data);
-      
+
       // Marquer les messages non lus comme lus
       markMessagesAsRead(data);
-      
     } catch (e) {
       setError(`Erreur lors de la récupération des messages: ${e.message}`);
       setMessages([]);
@@ -276,13 +300,13 @@ function DirectMessages() {
   // Marquer les messages non lus comme lus
   const markMessagesAsRead = (msgs) => {
     if (!socket || !msgs || !msgs.length) return;
-    
+
     const unreadMessages = msgs.filter(
-      m => m.fk_expediteur !== currentUserId && !m.date_lecture
+      (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
     );
-    
+
     if (unreadMessages.length > 0) {
-      unreadMessages.forEach(msg => {
+      unreadMessages.forEach((msg) => {
         socket.emit("readPrivateMessage", { id: msg.id_message_prive });
       });
     }
@@ -292,21 +316,21 @@ function DirectMessages() {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser || !socket) return;
-    
+
     try {
       // Ajouter le parent_id si on répond à un message
       socket.emit("privateMessage", {
         destinataireId: selectedUser,
         contenu: newMessage,
-        replyToId: replyingTo ? replyingTo.id_message_prive : null
+        replyToId: replyingTo ? replyingTo.id_message_prive : null,
       });
-      
+
       setNewMessage("");
       setReplyingTo(null);
     } catch (e) {
       console.error("Erreur lors de l'envoi du message:", e);
       setError(`Erreur lors de l'envoi du message: ${e.message}`);
-      
+
       // Fallback to API if socket fails
       try {
         const token = localStorage.getItem("token");
@@ -314,18 +338,18 @@ function DirectMessages() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             destinataireId: selectedUser,
-            contenu: newMessage
-          })
+            contenu: newMessage,
+          }),
         });
-        
+
         if (!res.ok) {
           throw new Error(await res.text());
         }
-        
+
         const data = await res.json();
         setMessages((prev) => [...prev, data]);
         setNewMessage("");
@@ -335,9 +359,43 @@ function DirectMessages() {
     }
   };
 
+  // Handler pour ouvrir le sélecteur de fichier
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  // Handler pour l'upload de fichier
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedUser) return;
+    setUploadingFile(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(
+        `${API_URL}/api/private-messages/${selectedUser}/upload`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
+      if (!res.ok) throw new Error("Erreur lors de l'envoi du fichier");
+      const message = await res.json();
+      setMessages((prev) => [...prev, message]);
+    } catch (err) {
+      alert(err.message || "Erreur lors de l'upload du fichier");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   // Filtre les conversations basées sur la recherche
   const filteredConversations = searchQuery.trim()
-    ? conversations.filter(userId => {
+    ? conversations.filter((userId) => {
         const user = usersInfo[userId] || {};
         return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
@@ -349,17 +407,17 @@ function DirectMessages() {
       setLoadingUsers(true);
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
         console.error("Erreur lors de la récupération des utilisateurs");
         return;
       }
-      
+
       const data = await res.json();
       // Filtrer pour exclure l'utilisateur courant
-      const filteredData = data.filter(user => user.id !== currentUserId);
+      const filteredData = data.filter((user) => user.id !== currentUserId);
       setAvailableUsers(filteredData);
       setFilteredUsers(filteredData);
     } catch (e) {
@@ -374,7 +432,7 @@ function DirectMessages() {
     if (searchUserQuery.trim() === "") {
       setFilteredUsers(availableUsers);
     } else {
-      const filtered = availableUsers.filter(user => 
+      const filtered = availableUsers.filter((user) =>
         user.name?.toLowerCase().includes(searchUserQuery.toLowerCase())
       );
       setFilteredUsers(filtered);
@@ -391,10 +449,10 @@ function DirectMessages() {
   const startConversationWith = (userId) => {
     setShowNewConversationModal(false);
     fetchMessages(userId);
-    
+
     // Si cet utilisateur n'est pas déjà dans la liste des conversations, ajoutez-le
     if (!conversations.includes(userId)) {
-      setConversations(prev => [...prev, userId]);
+      setConversations((prev) => [...prev, userId]);
     }
   };
 
@@ -408,20 +466,25 @@ function DirectMessages() {
       yPos: e.pageY,
       messageId: msg.id_message_prive,
       isOwnMessage: isOwnMsg,
-      message: msg
+      message: msg,
     });
   };
 
   const handleCloseMessageContextMenu = () => {
-    setMessageContextMenu({...messageContextMenu, visible: false});
+    setMessageContextMenu({ ...messageContextMenu, visible: false });
   };
 
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(`@${usersInfo[messageContextMenu.message.fk_expediteur]?.name || "Utilisateur"} `);
+    setNewMessage(
+      `@${
+        usersInfo[messageContextMenu.message.fk_expediteur]?.name ||
+        "Utilisateur"
+      } `
+    );
     handleCloseMessageContextMenu();
-    const inputElement = document.querySelector('.dm-input');
+    const inputElement = document.querySelector(".dm-input");
     if (inputElement) inputElement.focus();
   };
 
@@ -429,8 +492,8 @@ function DirectMessages() {
   const handleDeleteMessage = async () => {
     try {
       if (!socket || !messageContextMenu.messageId) return;
-      
-      socket.emit('deletePrivateMessage', { id: messageContextMenu.messageId });
+
+      socket.emit("deletePrivateMessage", { id: messageContextMenu.messageId });
       handleCloseMessageContextMenu();
     } catch (error) {
       console.error("Erreur lors de la suppression du message:", error);
@@ -449,12 +512,12 @@ function DirectMessages() {
   const handleSaveEdit = async () => {
     try {
       if (!socket || !editingMessage) return;
-      
-      socket.emit('editPrivateMessage', {
+
+      socket.emit("editPrivateMessage", {
         id: editingMessage.id_message_prive,
-        contenu: editMessageContent
+        contenu: editMessageContent,
       });
-      
+
       setEditingMessage(null);
       setEditMessageContent("");
     } catch (error) {
@@ -479,7 +542,7 @@ function DirectMessages() {
     setShowEmojiPicker(true);
     setEmojiPickerPosition({
       top: messageContextMenu.yPos,
-      left: messageContextMenu.xPos
+      left: messageContextMenu.xPos,
     });
     handleCloseMessageContextMenu();
   };
@@ -487,26 +550,29 @@ function DirectMessages() {
   // Gérer la sélection d'un emoji
   const handleEmojiSelect = (emoji) => {
     if (!socket || !messageContextMenu.messageId) return;
-    
-    socket.emit('addPrivateMessageReaction', {
+
+    socket.emit("addPrivateMessageReaction", {
       id: messageContextMenu.messageId,
-      reaction: emoji
+      reaction: emoji,
     });
-    
+
     setShowEmojiPicker(false);
   };
 
   // Fermer le sélecteur d'emoji lorsqu'on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target)
+      ) {
         setShowEmojiPicker(false);
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -518,7 +584,7 @@ function DirectMessages() {
         <div className="dm-sidebar">
           <div className="dm-sidebar-header">
             <h3 className="dm-title">Messages privés</h3>
-            
+
             <div className="dm-search">
               <div className="dm-search-input-wrapper">
                 <FaSearch className="dm-search-icon" />
@@ -531,18 +597,18 @@ function DirectMessages() {
                 />
               </div>
             </div>
-            
+
             {/* Bouton nouvelle conversation */}
-            <button 
-              className="dm-new-conversation-button" 
+            <button
+              className="dm-new-conversation-button"
               onClick={handleOpenNewConversation}
             >
               Démarrer une conversation
             </button>
           </div>
-          
+
           {error && <div className="dm-error">{error}</div>}
-          
+
           <ul className="dm-conv-list">
             {loading ? (
               <li className="dm-empty">Chargement des conversations...</li>
@@ -556,21 +622,25 @@ function DirectMessages() {
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${selectedUser === userId ? 'active' : ''}`}
+                    className={`dm-conv-item ${
+                      selectedUser === userId ? "active" : ""
+                    }`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name || "User"} 
-                        className="dm-avatar" 
+                      <img
+                        src={user.avatar}
+                        alt={user.name || "User"}
+                        className="dm-avatar"
                       />
                     ) : (
                       <div className="dm-avatar">
                         <FaUserCircle className="dm-avatar-placeholder" />
                       </div>
                     )}
-                    <span className="dm-username">{user.name || "Utilisateur"}</span>
+                    <span className="dm-username">
+                      {user.name || "Utilisateur"}
+                    </span>
                   </li>
                 );
               })
@@ -582,7 +652,7 @@ function DirectMessages() {
         <div className="dm-main">
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
-          
+
           {!selectedUser ? (
             <div className="dm-empty-msg">
               <h2>Sélectionnez une conversation</h2>
@@ -594,10 +664,10 @@ function DirectMessages() {
               <div className="dm-header">
                 <div className="dm-header-info">
                   {selectedUserInfo?.avatar ? (
-                    <img 
-                      src={selectedUserInfo.avatar} 
-                      alt={selectedUserInfo.name || "User"} 
-                      className="dm-header-avatar" 
+                    <img
+                      src={selectedUserInfo.avatar}
+                      alt={selectedUserInfo.name || "User"}
+                      className="dm-header-avatar"
                     />
                   ) : (
                     <FaUserCircle className="dm-header-avatar" />
@@ -606,14 +676,22 @@ function DirectMessages() {
                     {selectedUserInfo?.name || "Utilisateur"}
                   </h2>
                   <div className="dm-header-status">
-                    <span 
-                      className={`status-dot ${selectedUserInfo?.status === 'online' ? 'online' : 'offline'}`}
+                    <span
+                      className={`status-dot ${
+                        selectedUserInfo?.status === "online"
+                          ? "online"
+                          : "offline"
+                      }`}
                     ></span>
-                    <span>{selectedUserInfo?.status === 'online' ? 'En ligne' : 'Hors ligne'}</span>
+                    <span>
+                      {selectedUserInfo?.status === "online"
+                        ? "En ligne"
+                        : "Hors ligne"}
+                    </span>
                   </div>
                 </div>
               </div>
-              
+
               {/* Messages */}
               <div className="dm-messages" ref={messagesContainerRef}>
                 {loadingMessages ? (
@@ -626,47 +704,68 @@ function DirectMessages() {
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
-                    const user = usersInfo[isOwn ? currentUserId : msg.fk_expediteur];
-                    
+                    const user =
+                      usersInfo[isOwn ? currentUserId : msg.fk_expediteur];
+
                     // Si c'est un message qu'on est en train d'éditer
-                    if (editingMessage && editingMessage.id_message_prive === msg.id_message_prive) {
+                    if (
+                      editingMessage &&
+                      editingMessage.id_message_prive === msg.id_message_prive
+                    ) {
                       return (
-                        <div 
-                          key={msg.id_message_prive} 
-                          className={`dm-message ${isOwn ? 'own' : 'other'} editing`}
+                        <div
+                          key={msg.id_message_prive}
+                          className={`dm-message ${
+                            isOwn ? "own" : "other"
+                          } editing`}
                         >
                           <div className="dm-msg-avatar">
                             {user?.avatar ? (
-                              <img src={user.avatar} alt={user.name || "User"} />
+                              <img
+                                src={user.avatar}
+                                alt={user.name || "User"}
+                              />
                             ) : (
                               <div className="dm-avatar-placeholder">
                                 {user?.name ? user.name[0].toUpperCase() : "U"}
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="dm-msg-content">
                             <div className="dm-edit-container">
                               <textarea
                                 value={editMessageContent}
-                                onChange={(e) => setEditMessageContent(e.target.value)}
+                                onChange={(e) =>
+                                  setEditMessageContent(e.target.value)
+                                }
                                 className="dm-edit-textarea"
                                 autoFocus
                               />
                               <div className="dm-edit-actions">
-                                <button onClick={handleSaveEdit} className="dm-edit-save">Enregistrer</button>
-                                <button onClick={handleCancelEdit} className="dm-edit-cancel">Annuler</button>
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="dm-edit-save"
+                                >
+                                  Enregistrer
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="dm-edit-cancel"
+                                >
+                                  Annuler
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       );
                     }
-                    
+
                     return (
-                      <div 
-                        key={msg.id_message_prive} 
-                        className={`dm-message ${isOwn ? 'own' : 'other'}`}
+                      <div
+                        key={msg.id_message_prive}
+                        className={`dm-message ${isOwn ? "own" : "other"}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
                         {/* Si c'est une réponse, afficher le message parent */}
@@ -675,13 +774,17 @@ function DirectMessages() {
                             <div className="dm-reply-content">
                               {/* TODO: Récupérer le message parent */}
                               <span className="dm-reply-author">
-                                @{usersInfo[msg.parent_expediteur]?.name || "Utilisateur"}
+                                @
+                                {usersInfo[msg.parent_expediteur]?.name ||
+                                  "Utilisateur"}
                               </span>
-                              <span className="dm-reply-text">{msg.parent_contenu || "Message original"}</span>
+                              <span className="dm-reply-text">
+                                {msg.parent_contenu || "Message original"}
+                              </span>
                             </div>
                           </div>
                         )}
-                      
+
                         <div className="dm-msg-avatar">
                           {user?.avatar ? (
                             <img src={user.avatar} alt={user.name || "User"} />
@@ -691,21 +794,21 @@ function DirectMessages() {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
                             <span className="dm-msg-author">
                               {user?.name || "Utilisateur"}
                             </span>
                             <span className="dm-msg-date">
-                              {formatMessageDate(msg.date_creation || msg.date_envoi)}
+                              {formatMessageDate(
+                                msg.date_creation || msg.date_envoi
+                              )}
                             </span>
                           </div>
-                          
-                          <div className="dm-msg-bubble">
-                            {msg.contenu}
-                          </div>
-                          
+
+                          <div className="dm-msg-bubble">{msg.contenu}</div>
+
                           {isOwn && msg.date_lecture && (
                             <div className="dm-msg-read">✓ Lu</div>
                           )}
@@ -715,33 +818,52 @@ function DirectMessages() {
                   })
                 )}
               </div>
-              
+
               {/* Formulaire d'envoi de message avec zone de réponse */}
               <form className="dm-input-form" onSubmit={handleSendMessage}>
                 {replyingTo && (
                   <div className="dm-replying-to">
                     <div className="dm-replying-info">
                       <span>Réponse à </span>
-                      <strong>{usersInfo[replyingTo.fk_expediteur]?.name || "Utilisateur"}</strong>
-                      <span className="dm-replying-content">: {replyingTo.contenu}</span>
+                      <strong>
+                        {usersInfo[replyingTo.fk_expediteur]?.name ||
+                          "Utilisateur"}
+                      </strong>
+                      <span className="dm-replying-content">
+                        : {replyingTo.contenu}
+                      </span>
                     </div>
-                    <button 
-                      type="button" 
-                      className="dm-cancel-reply" 
+                    <button
+                      type="button"
+                      className="dm-cancel-reply"
                       onClick={handleCancelReply}
                     >
                       <FaTimes />
                     </button>
                   </div>
                 )}
-                
+
                 <div className="dm-input-wrapper">
-                  <button type="button" className="dm-attachment-btn">
+                  <button
+                    type="button"
+                    className="dm-attachment-btn"
+                    onClick={handleAttachmentClick}
+                    disabled={uploadingFile}
+                  >
                     <FaPaperclip />
                   </button>
                   <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFileChange}
+                    disabled={uploadingFile}
+                  />
+                  <input
                     type="text"
-                    placeholder={`Message à ${selectedUserInfo?.name || 'l\'utilisateur'}`}
+                    placeholder={`Message à ${
+                      selectedUserInfo?.name || "l'utilisateur"
+                    }`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="dm-input"
@@ -768,14 +890,14 @@ function DirectMessages() {
             <div className="dm-modal">
               <div className="dm-modal-header">
                 <h3>Nouvelle conversation</h3>
-                <button 
-                  className="dm-modal-close" 
+                <button
+                  className="dm-modal-close"
                   onClick={() => setShowNewConversationModal(false)}
                 >
                   <FaTimes />
                 </button>
               </div>
-              
+
               <div className="dm-modal-body">
                 <div className="dm-search-input-wrapper modal">
                   <FaSearch className="dm-search-icon" />
@@ -788,24 +910,26 @@ function DirectMessages() {
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="dm-users-list">
                   {loadingUsers ? (
-                    <div className="dm-loading-users">Chargement des utilisateurs...</div>
+                    <div className="dm-loading-users">
+                      Chargement des utilisateurs...
+                    </div>
                   ) : filteredUsers.length === 0 ? (
                     <div className="dm-no-users">Aucun utilisateur trouvé</div>
                   ) : (
-                    filteredUsers.map(user => (
-                      <div 
-                        key={user.id} 
+                    filteredUsers.map((user) => (
+                      <div
+                        key={user.id}
                         className="dm-user-item"
                         onClick={() => startConversationWith(user.id)}
                       >
                         {user.avatar ? (
-                          <img 
-                            src={user.avatar} 
-                            alt={user.name} 
-                            className="dm-avatar" 
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="dm-avatar"
                           />
                         ) : (
                           <div className="dm-avatar">
@@ -821,76 +945,78 @@ function DirectMessages() {
             </div>
           </div>
         )}
-        
+
         {/* Menu contextuel pour les messages */}
         {messageContextMenu.visible && (
-          <div 
+          <div
             className="dm-context-menu"
             style={{
               top: messageContextMenu.yPos,
-              left: messageContextMenu.xPos
+              left: messageContextMenu.xPos,
             }}
           >
             {messageContextMenu.isOwnMessage ? (
               <>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleEditMessage}
                 >
                   Modifier
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleDeleteMessage}
                 >
                   Supprimer
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleReplyMessage}
                 >
                   <FaReply className="dm-context-menu-icon" /> Répondre
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleAddReaction}
                 >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une réaction
+                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
+                  réaction
                 </div>
               </>
             ) : (
               <>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleReplyMessage}
                 >
                   <FaReply className="dm-context-menu-icon" /> Répondre
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleAddReaction}
                 >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une réaction
+                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
+                  réaction
                 </div>
               </>
             )}
           </div>
         )}
-        
+
         {/* Sélecteur d'emoji */}
         {showEmojiPicker && (
-          <div 
+          <div
             className="dm-emoji-picker"
             style={{
               top: emojiPickerPosition.top,
-              left: emojiPickerPosition.left
+              left: emojiPickerPosition.left,
             }}
             ref={emojiPickerRef}
           >
             <div className="dm-emoji-grid">
-              {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
-                <div 
-                  key={emoji} 
+              {["👍", "❤️", "😂", "😮", "😢", "😡"].map((emoji) => (
+                <div
+                  key={emoji}
                   className="dm-emoji-item"
                   onClick={() => handleEmojiSelect(emoji)}
                 >
@@ -900,10 +1026,10 @@ function DirectMessages() {
             </div>
           </div>
         )}
-        
+
         {/* Couche transparente pour fermer le menu */}
         {messageContextMenu.visible && (
-          <div 
+          <div
             className="dm-context-menu-overlay"
             onClick={handleCloseMessageContextMenu}
           />

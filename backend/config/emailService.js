@@ -19,7 +19,7 @@ const sendInvitation = async (
   workspaceName,
   senderName = "Un membre de SUPCHAT"
 ) => {
-  const inviteLink = `http://192.168.1.48:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
+  const inviteLink = `http://192.168.1.58:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
     toEmail
   )}`;
   const currentYear = new Date().getFullYear();

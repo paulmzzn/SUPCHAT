@@ -8,102 +8,113 @@ import { API_URL } from "../../config/config";
 
 function Discover() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [allWorkspaces, setAllWorkspaces] = useState([]);
+  const [processedWorkspaces, setProcessedWorkspaces] = useState([]);
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
-  const [workspaces, setWorkspaces] = useState([]);
-  const [userWorkspaces, setUserWorkspaces] = useState([]);
+  const [userWorkspaceIds, setUserWorkspaceIds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch user's workspaces to check membership
+  // Fetch user's workspace IDs
   useEffect(() => {
     const fetchUserWorkspaces = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setUserWorkspaceIds([]);
+        return;
+      }
+
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const response = await fetch(
+          `${API_URL}/api/workspaces/user/workspaces`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
           }
-        });
-        
+        );
+
         if (response.ok) {
           const data = await response.json();
-          // Extraire juste les IDs des workspaces de l'utilisateur
-          const userWorkspaceIds = data.map(ws => ws.id_workspace);
-          setUserWorkspaces(userWorkspaceIds);
+          const ids = data.map((ws) => ws.id_workspace);
+          setUserWorkspaceIds(ids);
+        } else {
+          console.error(
+            "Failed to fetch user workspaces, status:",
+            response.status
+          );
+          setUserWorkspaceIds([]);
         }
       } catch (err) {
         console.error("Error fetching user workspaces:", err);
+        setUserWorkspaceIds([]);
       }
     };
 
     fetchUserWorkspaces();
-  }, []); 
+  }, []);
 
-  // Fetch all workspaces from backend API
+  // Fetch all workspaces
   useEffect(() => {
-    const fetchWorkspaces = async () => {
+    const fetchAllWorkspaces = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const response = await fetch(`${API_URL}/api/workspaces`);
 
         if (!response.ok) {
-          throw new Error("Failed to fetch workspaces");
+          throw new Error(
+            `Failed to fetch workspaces (status: ${response.status})`
+          );
         }
 
         const data = await response.json();
-
-        // Transform backend data to match frontend format
-        const transformedWorkspaces = data.map((workspace) => ({
-          id: workspace.id_workspace,
-          name: workspace.nom,
-          description: workspace.description || "No description available",
-          banner: workspace.banner_url || defaultBanner,
-          icon:
-            workspace.icon_url ||
-            "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
-          onlineUsers: workspace.online_users || 0,
-          totalMembers: workspace.total_members || 0,
-          isFavorite: workspace.is_favorite || false,
-          isPrivate: workspace.is_private || false,
-          // Ajouter la propriété hasJoined pour chaque workspace
-          hasJoined: userWorkspaces.includes(workspace.id_workspace)
-        }));
-
-        setWorkspaces(transformedWorkspaces);
-        // Don't set filtered workspaces here - we'll do it in the next useEffect
+        setAllWorkspaces(data);
       } catch (err) {
-        console.error("Error fetching workspaces:", err);
+        console.error("Error fetching all workspaces:", err);
         setError(err.message);
+        setAllWorkspaces([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Attendre que userWorkspaces soit chargé
-    if (userWorkspaces.length > 0 || localStorage.getItem('token') === null) {
-      fetchWorkspaces();
-    }
-  }, [userWorkspaces]); 
+    fetchAllWorkspaces();
+  }, []);
 
-  // Filter workspaces based on search query
+  // Process workspaces (add hasJoined) when allWorkspaces or userWorkspaceIds change
+  useEffect(() => {
+    const processed = allWorkspaces.map((workspace) => ({
+      id: workspace.id_workspace,
+      name: workspace.nom,
+      description: workspace.description || "No description available",
+      banner: workspace.banner_url || defaultBanner,
+      icon:
+        workspace.icon_url ||
+        "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+      onlineUsers: workspace.online_users || 0,
+      totalMembers: workspace.total_members || 0,
+      isFavorite: workspace.is_favorite || false,
+      isPrivate: workspace.is_private || false,
+      hasJoined: userWorkspaceIds.includes(workspace.id_workspace),
+    }));
+    setProcessedWorkspaces(processed);
+  }, [allWorkspaces, userWorkspaceIds]);
+
+  // Filter workspaces based on search query and processed data
   useEffect(() => {
     if (!searchQuery) {
-      setFilteredWorkspaces(workspaces);
+      setFilteredWorkspaces(processedWorkspaces);
       return;
     }
 
-    const filtered = workspaces.filter(
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    const filtered = processedWorkspaces.filter(
       (workspace) =>
-        workspace.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        workspace.name.toLowerCase().includes(lowerCaseQuery) ||
         (workspace.description &&
-          workspace.description
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()))
+          workspace.description.toLowerCase().includes(lowerCaseQuery))
     );
     setFilteredWorkspaces(filtered);
-  }, [searchQuery, workspaces]);
+  }, [searchQuery, processedWorkspaces]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -123,35 +134,36 @@ function Discover() {
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Search workspaces..."
+              placeholder="Rechercher des workspaces..."
               value={searchQuery}
               onChange={handleSearchChange}
             />
           </div>
         </div>
 
-        {/* Workspaces grid */}
         <div className="workspaces-section">
-          <h2 className="section-title">All Workspaces</h2>
+          <h2 className="section-title">Tous les Workspaces</h2>
 
           {isLoading ? (
-            <div className="loading-state">Loading workspaces...</div>
+            <div className="loading-state">Chargement des workspaces...</div>
           ) : error ? (
-            <div className="error-state">Error: {error}</div>
+            <div className="error-state">Erreur: {error}</div>
           ) : (
             <div className="workspaces-grid">
               {filteredWorkspaces.length > 0 ? (
                 filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard 
-                    key={workspace.id} 
+                  <WorkspaceCard
+                    key={workspace.id}
                     workspace={workspace}
-                    showJoinButton={true} 
-                    hasJoined={workspace.hasJoined} // Passer l'information si l'utilisateur est membre
+                    showJoinButton={true}
+                    hasJoined={workspace.hasJoined}
                   />
                 ))
               ) : (
                 <div className="no-results">
-                  No workspaces found matching your search.
+                  {searchQuery
+                    ? "Aucun workspace ne correspond à votre recherche."
+                    : "Aucun workspace public trouvé."}
                 </div>
               )}
             </div>
