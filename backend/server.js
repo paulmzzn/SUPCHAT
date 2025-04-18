@@ -14,6 +14,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
 import dotenv from 'dotenv';
+import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 
 // Load environment variables at the start
 dotenv.config();
@@ -60,6 +61,7 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api", canalRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api", reactionRoutes);
+app.use("/api/private-messages", privateMessageRoutes);
 
 // Assurez-vous que cette ligne est AVANT l'initialisation de socketManager
 app.set('io', io);
