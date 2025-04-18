@@ -89,6 +89,7 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [activeChannel, setActiveChannel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [displayMessage, setDisplayMessage] = useState(''); // Added state for displayed message
   const [loadingMessages, setLoadingMessages] = useState(false);
   const chatContainerRef = useRef(null);
   const [socket, setSocket] = useState(null);
@@ -734,22 +735,32 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   }, []);
 
+  const convertMentionsForSending = (text) => {
+    let result = text;
+    mentionableUsers.forEach(user => {
+      const regex = new RegExp(`@${user.name}\\b`, 'g');
+      result = result.replace(regex, `@[${user.name}](${user.id})`);
+    });
+    return result;
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeChannel || !socket || !socket.connected) return;
-    
+    if (!displayMessage.trim() || !activeChannel || !socket || !socket.connected) return;
+    const messageToSend = convertMentionsForSending(displayMessage);
+    setNewMessage(messageToSend);
     try {
       socket.emit('message', {
         canal_id: activeChannel.id,
-        content: newMessage,
+        content: messageToSend,
         workspace_id: workspaceId,
         parent_id: replyingTo ? replyingTo.id_message : null
       });
+      setDisplayMessage('');
       setNewMessage('');
       setReplyingTo(null);
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message via socket:', error);
-      // Optionally handle fallback or error display
     }
   };
 
@@ -768,7 +779,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(`@${messageContextMenu.message.nom} `);
+    setDisplayMessage(`@${messageContextMenu.message.nom} `);
     handleCloseMessageContextMenu();
     const messageInput = document.querySelector('.chat-input-wrapper input');
     if (messageInput) messageInput.focus();
@@ -889,50 +900,33 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
-  // Handler for chat input changes to detect mentions
   const handleNewMessageChange = (value) => {
-    setNewMessage(value);
-
+    setDisplayMessage(value);
     const inputElement = document.querySelector('.chat-input-wrapper input');
     if (!inputElement) return;
-    
     const cursorPos = inputElement.selectionStart;
     const textBeforeCursor = value.substring(0, cursorPos);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
-    // Check if we're inside a word
     const lastSpaceIndex = textBeforeCursor.lastIndexOf(' ');
     const lastNewlineIndex = textBeforeCursor.lastIndexOf('\n');
     const lastBreakIndex = Math.max(lastSpaceIndex, lastNewlineIndex);
-    
-    // Detect if @ is at the start of a word
     if (lastAtIndex !== -1 && (lastAtIndex > lastBreakIndex || lastBreakIndex === -1)) {
       const query = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
       setMentionQuery(query);
-
       if (mentionableUsers.length > 0) {
-        // Filter users by query
         const filtered = mentionableUsers.filter(user =>
           user.name.toLowerCase().includes(query)
         );
-        
-        // Sort results: online first, then alphabetically, bot always at the top
         const sorted = [...filtered].sort((a, b) => {
-          // Bots first
           if (a.isBot && !b.isBot) return -1;
           if (!a.isBot && b.isBot) return 1;
-          
-          // Online users before offline
           if (a.status === 'online' && b.status !== 'online') return -1;
           if (a.status !== 'online' && b.status === 'online') return 1;
-          
-          // Alphabetical sort
           return a.name.localeCompare(b.name);
         });
-        
-        setMentionSuggestions(sorted.slice(0, 5)); // Limit suggestions
+        setMentionSuggestions(sorted.slice(0, 5));
         setShowMentionSuggestions(sorted.length > 0);
-        setActiveMentionIndex(0); // Reset active index
+        setActiveMentionIndex(0);
       } else {
         setShowMentionSuggestions(false);
       }
@@ -942,7 +936,6 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
-  // Handler for keyboard navigation in mention suggestions
   const handleMentionNavigation = (direction) => {
     if (mentionSuggestions.length === 0) return;
     
@@ -955,40 +948,30 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
   };
 
-  // Handler for selecting the current active mention
   const handleSelectActiveItem = () => {
     if (mentionSuggestions.length === 0) return;
     handleSelectMention(mentionSuggestions[activeMentionIndex]);
   };
 
-  // Handler for selecting a mention suggestion
   const handleSelectMention = (user) => {
-    const currentMessage = newMessage;
     const inputElement = document.querySelector('.chat-input-wrapper input');
     if (!inputElement) return;
-    
     const cursorPos = inputElement.selectionStart;
-    const textBeforeCursor = currentMessage.substring(0, cursorPos);
+    const currentDisplay = displayMessage;
+    const textBeforeCursor = currentDisplay.substring(0, cursorPos);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
     if (lastAtIndex !== -1) {
-      const textAfterCursor = currentMessage.substring(cursorPos);
+      const textAfterCursor = currentDisplay.substring(cursorPos);
       const mentionText = `@${user.name} `;
-      const newMessageValue = currentMessage.substring(0, lastAtIndex) + mentionText + textAfterCursor;
-
-      setNewMessage(newMessageValue);
+      const newDisplayValue = currentDisplay.substring(0, lastAtIndex) + mentionText + textAfterCursor;
+      setDisplayMessage(newDisplayValue);
       setShowMentionSuggestions(false);
       setMentionQuery('');
-
-      // Focus input and set cursor position after the mention
-      if (inputElement) {
+      setTimeout(() => {
+        const newCursorPos = lastAtIndex + mentionText.length;
         inputElement.focus();
-        // Use setTimeout to ensure the cursor position is set after the state update renders
-        setTimeout(() => {
-          const newCursorPos = lastAtIndex + mentionText.length;
-          inputElement.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-      }
+        inputElement.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
     }
   };
 
@@ -999,7 +982,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     showOfflineMembers, showFiles, showImages, loadingMembers, membersError,
     members, files, images, showCreateChannelModal, newChannel, isCreatingChannel,
     channelError, contextMenu, showEditChannelModal, editingChannel, isUpdatingChannel,
-    updateChannelError, activeChannel, messages, newMessage, loadingMessages,
+    updateChannelError, activeChannel, messages, newMessage, displayMessage, loadingMessages,
     chatContainerRef, socket, currentUserId, currentUserName, messageContextMenu, showEmojiPicker,
     replyingTo, commonEmojis, isMistralTyping, // Return the typing state
     // Mention state and handlers
