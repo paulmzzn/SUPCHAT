@@ -2076,6 +2076,53 @@
 
 .mention-highlight.current-user-mention:hover {
   background-color: rgba(147, 72, 183, 0.4);
+/* Style pour les mentions dans les messages - SANS ::before */
+.mention-highlight,
+a.mention-highlight, /* Garder au cas où */
+span.mention-highlight,
+.message-text span.mention-highlight,
+.message-paragraph span.mention-highlight {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: linear-gradient(90deg, #9348B7 0%, #B05FDF 100%) !important;
+  color: #fff !important;
+  /* Ajustement potentiel du padding si le '@' interne change l'espacement */
+  padding: 2px 8px !important; /* Simplifié, ajustez si besoin */
+  border-radius: 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.97em !important;
+  margin: 0 2px !important;
+  box-shadow: 0 2px 8px rgba(147, 72, 183, 0.15) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  border: none !important; 
+}
+
+.mention-highlight:hover,
+a.mention-highlight:hover,
+span.mention-highlight:hover,
+.message-text span.mention-highlight:hover,
+.message-paragraph span.mention-highlight:hover {
+  background: linear-gradient(90deg, #a65bd1 0%, #c47ef2 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.3) !important;
+  text-decoration: none !important;
+}
+
+.mention-highlight.current-user-mention,
+a.mention-highlight.current-user-mention,
+span.mention-highlight.current-user-mention {
+  background: linear-gradient(90deg, #ff9e2a 0%, #ffb357 100%) !important;
+  color: #222 !important;
+  box-shadow: 0 2px 8px rgba(255, 158, 42, 0.3) !important;
+  border: none !important; 
+}
+
+.mention-highlight.current-user-mention:hover,
+a.mention-highlight.current-user-mention:hover,
+span.mention-highlight.current-user-mention:hover {
+  background: linear-gradient(90deg, #ffae4a 0%, #ffc277 100%) !important;
+  color: #222 !important;
 }
 
 /* Style spécial pour la mention de l'utilisateur actuel */
@@ -2087,10 +2134,61 @@
 
 .mention-highlight.current-user-mention:hover {
   background-color: rgba(147, 72, 183, 0.4);
+/* Règle de spécificité maximale - Cible maintenant les spans */
+body .chat-messages .chat-message .message-content .message-text p span.mention-highlight,
+body .chat-messages .chat-message .message-content .message-text span.mention-highlight {
+  text-decoration: none !important;
+  border: none !important; 
+}
+
+body .chat-messages .chat-message .message-content .message-text span.mention-highlight.current-user-mention {
+    border: none !important; 
+}
+
+/* Force de supprimer tout style de lien dans les mentions */
+.message-text a:not(.message-link),
+.message-paragraph a:not(.message-link) {
+  color: inherit !important;
+  text-decoration: none !important;
 }
 
 /* Message paragraph style */
 .message-paragraph {
   margin: 0;
   line-height: 1.5;
+}
+
+/* Animation pour l'indicateur de frappe */
+.typing-indicator {
+  animation: fadeIn 0.3s ease;
+}
+
+.typing-animation {
+  display: inline-block;
+  margin-left: 5px;
+}
+
+.typing-animation::after {
+  content: "...";
+  animation: typingDots 1.5s infinite;
+}
+
+@keyframes typingDots {
+  0%, 20% { content: "."; }
+  40%, 60% { content: ".."; }
+  80%, 100% { content: "..."; }
+}
+
+/* Assurer que l'indicateur est bien visible */
+.message-paragraph i {
+  opacity: 0.9;
+  color: white;
+}
+
+/* Garantir que l'indicateur apparaît */
+.chat-message.typing-indicator {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 10;
 }

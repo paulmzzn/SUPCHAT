@@ -139,6 +139,11 @@ const formatMessageDate = (dateString) => {
   }
 };
 
+// Ajouter une fonction d'aide pour logger les interactions avec Mistral
+const debugMistralInteraction = (message) => {
+  console.log(`[Mistral Debug] ${message}`);
+};
+
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const navigate = useNavigate(); // Ajout hook navigation
@@ -182,6 +187,14 @@ function WorkspaceDetails() {
     showEmojiPicker,
     replyingTo,
     commonEmojis,
+    workspace, loading, error, searchQuery, channels, showChannels, canalsLoading, 
+    canalsError, showMembers, showOnlineMembers, showOfflineMembers, showFiles, 
+    showImages, members, files, images, showCreateChannelModal, newChannel, 
+    isCreatingChannel, channelError, contextMenu, showEditChannelModal, editingChannel, 
+    isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
+    displayMessage, // <-- Ajouté
+    loadingMessages, chatContainerRef, socket, currentUserId, currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
+    messageContextMenu, showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
     // Mention state and handlers
     showMentionSuggestions,
@@ -224,6 +237,7 @@ function WorkspaceDetails() {
     handleSelectActiveItem,
     // New handler for deleting messages
     handleDeleteMessage,
+    handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
   } = useWorkspaceDetails(workspaceId);
 
   const fileInputRef = useRef(null);
@@ -261,110 +275,28 @@ function WorkspaceDetails() {
     }
   };
 
-  // Handler pour ouvrir le sélecteur de fichier
-  const handleAttachmentClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
-
-  // Modifié: Stocke le fichier et affiche la prévisualisation
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setFileToSend(file);
-    setMessageWithFile(""); // Réinitialiser le message associé
-
-    // Générer un aperçu si c'est une image
-    if (file.type.startsWith("image/")) {
-      const previewUrl = URL.createObjectURL(file);
-      // Nettoyer l'ancienne URL si elle existe
-      if (filePreviewUrl) {
-        URL.revokeObjectURL(filePreviewUrl);
-      }
-      setFilePreviewUrl(previewUrl);
-    } else {
-      // Nettoyer l'URL si le nouveau fichier n'est pas une image
-      if (filePreviewUrl) {
-        URL.revokeObjectURL(filePreviewUrl);
-      }
-      setFilePreviewUrl(null);
-    }
-
-    setShowFilePreview(true);
-
-    // Réinitialiser l'input pour pouvoir sélectionner le même fichier à nouveau
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  // Nouveau: Annule la prévisualisation
-  const handleCancelPreview = () => {
-    setShowFilePreview(false);
-    setFileToSend(null);
-    setMessageWithFile("");
-    if (filePreviewUrl) {
-      URL.revokeObjectURL(filePreviewUrl);
-      setFilePreviewUrl(null);
-    }
-  };
-
-  // Nouveau: Envoie le fichier et le message depuis la prévisualisation
-  const handleSendFileWithMessage = async () => {
-    if (!fileToSend || !activeChannel) return;
-
-    setUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", fileToSend);
-      formData.append("contenu", messageWithFile); // Ajouter le message texte
-
-      // Ajouter parent_id si on répond à un message
-      if (replyingTo) {
-        formData.append("parent_id", replyingTo.id_message);
-      }
-
-      const res = await fetch(
-        `${API_URL}/api/messages/${activeChannel.id}/upload`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        }
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({
-          message: "Erreur inconnue lors de l'envoi du fichier",
-        }));
-        console.error("Erreur d'upload:", res.status, errorData);
-        throw new Error(
-          errorData.message || `Erreur ${res.status} lors de l'envoi du fichier`
-        );
-      }
-
-      const message = await res.json();
-      console.log("Fichier et message envoyés:", message);
-
-      // Réinitialiser après succès
-      handleCancelPreview(); // Ferme la prévisualisation
-      if (replyingTo) {
-        handleCancelReply(); // Annule l'état de réponse
-      }
-    } catch (err) {
-      console.error("Erreur détaillée lors de l'envoi fichier/message:", err);
-      alert(err.message || "Erreur lors de l'envoi du fichier");
-      // Garder la prévisualisation ouverte en cas d'erreur pour que l'utilisateur puisse réessayer ? Ou fermer ? À décider.
-      // handleCancelPreview(); // Optionnel: fermer même en cas d'erreur
-    } finally {
-      setUploadingFile(false);
-    }
-  };
+  // Helper pour vérifier si une chaîne est un UUID (pour identifier les user IDs dans les href)
+  const isUuid = (str) => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
+  };
+
+  // Utiliser le handler original pour l'envoi normal
+  const handleSendMessageWithMistralCheck = (e) => {
+    if (e) e.preventDefault();
+    
+    // Ne pas procéder si le message est vide
+    if (!displayMessage.trim()) return;
+    
+    // Vérifier si c'est une mention de Mistral et la traiter en priorité
+    const isMistralMention = handleMistralMention(displayMessage);
+    
+    // Si ce n'est pas une mention de Mistral, utiliser le handler original
+    if (!isMistralMention) {
+      handleSendMessage(e);
+    }
   };
 
   if (loading) {
@@ -536,6 +468,8 @@ function WorkspaceDetails() {
                       onContextMenu={(e) =>
                         handleMessageContextMenu(e, message)
                       } // Use handler from hook
+                      className={`chat-message ${message.fk_utilisateur === currentUserId ? 'own-message' : 'other-message'}`}
+                      onContextMenu={(e) => handleMessageContextMenu(e, message)} // Use handler from hook
                     >
                       <div className="message-avatar">
                         {/* Cette logique devrait fonctionner pour le bot aussi */}
@@ -628,6 +562,7 @@ function WorkspaceDetails() {
                             {message.isBot ||
                             message.fk_utilisateur ===
                               "00000000-0000-0000-0000-000000000001" ? (
+                            {message.fk_utilisateur === '00000000-0000-0000-0000-000000000001' ? (
                               <>
                                 <span>{message.nom}</span>
                                 <span className="bot-icon-spacer"> </span>
@@ -642,59 +577,81 @@ function WorkspaceDetails() {
                           </span>
                         </div>
 
-                        {/* Affichage du texte ou du fichier */}
-                        <div className="message-text">
-                          {/* Si le message contient un fichier, afficher un lien ou une preview */}
-                          {message.file_url ? (
-                            <>
-                              {message.file_type &&
-                              message.file_type.startsWith("image/") ? (
-                                <a
-                                  href={message.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <img
-                                    src={message.file_url}
-                                    alt="Fichier partagé"
-                                    style={{
-                                      maxWidth: 220,
-                                      maxHeight: 220,
-                                      borderRadius: 8,
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                <a
-                                  href={message.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="message-link"
-                                >
-                                  <FaFileAlt style={{ marginRight: 6 }} />
-                                  {message.file_url.split("/").pop()}
-                                </a>
-                              )}
-                            </>
-                          ) : (
-                            <ReactMarkdown
-                              components={{
-                                p: ({ node, ...props }) => (
-                                  <p {...props} className="message-paragraph" />
-                                ),
-                                span: ({ node, ...props }) => (
-                                  <span {...props} />
-                                ),
-                              }}
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeRaw]}
-                            >
-                              {processMessageContent(
-                                message.contenu,
-                                currentUserName
-                              )}
-                            </ReactMarkdown>
-                          )}
+                        {/* *** Approche avec vérification de null/undefined sur message.contenu *** */}
+                        <div className="message-text"> 
+                          {(() => {
+                            // Vérifier si message.contenu est null ou undefined
+                            if (!message.contenu) {
+                              return <p className="message-paragraph"></p>; // Retourner un paragraphe vide
+                            }
+                            
+                            // Prétraiter le contenu pour retirer les @ avant les mentions
+                            // Recherche les motifs de type @[nom](uuid)
+                            const mentionRegex = /@\[([^\]]+)\]\(([0-9a-fA-F-]+)\)/g;
+                            
+                            // Remplacer par [nom](uuid) sans le @ initial
+                            const processedContent = message.contenu.replace(mentionRegex, (match, name, uuid) => {
+                              if (isUuid(uuid)) {
+                                return `[${name}](${uuid})`;
+                              }
+                              return match; // Si ce n'est pas un UUID valide, laisser tel quel
+                            });
+                            
+                            return (
+                              <ReactMarkdown
+                                components={{
+                                  p: ({node, ...props}) => <p {...props} className="message-paragraph" />,
+                                  a: ({node, href, children, ...props}) => {
+                                    const potentialUserId = href;
+                                    
+                                    // Extraire le texte complet du lien plus efficacement
+                                    let fullText = "";
+                                    if (children && children.length) {
+                                      // Parcourir tous les éléments enfants et extraire leur texte
+                                      React.Children.forEach(children, child => {
+                                        if (typeof child === 'string') {
+                                          fullText += child;
+                                        } else if (child && child.props && child.props.children) {
+                                          // Traiter les enfants qui sont des éléments React
+                                          if (typeof child.props.children === 'string') {
+                                            fullText += child.props.children;
+                                          } else if (Array.isArray(child.props.children)) {
+                                            // Aplatir les tableaux d'enfants
+                                            fullText += child.props.children
+                                              .filter(c => typeof c === 'string')
+                                              .join('');
+                                          }
+                                        }
+                                      });
+                                    }
+                                    
+                                    // Si le href est un UUID, c'est une mention
+                                    if (isUuid(potentialUserId)) {
+                                      const isCurrentUser = potentialUserId === currentUserId;
+                                      return (
+                                        <span
+                                          className={`mention-highlight ${isCurrentUser ? 'current-user-mention' : ''}`}
+                                          data-userid={potentialUserId}
+                                        >
+                                          @{fullText} {/* Utilise le texte complet extrait */}
+                                        </span>
+                                      );
+                                    }
+                                    
+                                    return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
+                                  },
+                                  // Version simplifiée du gestionnaire de texte
+                                  text: ({node, ...props}) => {
+                                    return <>{renderTextWithLinks(node.value)}</>; 
+                                  }
+                                }}
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]} 
+                              >
+                                {processedContent}
+                              </ReactMarkdown>
+                            );
+                          })()}
                         </div>
 
                         {/* Afficher les réactions avec meilleur style */}
@@ -754,6 +711,7 @@ function WorkspaceDetails() {
                     className="chat-message bot-message typing-indicator"
                     // Utilise la même structure que les autres messages pour la bulle
                   >
+                  <div className="chat-message other-message typing-indicator">
                     <div className="message-avatar">
                       <img
                         src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp"
@@ -770,7 +728,10 @@ function WorkspaceDetails() {
                         <span className="message-time"></span>
                       </div>
                       <div className="message-text">
-                        <i>est en train d'écrire...</i>
+                        <p className="message-paragraph">
+                          <i>est en train d'écrire...</i>
+                          <span className="typing-animation"></span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -848,134 +809,43 @@ function WorkspaceDetails() {
                   </div>
                 )}
 
-                {/* NOUVEAU: Zone de prévisualisation de fichier */}
-                {showFilePreview && fileToSend && (
-                  <div className="file-preview-container">
-                    <div className="file-preview-header">
-                      <span>Aperçu du fichier</span>
-                      <button
-                        onClick={handleCancelPreview}
-                        className="cancel-preview-btn"
-                      >
-                        <FaTimes />
-                      </button>
-                    </div>
-                    <div className="file-preview-content">
-                      <div className="file-preview-details">
-                        {filePreviewUrl ? (
-                          <img
-                            src={filePreviewUrl}
-                            alt="Aperçu"
-                            className="file-preview-image"
-                          />
-                        ) : (
-                          <div className="file-preview-icon">
-                            {getFileIcon(fileToSend.type)}
-                          </div>
-                        )}
-                        <span className="file-preview-name">
-                          {fileToSend.name}
-                        </span>
+                <form className="chat-input-container" onSubmit={handleSendMessageWithMistralCheck}>
+                  {/* Afficher l'indicateur de réponse si on répond à un message */}
+                  {replyingTo && ( // Use replyingTo from hook
+                    <div className="replying-to">
+                      <div className="reply-info">
+                        <FaReply className="reply-icon" />
+                        <span>Réponse à <strong>{replyingTo.nom}</strong></span>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Ajouter un message (optionnel)"
-                        value={messageWithFile}
-                        onChange={(e) => setMessageWithFile(e.target.value)}
-                        className="file-preview-message-input"
-                        disabled={uploadingFile}
-                      />
-                    </div>
-                    <div className="file-preview-actions">
-                      {/* Afficher l'indicateur de réponse si on répond à un message */}
-                      {replyingTo && (
-                        <div className="replying-to-preview">
-                          <FaReply className="reply-icon" />
-                          <span>
-                            Réponse à <strong>{replyingTo.nom}</strong>
-                          </span>
-                        </div>
-                      )}
-                      <button
-                        onClick={handleSendFileWithMessage}
-                        className="send-preview-btn"
-                        disabled={uploadingFile}
-                      >
-                        {uploadingFile ? "Envoi..." : <FaPaperPlane />}
+                      <button type="button" className="cancel-reply" onClick={handleCancelReply}> {/* Use handler from hook */}
+                        ×
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {/* Formulaire de message normal (masqué si prévisualisation active ?) */}
-                {!showFilePreview && (
-                  <form
-                    className="chat-input-container"
-                    onSubmit={handleSendMessage}
-                  >
-                    {/* Afficher l'indicateur de réponse si on répond à un message */}
-                    {replyingTo && (
-                      <div className="replying-to">
-                        <div className="reply-info">
-                          <FaReply className="reply-icon" />
-                          <span>
-                            Réponse à <strong>{replyingTo.nom}</strong>
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="cancel-reply"
-                          onClick={handleCancelReply}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="chat-input-wrapper">
-                      {/* Bouton pièce jointe */}
-                      <button
-                        type="button"
-                        className="chat-attachment-btn"
-                        onClick={handleAttachmentClick}
-                        disabled={uploadingFile || showFilePreview} // Désactiver si prévisualisation active
-                      >
-                        <FaPaperclip />
-                      </button>
-                      {/* Input file caché */}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: "none" }}
-                        onChange={handleFileChange}
-                        disabled={uploadingFile || showFilePreview} // Désactiver si prévisualisation active
-                      />
-                      <input
-                        type="text"
-                        placeholder={`Message dans #${activeChannel.name}`}
-                        value={newMessage}
-                        onChange={(e) => handleNewMessageChange(e.target.value)}
-                        onKeyDown={handleChatInputKeyDown}
-                        disabled={showFilePreview} // Désactiver si prévisualisation active
-                      />
-                      <button
-                        type="button"
-                        className="chat-emoji-btn"
-                        onClick={() => setShowEmojiPicker(true)}
-                        disabled={showFilePreview} // Désactiver si prévisualisation active
-                      >
-                        <FaSmile />
-                      </button>
-                    </div>
-                    <button
-                      type="submit"
-                      className="chat-send-btn"
-                      disabled={!newMessage.trim() || showFilePreview} // Désactiver si prévisualisation active
-                    >
-                      <FaPaperPlane />
+                  )}
+                  
+                  <div className="chat-input-wrapper">
+                    <button type="button" className="chat-attachment-btn">
+                      <FaPaperclip />
                     </button>
-                  </form>
-                )}
+                    <input 
+                      type="text" 
+                      placeholder={`Message dans #${activeChannel.name}`}
+                      value={displayMessage} // <-- Utilise displayMessage
+                      onChange={(e) => handleNewMessageChange(e.target.value)} // <-- Utilise handleNewMessageChange
+                      onKeyDown={handleChatInputKeyDown} // Apply the new handler
+                    />
+                    <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}> {/* Use setter from hook */}
+                      <FaSmile />
+                    </button>
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="chat-send-btn"
+                    disabled={!displayMessage.trim()} // <-- Utilise displayMessage
+                  >
+                    <FaPaperPlane />
+                  </button>
+                </form>
               </div>
             </div>
           )}

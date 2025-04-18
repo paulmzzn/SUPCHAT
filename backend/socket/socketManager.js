@@ -254,7 +254,7 @@ const socketManager = (io) => {
                 // Récupérer la date de création réelle de la DB si possible, sinon utiliser new Date()
                 date_creation: savedMistralMessage.date_creation || savedMistralMessage.created_at || new Date().toISOString(),
                 reactions: [], // Initialement vide
-                isBot: true,
+                isBot: false,
                 // parent_id: userMessage.id_message // Optionnel
               };
 
@@ -295,7 +295,7 @@ const socketManager = (io) => {
               photo_de_profil: MISTRAL_AVATAR,
               date_creation: new Date().toISOString(),
               reactions: [],
-              isBot: true
+              isBot: false
             };
             io.to(`${canal_id}`).emit('message', errorMessage);
           }
@@ -304,6 +304,133 @@ const socketManager = (io) => {
       } catch (error) {
         console.error('Socket.IO: Erreur de traitement de message', error);
         socket.emit('error', { message: 'Erreur lors du traitement du message' });
+      }
+    });
+    
+    // Nouvel événement pour gérer directement les requêtes adressées à Mistral
+    socket.on('mistralRequest', async (data) => {
+      try {
+        console.log('Requête directe à Mistral reçue:', data);
+        const { content, channelId } = data;
+        
+        if (!channelId || !content) {
+          console.error('Socket.IO: Données de message Mistral incomplètes');
+          socket.emit('error', { message: 'Données de message incomplètes' });
+          return;
+        }
+        
+        // Enregistrer le message de l'utilisateur en base de données
+        const userMessage = await MessageModel.create({
+          contenu: content,
+          fk_canal: channelId,
+          fk_utilisateur: socket.user.id
+        });
+        
+        // Récupérer le message complet avec infos utilisateur
+        const fullUserMessage = await MessageModel.getById(userMessage.id_message);
+        
+        if (fullUserMessage) {
+          // Diffuser le message aux membres du canal
+          io.to(`${channelId}`).emit('message', {
+            ...fullUserMessage,
+            date_creation: fullUserMessage.date_creation || fullUserMessage.created_at || new Date().toISOString()
+          });
+          
+          // Indiquer que Mistral est en train d'écrire avec l'événement 'typing'
+          io.to(`${channelId}`).emit('typing', { 
+            userId: MISTRAL_USER_ID, 
+            username: MISTRAL_USERNAME 
+          });
+          
+          // Extraire le contenu réel de la question (enlever @Mistral)
+          const question = content.replace(/@Mistral(\s+AI)?/gi, '').trim();
+          
+          try {
+            if (!MISTRAL_API_KEY) {
+              throw new Error("Clé API Mistral manquante");
+            }
+            
+            // Faire la requête à l'API Mistral avec timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), MISTRAL_API_TIMEOUT_MS);
+            
+            const response = await fetch(MISTRAL_API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MISTRAL_API_KEY}`
+              },
+              body: JSON.stringify({
+                model: "mistral-large-latest",
+                messages: [{ role: "user", content: question }],
+                temperature: 0.7,
+                max_tokens: 800
+              }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error(`Erreur API Mistral: ${response.status} ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            const answer = result.choices[0].message.content;
+            
+            // Créer un message de réponse de Mistral dans la base de données
+            const botMessage = await MessageModel.create({
+              contenu: answer,
+              fk_canal: channelId,
+              fk_utilisateur: MISTRAL_USER_ID
+            });
+            
+            // Récupérer le message complet avec infos utilisateur
+            const fullBotMessage = await MessageModel.getById(botMessage.id_message);
+            
+            // Après avoir reçu la réponse, arrêter l'indication de frappe
+            io.to(`${channelId}`).emit('stopTyping', { 
+              userId: MISTRAL_USER_ID 
+            });
+            
+            // Diffuser le message de Mistral aux membres du canal
+            io.to(`${channelId}`).emit('message', {
+              ...fullBotMessage,
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              isBot: false,
+              date_creation: fullBotMessage.date_creation || fullBotMessage.created_at || new Date().toISOString()
+            });
+          } catch (error) {
+            // En cas d'erreur, arrêter également l'indication de frappe
+            io.to(`${channelId}`).emit('stopTyping', { 
+              userId: MISTRAL_USER_ID 
+            });
+            
+            console.error('Erreur lors de la communication avec Mistral:', error);
+            
+            // Créer un message d'erreur de Mistral
+            const errorMessage = await MessageModel.create({
+              contenu: "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer plus tard.",
+              fk_canal: channelId,
+              fk_utilisateur: MISTRAL_USER_ID
+            });
+            
+            const fullErrorMessage = await MessageModel.getById(errorMessage.id_message);
+            
+            // Diffuser le message d'erreur
+            io.to(`${channelId}`).emit('message', {
+              ...fullErrorMessage,
+              nom: MISTRAL_USERNAME,
+              photo_de_profil: MISTRAL_AVATAR,
+              isBot: false,
+              date_creation: fullErrorMessage.date_creation || fullErrorMessage.created_at || new Date().toISOString()
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement de la requête Mistral:', error);
+        socket.emit('error', { message: 'Erreur lors du traitement de la requête' });
       }
     });
     
