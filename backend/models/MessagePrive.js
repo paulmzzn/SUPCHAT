@@ -82,6 +82,23 @@ class MessagePrive {
     );
     return result.rows.map(row => row.other_user_id);
   }
+
+  // Ajouter une méthode pour la déduplication des messages
+  static async getRecentSimilarMessages(expediteurId, destinataireId, contenu) {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM message_prive 
+         WHERE fk_expediteur = $1 AND fk_destinataire = $2 AND contenu = $3
+         AND date_creation > NOW() - INTERVAL '5 seconds'
+         ORDER BY date_creation DESC`,
+        [expediteurId, destinataireId, contenu]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error checking for similar messages:', error);
+      return []; // Return empty array instead of failing
+    }
+  }
 }
 
 export default MessagePrive;
