@@ -7,9 +7,11 @@ import { MdWorkspacesFilled } from "react-icons/md";
 // Import logo
 import logoSupchat from '../../assets/icons/logo_supchat.svg';
 
-function Sidebar() {
+function Sidebar({ unreadMessageCount }) {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
+  const [localUnreadCount, setLocalUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   
   // Check if the current path matches the given path
   const isActive = (path) => {
@@ -26,10 +28,47 @@ function Sidebar() {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
+  useEffect(() => {
+    const handleUnreadMessagesUpdate = (event) => {
+      setLocalUnreadCount(event.detail.count);
+    };
+    
+    // Get initial count from localStorage
+    const storedCount = parseInt(localStorage.getItem('unreadPrivateMessages') || '0', 10);
+    setLocalUnreadCount(storedCount);
+    
+    // Listen for updates
+    window.addEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
+    
+    return () => {
+      window.removeEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Load initial count from localStorage
+    const storedCount = parseInt(localStorage.getItem('unreadPrivateMessages') || '0', 10);
+    setUnreadMessages(storedCount);
+    
+    // Listen for custom event when unread messages change
+    const handleUnreadUpdate = (event) => {
+      setUnreadMessages(event.detail.count);
+    };
+    
+    window.addEventListener('unreadMessagesUpdated', handleUnreadUpdate);
+    
+    return () => {
+      window.removeEventListener('unreadMessagesUpdated', handleUnreadUpdate);
+    };
+  }, []);
+
   // Fonction pour déterminer la classe CSS basée sur le statut actif
   const getIconClasses = (path) => {
     return `sidebar-icon ${isActive(path) ? 'active' : ''}`;
   };
+
+  // Determine which count to use
+  const displayCount = unreadMessageCount !== undefined ? unreadMessageCount : localUnreadCount;
 
   return (
     <div className="sidebar">
@@ -41,7 +80,9 @@ function Sidebar() {
         <div className="sidebar-nav">
           <Link to="/direct-messages" className={`nav-item ${isActive('/direct-messages') ? 'active' : ''}`}>
             <FaComment className={getIconClasses('/direct-messages')} />
-            <span className="notification-badge">12</span>
+            {unreadMessages > 0 && (
+              <span className="nav-badge">{unreadMessages}</span>
+            )}
           </Link>
           
           <Link to="/workspaces" className={`nav-item ${isActive('/workspaces') ? 'active' : ''}`}>

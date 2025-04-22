@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import MessageModel from '../models/Message.js';
 import Reaction from '../models/Reaction.js';
 import MessagePrive from '../models/MessagePrive.js'; // Ajout de l'importation de MessagePrive
+import pool from '../config/dbConnection.js'; // Add this import
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
@@ -20,6 +21,8 @@ const MISTRAL_AVATAR = 'https://www.servicesmobiles.fr/wp-content/uploads/2024/1
 const MISTRAL_API_TIMEOUT_MS = 120000; // 120 secondes = 2 minutes
 
 const socketManager = (io) => {
+  console.log("socketManager initialized with Socket.IO instance");
+  
   // Middleware pour authentifier les utilisateurs via socket.io
   io.use((socket, next) => {
     try {
@@ -29,12 +32,14 @@ const socketManager = (io) => {
         return next(new Error('Authentication error: Token required'));
       }
       
+      console.log('Socket.IO: Tentative d\'authentification avec token:', token.substring(0, 20) + '...');
+      
       jwt.verify(token, SECRET_KEY, (err, decoded) => {
         if (err) {
           console.error('Socket.IO: Token invalide', err);
           return next(new Error('Authentication error: Invalid token'));
         }
-        console.log('Socket.IO: Utilisateur authentifié', decoded);
+        console.log('Socket.IO: Utilisateur authentifié', decoded.id);
         socket.user = decoded;
         next();
       });
@@ -64,29 +69,75 @@ const socketManager = (io) => {
       socket.emit('canalJoined', { canalId, status: 'success' });
     });
     
-    // Rejoindre la room DM de l'utilisateur (pour recevoir ses messages privés)
+    // Joindre la room DM de l'utilisateur (pour recevoir ses messages privés)
     socket.on('joinPrivate', () => {
       if (socket.user?.id) {
+        console.log(`Socket.IO: Utilisateur ${socket.user.id} rejoint sa room privée dm:${socket.user.id}`);
         socket.join(`dm:${socket.user.id}`);
+        socket.emit('privateRoomJoined', { status: 'success' });
       }
     });
 
-    // Envoyer un message privé
-    socket.on('privateMessage', async ({ destinataireId, contenu }) => {
+    // Améliorer le handler de message privé pour gérer les tempId et la déduplication
+    socket.on('privateMessage', async ({ destinataireId, contenu, tempId, replyToId }, callback) => {
       try {
+        console.log(`Socket.IO: Message privé reçu de ${socket.user?.id} pour ${destinataireId}: ${contenu.substring(0, 30)}`);
+        
         const expediteurId = socket.user.id;
+        
         if (!destinataireId || !contenu) {
-          socket.emit('error', { message: 'destinataireId et contenu requis' });
+          console.warn('Socket.IO: Données de message privé incomplètes');
+          if (callback) callback({ ok: false, message: 'destinataireId et contenu requis' });
           return;
         }
+        
+        // Vérifier si un message identique a été créé récemment (déduplication)
+        // Utiliser MessagePrive pour la déduplication au lieu de pool.query directement
+        const recentMessages = await MessagePrive.getRecentSimilarMessages(
+          expediteurId, 
+          destinataireId, 
+          contenu
+        );
+        
+        if (recentMessages && recentMessages.length > 0) {
+          console.log('Socket.IO: Message privé similaire trouvé, éviter duplication');
+          const existingMessage = recentMessages[0];
+          
+          // Émettre le message existant avec le tempId pour que le frontend puisse faire la correspondance
+          const messageWithTempId = { ...existingMessage, tempId };
+          io.to(`dm:${expediteurId}`).to(`dm:${destinataireId}`).emit('privateMessage', messageWithTempId);
+          
+          if (callback) callback({ ok: true, message: 'Message existant récupéré', id: existingMessage.id_message_prive });
+          return;
+        }
+        
+        // Créer le message en base de données
+        console.log('Socket.IO: Création du message privé en base');
         const message = await MessagePrive.create({
           contenu,
           fk_expediteur: expediteurId,
-          fk_destinataire: destinataireId
+          fk_destinataire: destinataireId,
+          parent_id: replyToId
         });
+        
+        // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
+        if (tempId) {
+          message.tempId = tempId;
+        }
+        
+        console.log('Socket.IO: Message privé créé avec ID:', message.id_message_prive);
+        
+        // Émettre vers les deux utilisateurs
         io.to(`dm:${expediteurId}`).to(`dm:${destinataireId}`).emit('privateMessage', message);
+        
+        // IMPORTANT: Toujours répondre au callback
+        if (callback) {
+          callback({ ok: true, message: 'Message reçu côté backend', id: message.id_message_prive });
+        }
       } catch (error) {
-        socket.emit('error', { message: 'Erreur lors de l\'envoi du message privé' });
+        console.error('Socket.IO: Erreur lors de la création du message privé:', error);
+        if (callback) callback({ ok: false, message: error.message });
+        else socket.emit('error', { message: 'Erreur lors de l\'envoi du message privé' });
       }
     });
 
@@ -506,10 +557,24 @@ const socketManager = (io) => {
       }
     });
     
-    // Déconnexion
-    socket.on('disconnect', () => {
-      console.log(`Utilisateur déconnecté: ${socket.id}`);
+    // Ajouter des handlers pour différents événements d'erreur de socket
+    socket.on('error', (err) => {
+      console.error('Socket.IO: Erreur socket individuelle:', err);
     });
+    
+    socket.on('disconnect', (reason) => {
+      console.log(`Socket.IO: Utilisateur déconnecté: ${socket.id}, Raison: ${reason}`);
+    });
+    
+    socket.on('disconnecting', (reason) => {
+      console.log(`Socket.IO: Utilisateur en cours de déconnexion: ${socket.id}, Raison: ${reason}`);
+      console.log('Socket.IO: Rooms en cours de quittance:', Array.from(socket.rooms));
+    });
+  });
+  
+  // Handler pour erreurs au niveau de l'instance io
+  io.engine.on('connection_error', (err) => {
+    console.error('Socket.IO: Erreur de connexion au niveau du moteur:', err);
   });
   
   return io;
