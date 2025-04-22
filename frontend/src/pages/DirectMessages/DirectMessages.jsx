@@ -436,20 +436,34 @@ const fetchUserInfo = async (userId) => {
     }
     
     const data = await res.json();
-    console.log(`[DM] User info for ${userId}:`, data);
     
-    // Map database fields to frontend naming convention
+    // Log to debug the user data structure
+    console.log(`[DM] Fetched user data for ${userId}:`, data);
+    
+    // Create a normalized user object with all possible fields
     const userInfo = {
-      ...data,
+      id: userId,
       name: data.nom || data.name || "Utilisateur",
-      avatar: data.photo_de_profil || data.avatar
+      avatar: data.photo_de_profil || data.avatar || null,
+      // Preserve all original fields for reference
+      ...data
     };
     
+    console.log(`[DM] Normalized user info:`, userInfo);
+    
+    // Update the usersInfo state with this user
     setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
     return userInfo;
   } catch (e) {
     console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
-    return null;
+    // Return a fallback user object if fetch fails
+    const fallbackUser = { 
+      id: userId, 
+      name: "Utilisateur", 
+      avatar: null 
+    };
+    setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
+    return fallbackUser;
   }
 };
 
@@ -972,7 +986,16 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
-                    const user = usersInfo[isOwn ? currentUserId : msg.fk_expediteur];
+                    
+                    // Get the sender info, with strong fallbacks if missing
+                    const senderId = msg.fk_expediteur;
+                    const senderInfo = usersInfo[senderId] || {};
+                    
+                    // Determine display name with fallbacks
+                    const displayName = senderInfo.name || senderInfo.nom || (isOwn ? "Vous" : "Utilisateur");
+                    
+                    // Determine the avatar source with fallbacks
+                    const avatarSrc = senderInfo.avatar || senderInfo.photo_de_profil;
                     
                     // Si c'est un message qu'on est en train d'éditer
                     if (editingMessage && editingMessage.id_message_prive === msg.id_message_prive) {
@@ -982,11 +1005,12 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                           className={`dm-message ${isOwn ? 'own' : 'other'} editing`}
                         >
                           <div className="dm-msg-avatar">
-                            {user?.avatar ? (
-                              <img src={user.avatar} alt={user.name || "User"} />
+                            {senderInfo.avatar ? (
+                              <img src={senderInfo.avatar} alt={senderInfo.nom || senderInfo.name || "User"} />
                             ) : (
                               <div className="dm-avatar-placeholder">
-                                {user?.name ? user.name[0].toUpperCase() : "U"}
+                                {senderInfo.nom ? senderInfo.nom[0].toUpperCase() : 
+                                 senderInfo.name ? senderInfo.name[0].toUpperCase() : "U"}
                               </div>
                             )}
                           </div>
@@ -1029,11 +1053,11 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                         )}
                       
                         <div className="dm-msg-avatar">
-                          {user?.avatar ? (
-                            <img src={user.avatar} alt={user.name || "User"} />
+                          {avatarSrc ? (
+                            <img src={avatarSrc} alt={displayName} />
                           ) : (
                             <div className="dm-avatar-placeholder">
-                              {user?.name ? user.name[0].toUpperCase() : "U"}
+                              {displayName[0].toUpperCase()}
                             </div>
                           )}
                         </div>
@@ -1041,7 +1065,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
                             <span className="dm-msg-author">
-                              {user?.name || "Utilisateur"}
+                              {displayName}
                             </span>
                             <span className="dm-msg-date">
                               {formatMessageDate(msg.date_creation || msg.date_envoi)}
