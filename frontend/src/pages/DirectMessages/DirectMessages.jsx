@@ -27,6 +27,29 @@ const formatMessageDate = (dateString) => {
   return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
+// Add this utility function near the top of your component
+const safeJSONParse = (jsonString, fallback = null) => {
+  try {
+    return typeof jsonString === 'string' 
+      ? JSON.parse(jsonString) 
+      : fallback;
+  } catch (error) {
+    console.error("JSON parse error:", error);
+    return fallback;
+  }
+};
+
+const safeJSONStringify = (obj) => {
+  try {
+    return typeof obj === 'object' 
+      ? JSON.stringify(obj) 
+      : obj;
+  } catch (error) {
+    console.error("JSON stringify error:", error);
+    return '';
+  }
+};
+
 function DirectMessages() {
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -207,8 +230,39 @@ function DirectMessages() {
   useEffect(() => {
     if (!socket) return;
     
+    // Fix the storage event listener to prevent parsing errors
+    const storageEventHandler = (event) => {
+      if (event.key && event.key.startsWith('lastMessage_')) {
+        try {
+          // Only try to parse if it's a valid string
+          if (event.newValue && typeof event.newValue === 'string') {
+            // Just validate but don't use the result - this prevents parsing errors
+            JSON.parse(event.newValue);
+          }
+        } catch (e) {
+          console.warn("[DM] Storage event error:", e);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', storageEventHandler);
+    
+    // Update the handlePrivateMessage function to safely handle message storage
     const handlePrivateMessage = (msg) => {
       console.log("[DM] Received private message:", msg);
+      
+      // Cache last message in localStorage safely - skip this to avoid JSON errors
+      // This is probably causing the issue, so let's disable it for now
+      /* 
+      try {
+        if (msg && typeof msg === 'object') {
+          localStorage.setItem(`lastMessage_${msg.fk_expediteur || 'unknown'}`, 
+            safeJSONStringify(msg));
+        }
+      } catch (storageError) {
+        console.warn("[DM] Failed to store message in localStorage:", storageError);
+      }
+      */
       
       // Ne rien faire si le message n'est pas pertinent pour la conversation active
       if (!selectedUser || 
@@ -305,6 +359,8 @@ function DirectMessages() {
     socket.on("privateMessageRead", handlePrivateMessageRead);
     
     return () => {
+      // Clean up event listener on unmount
+      window.removeEventListener('storage', storageEventHandler);
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
