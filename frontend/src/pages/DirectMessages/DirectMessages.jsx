@@ -341,14 +341,17 @@ function DirectMessages() {
     };
     
     const handlePrivateMessageRead = (data) => {
-      console.log("Message read:", data);
+      console.log("[DM] Message read event:", data);
       if (selectedUser) {
         setMessages((prev) => 
-          prev.map((m) => 
-            m.id_message_prive === data.id 
-              ? { ...m, date_lecture: data.date_lecture } 
-              : m
-          )
+          prev.map((m) => {
+            // Check if this is the message that was read
+            if (m.id_message_prive === data.id) {
+              console.log(`[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`);
+              return { ...m, date_lecture: data.date_lecture };
+            }
+            return m;
+          })
         );
       }
     };
@@ -480,20 +483,50 @@ function DirectMessages() {
     }
   };
 
-  // Marquer les messages non lus comme lus
-  const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length) return;
-    
-    const unreadMessages = msgs.filter(
-      m => m.fk_expediteur !== currentUserId && !m.date_lecture
-    );
-    
-    if (unreadMessages.length > 0) {
-      unreadMessages.forEach(msg => {
-        socket.emit("readPrivateMessage", { id: msg.id_message_prive });
+  // Improve the markMessagesAsRead function to be more robust
+const markMessagesAsRead = (msgs) => {
+  if (!socket || !msgs || !msgs.length || !selectedUser) return;
+  
+  const unreadMessages = msgs.filter(
+    m => m.fk_expediteur !== currentUserId && !m.date_lecture
+  );
+  
+  if (unreadMessages.length > 0) {
+    console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
+    unreadMessages.forEach(msg => {
+      socket.emit("readPrivateMessage", { 
+        id: msg.id_message_prive,
+        senderId: msg.fk_expediteur, 
+        recipientId: currentUserId 
       });
+    });
+  }
+};
+
+// Add useEffect to handle visibility changes and mark messages as read
+// when the user is looking at them
+useEffect(() => {
+  if (!selectedUser || !messages.length || !socket) return;
+  
+  // Mark messages as read when they are displayed
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      markMessagesAsRead(messages);
     }
   };
+  
+  // Mark messages as read when focus returns to the window
+  window.addEventListener('focus', () => markMessagesAsRead(messages));
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Initial marking when messages are loaded
+  markMessagesAsRead(messages);
+  
+  return () => {
+    window.removeEventListener('focus', () => markMessagesAsRead(messages));
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [selectedUser, messages, socket]);
 
   // Modifiez la fonction d'envoi pour gérer différents états de connexion
 const handleSendMessage = async (e) => {
@@ -1022,8 +1055,12 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                             {msg.contenu}
                           </div>
                           
-                          {isOwn && msg.date_lecture && (
-                            <div className="dm-msg-read">✓ Lu</div>
+                          {isOwn && (
+                            <div className="dm-msg-read">
+                              {msg.date_lecture 
+                                ? `✓ Lu ${formatMessageDate(msg.date_lecture)}` 
+                                : "✓ Envoyé"}
+                            </div>
                           )}
                         </div>
                       </div>
