@@ -74,18 +74,37 @@ const formatMessageDate = (dateString) => {
     return '';
   }
   try {
+    // 1. Créer une date à partir du string
     const date = new Date(dateString);
+    
+    // 2. Correction MANUELLE du décalage total (4h de la DB + 2h d'affichage = 6h)
+    // Nous créons une nouvelle date avec le décalage appliqué
+    const correctedDate = new Date(date.getTime() + 2 * 60 * 60 * 1000); // +2h pour compenser le décalage d'affichage
+    
     const now = new Date();
-    if (isNaN(date.getTime())) {
-      console.warn('formatMessageDate: date invalide', dateString);
-      return '';
+    const nowParis = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Appliquer le même décalage à "maintenant"
+    
+    // 3. Formater l'heure sans utiliser les options de fuseau horaire qui peuvent causer des problèmes
+    const hours = correctedDate.getHours().toString().padStart(2, '0');
+    const minutes = correctedDate.getMinutes().toString().padStart(2, '0');
+    
+    // 4. Comparer si c'est aujourd'hui (après correction)
+    const isSameDay = 
+      correctedDate.getDate() === nowParis.getDate() &&
+      correctedDate.getMonth() === nowParis.getMonth() &&
+      correctedDate.getFullYear() === nowParis.getFullYear();
+    
+    if (isSameDay) {
+      return `${hours}:${minutes}`;
+    } else {
+      // Si ce n'est pas aujourd'hui, inclure la date
+      const day = correctedDate.getDate().toString().padStart(2, '0');
+      const month = (correctedDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = correctedDate.getFullYear();
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch (error) {
-    console.error('Erreur de formatage de date:', error);
+    console.error('Erreur de formatage de date:', error, dateString);
     return '';
   }
 };
