@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import MessageModel from '../models/Message.js';
 import Reaction from '../models/Reaction.js';
 import MessagePrive from '../models/MessagePrive.js'; // Ajout de l'importation de MessagePrive
+import pool from '../config/dbConnection.js'; // Add this import
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
@@ -77,11 +78,11 @@ const socketManager = (io) => {
       }
     });
 
-    // Amélioration du handler privateMessage pour garantir la persistance
-    socket.on('privateMessage', async ({ destinataireId, contenu, replyToId }, callback) => {
-      console.log('Socket.IO: Message privé reçu de', socket.user?.id, 'pour', destinataireId, ':', contenu.substring(0, 30));
-      
+    // Améliorer le handler de message privé pour gérer les tempId et la déduplication
+    socket.on('privateMessage', async ({ destinataireId, contenu, tempId, replyToId }, callback) => {
       try {
+        console.log(`Socket.IO: Message privé reçu de ${socket.user?.id} pour ${destinataireId}: ${contenu.substring(0, 30)}`);
+        
         const expediteurId = socket.user.id;
         
         if (!destinataireId || !contenu) {
@@ -90,8 +91,28 @@ const socketManager = (io) => {
           return;
         }
         
+        // Vérifier si un message identique a été créé récemment (déduplication)
+        // Utiliser MessagePrive pour la déduplication au lieu de pool.query directement
+        const recentMessages = await MessagePrive.getRecentSimilarMessages(
+          expediteurId, 
+          destinataireId, 
+          contenu
+        );
+        
+        if (recentMessages && recentMessages.length > 0) {
+          console.log('Socket.IO: Message privé similaire trouvé, éviter duplication');
+          const existingMessage = recentMessages[0];
+          
+          // Émettre le message existant avec le tempId pour que le frontend puisse faire la correspondance
+          const messageWithTempId = { ...existingMessage, tempId };
+          io.to(`dm:${expediteurId}`).to(`dm:${destinataireId}`).emit('privateMessage', messageWithTempId);
+          
+          if (callback) callback({ ok: true, message: 'Message existant récupéré', id: existingMessage.id_message_prive });
+          return;
+        }
+        
         // Créer le message en base de données
-        console.log('Socket.IO: Tentative de création du message privé en base de données');
+        console.log('Socket.IO: Création du message privé en base');
         const message = await MessagePrive.create({
           contenu,
           fk_expediteur: expediteurId,
@@ -99,20 +120,19 @@ const socketManager = (io) => {
           parent_id: replyToId
         });
         
+        // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
+        if (tempId) {
+          message.tempId = tempId;
+        }
+        
         console.log('Socket.IO: Message privé créé avec ID:', message.id_message_prive);
         
-        // Logs pour débugger les rooms
-        const rooms = Array.from(io.sockets.adapter.rooms.keys());
-        console.log('Socket.IO: Rooms actives:', rooms);
-        console.log(`Socket.IO: Émission vers dm:${expediteurId} et dm:${destinataireId}`);
-        
-        // Émettre le message aux deux participants
+        // Émettre vers les deux utilisateurs
         io.to(`dm:${expediteurId}`).to(`dm:${destinataireId}`).emit('privateMessage', message);
         
-        // Toujours répondre au callback
+        // IMPORTANT: Toujours répondre au callback
         if (callback) {
-          console.log('Socket.IO: Envoi du callback de confirmation');
-          callback({ ok: true, message: 'Message reçu côté backend' });
+          callback({ ok: true, message: 'Message reçu côté backend', id: message.id_message_prive });
         }
       } catch (error) {
         console.error('Socket.IO: Erreur lors de la création du message privé:', error);

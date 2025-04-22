@@ -69,74 +69,138 @@ function DirectMessages() {
     }
   })();
 
-  // Connexion socket et joinPrivate
+  // Ajouter cet état pour suivre l'état de connexion du socket
+  const [socketStatus, setSocketStatus] = useState({
+    connected: false,
+    connecting: false,
+    error: null,
+    reconnectAttempts: 0
+  });
+
+  // Connexion socket et joinPrivate - amélioration de la robustesse
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("[DM] Initializing socket connection with token:", token);
     console.log("[DM] API_URL utilisé pour le socket:", API_URL);
     
+    // Définir l'état comme "en cours de connexion"
+    setSocketStatus(prev => ({ ...prev, connecting: true }));
+    
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/ping`)
       .then(response => {
-        if (response.ok) console.log("[DM] Backend API /api/ping OK");
-        else console.error("[DM] Backend API /api/ping ERROR:", response.status);
-        return response.text();
+        if (response.ok) {
+          console.log("[DM] Backend API /api/ping OK");
+          return response.text();
+        } else {
+          console.error("[DM] Backend API /api/ping ERROR:", response.status);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connecting: false,
+            error: `API inaccessible: ${response.status}` 
+          }));
+          throw new Error(`API inaccessible: ${response.status}`);
+        }
       })
-      .then(text => console.log("[DM] Ping response:", text))
-      .catch(err => console.error("[DM] Backend API inaccessible:", err));
-    
-    // Log pour vérifier l'URL WebSocket
-    console.log("[DM] Tentative WebSocket sur:", `ws://${API_URL.replace(/^https?:\/\//, '')}/socket.io/?EIO=4&transport=websocket`);
-    
-    const newSocket = io(API_URL, {
-      auth: { token },
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 30000, // Augmenter le timeout
-      forceNew: true, // Forcer une nouvelle connexion
-    });
-    
-    // Écouter les événements de debug socket.io
-    newSocket.on("connect_error", (err) => {
-      console.error("[DM] Socket.io connection error:", err);
-    });
-    
-    newSocket.on("connect", () => {
-      console.log("[DM] Socket.io connecté avec succès avec ID:", newSocket.id);
-      console.log("[DM] Tentative de rejoindre la room privée");
-      newSocket.emit("joinPrivate");
-    });
+      .then(text => {
+        console.log("[DM] Ping response:", text);
+        
+        // Configuration complète pour Socket.IO
+        const socketOptions = {
+          auth: { token },
+          transports: ["polling", "websocket"], // Try polling first then websocket
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000,  // Start with 2 seconds
+          reconnectionDelayMax: 10000, // Max 10 seconds
+          timeout: 20000,
+          autoConnect: true,
+          forceNew: true
+        };
+        
+        console.log("[DM] Creating socket with options:", socketOptions);
+        
+        // Créer l'instance du socket
+        const newSocket = io(API_URL, socketOptions);
+        
+        // Événements de connexion et de diagnostic
+        newSocket.on("connect_error", (err) => {
+          console.error("[DM] Socket.io connection error:", err);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connected: false, 
+            connecting: false,
+            error: err.message,
+            reconnectAttempts: prev.reconnectAttempts + 1
+          }));
+        });
+        
+        newSocket.on("connect", () => {
+          console.log("[DM] Socket.io connecté avec succès avec ID:", newSocket.id);
+          setSocketStatus({
+            connected: true,
+            connecting: false,
+            error: null,
+            reconnectAttempts: 0
+          });
+          
+          // Rejoindre la room privée seulement après connexion réussie
+          console.log("[DM] Tentative de rejoindre la room privée");
+          newSocket.emit("joinPrivate");
+        });
+        
+        newSocket.on("disconnect", (reason) => {
+          console.log("[DM] Socket.io disconnected, reason:", reason);
+          setSocketStatus(prev => ({
+            ...prev,
+            connected: false,
+            connecting: reason === "io server disconnect" ? false : true
+          }));
+        });
 
-    newSocket.on("privateRoomJoined", (data) => {
-      console.log("[DM] Room privée rejointe:", data);
-    });
-    
-    newSocket.on("error", (error) => {
-      console.error("[DM] Socket.io error event:", error);
-    });
-    
-    newSocket.on("reconnect", (attempt) => {
-      console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
-    });
-    
-    newSocket.on("reconnect_attempt", (attempt) => {
-      console.log("[DM] Socket.io tentative de reconnexion #", attempt);
-    });
-    
-    newSocket.on("reconnect_error", (error) => {
-      console.error("[DM] Socket.io erreur de reconnexion:", error);
-    });
-    
-    setSocket(newSocket);
-    
-    return () => {
-      if (newSocket) {
-        console.log("[DM] Déconnexion du socket");
-        newSocket.disconnect();
-      }
-    };
+        // Autres événements de debug
+        newSocket.on("error", (error) => {
+          console.error("[DM] Socket.io error event:", error);
+        });
+        
+        newSocket.on("reconnect_attempt", (attempt) => {
+          console.log("[DM] Socket.io reconnect attempt #", attempt);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connecting: true,
+            reconnectAttempts: attempt
+          }));
+        });
+        
+        newSocket.on("reconnect", (attempt) => {
+          console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
+          setSocketStatus({
+            connected: true,
+            connecting: false,
+            error: null,
+            reconnectAttempts: 0
+          });
+          
+          // Rejoindre la room privée après reconnexion
+          newSocket.emit("joinPrivate");
+        });
+        
+        setSocket(newSocket);
+        
+        return () => {
+          console.log("[DM] Cleanup: Déconnexion du socket");
+          newSocket.off();
+          newSocket.disconnect();
+        };
+      })
+      .catch(err => {
+        console.error("[DM] Backend API setup failed:", err);
+        setSocketStatus(prev => ({ 
+          ...prev, 
+          connecting: false,
+          error: err.message
+        }));
+      });
   }, []);
 
   // Réception des nouveaux messages privés en temps réel
@@ -144,15 +208,52 @@ function DirectMessages() {
     if (!socket) return;
     
     const handlePrivateMessage = (msg) => {
-      console.log("Received private message:", msg);
-      // Ajoute le message seulement si la conversation affichée est concernée
-      if (
-        selectedUser &&
-        (msg.fk_expediteur === selectedUser || msg.fk_destinataire === selectedUser)
-      ) {
-        setMessages((prev) => [...prev, msg]);
-        scrollToBottom();
+      console.log("[DM] Received private message:", msg);
+      
+      // Ne rien faire si le message n'est pas pertinent pour la conversation active
+      if (!selectedUser || 
+          (msg.fk_expediteur !== selectedUser && msg.fk_destinataire !== selectedUser)) {
+        console.log("[DM] Message not relevant for current conversation, ignoring");
+        return;
       }
+      
+      setMessages((prev) => {
+        // Vérifier si le message existe déjà (par id ou contenu+expéditeur pour les messages optimistes)
+        const messageExists = prev.some(existingMsg => {
+          // Vérifier par ID réel
+          if (existingMsg.id_message_prive === msg.id_message_prive) return true;
+          
+          // Vérifier par ID temporaire si présent
+          if (msg.tempId && existingMsg.id_message_prive === `temp-${msg.tempId}`) return true;
+          
+          // Vérifier par contenu et expéditeur (pour messages optimistes)
+          if (existingMsg.isOptimistic && 
+              existingMsg.contenu === msg.contenu && 
+              existingMsg.fk_expediteur === msg.fk_expediteur) return true;
+          
+          return false;
+        });
+        
+        if (messageExists) {
+          // Remplacer les messages optimistes par la version réelle
+          return prev.map(m => {
+            if (m.id_message_prive === msg.id_message_prive) return msg;
+            
+            if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) return msg;
+            
+            if (m.isOptimistic && 
+                m.contenu === msg.contenu && 
+                m.fk_expediteur === msg.fk_expediteur) return msg;
+            
+            return m;
+          });
+        } else {
+          // Ajouter uniquement si le message n'existe pas
+          return [...prev, msg];
+        }
+      });
+      
+      scrollToBottom();
       
       // Si c'est un nouveau message, rafraîchir la liste des conversations
       if (!conversations.includes(msg.fk_expediteur) && msg.fk_expediteur !== currentUserId) {
@@ -338,15 +439,89 @@ function DirectMessages() {
     }
   };
 
-  // Modifiez la fonction d'envoi de message pour utiliser d'abord l'API REST puis emettre via socket
+  // Modifiez la fonction d'envoi pour gérer différents états de connexion
 const handleSendMessage = async (e) => {
   e.preventDefault();
-  if (!newMessage.trim() || !selectedUser || !socket) return;
+  if (!newMessage.trim() || !selectedUser) return;
   
   try {
     console.log("[DM] Sending message to:", selectedUser, "content:", newMessage);
     
-    // 1. D'abord envoyer via l'API pour garantir la persistance
+    // Générer un ID temporaire pour déduplication
+    const tempId = Date.now().toString();
+    
+    // Créer un objet message local pour l'affichage immédiat
+    const optimisticMessage = {
+      id_message_prive: `temp-${tempId}`,
+      contenu: newMessage,
+      fk_expediteur: currentUserId,
+      fk_destinataire: selectedUser,
+      date_envoi: new Date().toISOString(),
+      date_creation: new Date().toISOString(),
+      isOptimistic: true
+    };
+    
+    // Ajouter le message optimiste à l'UI
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    const messageData = {
+      destinataireId: selectedUser,
+      contenu: newMessage,
+      tempId,
+      replyToId: replyingTo ? replyingTo.id_message_prive : null
+    };
+    
+    // Tenter d'utiliser le socket si connecté
+    if (socket && socketStatus.connected) {
+      console.log("[DM] Socket connected, trying to send message via socket");
+      
+      try {
+        // Définir un timeout pour la réponse socket
+        const socketPromise = new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error("Socket timeout"));
+          }, 3000);
+          
+          socket.emit("privateMessage", messageData, (response) => {
+            clearTimeout(timeoutId);
+            console.log("[DM] Socket response:", response);
+            
+            if (response && response.ok === true) {
+              resolve(response);
+            } else {
+              reject(new Error(response?.message || "Socket error"));
+            }
+          });
+        });
+        
+        await socketPromise;
+        console.log("[DM] Message sent successfully via socket");
+      } catch (socketError) {
+        console.warn("[DM] Socket message failed:", socketError.message);
+        console.log("[DM] Falling back to REST API");
+        await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
+      }
+    } else {
+      // Socket not connected, use REST API directly
+      console.log("[DM] Socket not connected (state:", socketStatus, "), using REST API");
+      await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
+    }
+    
+    // Réinitialiser l'état après envoi
+    setNewMessage("");
+    setReplyingTo(null);
+    
+  } catch (e) {
+    console.error("Erreur lors de l'envoi du message:", e);
+    setError(`Erreur lors de l'envoi du message: ${e.message}`);
+  }
+};
+
+// Fonction de fallback pour l'API REST avec paramètres explicites
+const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) => {
+  if (!messageContent || !recipientId) return;
+  
+  try {
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_URL}/api/private-messages/`, {
       method: "POST",
@@ -355,9 +530,9 @@ const handleSendMessage = async (e) => {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        destinataireId: selectedUser,
-        contenu: newMessage,
-        replyToId: replyingTo ? replyingTo.id_message_prive : null
+        destinataireId: recipientId,
+        contenu: messageContent,
+        replyToId: replyToMessage ? replyToMessage.id_message_prive : null
       })
     });
     
@@ -365,26 +540,25 @@ const handleSendMessage = async (e) => {
       throw new Error(await res.text());
     }
     
-    // 2. Ajouter le message à l'interface utilisateur immédiatement
+    // Ajouter le message reçu de l'API à l'interface
     const data = await res.json();
-    setMessages((prev) => [...prev, data]);
     
-    // 3. Essayer d'émettre via socket (ce qui est optionnel pour la persistance)
-    if (socket && socket.connected) {
-      socket.emit("privateMessage", {
-        destinataireId: selectedUser,
-        contenu: newMessage,
-        replyToId: replyingTo ? replyingTo.id_message_prive : null
-      }, (response) => {
-        console.log("[DM] Message acknowledgement:", response);
-      });
-    }
+    // Mise à jour des messages pour remplacer le message optimiste
+    setMessages(prev => {
+      const exists = prev.some(m => 
+        !m.isOptimistic && m.id_message_prive === data.id_message_prive
+      );
+      
+      if (exists) return prev;
+      
+      return prev.map(m => 
+        (m.isOptimistic && m.contenu === messageContent) ? data : m
+      );
+    });
     
-    setNewMessage("");
-    setReplyingTo(null);
-  } catch (e) {
-    console.error("Erreur lors de l'envoi du message:", e);
-    setError(`Erreur lors de l'envoi du message: ${e.message}`);
+  } catch (apiError) {
+    console.error("API fallback failed:", apiError);
+    setError(`Échec de l'envoi du message. Veuillez réessayer.`);
   }
 };
 
@@ -651,8 +825,23 @@ const handleSendMessage = async (e) => {
 
         {/* Zone principale des messages */}
         <div className="dm-main">
+          {/* Éléments SVG pour l'arrière-plan */}
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
+          
+          {/* Indicateur de statut de la connexion socket */}
+          <div 
+            className={`socket-status ${socketStatus.connected ? 'connected' : socketStatus.connecting ? 'connecting' : 'disconnected'}`}
+            title={socketStatus.error || ''}
+          >
+            {socketStatus.connected ? (
+              <>✓ Connecté</>
+            ) : socketStatus.connecting ? (
+              <>⟳ Connexion...</>
+            ) : (
+              <>⚠ Hors ligne</>
+            )}
+          </div>
           
           {!selectedUser ? (
             <div className="dm-empty-msg">
