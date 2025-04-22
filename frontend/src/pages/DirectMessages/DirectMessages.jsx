@@ -82,6 +82,8 @@ function DirectMessages() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiPickerPosition, setEmojiPickerPosition] = useState({ top: 0, left: 0 });
   const emojiPickerRef = useRef(null);
+  const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   // Récupère l'ID utilisateur courant
   const currentUserId = (() => {
@@ -250,6 +252,24 @@ function DirectMessages() {
     // Update the handlePrivateMessage function to safely handle message storage
     const handlePrivateMessage = (msg) => {
       console.log("[DM] Received private message:", msg);
+      
+      // Only count as unread if it's not from current user and not in current conversation
+      if (msg.fk_expediteur !== currentUserId && (
+          !selectedUser || msg.fk_expediteur !== selectedUser)) {
+        
+        // Update the unread count for this sender
+        setUnreadMessageCounts(prev => {
+          const senderId = msg.fk_expediteur;
+          const newCounts = { 
+            ...prev,
+            [senderId]: (prev[senderId] || 0) + 1 
+          };
+          
+          // Update total count
+          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          return newCounts;
+        });
+      }
       
       // Cache last message in localStorage safely - skip this to avoid JSON errors
       // This is probably causing the issue, so let's disable it for now
@@ -479,6 +499,13 @@ const fetchUserInfo = async (userId) => {
         userInfo = await fetchUserInfo(userId);
       }
       setSelectedUserInfo(userInfo);
+      
+      // Clear unread messages for this user
+      setUnreadMessageCounts(prev => {
+        const newCounts = { ...prev, [userId]: 0 };
+        setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+        return newCounts;
+      });
       
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
@@ -867,9 +894,61 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
     // eslint-disable-next-line
   }, [selectedUser]);
 
+  // Add this function to calculate total unread messages
+  const calculateTotalUnreadCount = (countsObj) => {
+    return Object.values(countsObj).reduce((total, count) => total + count, 0);
+  };
+
+  // Add this effect to update the unread count in localStorage for the Sidebar
+  useEffect(() => {
+    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
+    
+    // Create a custom event to notify other components about the change
+    const event = new CustomEvent('unreadMessagesUpdated', { 
+      detail: { count: totalUnreadCount }
+    });
+    window.dispatchEvent(event);
+  }, [totalUnreadCount]);
+
+  // Make sure this effect properly updates the localStorage and dispatches an event
+  useEffect(() => {
+    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
+    
+    // Dispatch event to notify other components about the change
+    const event = new CustomEvent('unreadMessagesUpdated', { 
+      detail: { count: totalUnreadCount }
+    });
+    window.dispatchEvent(event);
+    
+    console.log(`[DM] Updated unread message count: ${totalUnreadCount}`);
+  }, [totalUnreadCount]);
+
+  // Add an effect to load initial unread counts when component mounts
+  useEffect(() => {
+    // Check for any stored unread messages in localStorage or fetch from API
+    const fetchUnreadCounts = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadMessageCounts(data);
+          setTotalUnreadCount(calculateTotalUnreadCount(data));
+        }
+      } catch (e) {
+        console.error("Error fetching unread counts:", e);
+      }
+    };
+    
+    fetchUnreadCounts();
+  }, []);
+
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar unreadMessageCount={totalUnreadCount} />
       <div className="dm-layout">
         {/* Sidebar des conversations */}
         <div className="dm-sidebar">
