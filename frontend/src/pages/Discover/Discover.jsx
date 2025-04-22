@@ -14,6 +14,7 @@ function Discover() {
   const [userWorkspaceIds, setUserWorkspaceIds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userWorkspacesLoaded, setUserWorkspacesLoaded] = useState(false); // Nouvel état pour suivre le chargement
 
   // Fetch user's workspace IDs
   useEffect(() => {
@@ -25,10 +26,22 @@ function Discover() {
       }
 
       try {
+<<<<<<< HEAD
         const response = await fetch(
           `${API_URL}/api/workspaces/user/workspaces`,
           {
             headers: { Authorization: `Bearer ${token}` },
+=======
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setUserWorkspacesLoaded(true); // Marquer comme chargé même si pas de token
+          return;
+        }
+        
+        const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
           }
         );
 
@@ -43,9 +56,15 @@ function Discover() {
           );
           setUserWorkspaceIds([]);
         }
+        
+        setUserWorkspacesLoaded(true); // Marquer comme chargé dans tous les cas
       } catch (err) {
         console.error("Error fetching user workspaces:", err);
+<<<<<<< HEAD
         setUserWorkspaceIds([]);
+=======
+        setUserWorkspacesLoaded(true); // Marquer comme chargé même en cas d'erreur
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       }
     };
 
@@ -77,8 +96,16 @@ function Discover() {
       }
     };
 
+<<<<<<< HEAD
     fetchAllWorkspaces();
   }, []);
+=======
+    // Modifier la condition pour charger les workspaces dès que userWorkspaces est chargé
+    if (userWorkspacesLoaded) {
+      fetchWorkspaces();
+    }
+  }, [userWorkspaces, userWorkspacesLoaded]); 
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
 
   // Process workspaces (add hasJoined) when allWorkspaces or userWorkspaceIds change
   useEffect(() => {

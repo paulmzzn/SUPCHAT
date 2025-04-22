@@ -148,6 +148,34 @@
   }
 }
 
+/* Notification badge styles */
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FF4B4B;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  padding: 0 5px;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+/* Make the badge bounce when it appears */
+@keyframes badge-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.nav-item .notification-badge {
+  animation: badge-bounce 0.3s ease-out;
+}
+
 .sidebar-footer {
   padding: 0;
   margin-top: auto;
@@ -416,4 +444,31 @@ svg rect[width="24"][height="24"] {
     border: none;
     background-color: transparent;
   }
+}
+
+/* Notification badge */
+.nav-badge {
+  position: absolute;
+  top: 50%;
+  right: 10px; /* Move further to the right */
+  transform: translateY(-50%);
+  background-color: #ff4b4b;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 9999;
+}
+
+@keyframes badge-appear {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }

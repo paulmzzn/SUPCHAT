@@ -6,6 +6,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import UserModel from "../models/User.js";
 
+<<<<<<< HEAD
 export const googleStrategy = new GoogleStrategy(
   {
     clientID:
@@ -16,6 +17,15 @@ export const googleStrategy = new GoogleStrategy(
   async (accessToken, refreshToken, profile, done) => {
     try {
       console.log("Google profile:", profile); // Pour le débogage
+=======
+export const googleStrategy = new GoogleStrategy({
+  clientID: 'REDACTED',
+  clientSecret: 'REDACTED',
+  callbackURL: 'http://REDACTED:3000/api/users/auth/google/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    console.log('Google profile:', profile); // Pour le débogage
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
 
       const user = await UserModel.findOrCreateUser({
         nom: profile.displayName,

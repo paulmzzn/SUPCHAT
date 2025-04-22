@@ -31,6 +31,29 @@ const formatMessageDate = (dateString) => {
   );
 };
 
+// Add this utility function near the top of your component
+const safeJSONParse = (jsonString, fallback = null) => {
+  try {
+    return typeof jsonString === 'string' 
+      ? JSON.parse(jsonString) 
+      : fallback;
+  } catch (error) {
+    console.error("JSON parse error:", error);
+    return fallback;
+  }
+};
+
+const safeJSONStringify = (obj) => {
+  try {
+    return typeof obj === 'object' 
+      ? JSON.stringify(obj) 
+      : obj;
+  } catch (error) {
+    console.error("JSON stringify error:", error);
+    return '';
+  }
+};
+
 function DirectMessages() {
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -67,8 +90,13 @@ function DirectMessages() {
     left: 0,
   });
   const emojiPickerRef = useRef(null);
+<<<<<<< HEAD
   const fileInputRef = useRef(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+=======
+  const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
 
   // Récupère l'ID utilisateur courant
   const currentUserId = (() => {
@@ -79,29 +107,144 @@ function DirectMessages() {
     }
   })();
 
-  // Connexion socket et joinPrivate
+  // Ajouter cet état pour suivre l'état de connexion du socket
+  const [socketStatus, setSocketStatus] = useState({
+    connected: false,
+    connecting: false,
+    error: null,
+    reconnectAttempts: 0
+  });
+
+  // Connexion socket et joinPrivate - amélioration de la robustesse
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const newSocket = io(API_URL, {
-      auth: { token },
-      transports: ["websocket", "polling"],
-      reconnection: true,
-    });
-    setSocket(newSocket);
+    console.log("[DM] Initializing socket connection with token:", token);
+    console.log("[DM] API_URL utilisé pour le socket:", API_URL);
+    
+    // Définir l'état comme "en cours de connexion"
+    setSocketStatus(prev => ({ ...prev, connecting: true }));
+    
+    // Vérifier d'abord si l'API est accessible
+    fetch(`${API_URL}/api/ping`)
+      .then(response => {
+        if (response.ok) {
+          console.log("[DM] Backend API /api/ping OK");
+          return response.text();
+        } else {
+          console.error("[DM] Backend API /api/ping ERROR:", response.status);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connecting: false,
+            error: `API inaccessible: ${response.status}` 
+          }));
+          throw new Error(`API inaccessible: ${response.status}`);
+        }
+      })
+      .then(text => {
+        console.log("[DM] Ping response:", text);
+        
+        // Configuration complète pour Socket.IO
+        const socketOptions = {
+          auth: { token },
+          transports: ["polling", "websocket"], // Try polling first then websocket
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000,  // Start with 2 seconds
+          reconnectionDelayMax: 10000, // Max 10 seconds
+          timeout: 20000,
+          autoConnect: true,
+          forceNew: true
+        };
+        
+        console.log("[DM] Creating socket with options:", socketOptions);
+        
+        // Créer l'instance du socket
+        const newSocket = io(API_URL, socketOptions);
+        
+        // Événements de connexion et de diagnostic
+        newSocket.on("connect_error", (err) => {
+          console.error("[DM] Socket.io connection error:", err);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connected: false, 
+            connecting: false,
+            error: err.message,
+            reconnectAttempts: prev.reconnectAttempts + 1
+          }));
+        });
+        
+        newSocket.on("connect", () => {
+          console.log("[DM] Socket.io connecté avec succès avec ID:", newSocket.id);
+          setSocketStatus({
+            connected: true,
+            connecting: false,
+            error: null,
+            reconnectAttempts: 0
+          });
+          
+          // Rejoindre la room privée seulement après connexion réussie
+          console.log("[DM] Tentative de rejoindre la room privée");
+          newSocket.emit("joinPrivate");
+        });
+        
+        newSocket.on("disconnect", (reason) => {
+          console.log("[DM] Socket.io disconnected, reason:", reason);
+          setSocketStatus(prev => ({
+            ...prev,
+            connected: false,
+            connecting: reason === "io server disconnect" ? false : true
+          }));
+        });
 
-    newSocket.on("connect", () => {
-      console.log("Socket connected, joining private room");
-      newSocket.emit("joinPrivate");
-    });
-
-    return () => {
-      if (newSocket) newSocket.disconnect();
-    };
+        // Autres événements de debug
+        newSocket.on("error", (error) => {
+          console.error("[DM] Socket.io error event:", error);
+        });
+        
+        newSocket.on("reconnect_attempt", (attempt) => {
+          console.log("[DM] Socket.io reconnect attempt #", attempt);
+          setSocketStatus(prev => ({ 
+            ...prev, 
+            connecting: true,
+            reconnectAttempts: attempt
+          }));
+        });
+        
+        newSocket.on("reconnect", (attempt) => {
+          console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
+          setSocketStatus({
+            connected: true,
+            connecting: false,
+            error: null,
+            reconnectAttempts: 0
+          });
+          
+          // Rejoindre la room privée après reconnexion
+          newSocket.emit("joinPrivate");
+        });
+        
+        setSocket(newSocket);
+        
+        return () => {
+          console.log("[DM] Cleanup: Déconnexion du socket");
+          newSocket.off();
+          newSocket.disconnect();
+        };
+      })
+      .catch(err => {
+        console.error("[DM] Backend API setup failed:", err);
+        setSocketStatus(prev => ({ 
+          ...prev, 
+          connecting: false,
+          error: err.message
+        }));
+      });
   }, []);
 
   // Réception des nouveaux messages privés en temps réel
   useEffect(() => {
     if (!socket) return;
+<<<<<<< HEAD
 
     const handlePrivateMessage = (msg) => {
       console.log("Received private message:", msg);
@@ -115,6 +258,106 @@ function DirectMessages() {
         scrollToBottom();
       }
 
+=======
+    
+    // Fix the storage event listener to prevent parsing errors
+    const storageEventHandler = (event) => {
+      if (event.key && event.key.startsWith('lastMessage_')) {
+        try {
+          // Only try to parse if it's a valid string
+          if (event.newValue && typeof event.newValue === 'string') {
+            // Just validate but don't use the result - this prevents parsing errors
+            JSON.parse(event.newValue);
+          }
+        } catch (e) {
+          console.warn("[DM] Storage event error:", e);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', storageEventHandler);
+    
+    // Update the handlePrivateMessage function to safely handle message storage
+    const handlePrivateMessage = (msg) => {
+      console.log("[DM] Received private message:", msg);
+      
+      // Only count as unread if it's not from current user and not in current conversation
+      if (msg.fk_expediteur !== currentUserId && (
+          !selectedUser || msg.fk_expediteur !== selectedUser)) {
+        
+        // Update the unread count for this sender
+        setUnreadMessageCounts(prev => {
+          const senderId = msg.fk_expediteur;
+          const newCounts = { 
+            ...prev,
+            [senderId]: (prev[senderId] || 0) + 1 
+          };
+          
+          // Update total count
+          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          return newCounts;
+        });
+      }
+      
+      // Cache last message in localStorage safely - skip this to avoid JSON errors
+      // This is probably causing the issue, so let's disable it for now
+      /* 
+      try {
+        if (msg && typeof msg === 'object') {
+          localStorage.setItem(`lastMessage_${msg.fk_expediteur || 'unknown'}`, 
+            safeJSONStringify(msg));
+        }
+      } catch (storageError) {
+        console.warn("[DM] Failed to store message in localStorage:", storageError);
+      }
+      */
+      
+      // Ne rien faire si le message n'est pas pertinent pour la conversation active
+      if (!selectedUser || 
+          (msg.fk_expediteur !== selectedUser && msg.fk_destinataire !== selectedUser)) {
+        console.log("[DM] Message not relevant for current conversation, ignoring");
+        return;
+      }
+      
+      setMessages((prev) => {
+        // Vérifier si le message existe déjà (par id ou contenu+expéditeur pour les messages optimistes)
+        const messageExists = prev.some(existingMsg => {
+          // Vérifier par ID réel
+          if (existingMsg.id_message_prive === msg.id_message_prive) return true;
+          
+          // Vérifier par ID temporaire si présent
+          if (msg.tempId && existingMsg.id_message_prive === `temp-${msg.tempId}`) return true;
+          
+          // Vérifier par contenu et expéditeur (pour messages optimistes)
+          if (existingMsg.isOptimistic && 
+              existingMsg.contenu === msg.contenu && 
+              existingMsg.fk_expediteur === msg.fk_expediteur) return true;
+          
+          return false;
+        });
+        
+        if (messageExists) {
+          // Remplacer les messages optimistes par la version réelle
+          return prev.map(m => {
+            if (m.id_message_prive === msg.id_message_prive) return msg;
+            
+            if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) return msg;
+            
+            if (m.isOptimistic && 
+                m.contenu === msg.contenu && 
+                m.fk_expediteur === msg.fk_expediteur) return msg;
+            
+            return m;
+          });
+        } else {
+          // Ajouter uniquement si le message n'existe pas
+          return [...prev, msg];
+        }
+      });
+      
+      scrollToBottom();
+      
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       // Si c'est un nouveau message, rafraîchir la liste des conversations
       if (
         !conversations.includes(msg.fk_expediteur) &&
@@ -153,14 +396,26 @@ function DirectMessages() {
     };
 
     const handlePrivateMessageRead = (data) => {
-      console.log("Message read:", data);
+      console.log("[DM] Message read event:", data);
       if (selectedUser) {
+<<<<<<< HEAD
         setMessages((prev) =>
           prev.map((m) =>
             m.id_message_prive === data.id
               ? { ...m, date_lecture: data.date_lecture }
               : m
           )
+=======
+        setMessages((prev) => 
+          prev.map((m) => {
+            // Check if this is the message that was read
+            if (m.id_message_prive === data.id) {
+              console.log(`[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`);
+              return { ...m, date_lecture: data.date_lecture };
+            }
+            return m;
+          })
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
         );
       }
     };
@@ -171,6 +426,8 @@ function DirectMessages() {
     socket.on("privateMessageRead", handlePrivateMessageRead);
 
     return () => {
+      // Clean up event listener on unmount
+      window.removeEventListener('storage', storageEventHandler);
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
@@ -229,6 +486,7 @@ function DirectMessages() {
   }, []);
 
   // Récupère les infos d'un utilisateur
+<<<<<<< HEAD
   const fetchUserInfo = async (userId) => {
     if (usersInfo[userId]) return usersInfo[userId];
 
@@ -253,9 +511,53 @@ function DirectMessages() {
         `Erreur lors de la récupération des infos utilisateur ${userId}:`,
         e
       );
+=======
+const fetchUserInfo = async (userId) => {
+  if (usersInfo[userId]) return usersInfo[userId];
+  
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (!res.ok) {
+      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       return null;
     }
-  };
+    
+    const data = await res.json();
+    
+    // Log to debug the user data structure
+    console.log(`[DM] Fetched user data for ${userId}:`, data);
+    
+    // Create a normalized user object with all possible fields
+    const userInfo = {
+      id: userId,
+      name: data.nom || data.name || "Utilisateur",
+      avatar: data.photo_de_profil || data.avatar || null,
+      // Preserve all original fields for reference
+      ...data
+    };
+    
+    console.log(`[DM] Normalized user info:`, userInfo);
+    
+    // Update the usersInfo state with this user
+    setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
+    return userInfo;
+  } catch (e) {
+    console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
+    // Return a fallback user object if fetch fails
+    const fallbackUser = { 
+      id: userId, 
+      name: "Utilisateur", 
+      avatar: null 
+    };
+    setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
+    return fallbackUser;
+  }
+};
 
   // Récupère les messages d'une conversation
   const fetchMessages = async (userId) => {
@@ -269,7 +571,18 @@ function DirectMessages() {
         userInfo = await fetchUserInfo(userId);
       }
       setSelectedUserInfo(userInfo);
+<<<<<<< HEAD
 
+=======
+      
+      // Clear unread messages for this user
+      setUnreadMessageCounts(prev => {
+        const newCounts = { ...prev, [userId]: 0 };
+        setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+        return newCounts;
+      });
+      
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -297,6 +610,7 @@ function DirectMessages() {
     }
   };
 
+<<<<<<< HEAD
   // Marquer les messages non lus comme lus
   const markMessagesAsRead = (msgs) => {
     if (!socket || !msgs || !msgs.length) return;
@@ -308,10 +622,54 @@ function DirectMessages() {
     if (unreadMessages.length > 0) {
       unreadMessages.forEach((msg) => {
         socket.emit("readPrivateMessage", { id: msg.id_message_prive });
+=======
+  // Improve the markMessagesAsRead function to be more robust
+const markMessagesAsRead = (msgs) => {
+  if (!socket || !msgs || !msgs.length || !selectedUser) return;
+  
+  const unreadMessages = msgs.filter(
+    m => m.fk_expediteur !== currentUserId && !m.date_lecture
+  );
+  
+  if (unreadMessages.length > 0) {
+    console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
+    unreadMessages.forEach(msg => {
+      socket.emit("readPrivateMessage", { 
+        id: msg.id_message_prive,
+        senderId: msg.fk_expediteur, 
+        recipientId: currentUserId 
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       });
+    });
+  }
+};
+
+// Add useEffect to handle visibility changes and mark messages as read
+// when the user is looking at them
+useEffect(() => {
+  if (!selectedUser || !messages.length || !socket) return;
+  
+  // Mark messages as read when they are displayed
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      markMessagesAsRead(messages);
     }
   };
+  
+  // Mark messages as read when focus returns to the window
+  window.addEventListener('focus', () => markMessagesAsRead(messages));
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Initial marking when messages are loaded
+  markMessagesAsRead(messages);
+  
+  return () => {
+    window.removeEventListener('focus', () => markMessagesAsRead(messages));
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [selectedUser, messages, socket]);
 
+<<<<<<< HEAD
   // Envoie un message
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -355,9 +713,130 @@ function DirectMessages() {
         setNewMessage("");
       } catch (apiError) {
         setError(`Erreur lors de l'envoi du message: ${apiError.message}`);
+=======
+  // Modifiez la fonction d'envoi pour gérer différents états de connexion
+const handleSendMessage = async (e) => {
+  e.preventDefault();
+  if (!newMessage.trim() || !selectedUser) return;
+  
+  try {
+    console.log("[DM] Sending message to:", selectedUser, "content:", newMessage);
+    
+    // Générer un ID temporaire pour déduplication
+    const tempId = Date.now().toString();
+    
+    // Créer un objet message local pour l'affichage immédiat
+    const optimisticMessage = {
+      id_message_prive: `temp-${tempId}`,
+      contenu: newMessage,
+      fk_expediteur: currentUserId,
+      fk_destinataire: selectedUser,
+      date_envoi: new Date().toISOString(),
+      date_creation: new Date().toISOString(),
+      isOptimistic: true
+    };
+    
+    // Ajouter le message optimiste à l'UI
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    const messageData = {
+      destinataireId: selectedUser,
+      contenu: newMessage,
+      tempId,
+      replyToId: replyingTo ? replyingTo.id_message_prive : null
+    };
+    
+    // Tenter d'utiliser le socket si connecté
+    if (socket && socketStatus.connected) {
+      console.log("[DM] Socket connected, trying to send message via socket");
+      
+      try {
+        // Définir un timeout pour la réponse socket
+        const socketPromise = new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error("Socket timeout"));
+          }, 3000);
+          
+          socket.emit("privateMessage", messageData, (response) => {
+            clearTimeout(timeoutId);
+            console.log("[DM] Socket response:", response);
+            
+            if (response && response.ok === true) {
+              resolve(response);
+            } else {
+              reject(new Error(response?.message || "Socket error"));
+            }
+          });
+        });
+        
+        await socketPromise;
+        console.log("[DM] Message sent successfully via socket");
+      } catch (socketError) {
+        console.warn("[DM] Socket message failed:", socketError.message);
+        console.log("[DM] Falling back to REST API");
+        await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       }
+    } else {
+      // Socket not connected, use REST API directly
+      console.log("[DM] Socket not connected (state:", socketStatus, "), using REST API");
+      await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
     }
-  };
+    
+    // Réinitialiser l'état après envoi
+    setNewMessage("");
+    setReplyingTo(null);
+    
+  } catch (e) {
+    console.error("Erreur lors de l'envoi du message:", e);
+    setError(`Erreur lors de l'envoi du message: ${e.message}`);
+  }
+};
+
+// Fonction de fallback pour l'API REST avec paramètres explicites
+const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) => {
+  if (!messageContent || !recipientId) return;
+  
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_URL}/api/private-messages/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        destinataireId: recipientId,
+        contenu: messageContent,
+        replyToId: replyToMessage ? replyToMessage.id_message_prive : null
+      })
+    });
+    
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    
+    // Ajouter le message reçu de l'API à l'interface
+    const data = await res.json();
+    
+    // Mise à jour des messages pour remplacer le message optimiste
+    setMessages(prev => {
+      const exists = prev.some(m => 
+        !m.isOptimistic && m.id_message_prive === data.id_message_prive
+      );
+      
+      if (exists) return prev;
+      
+      return prev.map(m => 
+        (m.isOptimistic && m.contenu === messageContent) ? data : m
+      );
+    });
+    
+  } catch (apiError) {
+    console.error("API fallback failed:", apiError);
+    setError(`Échec de l'envoi du message. Veuillez réessayer.`);
+  }
+};
 
   // Handler pour ouvrir le sélecteur de fichier
   const handleAttachmentClick = () => {
@@ -412,16 +891,29 @@ function DirectMessages() {
 
       if (!res.ok) {
         console.error("Erreur lors de la récupération des utilisateurs");
+        setAvailableUsers([]);
+        setFilteredUsers([]);
         return;
       }
 
       const data = await res.json();
+<<<<<<< HEAD
       // Filtrer pour exclure l'utilisateur courant
       const filteredData = data.filter((user) => user.id !== currentUserId);
+=======
+      // Correction : les utilisateurs ont l'id sous 'id_utilisateur'
+      // Exclure l'utilisateur courant et ceux déjà en conversation
+      const filteredData = data.filter(user =>
+        user.id_utilisateur !== currentUserId &&
+        !conversations.includes(user.id_utilisateur)
+      );
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       setAvailableUsers(filteredData);
       setFilteredUsers(filteredData);
     } catch (e) {
       console.error("Erreur lors de la récupération des utilisateurs:", e);
+      setAvailableUsers([]);
+      setFilteredUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -432,8 +924,15 @@ function DirectMessages() {
     if (searchUserQuery.trim() === "") {
       setFilteredUsers(availableUsers);
     } else {
+<<<<<<< HEAD
       const filtered = availableUsers.filter((user) =>
         user.name?.toLowerCase().includes(searchUserQuery.toLowerCase())
+=======
+      const filtered = availableUsers.filter(user => 
+        (user.nom || "")
+          .toLowerCase()
+          .includes(searchUserQuery.toLowerCase())
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
       );
       setFilteredUsers(filtered);
     }
@@ -576,9 +1075,69 @@ function DirectMessages() {
     };
   }, []);
 
+  // Correction pour l'affichage des conversations/messages après reload
+  useEffect(() => {
+    if (selectedUser) {
+      fetchMessages(selectedUser);
+    }
+    // eslint-disable-next-line
+  }, [selectedUser]);
+
+  // Add this function to calculate total unread messages
+  const calculateTotalUnreadCount = (countsObj) => {
+    return Object.values(countsObj).reduce((total, count) => total + count, 0);
+  };
+
+  // Add this effect to update the unread count in localStorage for the Sidebar
+  useEffect(() => {
+    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
+    
+    // Create a custom event to notify other components about the change
+    const event = new CustomEvent('unreadMessagesUpdated', { 
+      detail: { count: totalUnreadCount }
+    });
+    window.dispatchEvent(event);
+  }, [totalUnreadCount]);
+
+  // Make sure this effect properly updates the localStorage and dispatches an event
+  useEffect(() => {
+    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
+    
+    // Dispatch event to notify other components about the change
+    const event = new CustomEvent('unreadMessagesUpdated', { 
+      detail: { count: totalUnreadCount }
+    });
+    window.dispatchEvent(event);
+    
+    console.log(`[DM] Updated unread message count: ${totalUnreadCount}`);
+  }, [totalUnreadCount]);
+
+  // Add an effect to load initial unread counts when component mounts
+  useEffect(() => {
+    // Check for any stored unread messages in localStorage or fetch from API
+    const fetchUnreadCounts = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadMessageCounts(data);
+          setTotalUnreadCount(calculateTotalUnreadCount(data));
+        }
+      } catch (e) {
+        console.error("Error fetching unread counts:", e);
+      }
+    };
+    
+    fetchUnreadCounts();
+  }, []);
+
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar unreadMessageCount={totalUnreadCount} />
       <div className="dm-layout">
         {/* Sidebar des conversations */}
         <div className="dm-sidebar">
@@ -635,7 +1194,9 @@ function DirectMessages() {
                       />
                     ) : (
                       <div className="dm-avatar">
-                        <FaUserCircle className="dm-avatar-placeholder" />
+                        <div className="dm-avatar-placeholder">
+                          {user.name ? user.name[0].toUpperCase() : "U"}
+                        </div>
                       </div>
                     )}
                     <span className="dm-username">
@@ -650,6 +1211,7 @@ function DirectMessages() {
 
         {/* Zone principale des messages */}
         <div className="dm-main">
+          {/* Éléments SVG pour l'arrière-plan */}
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
 
@@ -704,9 +1266,23 @@ function DirectMessages() {
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
+<<<<<<< HEAD
                     const user =
                       usersInfo[isOwn ? currentUserId : msg.fk_expediteur];
 
+=======
+                    
+                    // Get the sender info, with strong fallbacks if missing
+                    const senderId = msg.fk_expediteur;
+                    const senderInfo = usersInfo[senderId] || {};
+                    
+                    // Determine display name with fallbacks
+                    const displayName = senderInfo.name || senderInfo.nom || (isOwn ? "Vous" : "Utilisateur");
+                    
+                    // Determine the avatar source with fallbacks
+                    const avatarSrc = senderInfo.avatar || senderInfo.photo_de_profil;
+                    
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
                     // Si c'est un message qu'on est en train d'éditer
                     if (
                       editingMessage &&
@@ -720,14 +1296,20 @@ function DirectMessages() {
                           } editing`}
                         >
                           <div className="dm-msg-avatar">
+<<<<<<< HEAD
                             {user?.avatar ? (
                               <img
                                 src={user.avatar}
                                 alt={user.name || "User"}
                               />
+=======
+                            {senderInfo.avatar ? (
+                              <img src={senderInfo.avatar} alt={senderInfo.nom || senderInfo.name || "User"} />
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
                             ) : (
                               <div className="dm-avatar-placeholder">
-                                {user?.name ? user.name[0].toUpperCase() : "U"}
+                                {senderInfo.nom ? senderInfo.nom[0].toUpperCase() : 
+                                 senderInfo.name ? senderInfo.name[0].toUpperCase() : "U"}
                               </div>
                             )}
                           </div>
@@ -786,11 +1368,11 @@ function DirectMessages() {
                         )}
 
                         <div className="dm-msg-avatar">
-                          {user?.avatar ? (
-                            <img src={user.avatar} alt={user.name || "User"} />
+                          {avatarSrc ? (
+                            <img src={avatarSrc} alt={displayName} />
                           ) : (
                             <div className="dm-avatar-placeholder">
-                              {user?.name ? user.name[0].toUpperCase() : "U"}
+                              {displayName[0].toUpperCase()}
                             </div>
                           )}
                         </div>
@@ -798,7 +1380,7 @@ function DirectMessages() {
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
                             <span className="dm-msg-author">
-                              {user?.name || "Utilisateur"}
+                              {displayName}
                             </span>
                             <span className="dm-msg-date">
                               {formatMessageDate(
@@ -806,11 +1388,25 @@ function DirectMessages() {
                               )}
                             </span>
                           </div>
+<<<<<<< HEAD
 
                           <div className="dm-msg-bubble">{msg.contenu}</div>
 
                           {isOwn && msg.date_lecture && (
                             <div className="dm-msg-read">✓ Lu</div>
+=======
+                          
+                          <div className="dm-msg-bubble">
+                            {msg.contenu}
+                          </div>
+                          
+                          {isOwn && (
+                            <div className="dm-msg-read">
+                              {msg.date_lecture 
+                                ? `✓ Lu ${formatMessageDate(msg.date_lecture)}` 
+                                : "✓ Envoyé"}
+                            </div>
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
                           )}
                         </div>
                       </div>
@@ -919,24 +1515,38 @@ function DirectMessages() {
                   ) : filteredUsers.length === 0 ? (
                     <div className="dm-no-users">Aucun utilisateur trouvé</div>
                   ) : (
+<<<<<<< HEAD
                     filteredUsers.map((user) => (
                       <div
                         key={user.id}
+=======
+                    filteredUsers.map(user => (
+                      <div 
+                        key={user.id_utilisateur} 
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
                         className="dm-user-item"
-                        onClick={() => startConversationWith(user.id)}
+                        onClick={() => startConversationWith(user.id_utilisateur)}
                       >
+<<<<<<< HEAD
                         {user.avatar ? (
                           <img
                             src={user.avatar}
                             alt={user.name}
                             className="dm-avatar"
+=======
+                        {user.photo_de_profil ? (
+                          <img 
+                            src={user.photo_de_profil} 
+                            alt={user.nom} 
+                            className="dm-avatar" 
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
                           />
                         ) : (
                           <div className="dm-avatar">
                             <FaUserCircle className="dm-avatar-placeholder" />
                           </div>
                         )}
-                        <span className="dm-username">{user.name}</span>
+                        <span className="dm-username">{user.nom || `Utilisateur ${user.id_utilisateur.substring(0, 6)}`}</span>
                       </div>
                     ))
                   )}

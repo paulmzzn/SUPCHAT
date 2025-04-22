@@ -72,6 +72,7 @@ router.get("/validate", validateUser);
 router.post("/request-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+<<<<<<< HEAD
 router.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -81,6 +82,11 @@ router.get(
   passport.authenticate("google", {
     failureRedirect: "http://192.168.1.58:3001/login",
   }),
+=======
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: 'http://REDACTED:3001/login' }), 
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
@@ -91,7 +97,11 @@ router.get(
 
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
+<<<<<<< HEAD
       `http://192.168.1.58:3001/auth/callback?token=${token}&email=${user.email}`
+=======
+      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
+>>>>>>> 09edbb18728b69232c4b46e9c81f1e6aabe28c48
     );
   }
 );
