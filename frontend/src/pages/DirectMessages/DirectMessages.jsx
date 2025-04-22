@@ -72,20 +72,70 @@ function DirectMessages() {
   // Connexion socket et joinPrivate
   useEffect(() => {
     const token = localStorage.getItem("token");
+    console.log("[DM] Initializing socket connection with token:", token);
+    console.log("[DM] API_URL utilisé pour le socket:", API_URL);
+    
+    // Vérifier d'abord si l'API est accessible
+    fetch(`${API_URL}/api/ping`)
+      .then(response => {
+        if (response.ok) console.log("[DM] Backend API /api/ping OK");
+        else console.error("[DM] Backend API /api/ping ERROR:", response.status);
+        return response.text();
+      })
+      .then(text => console.log("[DM] Ping response:", text))
+      .catch(err => console.error("[DM] Backend API inaccessible:", err));
+    
+    // Log pour vérifier l'URL WebSocket
+    console.log("[DM] Tentative WebSocket sur:", `ws://${API_URL.replace(/^https?:\/\//, '')}/socket.io/?EIO=4&transport=websocket`);
+    
     const newSocket = io(API_URL, {
       auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 30000, // Augmenter le timeout
+      forceNew: true, // Forcer une nouvelle connexion
     });
-    setSocket(newSocket);
-
+    
+    // Écouter les événements de debug socket.io
+    newSocket.on("connect_error", (err) => {
+      console.error("[DM] Socket.io connection error:", err);
+    });
+    
     newSocket.on("connect", () => {
-      console.log("Socket connected, joining private room");
+      console.log("[DM] Socket.io connecté avec succès avec ID:", newSocket.id);
+      console.log("[DM] Tentative de rejoindre la room privée");
       newSocket.emit("joinPrivate");
     });
 
+    newSocket.on("privateRoomJoined", (data) => {
+      console.log("[DM] Room privée rejointe:", data);
+    });
+    
+    newSocket.on("error", (error) => {
+      console.error("[DM] Socket.io error event:", error);
+    });
+    
+    newSocket.on("reconnect", (attempt) => {
+      console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
+    });
+    
+    newSocket.on("reconnect_attempt", (attempt) => {
+      console.log("[DM] Socket.io tentative de reconnexion #", attempt);
+    });
+    
+    newSocket.on("reconnect_error", (error) => {
+      console.error("[DM] Socket.io erreur de reconnexion:", error);
+    });
+    
+    setSocket(newSocket);
+    
     return () => {
-      if (newSocket) newSocket.disconnect();
+      if (newSocket) {
+        console.log("[DM] Déconnexion du socket");
+        newSocket.disconnect();
+      }
     };
   }, []);
 
@@ -288,52 +338,55 @@ function DirectMessages() {
     }
   };
 
-  // Envoie un message
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedUser || !socket) return;
+  // Modifiez la fonction d'envoi de message pour utiliser d'abord l'API REST puis emettre via socket
+const handleSendMessage = async (e) => {
+  e.preventDefault();
+  if (!newMessage.trim() || !selectedUser || !socket) return;
+  
+  try {
+    console.log("[DM] Sending message to:", selectedUser, "content:", newMessage);
     
-    try {
-      // Ajouter le parent_id si on répond à un message
+    // 1. D'abord envoyer via l'API pour garantir la persistance
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_URL}/api/private-messages/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        destinataireId: selectedUser,
+        contenu: newMessage,
+        replyToId: replyingTo ? replyingTo.id_message_prive : null
+      })
+    });
+    
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    
+    // 2. Ajouter le message à l'interface utilisateur immédiatement
+    const data = await res.json();
+    setMessages((prev) => [...prev, data]);
+    
+    // 3. Essayer d'émettre via socket (ce qui est optionnel pour la persistance)
+    if (socket && socket.connected) {
       socket.emit("privateMessage", {
         destinataireId: selectedUser,
         contenu: newMessage,
         replyToId: replyingTo ? replyingTo.id_message_prive : null
+      }, (response) => {
+        console.log("[DM] Message acknowledgement:", response);
       });
-      
-      setNewMessage("");
-      setReplyingTo(null);
-    } catch (e) {
-      console.error("Erreur lors de l'envoi du message:", e);
-      setError(`Erreur lors de l'envoi du message: ${e.message}`);
-      
-      // Fallback to API if socket fails
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/private-messages/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            destinataireId: selectedUser,
-            contenu: newMessage
-          })
-        });
-        
-        if (!res.ok) {
-          throw new Error(await res.text());
-        }
-        
-        const data = await res.json();
-        setMessages((prev) => [...prev, data]);
-        setNewMessage("");
-      } catch (apiError) {
-        setError(`Erreur lors de l'envoi du message: ${apiError.message}`);
-      }
     }
-  };
+    
+    setNewMessage("");
+    setReplyingTo(null);
+  } catch (e) {
+    console.error("Erreur lors de l'envoi du message:", e);
+    setError(`Erreur lors de l'envoi du message: ${e.message}`);
+  }
+};
 
   // Filtre les conversations basées sur la recherche
   const filteredConversations = searchQuery.trim()
@@ -354,16 +407,24 @@ function DirectMessages() {
       
       if (!res.ok) {
         console.error("Erreur lors de la récupération des utilisateurs");
+        setAvailableUsers([]);
+        setFilteredUsers([]);
         return;
       }
       
       const data = await res.json();
-      // Filtrer pour exclure l'utilisateur courant
-      const filteredData = data.filter(user => user.id !== currentUserId);
+      // Correction : les utilisateurs ont l'id sous 'id_utilisateur'
+      // Exclure l'utilisateur courant et ceux déjà en conversation
+      const filteredData = data.filter(user =>
+        user.id_utilisateur !== currentUserId &&
+        !conversations.includes(user.id_utilisateur)
+      );
       setAvailableUsers(filteredData);
       setFilteredUsers(filteredData);
     } catch (e) {
       console.error("Erreur lors de la récupération des utilisateurs:", e);
+      setAvailableUsers([]);
+      setFilteredUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -375,7 +436,9 @@ function DirectMessages() {
       setFilteredUsers(availableUsers);
     } else {
       const filtered = availableUsers.filter(user => 
-        user.name?.toLowerCase().includes(searchUserQuery.toLowerCase())
+        (user.nom || "")
+          .toLowerCase()
+          .includes(searchUserQuery.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -509,6 +572,14 @@ function DirectMessages() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Correction pour l'affichage des conversations/messages après reload
+  useEffect(() => {
+    if (selectedUser) {
+      fetchMessages(selectedUser);
+    }
+    // eslint-disable-next-line
+  }, [selectedUser]);
 
   return (
     <div className="app-layout">
@@ -797,14 +868,14 @@ function DirectMessages() {
                   ) : (
                     filteredUsers.map(user => (
                       <div 
-                        key={user.id} 
+                        key={user.id_utilisateur} 
                         className="dm-user-item"
-                        onClick={() => startConversationWith(user.id)}
+                        onClick={() => startConversationWith(user.id_utilisateur)}
                       >
-                        {user.avatar ? (
+                        {user.photo_de_profil ? (
                           <img 
-                            src={user.avatar} 
-                            alt={user.name} 
+                            src={user.photo_de_profil} 
+                            alt={user.nom} 
                             className="dm-avatar" 
                           />
                         ) : (
@@ -812,7 +883,7 @@ function DirectMessages() {
                             <FaUserCircle className="dm-avatar-placeholder" />
                           </div>
                         )}
-                        <span className="dm-username">{user.name}</span>
+                        <span className="dm-username">{user.nom || `Utilisateur ${user.id_utilisateur.substring(0, 6)}`}</span>
                       </div>
                     ))
                   )}
