@@ -918,20 +918,6 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
           
-          {/* Indicateur de statut de la connexion socket */}
-          <div 
-            className={`socket-status ${socketStatus.connected ? 'connected' : socketStatus.connecting ? 'connecting' : 'disconnected'}`}
-            title={socketStatus.error || ''}
-          >
-            {socketStatus.connected ? (
-              <>✓ Connecté</>
-            ) : socketStatus.connecting ? (
-              <>⟳ Connexion...</>
-            ) : (
-              <>⚠ Hors ligne</>
-            )}
-          </div>
-          
           {!selectedUser ? (
             <div className="dm-empty-msg">
               <h2>Sélectionnez une conversation</h2>
