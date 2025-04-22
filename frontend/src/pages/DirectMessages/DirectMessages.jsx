@@ -421,28 +421,37 @@ function DirectMessages() {
   }, []);
 
   // Récupère les infos d'un utilisateur
-  const fetchUserInfo = async (userId) => {
-    if (usersInfo[userId]) return usersInfo[userId];
+const fetchUserInfo = async (userId) => {
+  if (usersInfo[userId]) return usersInfo[userId];
+  
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!res.ok) {
-        console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
-        return null;
-      }
-      
-      const data = await res.json();
-      setUsersInfo((prev) => ({ ...prev, [userId]: data }));
-      return data;
-    } catch (e) {
-      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
+    if (!res.ok) {
+      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
       return null;
     }
-  };
+    
+    const data = await res.json();
+    console.log(`[DM] User info for ${userId}:`, data);
+    
+    // Map database fields to frontend naming convention
+    const userInfo = {
+      ...data,
+      name: data.nom || data.name || "Utilisateur",
+      avatar: data.photo_de_profil || data.avatar
+    };
+    
+    setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
+    return userInfo;
+  } catch (e) {
+    console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
+    return null;
+  }
+};
 
   // Récupère les messages d'une conversation
   const fetchMessages = async (userId) => {
@@ -901,7 +910,9 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                       />
                     ) : (
                       <div className="dm-avatar">
-                        <FaUserCircle className="dm-avatar-placeholder" />
+                        <div className="dm-avatar-placeholder">
+                          {user.name ? user.name[0].toUpperCase() : "U"}
+                        </div>
                       </div>
                     )}
                     <span className="dm-username">{user.name || "Utilisateur"}</span>
