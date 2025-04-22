@@ -317,6 +317,53 @@
   justify-content: center;
 }
 
+/* Improve avatar styling for perfect circle cropping */
+.dm-avatar, 
+.dm-header-avatar, 
+.dm-msg-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: rgba(147, 72, 183, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.07);
+}
+
+.dm-avatar img, 
+.dm-header-avatar img, 
+.dm-msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Special styling for header avatar */
+.dm-header-avatar {
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(147, 72, 183, 0.4);
+}
+
+/* Improved placeholder when no avatar is available */
+.dm-avatar-placeholder {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(147, 72, 183, 0.3);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
 .dm-msg-content {
   background-color: rgba(255, 255, 255, 0.07);
   border-radius: 4px 16px 16px 16px;
