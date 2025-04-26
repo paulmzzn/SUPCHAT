@@ -196,8 +196,11 @@ function WorkspaceDetails() {
   // Handler pour ouvrir le menu contextuel sur un membre (clic droit)
   const handleMemberContextMenu = (e, member) => {
     e.preventDefault();
-    if (currentUserRole !== 'owner') return;
-    if (member.role === 'owner') return; // On ne peut pas agir sur le owner
+    // Owner : peut agir sur tout le monde sauf owner
+    // Admin : peut promouvoir un membre en admin, mais ne peut pas rétrograder un admin
+    if (currentUserRole !== 'owner' && currentUserRole !== 'admin') return;
+    if (member.role === 'owner') return;
+    if (currentUserRole === 'admin' && member.role !== 'member') return;
     setMemberContextMenu({ visible: true, x: e.pageX, y: e.pageY, member });
   };
 
@@ -755,13 +758,15 @@ function WorkspaceDetails() {
               style={{ top: memberContextMenu.y, left: memberContextMenu.x, zIndex: 2000 }}
               onClick={e => e.stopPropagation()}
             >
-              {memberContextMenu.member.role === 'member' && (
+              {/* Owner : peut promouvoir/déclasser. Admin : peut seulement promouvoir un membre */}
+              {((currentUserRole === 'owner' && memberContextMenu.member.role === 'member') ||
+                (currentUserRole === 'admin' && memberContextMenu.member.role === 'member')) && (
                 <div className="context-menu-item" onClick={() => handleChangeMemberRole('admin')}>
                   <FaArrowUp className="context-menu-icon" />
                   Promouvoir en admin
                 </div>
               )}
-              {memberContextMenu.member.role === 'admin' && (
+              {currentUserRole === 'owner' && memberContextMenu.member.role === 'admin' && (
                 <div className="context-menu-item" onClick={() => handleChangeMemberRole('member')}>
                   <FaArrowDown className="context-menu-icon" />
                   Rétrograder en membre
