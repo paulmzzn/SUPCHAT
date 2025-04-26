@@ -1,110 +1,153 @@
-import AWS from 'aws-sdk';
-import dotenv from 'dotenv';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import dotenv from "dotenv";
+import { v4 as uuidv4 } from "uuid";
+import path from "path";
 
-// Load environment variables
+// Charger les variables d'environnement
 dotenv.config();
 
-// Configure AWS SDK with explicit credentials for Scaleway
-const s3Config = {
-  region: process.env.SCW_REGION || 'fr-par',
-  endpoint: process.env.SCW_ENDPOINT || 'https://s3.fr-par.scw.cloud/',
+// Configuration du client S3
+const s3Client = new S3Client({
+  region: process.env.SCW_REGION || "fr-par",
+  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID || 'SCW2E3VS5F51RVG9WQJA',
-    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY || '9dee615d-2a3e-4f47-aabd-728a5eec1438'
+    accessKeyId: process.env.SCW_ACCESS_KEY_ID,
+    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY,
   },
-  s3ForcePathStyle: true // Required for Scaleway S3 compatibility
-};
+  forcePathStyle: true,
+});
 
-// Create S3 service object with explicit configuration
-const s3 = new AWS.S3(s3Config);
+// Nom du bucket depuis les variables d'environnement ou valeur par défaut
+const BUCKET_NAME = process.env.S3_BUCKET_NAME || "supchat-files";
 
-// S3 bucket name
-const BUCKET_NAME = process.env.S3_BUCKET_NAME;
-
-// Log configuration status (without revealing sensitive data)
-console.log(`S3 Configuration: Region=${s3Config.region}, Bucket=${BUCKET_NAME}, Endpoint=${s3Config.endpoint}, Credentials: ${s3Config.credentials.accessKeyId ? 'Set' : 'Not set'}`);
-
-// Update the uploadToS3 function to return the correct URL format for Scaleway
-export const uploadToS3 = async (file, folder = 'workspaces') => {
-  if (!s3Config.credentials.accessKeyId || !s3Config.credentials.secretAccessKey || !BUCKET_NAME) {
-    throw new Error("Scaleway S3 credentials or bucket name not configured");
-  }
-
+// Fonction pour uploader un fichier vers S3
+export const uploadToS3 = async (file, directory = "") => {
+  console.log("🚀 Début de uploadToS3");
   try {
-    const fileContent = file.buffer;
-    const fileName = `${folder}/${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
-    
-    // Setting up S3 upload parameters
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: fileContent,
-      ContentType: file.mimetype
-    };
-    
-    console.log(`Attempting to upload to Scaleway S3 bucket: ${BUCKET_NAME}`);
-    
-    // Upload to S3
-    await s3.upload(params).promise();
-    
-    // Construct the correct URL format for Scaleway S3
-    const correctUrl = `${s3Config.endpoint}${BUCKET_NAME}/${fileName}`.replace(/([^:])\/\/+/g, '$1/');
-    
-    console.log(`Generated Scaleway S3 URL: ${correctUrl}`);
-    return correctUrl;
-  } catch (error) {
-    console.error("Error uploading to Scaleway S3:", error);
-    throw error;
-  }
-};
+    if (!file) {
+      console.log("❌ Aucun fichier fourni à uploadToS3");
+      throw new Error("Aucun fichier fourni");
+    }
 
-// Update the deleteFromS3 function to handle Scaleway S3 URL format
-export const deleteFromS3 = async (url) => {
-  if (!url) {
-    console.warn("No URL provided, skipping delete");
-    return false;
-  }
-  
-  try {
-    // Extract the key from Scaleway S3 URL format
-    // Example: https://s3.fr-par.scw.cloud/bucket-name/workspaces/file.png
-    let key;
-    
-    const urlObj = new URL(url);
-    const pathname = urlObj.pathname;
-    
-    // Extract the part after the bucket name
-    const bucketPrefix = `/${BUCKET_NAME}/`;
-    if (pathname.startsWith(bucketPrefix)) {
-      key = pathname.substring(bucketPrefix.length);
+    // Vérification des variables d'environnement critiques
+    console.log("🔑 Vérification des identifiants S3");
+    if (!process.env.SCW_ACCESS_KEY_ID || !process.env.SCW_SECRET_ACCESS_KEY) {
+      console.error("❌ Variables d'environnement S3 manquantes");
+      console.log(
+        "SCW_ACCESS_KEY_ID présent:",
+        !!process.env.SCW_ACCESS_KEY_ID
+      );
+      console.log(
+        "SCW_SECRET_ACCESS_KEY présent:",
+        !!process.env.SCW_SECRET_ACCESS_KEY
+      );
+      throw new Error(
+        "Configuration S3 incomplète - vérifiez vos variables d'environnement"
+      );
+    }
+
+    console.log(
+      `📂 Upload vers S3: ${file.originalname} (${file.size} octets, type: ${file.mimetype})`
+    );
+
+    // Vérifier que file.buffer existe
+    if (!file.buffer) {
+      console.error("❌ file.buffer est absent ou vide!");
+      throw new Error(
+        "Buffer de fichier manquant - vérifiez la configuration de multer"
+      );
     } else {
-      // Alternative approach: try to find the key after the last occurrence of bucket name
-      const pathParts = pathname.split('/').filter(Boolean);
-      const bucketIndex = pathParts.findIndex(part => part === BUCKET_NAME);
-      if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
-        key = pathParts.slice(bucketIndex + 1).join('/');
-      } else {
-        throw new Error(`Could not extract key from URL: ${url}`);
-      }
+      console.log(
+        `📄 Buffer de fichier présent (taille: ${file.buffer.length} octets)`
+      );
     }
-    
-    if (!key) {
-      throw new Error("Invalid Scaleway S3 URL - could not extract key");
-    }
-    
-    console.log(`Deleting object with key: ${key} from bucket: ${BUCKET_NAME}`);
-    
-    const params = {
+
+    // Générer un nom de fichier unique
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${uuidv4()}${fileExtension}`;
+
+    // Créer le chemin complet avec le répertoire
+    const fileKey = directory ? `${directory}/${fileName}` : fileName;
+
+    console.log(`📍 Destination S3: ${BUCKET_NAME}/${fileKey}`);
+    console.log(
+      `🔧 Paramètres S3: région=${process.env.SCW_REGION}, endpoint=${process.env.SCW_ENDPOINT}`
+    );
+
+    // Créer la commande pour uploader le fichier
+    const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: key
-    };
-    
-    await s3.deleteObject(params).promise();
-    return true;
+      Key: fileKey,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    });
+
+    // Uploader le fichier
+    console.log("⏳ Envoi de la commande vers S3...");
+    try {
+      const result = await s3Client.send(command);
+      console.log("✅ Upload S3 réussi:", result.$metadata.httpStatusCode);
+    } catch (s3SendError) {
+      console.error("❌ Erreur lors de l'envoi à S3:", s3SendError);
+      console.log("🔍 Détails de l'erreur S3:", {
+        name: s3SendError.name,
+        message: s3SendError.message,
+        code: s3SendError.code,
+        $metadata: s3SendError.$metadata,
+        requestId: s3SendError.$metadata?.requestId,
+      });
+      throw s3SendError;
+    }
+
+    console.log("🏁 Fin de uploadToS3 avec succès");
+    // Retourner la clé du fichier (qui sera utilisée pour créer l'URL)
+    return fileKey;
   } catch (error) {
-    console.error("Error deleting from Scaleway S3:", error);
-    return false;
+    console.error("❌ Erreur dans uploadToS3:", error);
+    console.error("❌ Stack trace:", error.stack);
+
+    // Vérifier si l'erreur est liée aux informations d'identification
+    if (
+      error.message.includes("credentials") ||
+      error.message.includes("authentication")
+    ) {
+      throw new Error(
+        "Problème d'authentification avec S3 - vérifiez vos clés d'accès"
+      );
+    }
+
+    // Vérifier si l'erreur est liée à la connexion
+    if (
+      error.message.includes("connect") ||
+      error.message.includes("network")
+    ) {
+      throw new Error(
+        "Problème de connexion au serveur S3 - vérifiez votre connectivité et l'endpoint"
+      );
+    }
+
+    throw new Error(`Erreur lors de l'upload vers S3: ${error.message}`);
   }
 };
 
-export default s3;
+// Fonction pour supprimer un fichier de S3
+export const deleteFromS3 = async (fileKey) => {
+  try {
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: fileKey,
+    };
+
+    await s3Client.send(new DeleteObjectCommand(params));
+  } catch (error) {
+    console.error("Error deleting from S3:", error);
+    throw new Error(`Failed to delete file: ${error.message}`);
+  }
+};
+
+// Export s3Client as default only, individual functions are already exported with 'export const'
+export default s3Client;
