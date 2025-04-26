@@ -10,6 +10,15 @@ import {
   FaTimes,
   FaReply,
   FaRegSmile,
+  FaFile,
+  FaFileAlt,
+  FaFileImage,
+  FaFilePdf,
+  FaFileWord,
+  FaFileExcel,
+  FaFileVideo,
+  FaFileAudio,
+  FaDownload,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
@@ -48,6 +57,56 @@ const safeJSONStringify = (obj) => {
     console.error("JSON stringify error:", error);
     return "";
   }
+};
+
+// Fonction utilitaire pour déterminer l'icône d'un fichier selon son type
+const getFileIcon = (fileType) => {
+  if (!fileType) return <FaFile />;
+
+  if (fileType.startsWith("image/")) return <FaFileImage />;
+  if (fileType.includes("pdf")) return <FaFilePdf />;
+  if (fileType.includes("word") || fileType.includes("document"))
+    return <FaFileWord />;
+  if (fileType.includes("excel") || fileType.includes("spreadsheet"))
+    return <FaFileExcel />;
+  if (fileType.startsWith("video/")) return <FaFileVideo />;
+  if (fileType.startsWith("audio/")) return <FaFileAudio />;
+
+  return <FaFileAlt />;
+};
+
+// Fonction utilitaire pour formater la taille des fichiers
+const formatFileSize = (bytes) => {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+};
+
+// Fonction pour construire l'URL complète d'un fichier
+const getCompleteFileUrl = (fileUrl) => {
+  if (!fileUrl) return "";
+
+  // Si l'URL est déjà complète (commence par http ou https), la renvoyer telle quelle
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    return fileUrl;
+  }
+
+  // Pour les fichiers S3 (messages privés), construire l'URL S3 complète (virtual-hosted style)
+  if (
+    fileUrl.startsWith("private-messages/") ||
+    fileUrl.startsWith("private-messages/files/")
+  ) {
+    return `https://s3-supchat.s3.fr-par.scw.cloud/${fileUrl}`;
+  }
+
+  // Pour les URLs relatives classiques, garder le fallback API
+  if (!fileUrl.startsWith("/api/files/")) {
+    return `${API_URL}/api/files/${fileUrl}`;
+  }
+
+  // Si l'URL commence déjà par /api/files/, juste ajouter l'URL de base
+  return `${API_URL}${fileUrl}`;
 };
 
 function DirectMessages() {
@@ -262,7 +321,7 @@ function DirectMessages() {
     window.addEventListener("storage", storageEventHandler);
 
     // Update the handlePrivateMessage function to safely handle message storage
-    const handlePrivateMessage = (msg) => {
+    const handlePrivateMessage = async (msg) => {
       console.log("[DM] Received private message:", msg);
 
       // Only count as unread if it's not from current user and not in current conversation
@@ -284,19 +343,6 @@ function DirectMessages() {
         });
       }
 
-      // Cache last message in localStorage safely - skip this to avoid JSON errors
-      // This is probably causing the issue, so let's disable it for now
-      /* 
-      try {
-        if (msg && typeof msg === 'object') {
-          localStorage.setItem(`lastMessage_${msg.fk_expediteur || 'unknown'}`, 
-            safeJSONStringify(msg));
-        }
-      } catch (storageError) {
-        console.warn("[DM] Failed to store message in localStorage:", storageError);
-      }
-      */
-
       // Ne rien faire si le message n'est pas pertinent pour la conversation active
       if (
         !selectedUser ||
@@ -308,6 +354,27 @@ function DirectMessages() {
         );
         return;
       }
+
+      // Récupérer les pièces jointes du message
+      let attachments = [];
+      try {
+        if (msg.id_message_prive) {
+          console.log(
+            "[DM] Fetching attachments for new message:",
+            msg.id_message_prive
+          );
+          attachments = await fetchMessageAttachments(msg.id_message_prive);
+          console.log("[DM] Attachments retrieved:", attachments);
+        }
+      } catch (error) {
+        console.error(
+          "[DM] Error fetching attachments for new message:",
+          error
+        );
+      }
+
+      // Ajouter les pièces jointes au message
+      const msgWithAttachments = { ...msg, attachments };
 
       setMessages((prev) => {
         // Vérifier si le message existe déjà (par id ou contenu+expéditeur pour les messages optimistes)
@@ -335,25 +402,26 @@ function DirectMessages() {
         });
 
         if (messageExists) {
-          // Remplacer les messages optimistes par la version réelle
+          // Remplacer les messages optimistes par la version réelle avec pièces jointes
           return prev.map((m) => {
-            if (m.id_message_prive === msg.id_message_prive) return msg;
+            if (m.id_message_prive === msg.id_message_prive)
+              return msgWithAttachments;
 
             if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`)
-              return msg;
+              return msgWithAttachments;
 
             if (
               m.isOptimistic &&
               m.contenu === msg.contenu &&
               m.fk_expediteur === msg.fk_expediteur
             )
-              return msg;
+              return msgWithAttachments;
 
             return m;
           });
         } else {
           // Ajouter uniquement si le message n'existe pas
-          return [...prev, msg];
+          return [...prev, msgWithAttachments];
         }
       });
 
@@ -531,6 +599,41 @@ function DirectMessages() {
     }
   };
 
+  // Ajout d'une fonction pour récupérer les pièces jointes d'un message privé
+  const fetchMessageAttachments = async (messageId) => {
+    try {
+      console.log(
+        `[DM] Récupération des pièces jointes pour le message ${messageId}`
+      );
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/attachments/private-messages/${messageId}/attachments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(
+        `[DM] Pièces jointes récupérées pour le message ${messageId}:`,
+        data
+      );
+      return data;
+    } catch (error) {
+      console.error(
+        "[DM] Erreur lors de la récupération des pièces jointes:",
+        error
+      );
+      return [];
+    }
+  };
+
   // Récupère les messages d'une conversation
   const fetchMessages = async (userId) => {
     try {
@@ -566,7 +669,26 @@ function DirectMessages() {
 
       const data = await res.json();
       console.log("Messages récupérés:", data);
-      setMessages(data);
+
+      // Pour chaque message, récupérer ses pièces jointes
+      const messagesWithAttachments = await Promise.all(
+        data.map(async (message) => {
+          try {
+            const attachments = await fetchMessageAttachments(
+              message.id_message_prive
+            );
+            return { ...message, attachments };
+          } catch (error) {
+            console.error(
+              `[DM] Erreur lors du chargement des pièces jointes pour le message ${message.id_message_prive}:`,
+              error
+            );
+            return { ...message, attachments: [] };
+          }
+        })
+      );
+
+      setMessages(messagesWithAttachments);
 
       // Marquer les messages non lus comme lus
       markMessagesAsRead(data);
@@ -625,46 +747,45 @@ function DirectMessages() {
 
   // Fonction pour gérer la sélection de fichier
   const handleFileSelect = async (e) => {
-    if (!e.target.files || e.target.files.length === 0 || !selectedUser) return;
+    console.log("[DM] handleFileSelect déclenché");
+    const file = e.target.files[0];
+    if (!file) {
+      console.log("[DM] Aucun fichier sélectionné");
+      return;
+    }
+    console.log("[DM] Fichier sélectionné :", file);
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Le fichier ne doit pas dépasser 10MB");
+      console.log("[DM] Fichier trop volumineux :", file.size);
+      return;
+    }
 
     try {
-      setUploadingFile(true);
-      const file = e.target.files[0];
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Vous devez être connecté");
+        console.log("[DM] Token manquant");
+        return;
+      }
+
+      // Correction de l'URL d'upload pour les messages privés
+      const uploadUrl = `${API_URL}/api/private-messages/upload`;
+      console.log("[DM] URL d'upload utilisée :", uploadUrl);
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("recipientId", selectedUser); // ou autre champ selon votre backend
 
-      // Déterminer le dossier de destination en fonction du type de fichier
-      let destinationFolder = "general";
-
-      // Si c'est une image
-      if (file.type.startsWith("image/")) {
-        destinationFolder = "images";
-      }
-      // Si c'est un document
-      else if (
-        file.type.includes("pdf") ||
-        file.type.includes("word") ||
-        file.type.includes("excel") ||
-        file.type.includes("document") ||
-        file.type.includes("text")
-      ) {
-        destinationFolder = "documents";
-      }
-      // Si c'est une vidéo
-      else if (file.type.startsWith("video/")) {
-        destinationFolder = "videos";
-      }
-      // Si c'est un audio
-      else if (file.type.startsWith("audio/")) {
-        destinationFolder = "audio";
+      // Affichage du contenu du FormData pour debug
+      for (let pair of formData.entries()) {
+        console.log("[DM] FormData:", pair[0], pair[1]);
       }
 
-      formData.append("destination", destinationFolder);
+      setUploadingFile(true);
+      console.log("[DM] Envoi du fichier en cours...");
 
-      // Upload du fichier
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/fichiers/upload`, {
+      const response = await fetch(uploadUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -672,17 +793,23 @@ function DirectMessages() {
         body: formData,
       });
 
+      console.log("[DM] Réponse upload status :", response.status);
+
       if (!response.ok) {
-        throw new Error("Échec de l'upload");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[DM] Erreur lors de l'upload:", errorData);
+        alert(errorData.message || "Erreur lors de l'upload du fichier");
+        return;
       }
 
       const data = await response.json();
-      console.log("Fichier uploadé:", data);
+      console.log("[DM] Réponse upload OK :", data);
 
       // Ajouter le fichier à la liste des pièces jointes
       setAttachments([...attachments, data.fichier]);
-    } catch (error) {
-      console.error("Erreur lors de l'upload:", error);
+      console.log("[DM] Pièce jointe ajoutée à l'état local :", data.fichier);
+    } catch (err) {
+      console.error("[DM] Erreur lors de l'upload:", err);
       alert("Erreur lors de l'upload du fichier");
     } finally {
       setUploadingFile(false);
@@ -690,6 +817,7 @@ function DirectMessages() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      console.log("[DM] Fin de handleFileSelect");
     }
   };
 
@@ -731,10 +859,19 @@ function DirectMessages() {
         attachments: attachments.map((att) => ({
           id_fichier: att.id_fichier,
           nom_fichier: att.nom_fichier,
-          url: att.presignedUrl || att.url,
+          // Utiliser directement l'URL sans transformation
+          url: att.url || att.presignedUrl,
+          presignedUrl: att.presignedUrl || att.url,
           type: att.type,
+          taille_fichier: att.taille_fichier,
         })),
       };
+
+      // Debug pour voir ce qui est affiché
+      console.log(
+        "[DM] Optimistic message with attachments:",
+        optimisticMessage
+      );
 
       // Ajouter le message optimiste à l'UI
       setMessages((prev) => [...prev, optimisticMessage]);
@@ -1334,6 +1471,104 @@ function DirectMessages() {
                           </div>
 
                           <div className="dm-msg-bubble">{msg.contenu}</div>
+
+                          {/* Afficher les pièces jointes du message */}
+                          {msg.attachments &&
+                            Array.isArray(msg.attachments) &&
+                            msg.attachments.length > 0 && (
+                              <div className="dm-msg-attachments">
+                                {msg.attachments.map((attachment) => {
+                                  // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
+                                  const fileUrl = getCompleteFileUrl(
+                                    attachment.presignedUrl || attachment.url
+                                  );
+
+                                  console.log(
+                                    "[DM] Affichage fichier avec URL:",
+                                    fileUrl
+                                  );
+
+                                  if (
+                                    attachment.type &&
+                                    attachment.type.startsWith("image/")
+                                  ) {
+                                    // Affichage des images
+                                    return (
+                                      <div
+                                        key={
+                                          attachment.id_fichier ||
+                                          `temp-${Date.now()}`
+                                        }
+                                        className="dm-msg-image-attachment"
+                                      >
+                                        <a
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <img
+                                            src={fileUrl}
+                                            alt={attachment.nom_fichier}
+                                            className="dm-msg-image"
+                                            onError={(e) => {
+                                              console.error(
+                                                `[DM] Failed to load image: ${fileUrl}`
+                                              );
+                                              e.target.src =
+                                                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
+                                              e.target.style.padding = "20px";
+                                              e.target.style.width = "80px";
+                                              e.target.style.height = "80px";
+                                              e.target.style.background =
+                                                "rgba(0,0,0,0.1)";
+                                            }}
+                                          />
+                                        </a>
+                                        <div className="dm-msg-image-filename">
+                                          {attachment.nom_fichier}
+                                        </div>
+                                      </div>
+                                    );
+                                  } else {
+                                    // Autres types de fichiers
+                                    return (
+                                      <div
+                                        key={
+                                          attachment.id_fichier ||
+                                          `temp-${Date.now()}`
+                                        }
+                                        className="dm-msg-file-attachment"
+                                      >
+                                        <a
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          download={attachment.nom_fichier}
+                                          className="dm-msg-file-download-link"
+                                        >
+                                          <div className="dm-msg-file-icon">
+                                            {getFileIcon(attachment.type)}
+                                          </div>
+                                          <div className="dm-msg-file-info">
+                                            <div className="dm-msg-file-name">
+                                              {attachment.nom_fichier}
+                                            </div>
+                                            <div className="dm-msg-file-size">
+                                              {formatFileSize(
+                                                attachment.taille_fichier
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="dm-msg-file-download">
+                                            <FaDownload />
+                                          </div>
+                                        </a>
+                                      </div>
+                                    );
+                                  }
+                                })}
+                              </div>
+                            )}
 
                           {isOwn && (
                             <div className="dm-msg-read">

@@ -12,27 +12,20 @@ class Fichier {
       url,
       type,
       taille_fichier = null,
-      extension = null,
-      mime_type = null,
+      extension = null, // Ces valeurs ne seront pas utilisées dans la requête
+      mime_type = null, // Cette valeur ne sera pas utilisée dans la requête
       fk_utilisateur,
     } = fichier;
 
     try {
+      // Modifié pour ne pas utiliser les colonnes extension et mime_type
       const query = `
-        INSERT INTO fichier (nom_fichier, url, type, taille_fichier, extension, mime_type, fk_utilisateur, date_upload)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        INSERT INTO fichier (nom_fichier, url, type, taille_fichier, fk_utilisateur, date_upload)
+        VALUES ($1, $2, $3, $4, $5, NOW())
         RETURNING *
       `;
 
-      const values = [
-        nom_fichier,
-        url,
-        type,
-        taille_fichier,
-        extension,
-        mime_type,
-        fk_utilisateur,
-      ];
+      const values = [nom_fichier, url, type, taille_fichier, fk_utilisateur];
 
       const result = await pool.query(query, values);
       return result.rows[0];
@@ -179,6 +172,30 @@ class Fichier {
   }
 
   /**
+   * Récupérer les pièces jointes d'un message privé
+   * @param {String} messageId - ID du message privé
+   * @returns {Array} - Pièces jointes du message privé
+   */
+  static async getPrivateMessageAttachments(messageId) {
+    try {
+      const query = `
+        SELECT f.* 
+        FROM fichier f
+        JOIN message_prive_fichier mpf ON f.id_fichier = mpf.fk_fichier
+        WHERE mpf.fk_message_prive = $1
+      `;
+      const result = await pool.query(query, [messageId]);
+      return result.rows;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des pièces jointes du message:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Supprimer un fichier
    * @param {String} id - ID du fichier
    * @param {String} userId - ID de l'utilisateur qui effectue la suppression
@@ -262,11 +279,10 @@ class Fichier {
   static async getByWorkspaceId(workspaceId) {
     try {
       const query = `
-        SELECT f.*, u.nom as username
+        SELECT DISTINCT f.* 
         FROM fichier f
-        JOIN utilisateur u ON f.fk_utilisateur = u.id_utilisateur
         JOIN message_fichier mf ON f.id_fichier = mf.fk_fichier
-        JOIN message m ON mf.fk_message = m.id_message
+        JOIN message m ON m.id_message = mf.fk_message
         JOIN canal c ON m.fk_canal = c.id_canal
         WHERE c.fk_workspace = $1
         ORDER BY f.date_upload DESC

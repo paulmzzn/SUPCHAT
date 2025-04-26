@@ -8,6 +8,7 @@ import { verifyToken } from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
 import dotenv from "dotenv";
+import { getPrivateMessageAttachments } from "../controllers/attachmentController.js";
 
 dotenv.config();
 
@@ -94,12 +95,10 @@ router.post(
       });
     } catch (error) {
       console.error("Erreur lors de l'upload du fichier:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erreur lors de l'upload du fichier",
-          error: error.message,
-        });
+      res.status(500).json({
+        message: "Erreur lors de l'upload du fichier",
+        error: error.message,
+      });
     }
   }
 );
@@ -114,10 +113,13 @@ router.get(
 
       const fichiers = await Fichier.getByMessageId(messageId);
 
-      // Les URLs Scaleway sont déjà accessibles directement
-      const fichiersWithUrls = fichiers.map((file) => ({
-        ...file,
-        presignedUrl: file.url,
+      // Générer des URLs S3 complètes pour chaque pièce jointe
+      const endpoint =
+        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
+      const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
+      const fichiersWithUrls = fichiers.map((fichier) => ({
+        ...fichier,
+        url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
       }));
 
       res.status(200).json(fichiersWithUrls);
@@ -134,40 +136,67 @@ router.get(
   }
 );
 
+// Route pour récupérer les pièces jointes d'un message privé
+router.get(
+  "/private-messages/:messagePriveId/attachments",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const { messagePriveId } = req.params;
+
+      const fichiers = await Fichier.getByPrivateMessageId(messagePriveId);
+
+      // Générer des URLs S3 complètes pour chaque pièce jointe
+      const endpoint =
+        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
+      const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
+      const fichiersWithUrls = fichiers.map((fichier) => ({
+        ...fichier,
+        url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+      }));
+
+      res.status(200).json(fichiersWithUrls);
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des pièces jointes du message privé:",
+        error
+      );
+      res.status(500).json({
+        message: "Erreur lors de la récupération des pièces jointes",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// Route pour récupérer les pièces jointes d'un message privé (nouvelle route)
+router.get(
+  "/attachments/private-messages/:messageId/attachments",
+  verifyToken,
+  getPrivateMessageAttachments
+);
+
 // Route pour supprimer une pièce jointe
 router.delete("/attachments/:attachmentId", verifyToken, async (req, res) => {
   try {
     const { attachmentId } = req.params;
+    const userId = req.user.id;
 
-    // Vérifier que l'utilisateur est propriétaire du fichier
-    const fileCheck = await Fichier.findById(attachmentId);
+    // Récupérer d'abord le fichier pour avoir l'URL S3
+    const fichier = await Fichier.delete(attachmentId, userId);
 
-    if (!fileCheck) {
-      return res.status(404).json({ message: "Pièce jointe non trouvée" });
+    if (!fichier) {
+      return res
+        .status(404)
+        .json({ message: "Pièce jointe non trouvée ou non autorisée" });
     }
 
-    if (fileCheck.fk_utilisateur !== req.user.id) {
-      return res.status(403).json({
-        message: "Vous n'êtes pas autorisé à supprimer ce fichier",
-      });
-    }
-
-    // Supprimer le fichier de Scaleway S3
+    // Supprimer le fichier de S3
     try {
-      await deleteFromS3(fileCheck.url);
+      await deleteFromS3(fichier.url);
     } catch (s3Error) {
-      console.error("Erreur lors de la suppression du fichier de S3:", s3Error);
-      // Continuer malgré l'erreur S3
-    }
-
-    // Supprimer les références dans les tables de liaison et BDD
-    const fichierDeleted = await Fichier.delete(attachmentId, req.user.id);
-
-    if (!fichierDeleted) {
-      return res.status(404).json({
-        message:
-          "Fichier non trouvé ou vous n'êtes pas autorisé à le supprimer",
-      });
+      console.error("Erreur lors de la suppression du fichier S3:", s3Error);
+      // Continuer même si la suppression S3 échoue
     }
 
     res.status(200).json({ message: "Pièce jointe supprimée avec succès" });
