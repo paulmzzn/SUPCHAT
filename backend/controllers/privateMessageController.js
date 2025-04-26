@@ -3,14 +3,15 @@ import MessagePrive from '../models/MessagePrive.js';
 export const sendPrivateMessage = async (req, res) => {
   try {
     const expediteurId = req.user.id;
-    const { destinataireId, contenu } = req.body;
+    const { destinataireId, contenu, replyToId } = req.body;
     if (!destinataireId || !contenu) {
       return res.status(400).json({ message: 'destinataireId et contenu requis' });
     }
     const message = await MessagePrive.create({
       contenu,
       fk_expediteur: expediteurId,
-      fk_destinataire: destinataireId
+      fk_destinataire: destinataireId,
+      parent_id: replyToId || null // Ajout du support pour les réponses
     });
     // Émission WebSocket (si besoin)
     const io = req.app.get('io');

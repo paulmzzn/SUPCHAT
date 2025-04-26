@@ -1,25 +1,33 @@
 import pool from '../config/dbConnection.js';
 
 class MessagePrive {
-  static async create({ contenu, fk_expediteur, fk_destinataire, pieces_jointes = [] }) {
+  static async create({ contenu, fk_expediteur, fk_destinataire, parent_id = null, pieces_jointes = [] }) {
     const result = await pool.query(
-      `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation)
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, parent_id, pieces_jointes, date_creation)
+       VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING *`,
-      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes)]
+      [contenu, fk_expediteur, fk_destinataire, parent_id, JSON.stringify(pieces_jointes)]
     );
     return result.rows[0];
   }
 
   static async getConversation(userA, userB, limit = 1000, offset = 0) {
     const result = await pool.query(
-      `SELECT mp.*, u.nom AS expediteur_nom, u2.nom AS destinataire_nom, u.photo_de_profil AS expediteur_avatar, u2.photo_de_profil AS destinataire_avatar
+      `SELECT mp.*,
+        u.nom AS expediteur_nom, u2.nom AS destinataire_nom,
+        u.photo_de_profil AS expediteur_avatar, u2.photo_de_profil AS destinataire_avatar,
+        parent.id_message_prive AS parent_id,
+        parent.contenu AS parent_contenu,
+        parent.fk_expediteur AS parent_expediteur,
+        pu.nom AS parent_expediteur_nom
        FROM message_prive mp
        JOIN utilisateur u ON mp.fk_expediteur = u.id_utilisateur
        JOIN utilisateur u2 ON mp.fk_destinataire = u2.id_utilisateur
-       WHERE ((fk_expediteur = $1 AND fk_destinataire = $2) OR (fk_expediteur = $2 AND fk_destinataire = $1))
-       AND is_deleted = false
-       ORDER BY date_creation DESC
+       LEFT JOIN message_prive parent ON mp.parent_id = parent.id_message_prive
+       LEFT JOIN utilisateur pu ON parent.fk_expediteur = pu.id_utilisateur
+       WHERE ((mp.fk_expediteur = $1 AND mp.fk_destinataire = $2) OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1))
+       AND mp.is_deleted = false
+       ORDER BY mp.date_creation DESC
        LIMIT $3 OFFSET $4`,
       [userA, userB, limit, offset]
     );
