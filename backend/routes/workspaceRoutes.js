@@ -13,7 +13,8 @@ import {
   joinWorkspace,
   removeMember,
   uploadWorkspaceImages,
-  getUserWorkspaces // Ajout de la nouvelle fonction
+  getUserWorkspaces, // Ajout de la nouvelle fonction
+  changeMemberRole // Ajout de la fonction pour changer le rôle d'un membre
 } from '../controllers/workspaceController.js';
 import {
   addFavorite,
@@ -60,6 +61,9 @@ router.get('/:workspaceId/members/:userId', checkWorkspaceMember);
 router.get('/:workspaceId/members', getWorkspaceMembers);
 router.post('/:workspaceId/join', verifyToken, joinWorkspace); // Ajout de verifyToken
 router.delete('/:workspaceId/members/:userId', verifyToken, removeMember); // Ajout de verifyToken
+
+// Changer le rôle d'un membre (owner only)
+router.put('/:workspaceId/members/:userId/role', verifyToken, changeMemberRole);
 
 // Route for image uploads, now using S3
 router.post('/:workspaceId/images', upload.fields([

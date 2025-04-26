@@ -65,6 +65,12 @@ const socketManager = (io) => {
       socket.currentRoom = `${canalId}`;
       socket.join(`${canalId}`);
       
+      // --- AJOUT : rejoindre aussi la room du workspace pour les events globaux ---
+      if (workspaceId) {
+        socket.join(`${workspaceId}`);
+        console.log(`Socket ${socket.id} rejoint la room workspace ${workspaceId}`);
+      }
+      
       // Informer le client que le canal a été rejoint
       socket.emit('canalJoined', { canalId, status: 'success' });
     });
@@ -75,6 +81,15 @@ const socketManager = (io) => {
         console.log(`Socket.IO: Utilisateur ${socket.user.id} rejoint sa room privée dm:${socket.user.id}`);
         socket.join(`dm:${socket.user.id}`);
         socket.emit('privateRoomJoined', { status: 'success' });
+      }
+    });
+
+    // Nouveau handler pour rejoindre explicitement la room du workspace
+    socket.on('joinWorkspace', (data) => {
+      const { workspaceId } = data;
+      if (workspaceId) {
+        socket.join(`${workspaceId}`);
+        console.log(`[WS DEBUG] Socket ${socket.id} rejoint explicitement la room workspace ${workspaceId}`);
       }
     });
 
