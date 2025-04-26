@@ -1096,10 +1096,6 @@
   gap: 12px;
 }
 
-
-
-
-
 .chat-messages {
   flex: 1;
   padding: 20px;
@@ -2046,22 +2042,28 @@ body
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 3000;
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 9999;
+  justify-content: center;
 }
 
 .fullscreen-modal-content {
-  background-color: #fff;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 1200px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3100;
+  background: #222;
+  border-radius: 12px;
+  max-width: 90vw;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  min-width: 70vw;
 }
 
 .fullscreen-modal-header {
@@ -2069,15 +2071,15 @@ body
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background-color: #f8f8f8;
-  border-bottom: 1px solid #e0e0e0;
+  background-color: #232323;
+  border-bottom: 1px solid #333;
 }
 
 .fullscreen-modal-title {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .fullscreen-modal-close {
@@ -2085,7 +2087,7 @@ body
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #666;
+  color: #aaa;
   transition: color 0.2s;
 }
 
@@ -2101,18 +2103,22 @@ body
   align-items: center;
   padding: 16px;
   min-height: 300px;
+  background: #181818;
 }
 
 .fullscreen-image {
   max-width: 100%;
   max-height: 70vh;
   object-fit: contain;
+  border-radius: 8px;
+  background: #111;
 }
 
 .file-preview-frame {
   width: 100%;
   height: 70vh;
   border: none;
+  background: #111;
 }
 
 .fullscreen-file {
@@ -2127,91 +2133,24 @@ body
   display: flex;
   justify-content: flex-end;
   padding: 16px;
-  background-color: #f8f8f8;
-  border-top: 1px solid #e0e0e0;
+  background: #232323;
+  border-top: 1px solid #333;
 }
 
 .fullscreen-download-btn {
-  background-color: var(--primary-color);
-  color: white;
+  background: linear-gradient(to right, #9348b7, #b05fdf);
   border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  cursor: pointer;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
   font-weight: 500;
-  transition: background-color 0.2s;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .fullscreen-download-btn:hover {
-  background-color: var(--primary-color-dark);
-}
-
-/* Styles pour les messages avec fichiers */
-.message-file {
-  margin: 8px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.message-image-container {
-  max-width: 100%;
-  margin-bottom: 8px;
-}
-
-.message-image {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.message-image:hover {
-  transform: scale(1.01);
-}
-
-.file-info-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-.file-details {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.file-name {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-}
-
-.file-size {
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.file-download-button {
-  background-color: var(--primary-color);
-  border: none;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.file-download-button:hover {
-  background-color: var(--primary-color-dark);
+  background: linear-gradient(to right, #b05fdf, #9348b7);
 }
 
 /* Styles pour les images en plein écran */
