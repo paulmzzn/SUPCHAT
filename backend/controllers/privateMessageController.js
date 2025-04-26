@@ -85,3 +85,13 @@ export const markPrivateMessageAsRead = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getUnreadCounts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const counts = await MessagePrive.getUnreadCounts(userId);
+    res.json(counts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
