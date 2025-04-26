@@ -1,4 +1,4 @@
 // Ce fichier centralise toutes les variables de configuration
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.223.1.1.141:8888";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.223.1:8888";
 export { API_URL };

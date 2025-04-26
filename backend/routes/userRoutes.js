@@ -68,7 +68,7 @@ router.get('/auth/google/callback',
 
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
-      `http://192.168.223.1.1.141:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.223.1:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );

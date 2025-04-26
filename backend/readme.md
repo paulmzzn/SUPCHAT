@@ -17,7 +17,7 @@ services:
   postgres:
     container_name: container-pg
     image: postgres
-    hostname: 192.168.223.1.1.134
+    hostname: 192.168.223.1
     ports:
       - "5432:5432"
     environment:

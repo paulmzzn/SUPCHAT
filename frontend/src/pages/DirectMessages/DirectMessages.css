@@ -1,7 +1,6 @@
 /* Nouvelle structure de mise en page avec sidebar */
 .app-layout {
   display: flex;
-  width: 95%;
   height: 100vh;
   overflow: hidden;
 }
