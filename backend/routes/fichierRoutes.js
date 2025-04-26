@@ -117,36 +117,13 @@ router.get("/user", verifyToken, async (req, res) => {
     const userId = req.user.id;
     const fichiers = await Fichier.getByUserId(userId);
 
-    // Générer des URLs présignées pour chaque fichier
-    const fichiersWithUrls = await Promise.all(
-      fichiers.map(async (fichier) => {
-        try {
-          const getCommand = new GetObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: fichier.url,
-          });
-
-          const presignedUrl = await getSignedUrl(s3Client, getCommand, {
-            expiresIn: 3600,
-          });
-
-          return {
-            ...fichier,
-            presignedUrl,
-          };
-        } catch (error) {
-          console.error(
-            `Erreur lors de la génération de l'URL pour ${fichier.id_fichier}:`,
-            error
-          );
-          return {
-            ...fichier,
-            presignedUrl: null,
-            error: "Impossible de générer l'URL",
-          };
-        }
-      })
-    );
+    // Générer des URLs S3 complètes pour chaque fichier
+    const endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
+    const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
+    const fichiersWithUrls = fichiers.map((fichier) => ({
+      ...fichier,
+      url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+    }));
 
     res.status(200).json(fichiersWithUrls);
   } catch (error) {
@@ -167,36 +144,13 @@ router.get("/workspace/:workspaceId", verifyToken, async (req, res) => {
     const { workspaceId } = req.params;
     const fichiers = await Fichier.getByWorkspaceId(workspaceId);
 
-    // Générer des URLs présignées pour chaque fichier
-    const fichiersWithUrls = await Promise.all(
-      fichiers.map(async (fichier) => {
-        try {
-          const getCommand = new GetObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: fichier.url,
-          });
-
-          const presignedUrl = await getSignedUrl(s3Client, getCommand, {
-            expiresIn: 3600,
-          });
-
-          return {
-            ...fichier,
-            presignedUrl,
-          };
-        } catch (error) {
-          console.error(
-            `Erreur lors de la génération de l'URL pour ${fichier.id_fichier}:`,
-            error
-          );
-          return {
-            ...fichier,
-            presignedUrl: null,
-            error: "Impossible de générer l'URL",
-          };
-        }
-      })
-    );
+    // Générer des URLs S3 complètes pour chaque fichier
+    const endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
+    const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
+    const fichiersWithUrls = fichiers.map((fichier) => ({
+      ...fichier,
+      url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+    }));
 
     res.status(200).json(fichiersWithUrls);
   } catch (error) {

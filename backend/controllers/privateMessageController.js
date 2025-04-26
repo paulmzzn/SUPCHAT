@@ -1,5 +1,7 @@
 import MessagePrive from "../models/MessagePrive.js";
 import Fichier from "../models/Fichier.js";
+import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
+import path from "path";
 
 export const sendPrivateMessage = async (req, res) => {
   try {
@@ -127,6 +129,125 @@ export const markPrivateMessageAsRead = async (req, res) => {
       });
     }
     res.json({ id, date_lecture: updated.date_lecture });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const uploadAttachment = async (req, res) => {
+  try {
+    console.log("[PrivateMessage] Début de l'upload d'un fichier"); // Vérifier si nous avons un fichier et le destinataire    if (!req.file) {      return res.status(400).json({ message: "Aucun fichier fourni" });    }    const { recipientId, message } = req.body;    const expediteurId = req.user.id;    if (!recipientId) {      return res.status(400).json({ message: "recipientId requis" });    }    console.log("[PrivateMessage] Données reçues:", {      file: req.file.originalname,      recipientId,      expediteurId,      message: message || "(vide)"    });
+    // Préparer les informations du fichier
+    const file = req.file;
+    const fileExt = path.extname(file.originalname).substring(1);
+
+    // Upload vers S3 ou un autre service de stockage
+    console.log("[PrivateMessage] Upload vers S3 en cours...");
+    const fileKey = await uploadToS3(file, "private-messages/files");
+    console.log("[PrivateMessage] Fichier uploadé avec succès:", fileKey);
+
+    // Construire l'URL complète pour le front-end
+    const baseUrl =
+      process.env.BASE_URL || req.protocol + "://" + req.get("host");
+    const fullUrl = fileKey; // Ou construisez une URL complète si nécessaire
+
+    // Créer l'entrée fichier dans la base de données
+    const fichierData = {
+      nom_fichier: file.originalname,
+      url: fileKey,
+      type: file.mimetype,
+      taille_fichier: file.size,
+      extension: fileExt,
+      mime_type: file.mimetype,
+      fk_utilisateur: expediteurId,
+    };
+
+    console.log(
+      "[PrivateMessage] Création de l'entrée fichier dans la BDD:",
+      fichierData
+    );
+    const newFichier = await Fichier.create(fichierData);
+    console.log("[PrivateMessage] Fichier créé en BDD:", newFichier);
+
+    // Créer le message privé contenant le fichier
+    const messageData = {
+      contenu: message || "",
+      fk_expediteur: expediteurId,
+      fk_destinataire: recipientId,
+    };
+
+    console.log("[PrivateMessage] Création du message privé:", messageData);
+    const newMessage = await MessagePrive.create(messageData);
+    console.log("[PrivateMessage] Message créé:", newMessage);
+
+    // Associer le fichier au message privé
+    console.log("[PrivateMessage] Association du fichier au message");
+    await Fichier.addToPrivateMessage(
+      newMessage.id_message_prive,
+      newFichier.id_fichier
+    );
+    console.log("[PrivateMessage] Association réussie");
+
+    // Récupérer le message complet avec pièces jointes
+    const completeMessage = await MessagePrive.getById(
+      newMessage.id_message_prive
+    );
+
+    // Envoyer une notification en temps réel via WebSocket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`dm:${recipientId}`).emit("privateMessage", {
+        ...completeMessage,
+        sender: {
+          id: req.user.id,
+          nom: req.user.nom,
+          photo_de_profil: req.user.photo_de_profil,
+        },
+      });
+      console.log("[PrivateMessage] Notification WebSocket envoyée");
+    }
+
+    res.status(201).json({
+      message: "Fichier uploadé et message privé créé",
+      fichier: {
+        ...newFichier,
+        presignedUrl: fullUrl, // URL complète pour accéder au fichier
+      },
+      message_prive: newMessage,
+    });
+  } catch (error) {
+    console.error("[PrivateMessage] Erreur durant l'upload:", error);
+    console.error("[PrivateMessage] Stack trace:", error.stack);
+
+    // Log des détails supplémentaires pour les erreurs de base de données
+    if (error.code) {
+      console.error("[PrivateMessage] Code d'erreur DB:", error.code);
+      console.error("[PrivateMessage] Détail:", error.detail);
+    }
+
+    res.status(500).json({
+      message: "Erreur upload fichier MP",
+      error: error.message,
+    });
+  }
+};
+
+// Récupérer le nombre de messages non lus par expéditeur
+export const getUnreadCounts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const counts = await MessagePrive.getUnreadCounts(userId);
+    res.json(counts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Récupérer les conversations récentes d'un utilisateur
+export const getUserConversations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conversations = await MessagePrive.getUserConversations(userId);
+    res.json(conversations);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

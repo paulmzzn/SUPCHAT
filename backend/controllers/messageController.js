@@ -242,7 +242,18 @@ export const uploadFile = async (req, res) => {
       const fileKey = await uploadToS3(req.file, "messages/files");
       console.log("✅ Fichier uploadé avec succès vers S3:", fileKey);
 
-      // Création du message avec le lien vers le fichier
+      // Construction de l'URL complète du fichier
+      const s3Endpoint =
+        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
+      const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
+      const fullFileUrl = `${s3Endpoint}${bucketName}/${fileKey}`.replace(
+        /([^:])\/\/+/g,
+        "$1/"
+      );
+
+      console.log("🔗 URL complète du fichier:", fullFileUrl);
+
+      // Créer le message avec le lien vers le fichier
       const fileUrl = fileKey;
       const fileName = req.file.originalname;
       const fileSize = req.file.size;

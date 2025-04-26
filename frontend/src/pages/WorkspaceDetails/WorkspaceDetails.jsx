@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react"; // Ajout de useState
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import {
@@ -189,6 +189,9 @@ function WorkspaceDetails() {
   // Référence vers l'input de fichier caché
   const fileInputRef = useRef(null);
 
+  // État pour l'affichage du fichier en plein écran
+  const [fullscreenFile, setFullscreenFile] = useState(null);
+
   // Use the custom hook to get state and handlers
   const {
     workspace,
@@ -283,6 +286,16 @@ function WorkspaceDetails() {
     }
   };
 
+  // Fonction pour ouvrir un fichier en plein écran
+  const handleOpenFileViewer = (fileData) => {
+    setFullscreenFile(fileData);
+  };
+
+  // Fonction pour fermer la popup de fichier
+  const handleCloseFileViewer = () => {
+    setFullscreenFile(null);
+  };
+
   // Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
   const handleFileUpload = async (e) => {
     console.log("🚀 Début de handleFileUpload");
@@ -352,6 +365,12 @@ function WorkspaceDetails() {
         console.log(
           `🌐 Début de l'appel API vers ${API_URL}/api/messages/upload`
         );
+
+        // Affichage du contenu FormData pour debug
+        console.log("📦 Vérification du FormData:");
+        for (let pair of formData.entries()) {
+          console.log(`${pair[0]}: ${pair[1]}`);
+        }
 
         // Upload du fichier vers l'API
         const response = await fetch(`${API_URL}/api/messages/upload`, {
@@ -779,11 +798,17 @@ function WorkspaceDetails() {
                                       src={fullFileUrl}
                                       alt={fileData.fileName}
                                       className="message-image"
+                                      onClick={() =>
+                                        handleOpenFileViewer({
+                                          ...fileData,
+                                          fullFileUrl,
+                                        })
+                                      }
                                     />
                                   </div>
                                 )}
 
-                                {/* Information et bouton de téléchargement pour tous les fichiers */}
+                                {/* Information et boutons pour tous les fichiers */}
                                 <div className="file-info-container">
                                   <div className="file-details">
                                     <span className="file-name">
@@ -793,17 +818,32 @@ function WorkspaceDetails() {
                                       {formatFileSize(fileData.fileSize)}
                                     </span>
                                   </div>
-                                  <button
-                                    className="file-download-button"
-                                    onClick={() =>
-                                      handleDownloadFile(
-                                        fileData.fileUrl,
-                                        fileData.fileName
-                                      )
-                                    }
-                                  >
-                                    Télécharger
-                                  </button>
+                                  <div className="file-actions">
+                                    {!fileData.isImage && (
+                                      <button
+                                        className="file-view-button"
+                                        onClick={() =>
+                                          handleOpenFileViewer({
+                                            ...fileData,
+                                            fullFileUrl,
+                                          })
+                                        }
+                                      >
+                                        Ouvrir
+                                      </button>
+                                    )}
+                                    <button
+                                      className="file-download-button"
+                                      onClick={() =>
+                                        handleDownloadFile(
+                                          fileData.fileUrl,
+                                          fileData.fileName
+                                        )
+                                      }
+                                    >
+                                      Télécharger
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -1193,47 +1233,39 @@ function WorkspaceDetails() {
                     className="subsection-header"
                     onClick={toggleOnlineMembers}
                   >
-                    {" "}
-                    {/* Use handler from hook */}
                     {showOnlineMembers ? (
                       <FaChevronDown className="toggle-icon" />
                     ) : (
                       <FaChevronRight className="toggle-icon" />
                     )}
-                    <h4>En ligne ({members.online.length})</h4>{" "}
-                    {/* Use members from hook */}
+                    <h4>En ligne ({members.online.length})</h4>
                   </div>
 
                   {showOnlineMembers && (
                     <ul className="members-list">
-                      {members.online.map(
-                        (
-                          member // Use members from hook
-                        ) => (
-                          <li
-                            key={member.id}
-                            className="member-item online"
-                            onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                            style={{ cursor: "pointer" }} // Optionnel : curseur pointer
-                          >
-                            {member.avatar ? (
-                              <img
-                                src={member.avatar}
-                                alt={member.name}
-                                className="member-avatar"
-                              />
-                            ) : (
-                              <FaUserCircle className="member-avatar-placeholder" />
-                            )}
-                            <div className="member-info">
-                              {getRoleIcon(member.role)}{" "}
-                              {/* Use helper function */}
-                              <span className="member-name">{member.name}</span>
-                            </div>
-                            <span className="status-indicator online"></span>
-                          </li>
-                        )
-                      )}
+                      {members.online.map((member) => (
+                        <li
+                          key={member.id}
+                          className="member-item online"
+                          onClick={() => handleOpenProfile(member)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          {member.avatar ? (
+                            <img
+                              src={member.avatar}
+                              alt={member.name}
+                              className="member-avatar"
+                            />
+                          ) : (
+                            <FaUserCircle className="member-avatar-placeholder" />
+                          )}
+                          <div className="member-info">
+                            {getRoleIcon(member.role)}
+                            <span className="member-name">{member.name}</span>
+                          </div>
+                          <span className="status-indicator online"></span>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -1244,47 +1276,39 @@ function WorkspaceDetails() {
                     className="subsection-header"
                     onClick={toggleOfflineMembers}
                   >
-                    {" "}
-                    {/* Use handler from hook */}
                     {showOfflineMembers ? (
                       <FaChevronDown className="toggle-icon" />
                     ) : (
                       <FaChevronRight className="toggle-icon" />
                     )}
-                    <h4>Hors ligne ({members.offline.length})</h4>{" "}
-                    {/* Use members from hook */}
+                    <h4>Hors ligne ({members.offline.length})</h4>
                   </div>
 
                   {showOfflineMembers && (
                     <ul className="members-list">
-                      {members.offline.map(
-                        (
-                          member // Use members from hook
-                        ) => (
-                          <li
-                            key={member.id}
-                            className="member-item offline"
-                            onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                            style={{ cursor: "pointer" }} // Optionnel : curseur pointer
-                          >
-                            {member.avatar ? (
-                              <img
-                                src={member.avatar}
-                                alt={member.name}
-                                className="member-avatar"
-                              />
-                            ) : (
-                              <FaUserCircle className="member-avatar-placeholder" />
-                            )}
-                            <div className="member-info">
-                              {getRoleIcon(member.role)}{" "}
-                              {/* Use helper function */}
-                              <span className="member-name">{member.name}</span>
-                            </div>
-                            <span className="status-indicator offline"></span>
-                          </li>
-                        )
-                      )}
+                      {members.offline.map((member) => (
+                        <li
+                          key={member.id}
+                          className="member-item offline"
+                          onClick={() => handleOpenProfile(member)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          {member.avatar ? (
+                            <img
+                              src={member.avatar}
+                              alt={member.name}
+                              className="member-avatar"
+                            />
+                          ) : (
+                            <FaUserCircle className="member-avatar-placeholder" />
+                          )}
+                          <div className="member-info">
+                            {getRoleIcon(member.role)}
+                            <span className="member-name">{member.name}</span>
+                          </div>
+                          <span className="status-indicator offline"></span>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -1418,15 +1442,13 @@ function WorkspaceDetails() {
                       type="button"
                       className={`visibility-option ${
                         !newChannel.isPrivate ? "selected" : ""
-                      }`} // Use state from hook
+                      }`}
                       onClick={() =>
                         setNewChannel((prev) => ({ ...prev, isPrivate: false }))
-                      } // Use setter from hook
+                      }
                     >
                       <FaGlobe className="visibility-icon" />
                       <div className="visibility-info">
-                        {" "}
-                        {/* Corrected nesting */}
                         <span className="visibility-title">Public</span>
                         <span className="visibility-desc">
                           Accessible à tous les membres
@@ -1438,10 +1460,10 @@ function WorkspaceDetails() {
                       type="button"
                       className={`visibility-option ${
                         newChannel.isPrivate ? "selected" : ""
-                      }`} // Use state from hook
+                      }`}
                       onClick={() =>
                         setNewChannel((prev) => ({ ...prev, isPrivate: true }))
-                      } // Use setter from hook
+                      }
                     >
                       <FaLock className="visibility-icon" />
                       <div className="visibility-info">
@@ -1707,6 +1729,62 @@ function WorkspaceDetails() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal pour afficher un fichier en plein écran */}
+        {fullscreenFile && (
+          <>
+            <div
+              className="fullscreen-modal-overlay"
+              onClick={handleCloseFileViewer}
+            ></div>
+            <div
+              className="fullscreen-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="fullscreen-modal-header">
+                <h3 className="fullscreen-modal-title">
+                  {fullscreenFile.fileName}
+                </h3>
+                <button
+                  className="fullscreen-modal-close"
+                  onClick={handleCloseFileViewer}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="fullscreen-modal-body">
+                {fullscreenFile.isImage ? (
+                  <img
+                    src={fullscreenFile.fullFileUrl}
+                    alt={fullscreenFile.fileName}
+                    className="fullscreen-image"
+                  />
+                ) : (
+                  <div className="fullscreen-file">
+                    <iframe
+                      src={fullscreenFile.fullFileUrl}
+                      title={fullscreenFile.fileName}
+                      className="file-preview-frame"
+                    ></iframe>
+                  </div>
+                )}
+              </div>
+              <div className="fullscreen-modal-footer">
+                <button
+                  className="fullscreen-download-btn"
+                  onClick={() =>
+                    handleDownloadFile(
+                      fullscreenFile.fileUrl,
+                      fullscreenFile.fileName
+                    )
+                  }
+                >
+                  Télécharger
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

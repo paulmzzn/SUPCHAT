@@ -546,6 +546,91 @@
   text-decoration: underline;
 }
 
+/* Styles pour les pièces jointes dans les messages */
+.dm-msg-attachments {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dm-msg-image-attachment {
+  position: relative;
+  max-width: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dm-msg-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.dm-msg-image-filename {
+  font-size: 0.8rem;
+  color: #8f8f8f;
+  margin-top: 4px;
+}
+
+.dm-msg-file-attachment {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  max-width: 300px;
+  overflow: hidden;
+}
+
+.dm-msg-file-download-link {
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+  padding: 10px;
+  width: 100%;
+}
+
+.dm-msg-file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-right: 12px;
+  color: #9571f6;
+  flex-shrink: 0;
+}
+
+.dm-msg-file-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0; /* Pour que le texte soit tronqué correctement */
+}
+
+.dm-msg-file-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dm-msg-file-size {
+  font-size: 0.75rem;
+  color: #8f8f8f;
+}
+
+.dm-msg-file-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9571f6;
+  padding: 0 8px;
+}
+
+/* Style pour les pièces jointes dans les messages envoyés par l'utilisateur */
+.dm-message.own .dm-msg-file-attachment {
+  background-color: rgba(149, 113, 246, 0.1);
+}
+
 /* Formulaire d'envoi de message */
 .dm-input-form {
   display: flex;

@@ -18,12 +18,37 @@ import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachment routes
 import fichierRoutes from "./routes/fichierRoutes.js"; // Import fichier routes
 import fileRoutes from "./routes/fileRoutes.js"; // Import des routes
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import path from "path"; // Import path
+import fs from "fs"; // Import fs
 
 // Load environment variables at the start
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Obtenir l'équivalent de __dirname pour ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Assurer que les dossiers d'upload existent
+const createUploadDirs = () => {
+  const uploadsDir = path.join(__dirname, "uploads");
+  const privateMessagesDir = path.join(uploadsDir, "private-messages");
+  const privateMessagesFilesDir = path.join(privateMessagesDir, "files");
+
+  // Créer les dossiers s'ils n'existent pas
+  [uploadsDir, privateMessagesDir, privateMessagesFilesDir].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      console.log(`[Server] Création du répertoire: ${dir}`);
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+};
+
+createUploadDirs();
 
 // Configuration de CORS avec plus de précision
 const allowedOrigins = [
@@ -79,6 +104,20 @@ app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
+
+// Servir les fichiers statiques pour les messages privés et autres
+// Configurer avant les routes API pour éviter les conflits d'authentification
+app.use(
+  "/api/files/private-messages/files",
+  express.static(path.join(__dirname, "uploads/private-messages/files"))
+);
+app.use("/api/files", express.static(path.join(__dirname, "uploads")));
+
+// Middleware pour logguer les requêtes de fichiers
+app.use("/api/files", (req, res, next) => {
+  console.log(`[File Access] ${req.method} ${req.url}`);
+  next();
+});
 
 // Ajouter une route API pour vérifier que le serveur est en ligne
 app.get("/api/ping", (req, res) => {
