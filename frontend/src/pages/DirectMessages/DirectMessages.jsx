@@ -361,13 +361,11 @@ function DirectMessages() {
     };
     
     const handlePrivateMessageRead = (data) => {
-      console.log("[DM] Message read event:", data);
       if (selectedUser) {
-        setMessages((prev) => 
+        // Marquer silencieusement le message comme lu sans déclencher d'appels supplémentaires
+        setMessages((prev) =>
           prev.map((m) => {
-            // Check if this is the message that was read
             if (m.id_message_prive === data.id) {
-              console.log(`[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`);
               return { ...m, date_lecture: data.date_lecture };
             }
             return m;
@@ -520,6 +518,11 @@ const fetchUserInfo = async (userId) => {
       
       const data = await res.json();
       console.log("Messages récupérés:", data);
+      
+      // Ajouter debug pour vérifier si des messages ont un parent_id
+      const messagesWithParent = data.filter(m => m.parent_id);
+      console.log("Messages avec parent_id:", messagesWithParent.length, messagesWithParent);
+      
       setMessages(data);
       
       // Marquer les messages non lus comme lus
@@ -798,7 +801,6 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(`@${usersInfo[messageContextMenu.message.fk_expediteur]?.name || "Utilisateur"} `);
     handleCloseMessageContextMenu();
     const inputElement = document.querySelector('.dm-input');
     if (inputElement) inputElement.focus();
@@ -1072,19 +1074,15 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
-                    
-                    // Get the sender info, with strong fallbacks if missing
+                    // Récupération des informations pour l'affichage
                     const senderId = msg.fk_expediteur;
                     const senderInfo = usersInfo[senderId] || {};
-                    
-                    // Determine display name with fallbacks
                     const displayName = senderInfo.name || senderInfo.nom || (isOwn ? "Vous" : "Utilisateur");
-                    
-                    // Determine the avatar source with fallbacks
                     const avatarSrc = senderInfo.avatar || senderInfo.photo_de_profil;
                     
-                    // Si c'est un message qu'on est en train d'éditer
+                    // Si c'est un message en cours d'édition
                     if (editingMessage && editingMessage.id_message_prive === msg.id_message_prive) {
+                      // ...existing code pour l'édition...
                       return (
                         <div 
                           key={msg.id_message_prive} 
@@ -1118,26 +1116,59 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                         </div>
                       );
                     }
+
+                    // Recherche du message parent
+                    let parentMessage = null;
+                    let parentAuthor = "Utilisateur";
+                    let parentText = "Message original non disponible";
                     
+                    if (msg.parent_id) {
+                      parentMessage = messages.find(m => m.id_message_prive === msg.parent_id);
+                      
+                      if (parentMessage) {
+                        const parentSenderId = parentMessage.fk_expediteur;
+                        const parentSenderInfo = usersInfo[parentSenderId] || {};
+                        parentAuthor = parentSenderInfo.name || parentSenderInfo.nom || "Utilisateur";
+                        parentText = parentMessage.contenu;
+                      } else if (msg.parent_expediteur) {
+                        parentAuthor = usersInfo[msg.parent_expediteur]?.name || 
+                                      usersInfo[msg.parent_expediteur]?.nom || "Utilisateur";
+                        parentText = msg.parent_contenu || "Message original non disponible";
+                      }
+                    }
+
                     return (
                       <div 
                         key={msg.id_message_prive} 
                         className={`dm-message ${isOwn ? 'own' : 'other'}`}
+                        id={`msg-${msg.id_message_prive}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
-                        {/* Si c'est une réponse, afficher le message parent */}
+                        {/* Bloc de réponse au format souhaité identique aux workspaces */}
                         {msg.parent_id && (
-                          <div className="dm-reply-info">
-                            <div className="dm-reply-content">
-                              {/* TODO: Récupérer le message parent */}
-                              <span className="dm-reply-author">
-                                @{usersInfo[msg.parent_expediteur]?.name || "Utilisateur"}
-                              </span>
-                              <span className="dm-reply-text">{msg.parent_contenu || "Message original"}</span>
+                          <div 
+                            className="message-reply-to"
+                            onClick={() => {
+                              const parentId = msg.parent_id;
+                              if (parentId) {
+                                const element = document.getElementById(`msg-${parentId}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.classList.add("highlight-message");
+                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                }
+                              }
+                            }}
+                          >
+                            <FaReply className="reply-icon" />
+                            <div className="reply-content">
+                              <span className="reply-author">@{parentAuthor}</span>
+                              <span className="reply-text">{parentText}</span>
                             </div>
                           </div>
                         )}
-                      
+                        
+                        {/* Le reste du message */}
                         <div className="dm-msg-avatar">
                           {avatarSrc ? (
                             <img src={avatarSrc} alt={displayName} />
@@ -1147,7 +1178,6 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                             </div>
                           )}
                         </div>
-                        
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
                             <span className="dm-msg-author">
@@ -1157,11 +1187,9 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                               {formatMessageDate(msg.date_creation || msg.date_envoi)}
                             </span>
                           </div>
-                          
                           <div className="dm-msg-bubble">
                             {msg.contenu}
                           </div>
-                          
                           {isOwn && (
                             <div className="dm-msg-read">
                               {msg.date_lecture 
@@ -1181,6 +1209,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 {replyingTo && (
                   <div className="dm-replying-to">
                     <div className="dm-replying-info">
+                      <FaReply className="reply-icon" />
                       <span>Réponse à </span>
                       <strong>{usersInfo[replyingTo.fk_expediteur]?.name || "Utilisateur"}</strong>
                       <span className="dm-replying-content">: {replyingTo.contenu}</span>
