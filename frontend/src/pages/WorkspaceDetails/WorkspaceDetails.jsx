@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react"; // Ajout de useState
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -231,7 +230,7 @@ function WorkspaceDetails() {
     socket,
     currentUserId,
     currentUserName,
-    currentUserRole,// Assurez-vous que currentUserName est exposé par votre hook
+    currentUserRole, // Assurez-vous que currentUserName est exposé par votre hook
     messageContextMenu,
     showEmojiPicker,
     replyingTo,
@@ -500,49 +499,59 @@ function WorkspaceDetails() {
     }
   };
 
-
   // Nouveau state pour le menu contextuel des membres
-  const [memberContextMenu, setMemberContextMenu] = useState({ visible: false, x: 0, y: 0, member: null });
+  const [memberContextMenu, setMemberContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    member: null,
+  });
 
   // Handler pour ouvrir le menu contextuel sur un membre (clic droit)
   const handleMemberContextMenu = (e, member) => {
     e.preventDefault();
     // Owner : peut agir sur tout le monde sauf owner
     // Admin : peut promouvoir un membre en admin, mais ne peut pas rétrograder un admin
-    if (currentUserRole !== 'owner' && currentUserRole !== 'admin') return;
-    if (member.role === 'owner') return;
-    if (currentUserRole === 'admin' && member.role !== 'member') return;
+    if (currentUserRole !== "owner" && currentUserRole !== "admin") return;
+    if (member.role === "owner") return;
+    if (currentUserRole === "admin" && member.role !== "member") return;
     setMemberContextMenu({ visible: true, x: e.pageX, y: e.pageY, member });
   };
 
   // Handler pour fermer le menu contextuel
-  const handleCloseMemberContextMenu = () => setMemberContextMenu({ ...memberContextMenu, visible: false });
+  const handleCloseMemberContextMenu = () =>
+    setMemberContextMenu({ ...memberContextMenu, visible: false });
 
   // Handler pour promouvoir/déclasser
   const handleChangeMemberRole = async (newRole) => {
     if (!memberContextMenu.member) return;
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members/${memberContextMenu.member.id}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ newRole })
-      });
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_URL}/api/workspaces/${workspace.id}/members/${memberContextMenu.member.id}/role`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ newRole }),
+        }
+      );
       if (!res.ok) {
         const err = await res.json();
-        alert(err.message || 'Erreur lors du changement de rôle');
+        alert(err.message || "Erreur lors du changement de rôle");
       } else {
         // Rafraîchir la liste des membres
-        if (typeof fetchWorkspaceMembers === 'function') fetchWorkspaceMembers();
+        if (typeof fetchWorkspaceMembers === "function")
+          fetchWorkspaceMembers();
       }
     } catch (e) {
-      alert('Erreur lors du changement de rôle');
+      alert("Erreur lors du changement de rôle");
     } finally {
       handleCloseMemberContextMenu();
     }
+  };
 
   // Fonction pour télécharger un fichier
   const handleDownloadFile = (fileUrl, fileName) => {
@@ -556,7 +565,6 @@ function WorkspaceDetails() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-
   };
 
   if (loading) {
@@ -629,14 +637,18 @@ function WorkspaceDetails() {
                   <FaChevronRight className="toggle-icon" />
                 )}
                 <h3>Canaux</h3>
-
                 {/* Afficher le bouton d'ajout de canal seulement si owner ou admin */}
-                {(currentUserRole === 'owner' || currentUserRole === 'admin') && (
-                  <button className="add-channel-btn" onClick={handleCreateChannel}> {/* Use handler from hook */}
+                {(currentUserRole === "owner" ||
+                  currentUserRole === "admin") && (
+                  <button
+                    className="add-channel-btn"
+                    onClick={handleCreateChannel}
+                  >
+                    {" "}
+                    {/* Use handler from hook */}
                     <FaPlus />
                   </button>
                 )}
-
               </div>
 
               {showChannels && (
@@ -657,9 +669,11 @@ function WorkspaceDetails() {
                             : ""
                         }`}
                         onClick={() => handleSelectChannel(channel)} // Use handler from hook
-
-                        onContextMenu={(e) => (currentUserRole === 'owner' || currentUserRole === 'admin') && handleChannelContextMenu(e, channel)} // Restrict context menu
-
+                        onContextMenu={(e) =>
+                          (currentUserRole === "owner" ||
+                            currentUserRole === "admin") &&
+                          handleChannelContextMenu(e, channel)
+                        } // Restrict context menu
                       >
                         {channel.isPrivate ? (
                           <FaLock className="channel-icon" />
@@ -735,43 +749,11 @@ function WorkspaceDetails() {
                       </div>
                       <div className="message-content">
                         {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
-                        {(message.parent_id || message.parent_message) && (
-                          <div
-                            className="message-reply-to"
-                            onClick={() => {
-                              // Find parent message and scroll to it
-                              const parentId =
-                                message.parent_id ||
-                                (message.parent_message &&
-                                  message.parent_message.id_message);
-                              if (parentId) {
-                                const element = document.getElementById(
-                                  `msg-${parentId}`
-                                );
-                                if (element) {
-                                  element.scrollIntoView({
-                                    behavior: "smooth",
-                                    block: "center",
-                                  });
-                                  element.classList.add("highlight-message");
-                                  setTimeout(
-                                    () =>
-                                      element.classList.remove(
-                                        "highlight-message"
-                                      ),
-                                    2000
-                                  );
-                                } else {
-                                  console.log(
-                                    `Message parent avec ID ${parentId} non trouvé dans la vue actuelle`
-                                  );
-                                }
-                              }
-                            }}
-                          >
-                            <FaReply className="reply-icon" />
-                            <div className="reply-content">
-                              {message.parent_message ? (
+                        {(message.parent_id || message.parent_message) &&
+                          (() => {
+                            let replyContent = null;
+                            if (message.parent_message) {
+                              replyContent = (
                                 <>
                                   <span className="reply-author">
                                     @{message.parent_message.nom}
@@ -780,31 +762,68 @@ function WorkspaceDetails() {
                                     {message.parent_message.contenu}
                                   </span>
                                 </>
+                              );
+                            } else {
+                              const parentMessage = messages.find(
+                                (m) => m.id_message === message.parent_id
+                              );
+                              replyContent = parentMessage ? (
+                                <>
+                                  <span className="reply-author">
+                                    @{parentMessage.nom}
+                                  </span>
+                                  <span className="reply-text">
+                                    {parentMessage.contenu}
+                                  </span>
+                                </>
                               ) : (
-                                // Si nous n'avons pas le message parent mais nous avons l'ID, chercher dans les messages existants
-                                (() => {
-                                  const parentMessage = messages.find(
-                                    (m) => m.id_message === message.parent_id
-                                  );
-                                  return parentMessage ? (
-                                    <>
-                                      <span className="reply-author">
-                                        @{parentMessage.nom}
-                                      </span>
-                                      <span className="reply-text">
-                                        {parentMessage.contenu}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="reply-text">
-                                      Message original non disponible
-                                    </span>
-                                  );
-                                })()
-                              )}
-                            </div>
-                          </div>
-                        )}
+                                <span className="reply-text">
+                                  Message original non disponible
+                                </span>
+                              );
+                            }
+                            return (
+                              <div
+                                className="message-reply-to"
+                                onClick={() => {
+                                  const parentId =
+                                    message.parent_id ||
+                                    (message.parent_message &&
+                                      message.parent_message.id_message);
+                                  if (parentId) {
+                                    const element = document.getElementById(
+                                      `msg-${parentId}`
+                                    );
+                                    if (element) {
+                                      element.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "center",
+                                      });
+                                      element.classList.add(
+                                        "highlight-message"
+                                      );
+                                      setTimeout(
+                                        () =>
+                                          element.classList.remove(
+                                            "highlight-message"
+                                          ),
+                                        2000
+                                      );
+                                    } else {
+                                      console.log(
+                                        `Message parent avec ID ${parentId} non trouvé dans la vue actuelle`
+                                      );
+                                    }
+                                  }
+                                }}
+                              >
+                                <FaReply className="reply-icon" />
+                                <div className="reply-content">
+                                  {replyContent}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                         <div className="message-header">
                           <span className="message-author">
@@ -1025,46 +1044,43 @@ function WorkspaceDetails() {
                                 })()}
                               </div>
                             );
-
-                          })()}
-                        </div>
+                          }
+                        })()}
                         {/* *** End Markdown rendering *** */}
-                        
+
                         {/* Afficher les réactions avec l'emoji Unicode directement */}
-         {message.reactions && message.reactions.length > 0 && (
+                        {message.reactions && message.reactions.length > 0 && (
                           <div className="message-reactions">
                             {message.reactions.map((reaction, index) => (
                               <div
                                 key={index}
-
                                 className={`reaction-badge ${
                                   reaction.user_reacted ? "user-reacted" : ""
                                 }`} // Add class if user reacted
-
                                 onClick={() => {
                                   if (socket && socket.connected) {
                                     if (reaction.user_reacted) {
                                       socket.emit("removeReaction", {
                                         messageId: message.id_message,
-
                                         reaction_type: reaction.reaction_type,
                                         canalId: activeChannel.id,
-
                                       });
                                     } else {
                                       socket.emit("addReaction", {
                                         messageId: message.id_message,
-
                                         reaction_type: reaction.reaction_type, // emoji unicode
-                                        canalId: activeChannel.id
+                                        canalId: activeChannel.id,
                                       });
                                     }
                                   }
                                 }}
                               >
-                                <span className="reaction-emoji">{getEmojiForType(reaction.reaction_type)}</span>
-                                <span className="reaction-count">{reaction.count}</span>
-
+                                <span className="reaction-emoji">
+                                  {getEmojiForType(reaction.reaction_type)}
+                                </span>
+                                <span className="reaction-count">
+                                  {reaction.count}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -1289,11 +1305,17 @@ function WorkspaceDetails() {
                         <li
                           key={member.id}
                           className="member-item online"
-
                           onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
-                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
-
+                          onContextMenu={(e) =>
+                            handleMemberContextMenu(e, member)
+                          }
+                          style={{
+                            cursor:
+                              currentUserRole === "owner" &&
+                              member.role !== "owner"
+                                ? "context-menu"
+                                : "pointer",
+                          }}
                         >
                           {member.avatar ? (
                             <img
@@ -1335,11 +1357,17 @@ function WorkspaceDetails() {
                         <li
                           key={member.id}
                           className="member-item offline"
-
                           onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
-                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
-
+                          onContextMenu={(e) =>
+                            handleMemberContextMenu(e, member)
+                          }
+                          style={{
+                            cursor:
+                              currentUserRole === "owner" &&
+                              member.role !== "owner"
+                                ? "context-menu"
+                                : "pointer",
+                          }}
                         >
                           {member.avatar ? (
                             <img
@@ -1367,23 +1395,36 @@ function WorkspaceDetails() {
           {memberContextMenu.visible && memberContextMenu.member && (
             <div
               className="channel-context-menu"
-              style={{ top: memberContextMenu.y, left: memberContextMenu.x, zIndex: 2000 }}
-              onClick={e => e.stopPropagation()}
+              style={{
+                top: memberContextMenu.y,
+                left: memberContextMenu.x,
+                zIndex: 2000,
+              }}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Owner : peut promouvoir/déclasser. Admin : peut seulement promouvoir un membre */}
-              {((currentUserRole === 'owner' && memberContextMenu.member.role === 'member') ||
-                (currentUserRole === 'admin' && memberContextMenu.member.role === 'member')) && (
-                <div className="context-menu-item" onClick={() => handleChangeMemberRole('admin')}>
+              {((currentUserRole === "owner" &&
+                memberContextMenu.member.role === "member") ||
+                (currentUserRole === "admin" &&
+                  memberContextMenu.member.role === "member")) && (
+                <div
+                  className="context-menu-item"
+                  onClick={() => handleChangeMemberRole("admin")}
+                >
                   <FaArrowUp className="context-menu-icon" />
                   Promouvoir en admin
                 </div>
               )}
-              {currentUserRole === 'owner' && memberContextMenu.member.role === 'admin' && (
-                <div className="context-menu-item" onClick={() => handleChangeMemberRole('member')}>
-                  <FaArrowDown className="context-menu-icon" />
-                  Rétrograder en membre
-                </div>
-              )}
+              {currentUserRole === "owner" &&
+                memberContextMenu.member.role === "admin" && (
+                  <div
+                    className="context-menu-item"
+                    onClick={() => handleChangeMemberRole("member")}
+                  >
+                    <FaArrowDown className="context-menu-icon" />
+                    Rétrograder en membre
+                  </div>
+                )}
             </div>
           )}
           {/* Files Section - NO CHANGE */}
