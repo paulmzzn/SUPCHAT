@@ -457,35 +457,32 @@ function WorkspaceDetails() {
                         </div>
                         {/* *** End Markdown rendering *** */}
                         
-                        {/* Afficher les réactions avec meilleur style */}
+                        {/* Afficher les réactions avec l'emoji Unicode directement */}
                         {message.reactions && message.reactions.length > 0 && (
                           <div className="message-reactions">
                             {message.reactions.map((reaction, index) => (
-                              <div 
-                                key={index} 
-                                className={`reaction-badge ${reaction.user_reacted ? 'user-reacted' : ''}`} // Add class if user reacted
+                              <div
+                                key={index}
+                                className={`reaction-badge ${reaction.user_reacted ? 'user-reacted' : ''}`}
                                 onClick={() => {
-                                  // Toggle reaction using socket from hook
                                   if (socket && socket.connected) {
                                     if (reaction.user_reacted) {
                                       socket.emit('removeReaction', {
                                         messageId: message.id_message,
-                                        reaction_type: reaction.reaction_type,
+                                        reaction_type: reaction.reaction_type, // emoji unicode
                                         canalId: activeChannel.id
                                       });
                                     } else {
                                       socket.emit('addReaction', {
                                         messageId: message.id_message,
-                                        reaction_type: reaction.reaction_type,
+                                        reaction_type: reaction.reaction_type, // emoji unicode
                                         canalId: activeChannel.id
                                       });
                                     }
                                   }
                                 }}
                               >
-                                <span className="reaction-emoji">
-                                  {reaction.emoji || getEmojiForType(reaction.reaction_type)} {/* Use helper from hook */}
-                                </span>
+                                <span className="reaction-emoji">{getEmojiForType(reaction.reaction_type)}</span>
                                 <span className="reaction-count">{reaction.count}</span>
                               </div>
                             ))}
