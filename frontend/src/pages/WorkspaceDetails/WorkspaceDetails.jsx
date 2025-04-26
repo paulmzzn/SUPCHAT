@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react"; // Ajout de useState
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -224,16 +225,19 @@ function WorkspaceDetails() {
     setMessages, // Ajout de setMessages ici
     newMessage,
     displayMessage, // <-- Ajouté
+
     loadingMessages,
     chatContainerRef,
     socket,
     currentUserId,
-    currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
+    currentUserName,
+    currentUserRole,// Assurez-vous que currentUserName est exposé par votre hook
     messageContextMenu,
     showEmojiPicker,
     replyingTo,
     setReplyingTo, // Ajouter setReplyingTo ici
     commonEmojis,
+
     isMistralTyping, // Get the typing state
     // Mention state and handlers
     showMentionSuggestions,
@@ -496,6 +500,50 @@ function WorkspaceDetails() {
     }
   };
 
+
+  // Nouveau state pour le menu contextuel des membres
+  const [memberContextMenu, setMemberContextMenu] = useState({ visible: false, x: 0, y: 0, member: null });
+
+  // Handler pour ouvrir le menu contextuel sur un membre (clic droit)
+  const handleMemberContextMenu = (e, member) => {
+    e.preventDefault();
+    // Owner : peut agir sur tout le monde sauf owner
+    // Admin : peut promouvoir un membre en admin, mais ne peut pas rétrograder un admin
+    if (currentUserRole !== 'owner' && currentUserRole !== 'admin') return;
+    if (member.role === 'owner') return;
+    if (currentUserRole === 'admin' && member.role !== 'member') return;
+    setMemberContextMenu({ visible: true, x: e.pageX, y: e.pageY, member });
+  };
+
+  // Handler pour fermer le menu contextuel
+  const handleCloseMemberContextMenu = () => setMemberContextMenu({ ...memberContextMenu, visible: false });
+
+  // Handler pour promouvoir/déclasser
+  const handleChangeMemberRole = async (newRole) => {
+    if (!memberContextMenu.member) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members/${memberContextMenu.member.id}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newRole })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Erreur lors du changement de rôle');
+      } else {
+        // Rafraîchir la liste des membres
+        if (typeof fetchWorkspaceMembers === 'function') fetchWorkspaceMembers();
+      }
+    } catch (e) {
+      alert('Erreur lors du changement de rôle');
+    } finally {
+      handleCloseMemberContextMenu();
+    }
+
   // Fonction pour télécharger un fichier
   const handleDownloadFile = (fileUrl, fileName) => {
     // Construire l'URL complète vers le fichier sur S3
@@ -508,6 +556,7 @@ function WorkspaceDetails() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
   };
 
   if (loading) {
@@ -580,14 +629,14 @@ function WorkspaceDetails() {
                   <FaChevronRight className="toggle-icon" />
                 )}
                 <h3>Canaux</h3>
-                <button
-                  className="add-channel-btn"
-                  onClick={handleCreateChannel}
-                >
-                  {" "}
-                  {/* Use handler from hook */}
-                  <FaPlus />
-                </button>
+
+                {/* Afficher le bouton d'ajout de canal seulement si owner ou admin */}
+                {(currentUserRole === 'owner' || currentUserRole === 'admin') && (
+                  <button className="add-channel-btn" onClick={handleCreateChannel}> {/* Use handler from hook */}
+                    <FaPlus />
+                  </button>
+                )}
+
               </div>
 
               {showChannels && (
@@ -608,9 +657,9 @@ function WorkspaceDetails() {
                             : ""
                         }`}
                         onClick={() => handleSelectChannel(channel)} // Use handler from hook
-                        onContextMenu={(e) =>
-                          handleChannelContextMenu(e, channel)
-                        } // Use handler from hook
+
+                        onContextMenu={(e) => (currentUserRole === 'owner' || currentUserRole === 'admin') && handleChannelContextMenu(e, channel)} // Restrict context menu
+
                       >
                         {channel.isPrivate ? (
                           <FaLock className="channel-icon" />
@@ -649,12 +698,6 @@ function WorkspaceDetails() {
                     <FaHashtag className="chat-header-icon" />
                   )}
                   <h2>{activeChannel.name}</h2>
-                </div>
-                <div className="chat-header-actions">
-                  <button className="header-action-btn">
-                    <FaUserCircle />
-                    <span>Membres</span>
-                  </button>
                 </div>
               </div>
 
@@ -982,47 +1025,46 @@ function WorkspaceDetails() {
                                 })()}
                               </div>
                             );
-                          }
-                        })()}
 
-                        {/* Afficher les réactions avec meilleur style */}
-                        {message.reactions && message.reactions.length > 0 && (
+                          })()}
+                        </div>
+                        {/* *** End Markdown rendering *** */}
+                        
+                        {/* Afficher les réactions avec l'emoji Unicode directement */}
+         {message.reactions && message.reactions.length > 0 && (
                           <div className="message-reactions">
                             {message.reactions.map((reaction, index) => (
                               <div
                                 key={index}
+
                                 className={`reaction-badge ${
                                   reaction.user_reacted ? "user-reacted" : ""
                                 }`} // Add class if user reacted
+
                                 onClick={() => {
-                                  // Toggle reaction using socket from hook
                                   if (socket && socket.connected) {
                                     if (reaction.user_reacted) {
                                       socket.emit("removeReaction", {
                                         messageId: message.id_message,
+
                                         reaction_type: reaction.reaction_type,
                                         canalId: activeChannel.id,
+
                                       });
                                     } else {
                                       socket.emit("addReaction", {
                                         messageId: message.id_message,
-                                        reaction_type: reaction.reaction_type,
-                                        canalId: activeChannel.id,
+
+                                        reaction_type: reaction.reaction_type, // emoji unicode
+                                        canalId: activeChannel.id
                                       });
                                     }
                                   }
                                 }}
                               >
-                                <span className="reaction-emoji">
-                                  {reaction.emoji ||
-                                    getEmojiForType(
-                                      reaction.reaction_type
-                                    )}{" "}
-                                  {/* Use helper from hook */}
-                                </span>
-                                <span className="reaction-count">
-                                  {reaction.count}
-                                </span>
+                                <span className="reaction-emoji">{getEmojiForType(reaction.reaction_type)}</span>
+                                <span className="reaction-count">{reaction.count}</span>
+
                               </div>
                             ))}
                           </div>
@@ -1247,8 +1289,11 @@ function WorkspaceDetails() {
                         <li
                           key={member.id}
                           className="member-item online"
-                          onClick={() => handleOpenProfile(member)}
-                          style={{ cursor: "pointer" }}
+
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
+
                         >
                           {member.avatar ? (
                             <img
@@ -1290,8 +1335,11 @@ function WorkspaceDetails() {
                         <li
                           key={member.id}
                           className="member-item offline"
-                          onClick={() => handleOpenProfile(member)}
-                          style={{ cursor: "pointer" }}
+
+                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
+                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
+
                         >
                           {member.avatar ? (
                             <img
@@ -1315,7 +1363,29 @@ function WorkspaceDetails() {
               </div>
             )}
           </div>
-
+          {/* Menu contextuel pour la gestion des rôles des membres */}
+          {memberContextMenu.visible && memberContextMenu.member && (
+            <div
+              className="channel-context-menu"
+              style={{ top: memberContextMenu.y, left: memberContextMenu.x, zIndex: 2000 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Owner : peut promouvoir/déclasser. Admin : peut seulement promouvoir un membre */}
+              {((currentUserRole === 'owner' && memberContextMenu.member.role === 'member') ||
+                (currentUserRole === 'admin' && memberContextMenu.member.role === 'member')) && (
+                <div className="context-menu-item" onClick={() => handleChangeMemberRole('admin')}>
+                  <FaArrowUp className="context-menu-icon" />
+                  Promouvoir en admin
+                </div>
+              )}
+              {currentUserRole === 'owner' && memberContextMenu.member.role === 'admin' && (
+                <div className="context-menu-item" onClick={() => handleChangeMemberRole('member')}>
+                  <FaArrowDown className="context-menu-icon" />
+                  Rétrograder en membre
+                </div>
+              )}
+            </div>
+          )}
           {/* Files Section - NO CHANGE */}
           <div className="details-section">
             <div className="section-header" onClick={toggleFiles}>

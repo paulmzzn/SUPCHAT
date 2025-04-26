@@ -6,7 +6,7 @@ import canalRoutes from "./routes/canalRoutes.js";
 import passport from "passport";
 import session from "express-session";
 import cors from "cors"; // Import CORS
-import { googleStrategy } from "./config/passport.js"; // Import Google strategy
+import { googleStrategy, githubStrategy } from "./config/passport.js"; // Import Google and GitHub strategies
 import { createServer } from "http";
 import { Server } from "socket.io";
 import MessageModel from "./models/Message.js";
@@ -28,6 +28,7 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
 
 // Obtenir l'équivalent de __dirname pour ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -51,34 +52,18 @@ const createUploadDirs = () => {
 createUploadDirs();
 
 // Configuration de CORS avec plus de précision
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.0:3001",
-  "http://192.168.1.29:3000",
-  "http://192.168.1.29:3001",
-];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Autorise les requêtes sans origin ou si l'origine est dans la liste
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`CORS bloqué pour l'origine: ${origin}`);
-        callback(null, false);
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-  })
-);
+
+app.use(cors({
+  origin: true, // Autorise toutes les origines
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
 
 // Middleware pour augmenter la limite de taille des requêtes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -94,6 +79,7 @@ app.use(passport.session());
 app.use(express.static("public"));
 
 passport.use(googleStrategy);
+passport.use(githubStrategy);
 
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
@@ -128,7 +114,7 @@ app.get("/api/ping", (req, res) => {
 // Configuration plus détaillée de Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: true, // Autorise toutes les origines
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
@@ -152,10 +138,11 @@ try {
   console.error("Error initializing Socket.IO manager:", error);
 }
 
-// Démarrer l'écoute du serveur avec l'interface et le port corrects
+
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`Serveur démarré sur http://192.168.1.29:${PORT}`);
   console.log(`WebSocket URL: ws://192.168.1.29:${PORT}`);
+
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
