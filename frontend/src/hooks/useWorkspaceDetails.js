@@ -159,6 +159,9 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserName, setCurrentUserName] = useState("");
 
+  // Ajout : calcul du rôle courant dans le workspace
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
   // Message Context Menu state
   const [messageContextMenu, setMessageContextMenu] = useState({
     visible: false,
@@ -356,6 +359,28 @@ export const useWorkspaceDetails = (workspaceId) => {
     fetchCurrentUser();
   }, []);
 
+  // Ajout : calculer le rôle de l'utilisateur dans le workspace
+  useEffect(() => {
+    async function fetchRole() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token || !workspace) return;
+        const userId = currentUserId;
+        if (!userId) return;
+        const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const members = await res.json();
+        const me = members.find(m => m.id_utilisateur === userId);
+        setCurrentUserRole(me?.role?.toLowerCase() || null);
+      } catch (e) {
+        setCurrentUserRole(null);
+      }
+    }
+    fetchRole();
+  }, [workspace, currentUserId]);
+
   // Filter channels effect
   useEffect(() => {
     if (!searchQuery) {
@@ -444,9 +469,9 @@ export const useWorkspaceDetails = (workspaceId) => {
             const formattedReactions = reactions.map((r) => {
               if (!r.emoji) {
                 r.emoji = getEmojiForType(r.reaction_type);
-                console.warn(
-                  `Emoji manquant pour ${(r.reaction_type, ajouté)}: ${r.emoji}`
-                );
+
+                console.warn(`Emoji manquant pour ${r.reaction_type}: ${r.emoji}`);
+
               }
               if (
                 typeof r.emoji === "string" &&
@@ -528,6 +553,27 @@ export const useWorkspaceDetails = (workspaceId) => {
       setIsMistralTyping(false); // Reset typing state when changing channels
     };
   }, [socket, activeChannel, chatContainerRef]);
+
+  useEffect(() => {
+    if (!socket || !workspaceId) return;
+    // Écoute le changement de rôle en temps réel
+    const handleRoleChange = (data) => {
+      if (data.workspaceId === workspaceId) {
+        fetchWorkspaceMembers();
+      }
+    };
+    socket.on('memberRoleChanged', handleRoleChange);
+    return () => {
+      socket.off('memberRoleChanged', handleRoleChange);
+    };
+  }, [socket, workspaceId, fetchWorkspaceMembers]);
+
+  useEffect(() => {
+    if (socket && workspaceId) {
+      socket.emit('joinWorkspace', { workspaceId });
+      console.log('[WS DEBUG] Demande de joinWorkspace envoyée pour', workspaceId);
+    }
+  }, [socket, workspaceId]);
 
   // Scroll to bottom effect
   useEffect(() => {
@@ -954,6 +1000,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     try {
       if (!messageContextMenu.messageId || !socket || !socket.connected) return;
 
+
       // Verify the message belongs to the current user
       const message = messages.find(
         (m) => m.id_message === messageContextMenu.messageId
@@ -964,6 +1011,7 @@ export const useWorkspaceDetails = (workspaceId) => {
         );
         return;
       }
+
 
       const token = localStorage.getItem("token");
       if (!token) {
@@ -1019,6 +1067,7 @@ export const useWorkspaceDetails = (workspaceId) => {
       alert("Erreur lors de la suppression: " + error.message);
 
       // Refresh the channel to ensure UI is in sync with the server
+
       if (activeChannel) {
         handleSelectChannel(activeChannel);
       }
@@ -1234,6 +1283,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleMentionNavigation,
     handleSelectActiveItem,
     handleMistralMention, // Exposer cette fonction
+    currentUserRole, // Expose le rôle courant
     setReplyingTo, // Ensure setReplyingTo is returned
   };
 };

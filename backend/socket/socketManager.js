@@ -73,6 +73,14 @@ const socketManager = (io) => {
       socket.currentRoom = `${canalId}`;
       socket.join(`${canalId}`);
 
+      
+      // --- AJOUT : rejoindre aussi la room du workspace pour les events globaux ---
+      if (workspaceId) {
+        socket.join(`${workspaceId}`);
+        console.log(`Socket ${socket.id} rejoint la room workspace ${workspaceId}`);
+      }
+      
+
       // Informer le client que le canal a été rejoint
       socket.emit("canalJoined", { canalId, status: "success" });
     });
@@ -85,6 +93,15 @@ const socketManager = (io) => {
         );
         socket.join(`dm:${socket.user.id}`);
         socket.emit("privateRoomJoined", { status: "success" });
+      }
+    });
+
+    // Nouveau handler pour rejoindre explicitement la room du workspace
+    socket.on('joinWorkspace', (data) => {
+      const { workspaceId } = data;
+      if (workspaceId) {
+        socket.join(`${workspaceId}`);
+        console.log(`[WS DEBUG] Socket ${socket.id} rejoint explicitement la room workspace ${workspaceId}`);
       }
     });
 
@@ -214,9 +231,11 @@ const socketManager = (io) => {
           socket.emit("error", { message: "Suppression refusée" });
           return;
         }
+
         io.to(`dm:${deleted.fk_expediteur}`)
           .to(`dm:${deleted.fk_destinataire}`)
           .emit("privateMessageDeleted", { id });
+
       } catch (error) {
         socket.emit("error", {
           message: "Erreur lors de la suppression du message privé",
@@ -454,6 +473,33 @@ const socketManager = (io) => {
         });
       }
     });
+
+    
+    // Suppression d'un message de canal (WebSocket)
+    socket.on('deleteMessage', async ({ messageId }) => {
+      try {
+        if (!messageId) {
+          socket.emit('error', { message: 'ID du message manquant' });
+          return;
+        }
+        const userId = socket.user.id;
+        const message = await MessageModel.getById(messageId);
+        if (!message) {
+          socket.emit('error', { message: 'Message non trouvé' });
+          return;
+        }
+        if (message.fk_utilisateur !== userId) {
+          socket.emit('error', { message: 'Vous ne pouvez supprimer que vos propres messages' });
+          return;
+        }
+        await MessageModel.delete(messageId);
+        io.to(`${message.fk_canal}`).emit('deleteMessage', { messageId });
+      } catch (error) {
+        console.error('Erreur lors de la suppression du message via WebSocket:', error);
+        socket.emit('error', { message: 'Erreur lors de la suppression du message' });
+      }
+    });
+    
 
     // Nouvel événement pour gérer directement les requêtes adressées à Mistral
     socket.on("mistralRequest", async (data) => {
