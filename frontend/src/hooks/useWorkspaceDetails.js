@@ -416,7 +416,7 @@ export const useWorkspaceDetails = (workspaceId) => {
             const formattedReactions = reactions.map(r => {
               if (!r.emoji) {
                 r.emoji = getEmojiForType(r.reaction_type);
-                console.warn(`Emoji manquant pour ${r.reaction_type, ajouté}: ${r.emoji}`);
+                console.warn(`Emoji manquant pour ${r.reaction_type}: ${r.emoji}`);
               }
               if (typeof r.emoji === 'string' && r.emoji.startsWith('{') && r.emoji.endsWith('}')) {
                 try {
