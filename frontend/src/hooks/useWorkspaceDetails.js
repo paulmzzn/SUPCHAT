@@ -845,64 +845,22 @@ export const useWorkspaceDetails = (workspaceId) => {
   const handleDeleteMessage = async () => {
     try {
       if (!messageContextMenu.messageId || !socket || !socket.connected) return;
-      
-      // Verify the message belongs to the current user
+      // Vérifier que le message appartient à l'utilisateur courant
       const message = messages.find(m => m.id_message === messageContextMenu.messageId);
       if (!message || message.fk_utilisateur !== currentUserId) {
         console.error("Vous ne pouvez pas supprimer les messages d'autres utilisateurs");
         return;
       }
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error("Token d'authentification manquant");
-        return;
-      }
-      
-      // Store message ID before closing context menu
-      const messageIdToDelete = messageContextMenu.messageId;
-      const channelId = activeChannel.id;
-      
-      // Close context menu first for better UX
+      // Fermer le menu contextuel pour l'UX
       handleCloseMessageContextMenu();
-      
-      // Update UI immediately (optimistic update)
-      setMessages(prevMessages => 
-        prevMessages.filter(m => m.id_message !== messageIdToDelete)
-      );
-      
-      // Delete on server via REST API first
-      console.log(`Suppression du message ${messageIdToDelete} via API REST`);
-      const response = await fetch(`${API_URL}/api/messages/${messageIdToDelete}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error deleting message: ${response.status}`);
-      }
-      
-      // If API call succeeds, broadcast deletion via socket
-      console.log(`Message ${messageIdToDelete} supprimé avec succès`);
-      
-      // Use consistent event name - ONLY use deleteMessage (not messageDeleted)
-      console.log(`Émission de l'événement deleteMessage pour le message ${messageIdToDelete}`);
-      socket.emit('deleteMessage', {
-        messageId: messageIdToDelete,
-        canalId: channelId,
-        workspaceId: workspaceId // Add workspace ID to help with routing
-      });
-      
+      // Suppression optimiste côté UI
+      setMessages(prevMessages => prevMessages.filter(m => m.id_message !== messageContextMenu.messageId));
+      // Suppression via WebSocket uniquement (plus d'appel REST)
+      socket.emit('deleteMessage', { messageId: messageContextMenu.messageId });
     } catch (error) {
       console.error('Erreur lors de la suppression du message:', error);
-      
-      // If error occurs, notify user
       alert("Erreur lors de la suppression: " + error.message);
-      
-      // Refresh the channel to ensure UI is in sync with the server
+      // Optionnel: rafraîchir le canal si besoin
       if (activeChannel) {
         handleSelectChannel(activeChannel);
       }

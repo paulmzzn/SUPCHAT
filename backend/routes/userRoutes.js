@@ -128,6 +128,16 @@ router.put('/profile', verifyToken, upload.single('avatar'), updateUserProfile);
 // Route pour récupérer un utilisateur par ID
 router.get('/:id', getUserById);
 
+// Route pour récupérer l'utilisateur courant (via token)
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const user = await getUserById({ params: { id: req.user.id } }, res);
+    // getUserById gère déjà la réponse
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de l\'utilisateur', error: error.message });
+  }
+});
+
 // Route pour récupérer les workspaces d'un utilisateur spécifique
 router.get('/:id/workspaces', async (req, res) => {
   try {

@@ -22,26 +22,9 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// Configuration de CORS avec plus de précision
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.0:3001",
-  "http://192.168.1.63:3000",
-  "http://192.168.1.63:3001"
-];
-
+// Autoriser toutes les origines (CORS ouvert)
 app.use(cors({
-  origin: (origin, callback) => {
-    // Autorise les requêtes sans origin ou si l'origine est dans la liste
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS bloqué pour l'origine: ${origin}`);
-      callback(null, false);
-    }
-  },
+  origin: true, // Autorise toutes les origines
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true
 }));
@@ -78,7 +61,7 @@ app.get('/api/ping', (req, res) => {
 // Configuration plus détaillée de Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: true, // Autorise toutes les origines
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   },
