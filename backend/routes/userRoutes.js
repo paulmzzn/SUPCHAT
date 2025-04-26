@@ -41,6 +41,7 @@ dotenv.config();
 const router = express.Router();
 // Utiliser une variable d'environnement ou une valeur par défaut
 const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
+const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
 
 router.post('/register', registerUser);
 router.get('/', getAllUsers);
@@ -57,18 +58,17 @@ router.post('/reset-password', resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://REDACTED:3001/login' }), 
+  passport.authenticate('google', { failureRedirect: `http://${SUPCHAT_HOST}:3001/login` }), 
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
       SECRET_KEY,
-      { expiresIn: '7d' } // Augmenté à 7 jours
+      { expiresIn: '7d' }
     );
 
-    // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
-      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://${SUPCHAT_HOST}:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );

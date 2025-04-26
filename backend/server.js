@@ -89,6 +89,7 @@ const io = new Server(httpServer, {
 
 // Définir le port à utiliser
 const PORT = process.env.PORT || 3000;
+const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
 
 // Assurez-vous que cette ligne est AVANT l'initialisation de socketManager
 app.set('io', io);
@@ -103,8 +104,8 @@ try {
 
 // Démarrer l'écoute du serveur avec l'interface et le port corrects
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Serveur démarré sur http://REDACTED:${PORT}`);
-  console.log(`WebSocket URL: ws://REDACTED:${PORT}`);
+  console.log(`Serveur démarré sur http://${SUPCHAT_HOST}:${PORT}`);
+  console.log(`WebSocket URL: ws://${SUPCHAT_HOST}:${PORT}`);
   
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool.query("SELECT NOW()") // Test simple pour vérifier la connexion

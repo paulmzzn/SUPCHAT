@@ -13,13 +13,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
+
 const sendInvitation = async (
   toEmail,
   workspaceId,
   workspaceName,
   senderName = "Un membre de SUPCHAT"
 ) => {
-  const inviteLink = `http://REDACTED:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
+  const inviteLink = `http://${SUPCHAT_HOST}:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
     toEmail
   )}`;
   const currentYear = new Date().getFullYear();

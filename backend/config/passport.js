@@ -5,11 +5,14 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import UserModel from '../models/User.js';
+import dotenv from 'dotenv';
+dotenv.config();
+const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
 
 export const googleStrategy = new GoogleStrategy({
   clientID: 'REDACTED',
   clientSecret: 'REDACTED',
-  callbackURL: 'http://REDACTED:3000/api/users/auth/google/callback'
+  callbackURL: `http://${SUPCHAT_HOST}:3000/api/users/auth/google/callback`
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     console.log('Google profile:', profile); // Pour le débogage

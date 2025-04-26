@@ -12,6 +12,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=8888
+      - SUPCHAT_HOST=REDACTED
 
   frontend:
     build:
@@ -27,6 +28,7 @@ services:
       - backend
     environment:
       - REACT_APP_API_URL=http://REDACTED:8888
+      - REACT_APP_SUPCHAT_HOST=REDACTED
       - WDS_SOCKET_PORT=0
 #   portainer:
 #     image: portainer/portainer-ce
