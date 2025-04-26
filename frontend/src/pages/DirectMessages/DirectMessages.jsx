@@ -9,7 +9,9 @@ import {
   FaPlus,
   FaTimes,
   FaReply,
-  FaRegSmile
+  FaRegSmile,
+  FaTrashAlt, // Ajout icône corbeille
+  FaEdit // Ajout icône stylo
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
@@ -1313,7 +1315,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
         
         {/* Menu contextuel pour les messages */}
         {messageContextMenu.visible && (
-          <div 
+          <div
             className="dm-context-menu"
             style={{
               top: messageContextMenu.yPos,
@@ -1326,13 +1328,13 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                   className="dm-context-menu-item" 
                   onClick={handleEditMessage}
                 >
-                  Modifier
+                  <FaEdit className="dm-context-menu-icon" /> Modifier
                 </div>
                 <div 
                   className="dm-context-menu-item" 
                   onClick={handleDeleteMessage}
                 >
-                  Supprimer
+                  <FaTrashAlt className="dm-context-menu-icon" /> Supprimer
                 </div>
                 <div 
                   className="dm-context-menu-item" 
