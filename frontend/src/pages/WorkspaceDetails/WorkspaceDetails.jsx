@@ -344,12 +344,6 @@ function WorkspaceDetails() {
                   {activeChannel.isPrivate ? <FaLock className="chat-header-icon" /> : <FaHashtag className="chat-header-icon" />}
                   <h2>{activeChannel.name}</h2>
                 </div>
-                <div className="chat-header-actions">
-                  <button className="header-action-btn">
-                    <FaUserCircle />
-                    <span>Membres</span>
-                  </button>
-                </div>
               </div>
               
               <div className="chat-messages" ref={chatContainerRef}> {/* Use ref from hook */}

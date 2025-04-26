@@ -1070,22 +1070,9 @@
   gap: 12px;
 }
 
-.header-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.header-action-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+
+
 
 .chat-messages {
   flex: 1;
