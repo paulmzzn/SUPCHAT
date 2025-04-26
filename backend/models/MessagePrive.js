@@ -1,7 +1,12 @@
-import pool from '../config/dbConnection.js';
+import pool from "../config/dbConnection.js";
 
 class MessagePrive {
-  static async create({ contenu, fk_expediteur, fk_destinataire, pieces_jointes = [] }) {
+  static async create({
+    contenu,
+    fk_expediteur,
+    fk_destinataire,
+    pieces_jointes = [],
+  }) {
     const result = await pool.query(
       `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation)
        VALUES ($1, $2, $3, $4, NOW())
@@ -12,26 +17,80 @@ class MessagePrive {
   }
 
   static async getConversation(userA, userB, limit = 50, offset = 0) {
-    const result = await pool.query(
-      `SELECT mp.*, u.nom AS expediteur_nom, u2.nom AS destinataire_nom, u.photo_de_profil AS expediteur_avatar, u2.photo_de_profil AS destinataire_avatar
-       FROM message_prive mp
-       JOIN utilisateur u ON mp.fk_expediteur = u.id_utilisateur
-       JOIN utilisateur u2 ON mp.fk_destinataire = u2.id_utilisateur
-       WHERE ((fk_expediteur = $1 AND fk_destinataire = $2) OR (fk_expediteur = $2 AND fk_destinataire = $1))
-       AND is_deleted = false
-       ORDER BY date_creation ASC
-       LIMIT $3 OFFSET $4`,
-      [userA, userB, limit, offset]
-    );
-    return result.rows;
+    try {
+      const result = await pool.query(
+        `SELECT mp.* 
+         FROM message_prive mp
+         WHERE (mp.fk_expediteur = $1 AND mp.fk_destinataire = $2)
+            OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1)
+         ORDER BY mp.date_envoi ASC`,
+        [userA, userB]
+      );
+
+      // Pour chaque message, récupérer les pièces jointes
+      const messagesWithAttachments = await Promise.all(
+        result.rows.map(async (message) => {
+          const attachmentsResult = await pool.query(
+            `SELECT f.* 
+           FROM fichier f
+           JOIN message_prive_fichier mpf ON f.id_fichier = mpf.fk_fichier
+           WHERE mpf.fk_message_prive = $1`,
+            [message.id_message_prive]
+          );
+
+          if (attachmentsResult.rows.length > 0) {
+            message.attachments = attachmentsResult.rows;
+          } else {
+            message.attachments = [];
+          }
+
+          return message;
+        })
+      );
+
+      return messagesWithAttachments;
+    } catch (error) {
+      console.error(
+        `Erreur dans MessagePrive.getConversation: ${error.message}`
+      );
+      throw error;
+    }
   }
 
   static async getById(id_message_prive) {
-    const result = await pool.query(
-      `SELECT * FROM message_prive WHERE id_message_prive = $1`,
-      [id_message_prive]
-    );
-    return result.rows[0];
+    try {
+      // Requête pour récupérer le message
+      const messageResult = await pool.query(
+        `SELECT * FROM message_prive WHERE id_message_prive = $1`,
+        [id_message_prive]
+      );
+
+      if (messageResult.rows.length === 0) {
+        return null;
+      }
+
+      const message = messageResult.rows[0];
+
+      // Récupérer les pièces jointes associées
+      const attachmentsResult = await pool.query(
+        `SELECT f.* 
+         FROM fichier f
+         JOIN message_prive_fichier mpf ON f.id_fichier = mpf.fk_fichier
+         WHERE mpf.fk_message_prive = $1`,
+        [id_message_prive]
+      );
+
+      if (attachmentsResult.rows.length > 0) {
+        message.attachments = attachmentsResult.rows;
+      } else {
+        message.attachments = [];
+      }
+
+      return message;
+    } catch (error) {
+      console.error(`Erreur dans MessagePrive.getById: ${error.message}`);
+      throw error;
+    }
   }
 
   static async updateMessage(id_message_prive, userId, contenu) {
@@ -80,7 +139,7 @@ class MessagePrive {
        WHERE (fk_expediteur = $1 OR fk_destinataire = $1) AND is_deleted = false`,
       [userId]
     );
-    return result.rows.map(row => row.other_user_id);
+    return result.rows.map((row) => row.other_user_id);
   }
 
   // Ajouter une méthode pour la déduplication des messages
@@ -95,8 +154,128 @@ class MessagePrive {
       );
       return result.rows;
     } catch (error) {
-      console.error('Error checking for similar messages:', error);
+      console.error("Error checking for similar messages:", error);
       return []; // Return empty array instead of failing
+    }
+  }
+
+  /**
+   * Ajouter une pièce jointe à un message privé existant
+   * @param {Number} messageId - ID du message privé
+   * @param {Object} attachmentInfo - Informations de la pièce jointe (url, type, etc.)
+   * @returns {Object} - Message mis à jour
+   */
+  static async addAttachment(messageId, attachmentInfo) {
+    try {
+      // Récupérer d'abord le message et ses pièces jointes actuelles
+      const currentMessage = await pool.query(
+        `SELECT pieces_jointes FROM message_prive WHERE id_message_prive = $1`,
+        [messageId]
+      );
+
+      if (currentMessage.rows.length === 0) {
+        throw new Error("Message privé non trouvé");
+      }
+
+      // Récupérer les pièces jointes actuelles ou initialiser un tableau vide
+      let currentAttachments = [];
+      try {
+        if (currentMessage.rows[0].pieces_jointes) {
+          currentAttachments = JSON.parse(
+            currentMessage.rows[0].pieces_jointes
+          );
+          // S'assurer que c'est un tableau
+          if (!Array.isArray(currentAttachments)) {
+            currentAttachments = [];
+          }
+        }
+      } catch (parseError) {
+        console.warn(
+          "Erreur lors du parsing des pièces jointes existantes:",
+          parseError
+        );
+        currentAttachments = [];
+      }
+
+      // Ajouter la nouvelle pièce jointe
+      currentAttachments.push(attachmentInfo);
+
+      // Mettre à jour le message
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET pieces_jointes = $1, date_modification = NOW()
+         WHERE id_message_prive = $2
+         RETURNING *`,
+        [JSON.stringify(currentAttachments), messageId]
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      console.error("Erreur dans MessagePrive.addAttachment:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supprimer une pièce jointe d'un message privé
+   * @param {Number} messageId - ID du message privé
+   * @param {String} attachmentUrl - URL de la pièce jointe à supprimer
+   * @returns {Object} - Message mis à jour
+   */
+  static async removeAttachment(messageId, attachmentUrl) {
+    try {
+      // Récupérer d'abord le message et ses pièces jointes actuelles
+      const currentMessage = await pool.query(
+        `SELECT pieces_jointes FROM message_prive WHERE id_message_prive = $1`,
+        [messageId]
+      );
+
+      if (currentMessage.rows.length === 0) {
+        throw new Error("Message privé non trouvé");
+      }
+
+      // Récupérer les pièces jointes actuelles
+      let currentAttachments = [];
+      try {
+        if (currentMessage.rows[0].pieces_jointes) {
+          currentAttachments = JSON.parse(
+            currentMessage.rows[0].pieces_jointes
+          );
+          if (!Array.isArray(currentAttachments)) {
+            return null; // Rien à supprimer
+          }
+        }
+      } catch (parseError) {
+        console.warn(
+          "Erreur lors du parsing des pièces jointes existantes:",
+          parseError
+        );
+        return null;
+      }
+
+      // Filtrer pour enlever la pièce jointe correspondant à l'URL
+      const updatedAttachments = currentAttachments.filter(
+        (attachment) => attachment.url !== attachmentUrl
+      );
+
+      // Si rien n'a changé, on peut retourner null
+      if (updatedAttachments.length === currentAttachments.length) {
+        return null;
+      }
+
+      // Mettre à jour le message
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET pieces_jointes = $1, date_modification = NOW()
+         WHERE id_message_prive = $2
+         RETURNING *`,
+        [JSON.stringify(updatedAttachments), messageId]
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      console.error("Erreur dans MessagePrive.removeAttachment:", error);
+      throw error;
     }
   }
 }
