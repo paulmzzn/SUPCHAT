@@ -17,7 +17,7 @@ services:
   postgres:
     container_name: container-pg
     image: postgres
-    hostname: 192.168.1.134
+    hostname: 192.168.223.1.1.134
     ports:
       - "5432:5432"
     environment:
@@ -56,7 +56,7 @@ cd /chemin/vers/votre/docker-compose.yml
 docker-compose up -d
 ```
 📊 Accéder à pgAdmin
-	1.	Ouvrez votre navigateur et accédez à : http://192.168.1.134:5050
+	1.	Ouvrez votre navigateur et accédez à : http://192.168.223.1.1.134:5050
 
 	2.	Connectez-vous avec les identifiants définis dans le docker-compose.yml :
 	•	Email : admin@admin.com

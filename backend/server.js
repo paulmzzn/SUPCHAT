@@ -28,8 +28,8 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://127.0.0.1:3000",
   "http://127.0.0.0:3001",
-  "http://192.168.1.52:3000",
-  "http://192.168.1.52:3001"
+  "http://192.168.223.1.1.52:3000",
+  "http://192.168.223.1.1.52:3001"
 ];
 
 app.use(cors({
@@ -103,8 +103,8 @@ try {
 
 // Démarrer l'écoute du serveur avec l'interface et le port corrects
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Serveur démarré sur http://REDACTED:${PORT}`);
-  console.log(`WebSocket URL: ws://REDACTED:${PORT}`);
+  console.log(`Serveur démarré sur http://192.168.223.1.1.141:${PORT}`);
+  console.log(`WebSocket URL: ws://192.168.223.1.1.141:${PORT}`);
   
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool.query("SELECT NOW()") // Test simple pour vérifier la connexion
