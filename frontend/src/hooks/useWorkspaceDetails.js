@@ -436,9 +436,22 @@ export const useWorkspaceDetails = (workspaceId) => {
         message.date_creation = message.created_at;
       }
 
-      // Filtrer les messages dupliqués
       setMessages((prev) => {
-        // Vérifier si ce message existe déjà
+        // Si un message temporaire existe (même contenu, même parent_id, même auteur, et marqué isTemp), on le remplace
+        const tempIndex = prev.findIndex(
+          (m) =>
+            m.isTemp &&
+            m.fk_utilisateur === message.fk_utilisateur &&
+            m.contenu === message.contenu &&
+            (m.parent_id || null) === (message.parent_id || null)
+        );
+        if (tempIndex !== -1) {
+          // Remplacer le message temporaire par le message réel
+          const newArr = [...prev];
+          newArr[tempIndex] = message;
+          return newArr;
+        }
+        // Sinon, vérifier si ce message existe déjà (par id_message)
         const exists = prev.some((m) => m.id_message === message.id_message);
         if (!exists) {
           return [...prev, message];
@@ -575,6 +588,14 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   }, [socket, workspaceId]);
 
+  // Socket: join canal à chaque changement de canal actif
+  useEffect(() => {
+    if (!socket || !activeChannel || !workspaceId) return;
+    // Rejoindre la room du canal à chaque sélection
+    socket.emit('joinCanal', { canalId: activeChannel.id, workspaceId });
+    console.log('[WS DEBUG] joinCanal envoyé', { canalId: activeChannel.id, workspaceId });
+  }, [socket, activeChannel, workspaceId]);
+
   // Scroll to bottom effect
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -582,6 +603,15 @@ export const useWorkspaceDetails = (workspaceId) => {
         chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Scroll to bottom when channel changes (chargement des messages)
+  useEffect(() => {
+    if (chatContainerRef.current && activeChannel && !loadingMessages) {
+      setTimeout(() => {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }, 100);
+    }
+  }, [activeChannel, loadingMessages, messages.length]);
 
   // Get current user ID effect
   useEffect(() => {
@@ -877,38 +907,6 @@ export const useWorkspaceDetails = (workspaceId) => {
       `Envoi du message: "${displayMessage}" dans le canal ${activeChannel.id}`
     );
 
-    // Créer un ID temporaire pour le message
-    const tempId = `temp-${Date.now()}`;
-
-    // Ajouter un message temporaire pour feedback immédiat
-    const tempMessage = {
-      id_message: tempId,
-      contenu: displayMessage,
-      nom: currentUserName || "Vous",
-      fk_utilisateur: currentUserId,
-      date_creation: new Date().toISOString(),
-      isTemp: true, // Marquer comme temporaire
-      reactions: [],
-      parent_id: replyingTo ? replyingTo.id_message : null,
-    };
-
-    // Si c'est une réponse, ajouter les infos du message parent
-    if (replyingTo) {
-      tempMessage.parent_message = {
-        id_message: replyingTo.id_message,
-        contenu: replyingTo.contenu,
-        nom: replyingTo.nom,
-      };
-    }
-
-    setMessages((prev) => [...prev, tempMessage]);
-
-    // Scroll vers le bas
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
-    }
-
     // Envoyer via socket.io
     socket.emit("message", {
       canal_id: activeChannel.id,
@@ -919,6 +917,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
     // Réinitialiser le message et la réponse
     setNewMessage("");
+    setDisplayMessage("");
     setReplyingTo(null);
   };
 

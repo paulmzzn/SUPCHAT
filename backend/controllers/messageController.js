@@ -163,7 +163,7 @@ export const updateMessage = async (req, res) => {
 // Supprimer un message et ses pièces jointes
 export const deleteMessage = async (req, res) => {
   try {
-    const { messageId } = req.params;
+    const messageId = req.params.id; // Correction ici
     const userId = req.user.id;
 
     // Vérifier que le message existe et appartient à l'utilisateur

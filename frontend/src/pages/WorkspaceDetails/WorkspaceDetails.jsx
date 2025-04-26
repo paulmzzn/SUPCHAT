@@ -28,6 +28,8 @@ import {
   FaRegSmile,
   FaRobot,
   FaAt,
+  FaArrowUp,
+  FaArrowDown,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
