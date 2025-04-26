@@ -421,11 +421,11 @@ function DirectMessages() {
       
       const data = await res.json();
       console.log("Conversations reçues:", data);
+      // data = [{ other_user_id, last_message_date }, ...]
       setConversations(data);
-      
       // Précharge les infos utilisateurs
-      for (const userId of data) {
-        fetchUserInfo(userId);
+      for (const conv of data) {
+        fetchUserInfo(conv.other_user_id);
       }
     } catch (e) {
       setError(`Erreur réseau: ${e.message}`);
@@ -701,13 +701,16 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   }
 };
 
-  // Filtre les conversations basées sur la recherche
+  // Filtre les conversations basées sur la recherche et trie par date
   const filteredConversations = searchQuery.trim()
-    ? conversations.filter(userId => {
-        const user = usersInfo[userId] || {};
+    ? conversations.filter(conv => {
+        const user = usersInfo[conv.other_user_id] || {};
         return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
     : conversations;
+
+  // Trie par date décroissante (plus récent en haut)
+  filteredConversations.sort((a, b) => new Date(b.last_message_date) - new Date(a.last_message_date));
 
   // Récupérer la liste de tous les utilisateurs disponibles
   const fetchAvailableUsers = async () => {
@@ -987,7 +990,8 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 {searchQuery ? "Aucun résultat" : "Aucune conversation"}
               </li>
             ) : (
-              filteredConversations.map((userId) => {
+              filteredConversations.map((conv) => {
+                const userId = conv.other_user_id;
                 const user = usersInfo[userId] || {};
                 return (
                   <li
@@ -1009,6 +1013,9 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                       </div>
                     )}
                     <span className="dm-username">{user.name || "Utilisateur"}</span>
+                    {unreadMessageCounts[userId] > 0 && (
+                      <span className="dm-unread-badge">{unreadMessageCounts[userId]}</span>
+                    )}
                   </li>
                 );
               })

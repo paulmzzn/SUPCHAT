@@ -5,7 +5,8 @@ import {
   getPrivateConversation,
   updatePrivateMessage,
   deletePrivateMessage,
-  markPrivateMessageAsRead
+  markPrivateMessageAsRead,
+  getUnreadCounts // <-- ajout de l'import manquant
 } from '../controllers/privateMessageController.js';
 import MessagePrive from '../models/MessagePrive.js';
 
@@ -26,5 +27,7 @@ router.get('/:userId', verifyToken, getPrivateConversation);
 router.put('/message/:id', verifyToken, updatePrivateMessage);
 router.delete('/message/:id', verifyToken, deletePrivateMessage);
 router.post('/message/:id/read', verifyToken, markPrivateMessageAsRead);
+// Ajout de la route pour récupérer les messages non lus par conversation
+router.get('/unread-counts', verifyToken, getUnreadCounts);
 
 export default router;
