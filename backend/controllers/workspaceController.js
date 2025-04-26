@@ -356,13 +356,18 @@ export const changeMemberRole = async (req, res) => {
     const { newRole } = req.body; // 'admin' ou 'member'
     const requesterId = req.user.id;
 
-    // Vérifier que le demandeur est owner
-    const ownerCheck = await pool.query(
-      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1",
+    // Vérifier que le demandeur est owner OU admin (admin ne peut promouvoir que des membres)
+    const roleCheck = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, requesterId]
     );
-    if (ownerCheck.rows.length === 0) {
-      return res.status(403).json({ message: "Seul le propriétaire peut changer le rôle d'un membre" });
+    if (!roleCheck.rows.length) {
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    const requesterRole = roleCheck.rows[0].fk_role;
+    // Owner (1) : tout permis. Admin (2) : peut seulement promouvoir un membre en admin
+    if (requesterRole !== 1 && !(requesterRole === 2 && newRole === 'admin')) {
+      return res.status(403).json({ message: "Seul le propriétaire peut changer le rôle d'un membre, sauf promotion admin par un admin." });
     }
 
     // On ne peut pas changer le rôle du owner
