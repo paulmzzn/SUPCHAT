@@ -98,6 +98,9 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserName, setCurrentUserName] = useState('');
 
+  // Ajout : calcul du rôle courant dans le workspace
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
   // Message Context Menu state
   const [messageContextMenu, setMessageContextMenu] = useState({
     visible: false,
@@ -283,6 +286,28 @@ export const useWorkspaceDetails = (workspaceId) => {
     
     fetchCurrentUser();
   }, []);
+
+  // Ajout : calculer le rôle de l'utilisateur dans le workspace
+  useEffect(() => {
+    async function fetchRole() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token || !workspace) return;
+        const userId = currentUserId;
+        if (!userId) return;
+        const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const members = await res.json();
+        const me = members.find(m => m.id_utilisateur === userId);
+        setCurrentUserRole(me?.role?.toLowerCase() || null);
+      } catch (e) {
+        setCurrentUserRole(null);
+      }
+    }
+    fetchRole();
+  }, [workspace, currentUserId]);
 
   // Filter channels effect
   useEffect(() => {
@@ -489,6 +514,27 @@ export const useWorkspaceDetails = (workspaceId) => {
       setIsMistralTyping(false); // Reset typing state when changing channels
     };
   }, [socket, activeChannel, workspaceId]);
+
+  useEffect(() => {
+    if (!socket || !workspaceId) return;
+    // Écoute le changement de rôle en temps réel
+    const handleRoleChange = (data) => {
+      if (data.workspaceId === workspaceId) {
+        fetchWorkspaceMembers();
+      }
+    };
+    socket.on('memberRoleChanged', handleRoleChange);
+    return () => {
+      socket.off('memberRoleChanged', handleRoleChange);
+    };
+  }, [socket, workspaceId, fetchWorkspaceMembers]);
+
+  useEffect(() => {
+    if (socket && workspaceId) {
+      socket.emit('joinWorkspace', { workspaceId });
+      console.log('[WS DEBUG] Demande de joinWorkspace envoyée pour', workspaceId);
+    }
+  }, [socket, workspaceId]);
 
   // Scroll to bottom effect
   useEffect(() => {
@@ -994,6 +1040,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     // New handlers for mentions
     handleNewMessageChange, handleSelectMention, handleMentionNavigation, handleSelectActiveItem,
     handleMistralMention, // Exposer cette fonction
+    currentUserRole, // Expose le rôle courant
   };
 };
 

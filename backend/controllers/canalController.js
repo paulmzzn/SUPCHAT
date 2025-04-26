@@ -7,11 +7,21 @@ export const createCanal = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const { nom, is_private } = req.body;
+    const userId = req.user.id;
 
     // Vérifier si le workspace existe
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Vérifier le rôle de l'utilisateur (owner=1, admin=2)
+    const roleRes = await pool.query(
+      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+    if (!roleRes.rows.length || (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ message: "Seuls les owners ou admins peuvent créer un canal" });
     }
 
     const canal = await Canal.create({
@@ -82,6 +92,7 @@ export const updateCanal = async (req, res) => {
 export const deleteCanal = async (req, res) => {
   try {
     const { canalId, workspaceId } = req.params;
+    const userId = req.user.id;
 
     // Vérification que le canal existe et appartient au workspace
     const canal = await Canal.findById(canalId);
@@ -93,6 +104,15 @@ export const deleteCanal = async (req, res) => {
       return res
         .status(403)
         .json({ message: "Ce canal n'appartient pas au workspace spécifié" });
+    }
+
+    // Vérifier le rôle de l'utilisateur (owner=1, admin=2)
+    const roleRes = await pool.query(
+      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      [workspaceId, userId]
+    );
+    if (!roleRes.rows.length || (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ message: "Seuls les owners ou admins peuvent supprimer un canal" });
     }
 
     const result = await Canal.delete(canalId);

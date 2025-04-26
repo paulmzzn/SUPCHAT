@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot, FaAt } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight, FaUserCircle, FaFile, FaImage, FaFileAlt, FaFileWord, FaFilePdf, FaFileExcel, FaGlobe, FaCrown, FaUserShield, FaUser, FaEdit, FaTrashAlt, FaPaperPlane, FaSmile, FaPaperclip, FaReply, FaRegSmile, FaRobot, FaAt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import './WorkspaceDetails.css';
 import { useWorkspaceDetails } from '../../hooks/useWorkspaceDetails';
 import { useNavigate } from 'react-router-dom'; // Ajout import
+import { API_URL } from '../../config/config';
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -127,6 +128,7 @@ function WorkspaceDetails() {
     isUpdatingChannel, updateChannelError, activeChannel, messages, newMessage, 
     displayMessage, // <-- Ajouté
     loadingMessages, chatContainerRef, socket, currentUserId, currentUserName, // Assurez-vous que currentUserName est exposé par votre hook
+    currentUserRole, // Ajouté pour le rôle de l'utilisateur
     messageContextMenu, showEmojiPicker, replyingTo, commonEmojis,
     isMistralTyping, // Get the typing state
     // Mention state and handlers
@@ -188,6 +190,47 @@ function WorkspaceDetails() {
     }
   };
 
+  // Nouveau state pour le menu contextuel des membres
+  const [memberContextMenu, setMemberContextMenu] = useState({ visible: false, x: 0, y: 0, member: null });
+
+  // Handler pour ouvrir le menu contextuel sur un membre (clic droit)
+  const handleMemberContextMenu = (e, member) => {
+    e.preventDefault();
+    if (currentUserRole !== 'owner') return;
+    if (member.role === 'owner') return; // On ne peut pas agir sur le owner
+    setMemberContextMenu({ visible: true, x: e.pageX, y: e.pageY, member });
+  };
+
+  // Handler pour fermer le menu contextuel
+  const handleCloseMemberContextMenu = () => setMemberContextMenu({ ...memberContextMenu, visible: false });
+
+  // Handler pour promouvoir/déclasser
+  const handleChangeMemberRole = async (newRole) => {
+    if (!memberContextMenu.member) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members/${memberContextMenu.member.id}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newRole })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Erreur lors du changement de rôle');
+      } else {
+        // Rafraîchir la liste des membres
+        if (typeof fetchWorkspaceMembers === 'function') fetchWorkspaceMembers();
+      }
+    } catch (e) {
+      alert('Erreur lors du changement de rôle');
+    } finally {
+      handleCloseMemberContextMenu();
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-layout">
@@ -246,9 +289,12 @@ function WorkspaceDetails() {
               <div className="section-header" onClick={toggleChannelsVisibility}> {/* Use handler from hook */}
                 {showChannels ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
                 <h3>Canaux</h3>
-                <button className="add-channel-btn" onClick={handleCreateChannel}> {/* Use handler from hook */}
-                  <FaPlus />
-                </button>
+                {/* Afficher le bouton d'ajout de canal seulement si owner ou admin */}
+                {(currentUserRole === 'owner' || currentUserRole === 'admin') && (
+                  <button className="add-channel-btn" onClick={handleCreateChannel}> {/* Use handler from hook */}
+                    <FaPlus />
+                  </button>
+                )}
               </div>
               
               {showChannels && (
@@ -263,7 +309,7 @@ function WorkspaceDetails() {
                         key={channel.id} 
                         className={`channel-item ${activeChannel && activeChannel.id === channel.id ? 'active' : ''}`}
                         onClick={() => handleSelectChannel(channel)} // Use handler from hook
-                        onContextMenu={(e) => handleChannelContextMenu(e, channel)} // Use handler from hook
+                        onContextMenu={(e) => (currentUserRole === 'owner' || currentUserRole === 'admin') && handleChannelContextMenu(e, channel)} // Restrict context menu
                       >
                         {channel.isPrivate ? <FaLock className="channel-icon" /> : <FaHashtag className="channel-icon" />}
                         <span className="channel-name">{channel.name}</span>
@@ -648,7 +694,8 @@ function WorkspaceDetails() {
                           key={member.id}
                           className="member-item online"
                           onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
                         >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
@@ -680,7 +727,8 @@ function WorkspaceDetails() {
                           key={member.id}
                           className="member-item offline"
                           onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          style={{ cursor: 'pointer' }} // Optionnel : curseur pointer
+                          onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                          style={{ cursor: currentUserRole === 'owner' && member.role !== 'owner' ? 'context-menu' : 'pointer' }}
                         >
                           {member.avatar ? (
                             <img src={member.avatar} alt={member.name} className="member-avatar" />
@@ -700,7 +748,27 @@ function WorkspaceDetails() {
               </div>
             )}
           </div>
-
+          {/* Menu contextuel pour la gestion des rôles des membres */}
+          {memberContextMenu.visible && memberContextMenu.member && (
+            <div
+              className="channel-context-menu"
+              style={{ top: memberContextMenu.y, left: memberContextMenu.x, zIndex: 2000 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {memberContextMenu.member.role === 'member' && (
+                <div className="context-menu-item" onClick={() => handleChangeMemberRole('admin')}>
+                  <FaArrowUp className="context-menu-icon" />
+                  Promouvoir en admin
+                </div>
+              )}
+              {memberContextMenu.member.role === 'admin' && (
+                <div className="context-menu-item" onClick={() => handleChangeMemberRole('member')}>
+                  <FaArrowDown className="context-menu-icon" />
+                  Rétrograder en membre
+                </div>
+              )}
+            </div>
+          )}
           {/* Files Section - NO CHANGE */}
           <div className="details-section">
             <div className="section-header" onClick={toggleFiles}> {/* Use handler from hook */}

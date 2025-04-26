@@ -348,3 +348,60 @@ export const getUserWorkspaces = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Changer le rôle d'un membre (owner only)
+export const changeMemberRole = async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    const { newRole } = req.body; // 'admin' ou 'member'
+    const requesterId = req.user.id;
+
+    // Vérifier que le demandeur est owner
+    const ownerCheck = await pool.query(
+      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2 AND fk_role = 1",
+      [workspaceId, requesterId]
+    );
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ message: "Seul le propriétaire peut changer le rôle d'un membre" });
+    }
+
+    // On ne peut pas changer le rôle du owner
+    const memberCheck = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, userId]
+    );
+    if (memberCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Membre non trouvé dans ce workspace" });
+    }
+    if (memberCheck.rows[0].fk_role === 1) {
+      return res.status(403).json({ message: "Impossible de modifier le rôle du propriétaire" });
+    }
+
+    // Déterminer la valeur numérique du rôle
+    let roleValue = 3; // member par défaut
+    if (newRole === 'admin') roleValue = 2;
+    if (newRole === 'member') roleValue = 3;
+
+    await pool.query(
+      "UPDATE membre_workspace SET fk_role = $1 WHERE fk_workspace = $2 AND fk_utilisateur = $3",
+      [roleValue, workspaceId, userId]
+    );
+
+    // DEBUG LOGS: Afficher les sockets dans la room avant émission
+    if (req.app && req.app.get('io')) {
+      const sockets = await req.app.get('io').in(workspaceId).allSockets();
+      console.log('[WS DEBUG] Sockets in workspace room', workspaceId, ':', Array.from(sockets));
+      req.app.get('io').to(workspaceId).emit('memberRoleChanged', {
+        workspaceId,
+        userId,
+        newRole
+      });
+      console.log('[WS DEBUG] Event memberRoleChanged emitted to room', workspaceId, 'for user', userId, 'newRole:', newRole);
+    }
+
+    res.status(200).json({ message: `Rôle mis à jour en ${newRole}` });
+  } catch (error) {
+    console.error("Erreur lors du changement de rôle:", error);
+    res.status(500).json({ message: error.message });
+  }
+}
