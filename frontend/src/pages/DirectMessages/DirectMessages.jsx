@@ -51,6 +51,7 @@ const safeJSONStringify = (obj) => {
 };
 
 function DirectMessages() {
+  // Remplace conversations: array d'IDs -> array d'objets { userId, lastMessageDate }
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState(null);
@@ -424,8 +425,8 @@ function DirectMessages() {
       setConversations(data);
       
       // Précharge les infos utilisateurs
-      for (const userId of data) {
-        fetchUserInfo(userId);
+      for (const conv of data) {
+        fetchUserInfo(conv.userId);
       }
     } catch (e) {
       setError(`Erreur réseau: ${e.message}`);
@@ -440,50 +441,26 @@ function DirectMessages() {
     fetchConversations();
   }, []);
 
-  // Récupère les infos d'un utilisateur
+  // Récupère les infos d'un utilisateur (corrigé pour bien remplir usersInfo)
 const fetchUserInfo = async (userId) => {
   if (usersInfo[userId]) return usersInfo[userId];
-  
   try {
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_URL}/api/users/${userId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    
-    if (!res.ok) {
-      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
-      return null;
-    }
-    
+    if (!res.ok) return null;
     const data = await res.json();
-    
-    // Log to debug the user data structure
-    console.log(`[DM] Fetched user data for ${userId}:`, data);
-    
-    // Create a normalized user object with all possible fields
     const userInfo = {
       id: userId,
       name: data.nom || data.name || "Utilisateur",
       avatar: data.photo_de_profil || data.avatar || null,
-      // Preserve all original fields for reference
       ...data
     };
-    
-    console.log(`[DM] Normalized user info:`, userInfo);
-    
-    // Update the usersInfo state with this user
     setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
     return userInfo;
   } catch (e) {
-    console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
-    // Return a fallback user object if fetch fails
-    const fallbackUser = { 
-      id: userId, 
-      name: "Utilisateur", 
-      avatar: null 
-    };
-    setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
-    return fallbackUser;
+    return null;
   }
 };
 
@@ -703,8 +680,8 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
 
   // Filtre les conversations basées sur la recherche
   const filteredConversations = searchQuery.trim()
-    ? conversations.filter(userId => {
-        const user = usersInfo[userId] || {};
+    ? conversations.filter(conv => {
+        const user = usersInfo[conv.userId] || {};
         return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
     : conversations;
@@ -987,7 +964,8 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 {searchQuery ? "Aucun résultat" : "Aucune conversation"}
               </li>
             ) : (
-              filteredConversations.map((userId) => {
+              filteredConversations.map((conv) => {
+                const userId = conv.userId;
                 const user = usersInfo[userId] || {};
                 return (
                   <li
@@ -996,19 +974,19 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name || "User"} 
-                        className="dm-avatar" 
+                      <img
+                        src={user.avatar}
+                        alt={user.name || user.nom || "Utilisateur"}
+                        className="dm-avatar"
                       />
                     ) : (
                       <div className="dm-avatar">
                         <div className="dm-avatar-placeholder">
-                          {user.name ? user.name[0].toUpperCase() : "U"}
+                          {(user.name || user.nom || "U")[0].toUpperCase()}
                         </div>
                       </div>
                     )}
-                    <span className="dm-username">{user.name || "Utilisateur"}</span>
+                    <span className="dm-username">{user.name || user.nom || "Utilisateur"}</span>
                   </li>
                 );
               })

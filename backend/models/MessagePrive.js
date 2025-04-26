@@ -69,18 +69,26 @@ class MessagePrive {
   }
 
   static async getUserConversations(userId) {
-    // Retourne la liste des utilisateurs avec qui userId a échangé au moins un message
+    // Retourne la liste des utilisateurs avec qui userId a échangé au moins un message,
+    // triée par date du dernier message (plus récent en haut)
     const result = await pool.query(
-      `SELECT DISTINCT
+      `SELECT
           CASE
             WHEN fk_expediteur = $1 THEN fk_destinataire
             ELSE fk_expediteur
-          END AS other_user_id
+          END AS other_user_id,
+          MAX(date_creation) AS last_message_date
        FROM message_prive
-       WHERE (fk_expediteur = $1 OR fk_destinataire = $1) AND is_deleted = false`,
+       WHERE (fk_expediteur = $1 OR fk_destinataire = $1) AND is_deleted = false
+       GROUP BY other_user_id
+       ORDER BY last_message_date DESC`,
       [userId]
     );
-    return result.rows.map(row => row.other_user_id);
+    // On retourne un tableau d'objets { userId, lastMessageDate }
+    return result.rows.map(row => ({
+      userId: row.other_user_id,
+      lastMessageDate: row.last_message_date
+    }));
   }
 
   // Ajouter une méthode pour la déduplication des messages
