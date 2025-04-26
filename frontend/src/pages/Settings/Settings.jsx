@@ -3,6 +3,7 @@ import { FaUser, FaBell, FaLock, FaPalette, FaLanguage, FaShieldAlt, FaSignOutAl
 import Sidebar from '../../components/Sidebar/Sidebar';
 import './Settings.css';
 import { API_URL } from '../../config/config';
+import { useTheme } from '../../context/ThemeContext';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -30,7 +31,7 @@ const Settings = () => {
   });
   
   // Appearance settings
-  const [theme, setTheme] = useState('dark');
+  const { theme, setTheme } = useTheme(); // Utilise le contexte pour le thème
   const [fontSize, setFontSize] = useState('medium');
   const [language, setLanguage] = useState('fr');
 
