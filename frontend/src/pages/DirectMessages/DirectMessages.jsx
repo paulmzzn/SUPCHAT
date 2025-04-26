@@ -1,15 +1,24 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { 
-  FaUserCircle, 
-  FaPaperPlane, 
-  FaPaperclip, 
-  FaSmile, 
+import {
+  FaUserCircle,
+  FaPaperPlane,
+  FaPaperclip,
+  FaSmile,
   FaSearch,
   FaPlus,
   FaTimes,
   FaReply,
-  FaRegSmile
+  FaRegSmile,
+  FaFile,
+  FaFileAlt,
+  FaFileImage,
+  FaFilePdf,
+  FaFileWord,
+  FaFileExcel,
+  FaFileVideo,
+  FaFileAudio,
+  FaDownload,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
@@ -24,15 +33,17 @@ const formatMessageDate = (dateString) => {
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
-  return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    date.toLocaleDateString() +
+    " " +
+    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
 };
 
 // Add this utility function near the top of your component
 const safeJSONParse = (jsonString, fallback = null) => {
   try {
-    return typeof jsonString === 'string' 
-      ? JSON.parse(jsonString) 
-      : fallback;
+    return typeof jsonString === "string" ? JSON.parse(jsonString) : fallback;
   } catch (error) {
     console.error("JSON parse error:", error);
     return fallback;
@@ -41,13 +52,61 @@ const safeJSONParse = (jsonString, fallback = null) => {
 
 const safeJSONStringify = (obj) => {
   try {
-    return typeof obj === 'object' 
-      ? JSON.stringify(obj) 
-      : obj;
+    return typeof obj === "object" ? JSON.stringify(obj) : obj;
   } catch (error) {
     console.error("JSON stringify error:", error);
-    return '';
+    return "";
   }
+};
+
+// Fonction utilitaire pour déterminer l'icône d'un fichier selon son type
+const getFileIcon = (fileType) => {
+  if (!fileType) return <FaFile />;
+
+  if (fileType.startsWith("image/")) return <FaFileImage />;
+  if (fileType.includes("pdf")) return <FaFilePdf />;
+  if (fileType.includes("word") || fileType.includes("document"))
+    return <FaFileWord />;
+  if (fileType.includes("excel") || fileType.includes("spreadsheet"))
+    return <FaFileExcel />;
+  if (fileType.startsWith("video/")) return <FaFileVideo />;
+  if (fileType.startsWith("audio/")) return <FaFileAudio />;
+
+  return <FaFileAlt />;
+};
+
+// Fonction utilitaire pour formater la taille des fichiers
+const formatFileSize = (bytes) => {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+};
+
+// Fonction pour construire l'URL complète d'un fichier
+const getCompleteFileUrl = (fileUrl) => {
+  if (!fileUrl) return "";
+
+  // Si l'URL est déjà complète (commence par http ou https), la renvoyer telle quelle
+  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+    return fileUrl;
+  }
+
+  // Pour les fichiers S3 (messages privés), construire l'URL S3 complète (virtual-hosted style)
+  if (
+    fileUrl.startsWith("private-messages/") ||
+    fileUrl.startsWith("private-messages/files/")
+  ) {
+    return `https://s3-supchat.s3.fr-par.scw.cloud/${fileUrl}`;
+  }
+
+  // Pour les URLs relatives classiques, garder le fallback API
+  if (!fileUrl.startsWith("/api/files/")) {
+    return `${API_URL}/api/files/${fileUrl}`;
+  }
+
+  // Si l'URL commence déjà par /api/files/, juste ajouter l'URL de base
+  return `${API_URL}${fileUrl}`;
 };
 
 function DirectMessages() {
@@ -63,7 +122,8 @@ function DirectMessages() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const messagesContainerRef = useRef(null);
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] =
+    useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [availableUsers, setAvailableUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -74,21 +134,29 @@ function DirectMessages() {
     yPos: 0,
     messageId: null,
     isOwnMessage: false,
-    message: null
+    message: null,
   });
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editMessageContent, setEditMessageContent] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiPickerPosition, setEmojiPickerPosition] = useState({ top: 0, left: 0 });
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
+    top: 0,
+    left: 0,
+  });
   const emojiPickerRef = useRef(null);
   const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
+  // Ajout des états pour gérer les pièces jointes
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
+
   // Récupère l'ID utilisateur courant
   const currentUserId = (() => {
     try {
-      return JSON.parse(atob(localStorage.getItem("token").split('.')[1])).id;
+      return JSON.parse(atob(localStorage.getItem("token").split(".")[1])).id;
     } catch {
       return null;
     }
@@ -99,7 +167,7 @@ function DirectMessages() {
     connected: false,
     connecting: false,
     error: null,
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
   });
 
   // Connexion socket et joinPrivate - amélioration de la robustesse
@@ -107,79 +175,82 @@ function DirectMessages() {
     const token = localStorage.getItem("token");
     console.log("[DM] Initializing socket connection with token:", token);
     console.log("[DM] API_URL utilisé pour le socket:", API_URL);
-    
+
     // Définir l'état comme "en cours de connexion"
-    setSocketStatus(prev => ({ ...prev, connecting: true }));
-    
+    setSocketStatus((prev) => ({ ...prev, connecting: true }));
+
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/ping`)
-      .then(response => {
+      .then((response) => {
         if (response.ok) {
           console.log("[DM] Backend API /api/ping OK");
           return response.text();
         } else {
           console.error("[DM] Backend API /api/ping ERROR:", response.status);
-          setSocketStatus(prev => ({ 
-            ...prev, 
+          setSocketStatus((prev) => ({
+            ...prev,
             connecting: false,
-            error: `API inaccessible: ${response.status}` 
+            error: `API inaccessible: ${response.status}`,
           }));
           throw new Error(`API inaccessible: ${response.status}`);
         }
       })
-      .then(text => {
+      .then((text) => {
         console.log("[DM] Ping response:", text);
-        
+
         // Configuration complète pour Socket.IO
         const socketOptions = {
           auth: { token },
           transports: ["polling", "websocket"], // Try polling first then websocket
           reconnection: true,
           reconnectionAttempts: 10,
-          reconnectionDelay: 2000,  // Start with 2 seconds
+          reconnectionDelay: 2000, // Start with 2 seconds
           reconnectionDelayMax: 10000, // Max 10 seconds
           timeout: 20000,
           autoConnect: true,
-          forceNew: true
+          forceNew: true,
         };
-        
+
         console.log("[DM] Creating socket with options:", socketOptions);
-        
+
         // Créer l'instance du socket
         const newSocket = io(API_URL, socketOptions);
-        
+
         // Événements de connexion et de diagnostic
         newSocket.on("connect_error", (err) => {
           console.error("[DM] Socket.io connection error:", err);
-          setSocketStatus(prev => ({ 
-            ...prev, 
-            connected: false, 
+          setSocketStatus((prev) => ({
+            ...prev,
+            connected: false,
             connecting: false,
             error: err.message,
-            reconnectAttempts: prev.reconnectAttempts + 1
+            reconnectAttempts: prev.reconnectAttempts + 1,
           }));
         });
-        
+
         newSocket.on("connect", () => {
-          console.log("[DM] Socket.io connecté avec succès avec ID:", newSocket.id);
+          console.log(
+            "[DM] Socket.io connecté avec succès avec ID:",
+            newSocket.id
+          );
           setSocketStatus({
             connected: true,
             connecting: false,
             error: null,
-            reconnectAttempts: 0
+            reconnectAttempts: 0,
           });
-          
+
           // Rejoindre la room privée seulement après connexion réussie
           console.log("[DM] Tentative de rejoindre la room privée");
           newSocket.emit("joinPrivate");
         });
-        
+
         newSocket.on("disconnect", (reason) => {
           console.log("[DM] Socket.io disconnected, reason:", reason);
-          setSocketStatus(prev => ({
+          setSocketStatus((prev) => ({
             ...prev,
             connected: false,
-            connecting: reason === "io server disconnect" ? false : true
+            connecting: reason === "io server disconnect" ? false : true,
           }));
         });
 
@@ -187,43 +258,43 @@ function DirectMessages() {
         newSocket.on("error", (error) => {
           console.error("[DM] Socket.io error event:", error);
         });
-        
+
         newSocket.on("reconnect_attempt", (attempt) => {
           console.log("[DM] Socket.io reconnect attempt #", attempt);
-          setSocketStatus(prev => ({ 
-            ...prev, 
+          setSocketStatus((prev) => ({
+            ...prev,
             connecting: true,
-            reconnectAttempts: attempt
+            reconnectAttempts: attempt,
           }));
         });
-        
+
         newSocket.on("reconnect", (attempt) => {
           console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
           setSocketStatus({
             connected: true,
             connecting: false,
             error: null,
-            reconnectAttempts: 0
+            reconnectAttempts: 0,
           });
-          
+
           // Rejoindre la room privée après reconnexion
           newSocket.emit("joinPrivate");
         });
-        
+
         setSocket(newSocket);
-        
+
         return () => {
           console.log("[DM] Cleanup: Déconnexion du socket");
           newSocket.off();
           newSocket.disconnect();
         };
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("[DM] Backend API setup failed:", err);
-        setSocketStatus(prev => ({ 
-          ...prev, 
+        setSocketStatus((prev) => ({
+          ...prev,
           connecting: false,
-          error: err.message
+          error: err.message,
         }));
       });
   }, []);
@@ -231,13 +302,13 @@ function DirectMessages() {
   // Réception des nouveaux messages privés en temps réel
   useEffect(() => {
     if (!socket) return;
-    
+
     // Fix the storage event listener to prevent parsing errors
     const storageEventHandler = (event) => {
-      if (event.key && event.key.startsWith('lastMessage_')) {
+      if (event.key && event.key.startsWith("lastMessage_")) {
         try {
           // Only try to parse if it's a valid string
-          if (event.newValue && typeof event.newValue === 'string') {
+          if (event.newValue && typeof event.newValue === "string") {
             // Just validate but don't use the result - this prevents parsing errors
             JSON.parse(event.newValue);
           }
@@ -246,128 +317,163 @@ function DirectMessages() {
         }
       }
     };
-    
-    window.addEventListener('storage', storageEventHandler);
-    
+
+    window.addEventListener("storage", storageEventHandler);
+
     // Update the handlePrivateMessage function to safely handle message storage
-    const handlePrivateMessage = (msg) => {
+    const handlePrivateMessage = async (msg) => {
       console.log("[DM] Received private message:", msg);
-      
+
       // Only count as unread if it's not from current user and not in current conversation
-      if (msg.fk_expediteur !== currentUserId && (
-          !selectedUser || msg.fk_expediteur !== selectedUser)) {
-        
+      if (
+        msg.fk_expediteur !== currentUserId &&
+        (!selectedUser || msg.fk_expediteur !== selectedUser)
+      ) {
         // Update the unread count for this sender
-        setUnreadMessageCounts(prev => {
+        setUnreadMessageCounts((prev) => {
           const senderId = msg.fk_expediteur;
-          const newCounts = { 
+          const newCounts = {
             ...prev,
-            [senderId]: (prev[senderId] || 0) + 1 
+            [senderId]: (prev[senderId] || 0) + 1,
           };
-          
+
           // Update total count
           setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
           return newCounts;
         });
       }
-      
-      // Cache last message in localStorage safely - skip this to avoid JSON errors
-      // This is probably causing the issue, so let's disable it for now
-      /* 
-      try {
-        if (msg && typeof msg === 'object') {
-          localStorage.setItem(`lastMessage_${msg.fk_expediteur || 'unknown'}`, 
-            safeJSONStringify(msg));
-        }
-      } catch (storageError) {
-        console.warn("[DM] Failed to store message in localStorage:", storageError);
-      }
-      */
-      
+
       // Ne rien faire si le message n'est pas pertinent pour la conversation active
-      if (!selectedUser || 
-          (msg.fk_expediteur !== selectedUser && msg.fk_destinataire !== selectedUser)) {
-        console.log("[DM] Message not relevant for current conversation, ignoring");
+      if (
+        !selectedUser ||
+        (msg.fk_expediteur !== selectedUser &&
+          msg.fk_destinataire !== selectedUser)
+      ) {
+        console.log(
+          "[DM] Message not relevant for current conversation, ignoring"
+        );
         return;
       }
-      
+
+      // Récupérer les pièces jointes du message
+      let attachments = [];
+      try {
+        if (msg.id_message_prive) {
+          console.log(
+            "[DM] Fetching attachments for new message:",
+            msg.id_message_prive
+          );
+          attachments = await fetchMessageAttachments(msg.id_message_prive);
+          console.log("[DM] Attachments retrieved:", attachments);
+        }
+      } catch (error) {
+        console.error(
+          "[DM] Error fetching attachments for new message:",
+          error
+        );
+      }
+
+      // Ajouter les pièces jointes au message
+      const msgWithAttachments = { ...msg, attachments };
+
       setMessages((prev) => {
         // Vérifier si le message existe déjà (par id ou contenu+expéditeur pour les messages optimistes)
-        const messageExists = prev.some(existingMsg => {
+        const messageExists = prev.some((existingMsg) => {
           // Vérifier par ID réel
-          if (existingMsg.id_message_prive === msg.id_message_prive) return true;
-          
+          if (existingMsg.id_message_prive === msg.id_message_prive)
+            return true;
+
           // Vérifier par ID temporaire si présent
-          if (msg.tempId && existingMsg.id_message_prive === `temp-${msg.tempId}`) return true;
-          
+          if (
+            msg.tempId &&
+            existingMsg.id_message_prive === `temp-${msg.tempId}`
+          )
+            return true;
+
           // Vérifier par contenu et expéditeur (pour messages optimistes)
-          if (existingMsg.isOptimistic && 
-              existingMsg.contenu === msg.contenu && 
-              existingMsg.fk_expediteur === msg.fk_expediteur) return true;
-          
+          if (
+            existingMsg.isOptimistic &&
+            existingMsg.contenu === msg.contenu &&
+            existingMsg.fk_expediteur === msg.fk_expediteur
+          )
+            return true;
+
           return false;
         });
-        
+
         if (messageExists) {
-          // Remplacer les messages optimistes par la version réelle
-          return prev.map(m => {
-            if (m.id_message_prive === msg.id_message_prive) return msg;
-            
-            if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) return msg;
-            
-            if (m.isOptimistic && 
-                m.contenu === msg.contenu && 
-                m.fk_expediteur === msg.fk_expediteur) return msg;
-            
+          // Remplacer les messages optimistes par la version réelle avec pièces jointes
+          return prev.map((m) => {
+            if (m.id_message_prive === msg.id_message_prive)
+              return msgWithAttachments;
+
+            if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`)
+              return msgWithAttachments;
+
+            if (
+              m.isOptimistic &&
+              m.contenu === msg.contenu &&
+              m.fk_expediteur === msg.fk_expediteur
+            )
+              return msgWithAttachments;
+
             return m;
           });
         } else {
           // Ajouter uniquement si le message n'existe pas
-          return [...prev, msg];
+          return [...prev, msgWithAttachments];
         }
       });
-      
+
       scrollToBottom();
-      
+
       // Si c'est un nouveau message, rafraîchir la liste des conversations
-      if (!conversations.includes(msg.fk_expediteur) && msg.fk_expediteur !== currentUserId) {
+      if (
+        !conversations.includes(msg.fk_expediteur) &&
+        msg.fk_expediteur !== currentUserId
+      ) {
         fetchConversations();
       }
     };
-    
+
     const handlePrivateMessageUpdated = (msg) => {
       console.log("Message updated:", msg);
       if (
         selectedUser &&
-        (msg.fk_expediteur === selectedUser || msg.fk_destinataire === selectedUser)
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
       ) {
-        setMessages((prev) => 
-          prev.map((m) => (m.id_message_prive === msg.id_message_prive ? msg : m))
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === msg.id_message_prive ? msg : m
+          )
         );
       }
     };
-    
+
     const handlePrivateMessageDeleted = (data) => {
       console.log("Message deleted:", data);
       if (selectedUser) {
-        setMessages((prev) => 
-          prev.map((m) => 
-            m.id_message_prive === data.id 
-              ? { ...m, is_deleted: true, contenu: "[message supprimé]" } 
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.id
+              ? { ...m, is_deleted: true, contenu: "[message supprimé]" }
               : m
           )
         );
       }
     };
-    
+
     const handlePrivateMessageRead = (data) => {
       console.log("[DM] Message read event:", data);
       if (selectedUser) {
-        setMessages((prev) => 
+        setMessages((prev) =>
           prev.map((m) => {
             // Check if this is the message that was read
             if (m.id_message_prive === data.id) {
-              console.log(`[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`);
+              console.log(
+                `[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`
+              );
               return { ...m, date_lecture: data.date_lecture };
             }
             return m;
@@ -375,15 +481,15 @@ function DirectMessages() {
         );
       }
     };
-    
+
     socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageRead", handlePrivateMessageRead);
-    
+
     return () => {
       // Clean up event listener on unmount
-      window.removeEventListener('storage', storageEventHandler);
+      window.removeEventListener("storage", storageEventHandler);
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
@@ -394,7 +500,8 @@ function DirectMessages() {
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   };
 
@@ -408,9 +515,9 @@ function DirectMessages() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
         const err = await res.text();
         setError(`Erreur lors de la récupération des conversations: ${err}`);
@@ -418,11 +525,11 @@ function DirectMessages() {
         setConversations([]);
         return;
       }
-      
+
       const data = await res.json();
       console.log("Conversations reçues:", data);
       setConversations(data);
-      
+
       // Précharge les infos utilisateurs
       for (const userId of data) {
         fetchUserInfo(userId);
@@ -441,90 +548,150 @@ function DirectMessages() {
   }, []);
 
   // Récupère les infos d'un utilisateur
-const fetchUserInfo = async (userId) => {
-  if (usersInfo[userId]) return usersInfo[userId];
-  
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/api/users/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (!res.ok) {
-      console.error(`Erreur lors de la récupération des infos utilisateur ${userId}`);
-      return null;
+  const fetchUserInfo = async (userId) => {
+    if (usersInfo[userId]) return usersInfo[userId];
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        console.error(
+          `Erreur lors de la récupération des infos utilisateur ${userId}`
+        );
+        return null;
+      }
+
+      const data = await res.json();
+
+      // Log to debug the user data structure
+      console.log(`[DM] Fetched user data for ${userId}:`, data);
+
+      // Create a normalized user object with all possible fields
+      const userInfo = {
+        id: userId,
+        name: data.nom || data.name || "Utilisateur",
+        avatar: data.photo_de_profil || data.avatar || null,
+        // Preserve all original fields for reference
+        ...data,
+      };
+
+      console.log(`[DM] Normalized user info:`, userInfo);
+
+      // Update the usersInfo state with this user
+      setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
+      return userInfo;
+    } catch (e) {
+      console.error(
+        `Erreur lors de la récupération des infos utilisateur ${userId}:`,
+        e
+      );
+      // Return a fallback user object if fetch fails
+      const fallbackUser = {
+        id: userId,
+        name: "Utilisateur",
+        avatar: null,
+      };
+      setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
+      return fallbackUser;
     }
-    
-    const data = await res.json();
-    
-    // Log to debug the user data structure
-    console.log(`[DM] Fetched user data for ${userId}:`, data);
-    
-    // Create a normalized user object with all possible fields
-    const userInfo = {
-      id: userId,
-      name: data.nom || data.name || "Utilisateur",
-      avatar: data.photo_de_profil || data.avatar || null,
-      // Preserve all original fields for reference
-      ...data
-    };
-    
-    console.log(`[DM] Normalized user info:`, userInfo);
-    
-    // Update the usersInfo state with this user
-    setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
-    return userInfo;
-  } catch (e) {
-    console.error(`Erreur lors de la récupération des infos utilisateur ${userId}:`, e);
-    // Return a fallback user object if fetch fails
-    const fallbackUser = { 
-      id: userId, 
-      name: "Utilisateur", 
-      avatar: null 
-    };
-    setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
-    return fallbackUser;
-  }
-};
+  };
+
+  // Ajout d'une fonction pour récupérer les pièces jointes d'un message privé
+  const fetchMessageAttachments = async (messageId) => {
+    try {
+      console.log(
+        `[DM] Récupération des pièces jointes pour le message ${messageId}`
+      );
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/attachments/private-messages/${messageId}/attachments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(
+        `[DM] Pièces jointes récupérées pour le message ${messageId}:`,
+        data
+      );
+      return data;
+    } catch (error) {
+      console.error(
+        "[DM] Erreur lors de la récupération des pièces jointes:",
+        error
+      );
+      return [];
+    }
+  };
 
   // Récupère les messages d'une conversation
   const fetchMessages = async (userId) => {
     try {
       setLoadingMessages(true);
       setSelectedUser(userId);
-      
+
       // Récupérer les informations de l'utilisateur sélectionné
       let userInfo = usersInfo[userId];
       if (!userInfo) {
         userInfo = await fetchUserInfo(userId);
       }
       setSelectedUserInfo(userInfo);
-      
+
       // Clear unread messages for this user
-      setUnreadMessageCounts(prev => {
+      setUnreadMessageCounts((prev) => {
         const newCounts = { ...prev, [userId]: 0 };
         setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
         return newCounts;
       });
-      
+
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
-        setError(`Erreur lors de la récupération des messages: ${await res.text()}`);
+        setError(
+          `Erreur lors de la récupération des messages: ${await res.text()}`
+        );
         setMessages([]);
         return;
       }
-      
+
       const data = await res.json();
       console.log("Messages récupérés:", data);
-      setMessages(data);
-      
+
+      // Pour chaque message, récupérer ses pièces jointes
+      const messagesWithAttachments = await Promise.all(
+        data.map(async (message) => {
+          try {
+            const attachments = await fetchMessageAttachments(
+              message.id_message_prive
+            );
+            return { ...message, attachments };
+          } catch (error) {
+            console.error(
+              `[DM] Erreur lors du chargement des pièces jointes pour le message ${message.id_message_prive}:`,
+              error
+            );
+            return { ...message, attachments: [] };
+          }
+        })
+      );
+
+      setMessages(messagesWithAttachments);
+
       // Marquer les messages non lus comme lus
       markMessagesAsRead(data);
-      
     } catch (e) {
       setError(`Erreur lors de la récupération des messages: ${e.message}`);
       setMessages([]);
@@ -534,176 +701,273 @@ const fetchUserInfo = async (userId) => {
   };
 
   // Improve the markMessagesAsRead function to be more robust
-const markMessagesAsRead = (msgs) => {
-  if (!socket || !msgs || !msgs.length || !selectedUser) return;
-  
-  const unreadMessages = msgs.filter(
-    m => m.fk_expediteur !== currentUserId && !m.date_lecture
-  );
-  
-  if (unreadMessages.length > 0) {
-    console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
-    unreadMessages.forEach(msg => {
-      socket.emit("readPrivateMessage", { 
-        id: msg.id_message_prive,
-        senderId: msg.fk_expediteur, 
-        recipientId: currentUserId 
-      });
-    });
-  }
-};
+  const markMessagesAsRead = (msgs) => {
+    if (!socket || !msgs || !msgs.length || !selectedUser) return;
 
-// Add useEffect to handle visibility changes and mark messages as read
-// when the user is looking at them
-useEffect(() => {
-  if (!selectedUser || !messages.length || !socket) return;
-  
-  // Mark messages as read when they are displayed
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      markMessagesAsRead(messages);
+    const unreadMessages = msgs.filter(
+      (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
+    );
+
+    if (unreadMessages.length > 0) {
+      console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
+      unreadMessages.forEach((msg) => {
+        socket.emit("readPrivateMessage", {
+          id: msg.id_message_prive,
+          senderId: msg.fk_expediteur,
+          recipientId: currentUserId,
+        });
+      });
     }
   };
-  
-  // Mark messages as read when focus returns to the window
-  window.addEventListener('focus', () => markMessagesAsRead(messages));
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  
-  // Initial marking when messages are loaded
-  markMessagesAsRead(messages);
-  
-  return () => {
-    window.removeEventListener('focus', () => markMessagesAsRead(messages));
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+  // Add useEffect to handle visibility changes and mark messages as read
+  // when the user is looking at them
+  useEffect(() => {
+    if (!selectedUser || !messages.length || !socket) return;
+
+    // Mark messages as read when they are displayed
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        markMessagesAsRead(messages);
+      }
+    };
+
+    // Mark messages as read when focus returns to the window
+    window.addEventListener("focus", () => markMessagesAsRead(messages));
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Initial marking when messages are loaded
+    markMessagesAsRead(messages);
+
+    return () => {
+      window.removeEventListener("focus", () => markMessagesAsRead(messages));
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [selectedUser, messages, socket]);
+
+  // Fonction pour gérer la sélection de fichier
+  const handleFileSelect = async (e) => {
+    console.log("[DM] handleFileSelect déclenché");
+    const file = e.target.files[0];
+    if (!file) {
+      console.log("[DM] Aucun fichier sélectionné");
+      return;
+    }
+    console.log("[DM] Fichier sélectionné :", file);
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Le fichier ne doit pas dépasser 10MB");
+      console.log("[DM] Fichier trop volumineux :", file.size);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Vous devez être connecté");
+        console.log("[DM] Token manquant");
+        return;
+      }
+
+      // Correction de l'URL d'upload pour les messages privés
+      const uploadUrl = `${API_URL}/api/private-messages/upload`;
+      console.log("[DM] URL d'upload utilisée :", uploadUrl);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("recipientId", selectedUser); // ou autre champ selon votre backend
+
+      // Affichage du contenu du FormData pour debug
+      for (let pair of formData.entries()) {
+        console.log("[DM] FormData:", pair[0], pair[1]);
+      }
+
+      setUploadingFile(true);
+      console.log("[DM] Envoi du fichier en cours...");
+
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      console.log("[DM] Réponse upload status :", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[DM] Erreur lors de l'upload:", errorData);
+        alert(errorData.message || "Erreur lors de l'upload du fichier");
+        return;
+      }
+
+      const data = await response.json();
+      console.log("[DM] Réponse upload OK :", data);
+
+      // Ajouter le fichier à la liste des pièces jointes
+      setAttachments([...attachments, data.fichier]);
+      console.log("[DM] Pièce jointe ajoutée à l'état local :", data.fichier);
+    } catch (err) {
+      console.error("[DM] Erreur lors de l'upload:", err);
+      alert("Erreur lors de l'upload du fichier");
+    } finally {
+      setUploadingFile(false);
+      // Réinitialiser l'input file pour permettre de sélectionner à nouveau le même fichier
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      console.log("[DM] Fin de handleFileSelect");
+    }
   };
-}, [selectedUser, messages, socket]);
+
+  // Fonction pour déclencher le sélecteur de fichier
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   // Modifiez la fonction d'envoi pour gérer différents états de connexion
-const handleSendMessage = async (e) => {
-  e.preventDefault();
-  if (!newMessage.trim() || !selectedUser) return;
-  
-  try {
-    console.log("[DM] Sending message to:", selectedUser, "content:", newMessage);
-    
-    // Générer un ID temporaire pour déduplication
-    const tempId = Date.now().toString();
-    
-    // Créer un objet message local pour l'affichage immédiat
-    const optimisticMessage = {
-      id_message_prive: `temp-${tempId}`,
-      contenu: newMessage,
-      fk_expediteur: currentUserId,
-      fk_destinataire: selectedUser,
-      date_envoi: new Date().toISOString(),
-      date_creation: new Date().toISOString(),
-      isOptimistic: true
-    };
-    
-    // Ajouter le message optimiste à l'UI
-    setMessages(prev => [...prev, optimisticMessage]);
-    
-    const messageData = {
-      destinataireId: selectedUser,
-      contenu: newMessage,
-      tempId,
-      replyToId: replyingTo ? replyingTo.id_message_prive : null
-    };
-    
-    // Tenter d'utiliser le socket si connecté
-    if (socket && socketStatus.connected) {
-      console.log("[DM] Socket connected, trying to send message via socket");
-      
-      try {
-        // Définir un timeout pour la réponse socket
-        const socketPromise = new Promise((resolve, reject) => {
-          const timeoutId = setTimeout(() => {
-            reject(new Error("Socket timeout"));
-          }, 3000);
-          
-          socket.emit("privateMessage", messageData, (response) => {
-            clearTimeout(timeoutId);
-            console.log("[DM] Socket response:", response);
-            
-            if (response && response.ok === true) {
-              resolve(response);
-            } else {
-              reject(new Error(response?.message || "Socket error"));
-            }
-          });
-        });
-        
-        await socketPromise;
-        console.log("[DM] Message sent successfully via socket");
-      } catch (socketError) {
-        console.warn("[DM] Socket message failed:", socketError.message);
-        console.log("[DM] Falling back to REST API");
-        await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
-      }
-    } else {
-      // Socket not connected, use REST API directly
-      console.log("[DM] Socket not connected (state:", socketStatus, "), using REST API");
-      await sendMessageViaAPI(newMessage, selectedUser, replyingTo);
-    }
-    
-    // Réinitialiser l'état après envoi
-    setNewMessage("");
-    setReplyingTo(null);
-    
-  } catch (e) {
-    console.error("Erreur lors de l'envoi du message:", e);
-    setError(`Erreur lors de l'envoi du message: ${e.message}`);
-  }
-};
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
+      return;
 
-// Fonction de fallback pour l'API REST avec paramètres explicites
-const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) => {
-  if (!messageContent || !recipientId) return;
-  
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/api/private-messages/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        destinataireId: recipientId,
-        contenu: messageContent,
-        replyToId: replyToMessage ? replyToMessage.id_message_prive : null
-      })
-    });
-    
-    if (!res.ok) {
-      throw new Error(await res.text());
+    try {
+      console.log(
+        "[DM] Sending message to:",
+        selectedUser,
+        "content:",
+        newMessage,
+        "attachments:",
+        attachments
+      );
+
+      // Générer un ID temporaire pour déduplication
+      const tempId = Date.now().toString();
+
+      // Créer un objet message local pour l'affichage immédiat
+      const optimisticMessage = {
+        id_message_prive: `temp-${tempId}`,
+        contenu: newMessage,
+        fk_expediteur: currentUserId,
+        fk_destinataire: selectedUser,
+        date_envoi: new Date().toISOString(),
+        date_creation: new Date().toISOString(),
+        isOptimistic: true,
+        attachments: attachments.map((att) => ({
+          id_fichier: att.id_fichier,
+          nom_fichier: att.nom_fichier,
+          // Utiliser directement l'URL sans transformation
+          url: att.url || att.presignedUrl,
+          presignedUrl: att.presignedUrl || att.url,
+          type: att.type,
+          taille_fichier: att.taille_fichier,
+        })),
+      };
+
+      // Debug pour voir ce qui est affiché
+      console.log(
+        "[DM] Optimistic message with attachments:",
+        optimisticMessage
+      );
+
+      // Ajouter le message optimiste à l'UI
+      setMessages((prev) => [...prev, optimisticMessage]);
+
+      const messageData = {
+        destinataireId: selectedUser,
+        contenu: newMessage,
+        tempId,
+        replyToId: replyingTo ? replyingTo.id_message_prive : null,
+        attachments: attachments.map((att) => att.id_fichier),
+      };
+
+      // Envoi via socket ou API REST
+      if (socket && socketStatus.connected) {
+        socket.emit("privateMessage", messageData, (response) => {
+          if (response && !response.ok) {
+            console.error("Erreur socket:", response.message);
+            sendMessageViaAPI(
+              newMessage,
+              selectedUser,
+              replyingTo,
+              attachments.map((att) => att.id_fichier)
+            );
+          }
+        });
+      } else {
+        await sendMessageViaAPI(
+          newMessage,
+          selectedUser,
+          replyingTo,
+          attachments.map((att) => att.id_fichier)
+        );
+      }
+
+      // Réinitialiser l'état après envoi
+      setNewMessage("");
+      setReplyingTo(null);
+      setAttachments([]);
+    } catch (e) {
+      console.error("Erreur lors de l'envoi du message:", e);
+      setError(`Erreur lors de l'envoi du message: ${e.message}`);
     }
-    
-    // Ajouter le message reçu de l'API à l'interface
-    const data = await res.json();
-    
-    // Mise à jour des messages pour remplacer le message optimiste
-    setMessages(prev => {
-      const exists = prev.some(m => 
-        !m.isOptimistic && m.id_message_prive === data.id_message_prive
-      );
-      
-      if (exists) return prev;
-      
-      return prev.map(m => 
-        (m.isOptimistic && m.contenu === messageContent) ? data : m
-      );
-    });
-    
-  } catch (apiError) {
-    console.error("API fallback failed:", apiError);
-    setError(`Échec de l'envoi du message. Veuillez réessayer.`);
-  }
-};
+  };
+
+  // Fonction de fallback pour l'API REST avec paramètres explicites
+  const sendMessageViaAPI = async (
+    messageContent,
+    recipientId,
+    replyToMessage,
+    attachmentIds = []
+  ) => {
+    if (!messageContent && attachmentIds.length === 0) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/api/private-messages/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          destinataireId: recipientId,
+          contenu: messageContent || "",
+          replyToId: replyToMessage ? replyToMessage.id_message_prive : null,
+          attachments: attachmentIds,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const data = await res.json();
+
+      // Mise à jour des messages pour remplacer le message optimiste
+      setMessages((prev) => {
+        const exists = prev.some(
+          (m) => !m.isOptimistic && m.id_message_prive === data.id_message_prive
+        );
+
+        if (exists) return prev;
+
+        return prev.map((m) =>
+          m.isOptimistic && m.contenu === messageContent ? data : m
+        );
+      });
+    } catch (apiError) {
+      console.error("API fallback failed:", apiError);
+      setError(`Échec de l'envoi du message. Veuillez réessayer.`);
+    }
+  };
 
   // Filtre les conversations basées sur la recherche
   const filteredConversations = searchQuery.trim()
-    ? conversations.filter(userId => {
+    ? conversations.filter((userId) => {
         const user = usersInfo[userId] || {};
         return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
@@ -715,22 +979,23 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
       setLoadingUsers(true);
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
         console.error("Erreur lors de la récupération des utilisateurs");
         setAvailableUsers([]);
         setFilteredUsers([]);
         return;
       }
-      
+
       const data = await res.json();
       // Correction : les utilisateurs ont l'id sous 'id_utilisateur'
       // Exclure l'utilisateur courant et ceux déjà en conversation
-      const filteredData = data.filter(user =>
-        user.id_utilisateur !== currentUserId &&
-        !conversations.includes(user.id_utilisateur)
+      const filteredData = data.filter(
+        (user) =>
+          user.id_utilisateur !== currentUserId &&
+          !conversations.includes(user.id_utilisateur)
       );
       setAvailableUsers(filteredData);
       setFilteredUsers(filteredData);
@@ -748,10 +1013,8 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
     if (searchUserQuery.trim() === "") {
       setFilteredUsers(availableUsers);
     } else {
-      const filtered = availableUsers.filter(user => 
-        (user.nom || "")
-          .toLowerCase()
-          .includes(searchUserQuery.toLowerCase())
+      const filtered = availableUsers.filter((user) =>
+        (user.nom || "").toLowerCase().includes(searchUserQuery.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -767,10 +1030,10 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   const startConversationWith = (userId) => {
     setShowNewConversationModal(false);
     fetchMessages(userId);
-    
+
     // Si cet utilisateur n'est pas déjà dans la liste des conversations, ajoutez-le
     if (!conversations.includes(userId)) {
-      setConversations(prev => [...prev, userId]);
+      setConversations((prev) => [...prev, userId]);
     }
   };
 
@@ -784,20 +1047,25 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
       yPos: e.pageY,
       messageId: msg.id_message_prive,
       isOwnMessage: isOwnMsg,
-      message: msg
+      message: msg,
     });
   };
 
   const handleCloseMessageContextMenu = () => {
-    setMessageContextMenu({...messageContextMenu, visible: false});
+    setMessageContextMenu({ ...messageContextMenu, visible: false });
   };
 
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(`@${usersInfo[messageContextMenu.message.fk_expediteur]?.name || "Utilisateur"} `);
+    setNewMessage(
+      `@${
+        usersInfo[messageContextMenu.message.fk_expediteur]?.name ||
+        "Utilisateur"
+      } `
+    );
     handleCloseMessageContextMenu();
-    const inputElement = document.querySelector('.dm-input');
+    const inputElement = document.querySelector(".dm-input");
     if (inputElement) inputElement.focus();
   };
 
@@ -805,8 +1073,8 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   const handleDeleteMessage = async () => {
     try {
       if (!socket || !messageContextMenu.messageId) return;
-      
-      socket.emit('deletePrivateMessage', { id: messageContextMenu.messageId });
+
+      socket.emit("deletePrivateMessage", { id: messageContextMenu.messageId });
       handleCloseMessageContextMenu();
     } catch (error) {
       console.error("Erreur lors de la suppression du message:", error);
@@ -825,12 +1093,12 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   const handleSaveEdit = async () => {
     try {
       if (!socket || !editingMessage) return;
-      
-      socket.emit('editPrivateMessage', {
+
+      socket.emit("editPrivateMessage", {
         id: editingMessage.id_message_prive,
-        contenu: editMessageContent
+        contenu: editMessageContent,
       });
-      
+
       setEditingMessage(null);
       setEditMessageContent("");
     } catch (error) {
@@ -855,7 +1123,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
     setShowEmojiPicker(true);
     setEmojiPickerPosition({
       top: messageContextMenu.yPos,
-      left: messageContextMenu.xPos
+      left: messageContextMenu.xPos,
     });
     handleCloseMessageContextMenu();
   };
@@ -863,26 +1131,29 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
   // Gérer la sélection d'un emoji
   const handleEmojiSelect = (emoji) => {
     if (!socket || !messageContextMenu.messageId) return;
-    
-    socket.emit('addPrivateMessageReaction', {
+
+    socket.emit("addPrivateMessageReaction", {
       id: messageContextMenu.messageId,
-      reaction: emoji
+      reaction: emoji,
     });
-    
+
     setShowEmojiPicker(false);
   };
 
   // Fermer le sélecteur d'emoji lorsqu'on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target)
+      ) {
         setShowEmojiPicker(false);
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -901,25 +1172,25 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
 
   // Add this effect to update the unread count in localStorage for the Sidebar
   useEffect(() => {
-    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
-    
+    localStorage.setItem("unreadPrivateMessages", totalUnreadCount.toString());
+
     // Create a custom event to notify other components about the change
-    const event = new CustomEvent('unreadMessagesUpdated', { 
-      detail: { count: totalUnreadCount }
+    const event = new CustomEvent("unreadMessagesUpdated", {
+      detail: { count: totalUnreadCount },
     });
     window.dispatchEvent(event);
   }, [totalUnreadCount]);
 
   // Make sure this effect properly updates the localStorage and dispatches an event
   useEffect(() => {
-    localStorage.setItem('unreadPrivateMessages', totalUnreadCount.toString());
-    
+    localStorage.setItem("unreadPrivateMessages", totalUnreadCount.toString());
+
     // Dispatch event to notify other components about the change
-    const event = new CustomEvent('unreadMessagesUpdated', { 
-      detail: { count: totalUnreadCount }
+    const event = new CustomEvent("unreadMessagesUpdated", {
+      detail: { count: totalUnreadCount },
     });
     window.dispatchEvent(event);
-    
+
     console.log(`[DM] Updated unread message count: ${totalUnreadCount}`);
   }, [totalUnreadCount]);
 
@@ -929,10 +1200,13 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
     const fetchUnreadCounts = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
+        const res = await fetch(
+          `${API_URL}/api/private-messages/unread-counts`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
         if (res.ok) {
           const data = await res.json();
           setUnreadMessageCounts(data);
@@ -942,7 +1216,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
         console.error("Error fetching unread counts:", e);
       }
     };
-    
+
     fetchUnreadCounts();
   }, []);
 
@@ -954,7 +1228,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
         <div className="dm-sidebar">
           <div className="dm-sidebar-header">
             <h3 className="dm-title">Messages privés</h3>
-            
+
             <div className="dm-search">
               <div className="dm-search-input-wrapper">
                 <FaSearch className="dm-search-icon" />
@@ -967,18 +1241,18 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 />
               </div>
             </div>
-            
+
             {/* Bouton nouvelle conversation */}
-            <button 
-              className="dm-new-conversation-button" 
+            <button
+              className="dm-new-conversation-button"
               onClick={handleOpenNewConversation}
             >
               Démarrer une conversation
             </button>
           </div>
-          
+
           {error && <div className="dm-error">{error}</div>}
-          
+
           <ul className="dm-conv-list">
             {loading ? (
               <li className="dm-empty">Chargement des conversations...</li>
@@ -992,14 +1266,16 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${selectedUser === userId ? 'active' : ''}`}
+                    className={`dm-conv-item ${
+                      selectedUser === userId ? "active" : ""
+                    }`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name || "User"} 
-                        className="dm-avatar" 
+                      <img
+                        src={user.avatar}
+                        alt={user.name || "User"}
+                        className="dm-avatar"
                       />
                     ) : (
                       <div className="dm-avatar">
@@ -1008,7 +1284,9 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                         </div>
                       </div>
                     )}
-                    <span className="dm-username">{user.name || "Utilisateur"}</span>
+                    <span className="dm-username">
+                      {user.name || "Utilisateur"}
+                    </span>
                   </li>
                 );
               })
@@ -1021,7 +1299,7 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
           {/* Éléments SVG pour l'arrière-plan */}
           <div className="glow-circle-right top-right"></div>
           <div className="glow-circle-left bottom-left"></div>
-          
+
           {!selectedUser ? (
             <div className="dm-empty-msg">
               <h2>Sélectionnez une conversation</h2>
@@ -1033,10 +1311,10 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
               <div className="dm-header">
                 <div className="dm-header-info">
                   {selectedUserInfo?.avatar ? (
-                    <img 
-                      src={selectedUserInfo.avatar} 
-                      alt={selectedUserInfo.name || "User"} 
-                      className="dm-header-avatar" 
+                    <img
+                      src={selectedUserInfo.avatar}
+                      alt={selectedUserInfo.name || "User"}
+                      className="dm-header-avatar"
                     />
                   ) : (
                     <FaUserCircle className="dm-header-avatar" />
@@ -1045,14 +1323,22 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                     {selectedUserInfo?.name || "Utilisateur"}
                   </h2>
                   <div className="dm-header-status">
-                    <span 
-                      className={`status-dot ${selectedUserInfo?.status === 'online' ? 'online' : 'offline'}`}
+                    <span
+                      className={`status-dot ${
+                        selectedUserInfo?.status === "online"
+                          ? "online"
+                          : "offline"
+                      }`}
                     ></span>
-                    <span>{selectedUserInfo?.status === 'online' ? 'En ligne' : 'Hors ligne'}</span>
+                    <span>
+                      {selectedUserInfo?.status === "online"
+                        ? "En ligne"
+                        : "Hors ligne"}
+                    </span>
                   </div>
                 </div>
               </div>
-              
+
               {/* Messages */}
               <div className="dm-messages" ref={messagesContainerRef}>
                 {loadingMessages ? (
@@ -1065,57 +1351,86 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
-                    
+
                     // Get the sender info, with strong fallbacks if missing
                     const senderId = msg.fk_expediteur;
                     const senderInfo = usersInfo[senderId] || {};
-                    
+
                     // Determine display name with fallbacks
-                    const displayName = senderInfo.name || senderInfo.nom || (isOwn ? "Vous" : "Utilisateur");
-                    
+                    const displayName =
+                      senderInfo.name ||
+                      senderInfo.nom ||
+                      (isOwn ? "Vous" : "Utilisateur");
+
                     // Determine the avatar source with fallbacks
-                    const avatarSrc = senderInfo.avatar || senderInfo.photo_de_profil;
-                    
+                    const avatarSrc =
+                      senderInfo.avatar || senderInfo.photo_de_profil;
+
                     // Si c'est un message qu'on est en train d'éditer
-                    if (editingMessage && editingMessage.id_message_prive === msg.id_message_prive) {
+                    if (
+                      editingMessage &&
+                      editingMessage.id_message_prive === msg.id_message_prive
+                    ) {
                       return (
-                        <div 
-                          key={msg.id_message_prive} 
-                          className={`dm-message ${isOwn ? 'own' : 'other'} editing`}
+                        <div
+                          key={msg.id_message_prive}
+                          className={`dm-message ${
+                            isOwn ? "own" : "other"
+                          } editing`}
                         >
                           <div className="dm-msg-avatar">
                             {senderInfo.avatar ? (
-                              <img src={senderInfo.avatar} alt={senderInfo.nom || senderInfo.name || "User"} />
+                              <img
+                                src={senderInfo.avatar}
+                                alt={
+                                  senderInfo.nom || senderInfo.name || "User"
+                                }
+                              />
                             ) : (
                               <div className="dm-avatar-placeholder">
-                                {senderInfo.nom ? senderInfo.nom[0].toUpperCase() : 
-                                 senderInfo.name ? senderInfo.name[0].toUpperCase() : "U"}
+                                {senderInfo.nom
+                                  ? senderInfo.nom[0].toUpperCase()
+                                  : senderInfo.name
+                                  ? senderInfo.name[0].toUpperCase()
+                                  : "U"}
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="dm-msg-content">
                             <div className="dm-edit-container">
                               <textarea
                                 value={editMessageContent}
-                                onChange={(e) => setEditMessageContent(e.target.value)}
+                                onChange={(e) =>
+                                  setEditMessageContent(e.target.value)
+                                }
                                 className="dm-edit-textarea"
                                 autoFocus
                               />
                               <div className="dm-edit-actions">
-                                <button onClick={handleSaveEdit} className="dm-edit-save">Enregistrer</button>
-                                <button onClick={handleCancelEdit} className="dm-edit-cancel">Annuler</button>
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="dm-edit-save"
+                                >
+                                  Enregistrer
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="dm-edit-cancel"
+                                >
+                                  Annuler
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       );
                     }
-                    
+
                     return (
-                      <div 
-                        key={msg.id_message_prive} 
-                        className={`dm-message ${isOwn ? 'own' : 'other'}`}
+                      <div
+                        key={msg.id_message_prive}
+                        className={`dm-message ${isOwn ? "own" : "other"}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
                         {/* Si c'est une réponse, afficher le message parent */}
@@ -1124,13 +1439,17 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                             <div className="dm-reply-content">
                               {/* TODO: Récupérer le message parent */}
                               <span className="dm-reply-author">
-                                @{usersInfo[msg.parent_expediteur]?.name || "Utilisateur"}
+                                @
+                                {usersInfo[msg.parent_expediteur]?.name ||
+                                  "Utilisateur"}
                               </span>
-                              <span className="dm-reply-text">{msg.parent_contenu || "Message original"}</span>
+                              <span className="dm-reply-text">
+                                {msg.parent_contenu || "Message original"}
+                              </span>
                             </div>
                           </div>
                         )}
-                      
+
                         <div className="dm-msg-avatar">
                           {avatarSrc ? (
                             <img src={avatarSrc} alt={displayName} />
@@ -1140,25 +1459,121 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
-                            <span className="dm-msg-author">
-                              {displayName}
-                            </span>
+                            <span className="dm-msg-author">{displayName}</span>
                             <span className="dm-msg-date">
-                              {formatMessageDate(msg.date_creation || msg.date_envoi)}
+                              {formatMessageDate(
+                                msg.date_creation || msg.date_envoi
+                              )}
                             </span>
                           </div>
-                          
-                          <div className="dm-msg-bubble">
-                            {msg.contenu}
-                          </div>
-                          
+
+                          <div className="dm-msg-bubble">{msg.contenu}</div>
+
+                          {/* Afficher les pièces jointes du message */}
+                          {msg.attachments &&
+                            Array.isArray(msg.attachments) &&
+                            msg.attachments.length > 0 && (
+                              <div className="dm-msg-attachments">
+                                {msg.attachments.map((attachment) => {
+                                  // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
+                                  const fileUrl = getCompleteFileUrl(
+                                    attachment.presignedUrl || attachment.url
+                                  );
+
+                                  console.log(
+                                    "[DM] Affichage fichier avec URL:",
+                                    fileUrl
+                                  );
+
+                                  if (
+                                    attachment.type &&
+                                    attachment.type.startsWith("image/")
+                                  ) {
+                                    // Affichage des images
+                                    return (
+                                      <div
+                                        key={
+                                          attachment.id_fichier ||
+                                          `temp-${Date.now()}`
+                                        }
+                                        className="dm-msg-image-attachment"
+                                      >
+                                        <a
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <img
+                                            src={fileUrl}
+                                            alt={attachment.nom_fichier}
+                                            className="dm-msg-image"
+                                            onError={(e) => {
+                                              console.error(
+                                                `[DM] Failed to load image: ${fileUrl}`
+                                              );
+                                              e.target.src =
+                                                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
+                                              e.target.style.padding = "20px";
+                                              e.target.style.width = "80px";
+                                              e.target.style.height = "80px";
+                                              e.target.style.background =
+                                                "rgba(0,0,0,0.1)";
+                                            }}
+                                          />
+                                        </a>
+                                        <div className="dm-msg-image-filename">
+                                          {attachment.nom_fichier}
+                                        </div>
+                                      </div>
+                                    );
+                                  } else {
+                                    // Autres types de fichiers
+                                    return (
+                                      <div
+                                        key={
+                                          attachment.id_fichier ||
+                                          `temp-${Date.now()}`
+                                        }
+                                        className="dm-msg-file-attachment"
+                                      >
+                                        <a
+                                          href={fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          download={attachment.nom_fichier}
+                                          className="dm-msg-file-download-link"
+                                        >
+                                          <div className="dm-msg-file-icon">
+                                            {getFileIcon(attachment.type)}
+                                          </div>
+                                          <div className="dm-msg-file-info">
+                                            <div className="dm-msg-file-name">
+                                              {attachment.nom_fichier}
+                                            </div>
+                                            <div className="dm-msg-file-size">
+                                              {formatFileSize(
+                                                attachment.taille_fichier
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="dm-msg-file-download">
+                                            <FaDownload />
+                                          </div>
+                                        </a>
+                                      </div>
+                                    );
+                                  }
+                                })}
+                              </div>
+                            )}
+
                           {isOwn && (
                             <div className="dm-msg-read">
-                              {msg.date_lecture 
-                                ? `✓ Lu ${formatMessageDate(msg.date_lecture)}` 
+                              {msg.date_lecture
+                                ? `✓ Lu ${formatMessageDate(msg.date_lecture)}`
                                 : "✓ Envoyé"}
                             </div>
                           )}
@@ -1168,36 +1583,86 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                   })
                 )}
               </div>
-              
-              {/* Formulaire d'envoi de message avec zone de réponse */}
+
+              {/* Formulaire d'envoi de message avec zone de réponse et upload de fichiers */}
               <form className="dm-input-form" onSubmit={handleSendMessage}>
                 {replyingTo && (
                   <div className="dm-replying-to">
                     <div className="dm-replying-info">
                       <span>Réponse à </span>
-                      <strong>{usersInfo[replyingTo.fk_expediteur]?.name || "Utilisateur"}</strong>
-                      <span className="dm-replying-content">: {replyingTo.contenu}</span>
+                      <strong>
+                        {usersInfo[replyingTo.fk_expediteur]?.name ||
+                          "Utilisateur"}
+                      </strong>
+                      <span className="dm-replying-content">
+                        : {replyingTo.contenu}
+                      </span>
                     </div>
-                    <button 
-                      type="button" 
-                      className="dm-cancel-reply" 
+                    <button
+                      type="button"
+                      className="dm-cancel-reply"
                       onClick={handleCancelReply}
                     >
                       <FaTimes />
                     </button>
                   </div>
                 )}
-                
+
+                {/* Afficher les pièces jointes en attente */}
+                {attachments.length > 0 && (
+                  <div className="dm-attachments-preview">
+                    {attachments.map((att, index) => (
+                      <div
+                        key={att.id_fichier || index}
+                        className="dm-attachment-preview"
+                      >
+                        <span className="attachment-name">
+                          {att.nom_fichier}
+                        </span>
+                        <button
+                          type="button"
+                          className="attachment-remove"
+                          onClick={() =>
+                            setAttachments(
+                              attachments.filter((_, i) => i !== index)
+                            )
+                          }
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="dm-input-wrapper">
-                  <button type="button" className="dm-attachment-btn">
+                  {/* Input file caché déclenché par le bouton d'attachement */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    style={{ display: "none" }}
+                  />
+                  <button
+                    type="button"
+                    className={`dm-attachment-btn ${
+                      uploadingFile ? "uploading" : ""
+                    }`}
+                    onClick={handleAttachmentClick}
+                    disabled={uploadingFile}
+                  >
                     <FaPaperclip />
+                    {uploadingFile && <span className="upload-spinner"></span>}
                   </button>
                   <input
                     type="text"
-                    placeholder={`Message à ${selectedUserInfo?.name || 'l\'utilisateur'}`}
+                    placeholder={`Message à ${
+                      selectedUserInfo?.name || "l'utilisateur"
+                    }`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="dm-input"
+                    disabled={uploadingFile}
                   />
                   <button type="button" className="dm-emoji-btn">
                     <FaSmile />
@@ -1206,7 +1671,10 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                 <button
                   type="submit"
                   className="dm-send-btn"
-                  disabled={!newMessage.trim()}
+                  disabled={
+                    (!newMessage.trim() && attachments.length === 0) ||
+                    uploadingFile
+                  }
                 >
                   <FaPaperPlane />
                 </button>
@@ -1221,14 +1689,14 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
             <div className="dm-modal">
               <div className="dm-modal-header">
                 <h3>Nouvelle conversation</h3>
-                <button 
-                  className="dm-modal-close" 
+                <button
+                  className="dm-modal-close"
                   onClick={() => setShowNewConversationModal(false)}
                 >
                   <FaTimes />
                 </button>
               </div>
-              
+
               <div className="dm-modal-body">
                 <div className="dm-search-input-wrapper modal">
                   <FaSearch className="dm-search-icon" />
@@ -1241,31 +1709,41 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="dm-users-list">
                   {loadingUsers ? (
-                    <div className="dm-loading-users">Chargement des utilisateurs...</div>
+                    <div className="dm-loading-users">
+                      Chargement des utilisateurs...
+                    </div>
                   ) : filteredUsers.length === 0 ? (
                     <div className="dm-no-users">Aucun utilisateur trouvé</div>
                   ) : (
-                    filteredUsers.map(user => (
-                      <div 
-                        key={user.id_utilisateur} 
+                    filteredUsers.map((user) => (
+                      <div
+                        key={user.id_utilisateur}
                         className="dm-user-item"
-                        onClick={() => startConversationWith(user.id_utilisateur)}
+                        onClick={() =>
+                          startConversationWith(user.id_utilisateur)
+                        }
                       >
                         {user.photo_de_profil ? (
-                          <img 
-                            src={user.photo_de_profil} 
-                            alt={user.nom} 
-                            className="dm-avatar" 
+                          <img
+                            src={user.photo_de_profil}
+                            alt={user.nom}
+                            className="dm-avatar"
                           />
                         ) : (
                           <div className="dm-avatar">
                             <FaUserCircle className="dm-avatar-placeholder" />
                           </div>
                         )}
-                        <span className="dm-username">{user.nom || `Utilisateur ${user.id_utilisateur.substring(0, 6)}`}</span>
+                        <span className="dm-username">
+                          {user.nom ||
+                            `Utilisateur ${user.id_utilisateur.substring(
+                              0,
+                              6
+                            )}`}
+                        </span>
                       </div>
                     ))
                   )}
@@ -1274,76 +1752,78 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
             </div>
           </div>
         )}
-        
+
         {/* Menu contextuel pour les messages */}
         {messageContextMenu.visible && (
-          <div 
+          <div
             className="dm-context-menu"
             style={{
               top: messageContextMenu.yPos,
-              left: messageContextMenu.xPos
+              left: messageContextMenu.xPos,
             }}
           >
             {messageContextMenu.isOwnMessage ? (
               <>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleEditMessage}
                 >
                   Modifier
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleDeleteMessage}
                 >
                   Supprimer
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleReplyMessage}
                 >
                   <FaReply className="dm-context-menu-icon" /> Répondre
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleAddReaction}
                 >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une réaction
+                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
+                  réaction
                 </div>
               </>
             ) : (
               <>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleReplyMessage}
                 >
                   <FaReply className="dm-context-menu-icon" /> Répondre
                 </div>
-                <div 
-                  className="dm-context-menu-item" 
+                <div
+                  className="dm-context-menu-item"
                   onClick={handleAddReaction}
                 >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une réaction
+                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
+                  réaction
                 </div>
               </>
             )}
           </div>
         )}
-        
+
         {/* Sélecteur d'emoji */}
         {showEmojiPicker && (
-          <div 
+          <div
             className="dm-emoji-picker"
             style={{
               top: emojiPickerPosition.top,
-              left: emojiPickerPosition.left
+              left: emojiPickerPosition.left,
             }}
             ref={emojiPickerRef}
           >
             <div className="dm-emoji-grid">
-              {["👍", "❤️", "😂", "😮", "😢", "😡"].map(emoji => (
-                <div 
-                  key={emoji} 
+              {["👍", "❤️", "😂", "😮", "😢", "😡"].map((emoji) => (
+                <div
+                  key={emoji}
                   className="dm-emoji-item"
                   onClick={() => handleEmojiSelect(emoji)}
                 >
@@ -1353,10 +1833,10 @@ const sendMessageViaAPI = async (messageContent, recipientId, replyToMessage) =>
             </div>
           </div>
         )}
-        
+
         {/* Couche transparente pour fermer le menu */}
         {messageContextMenu.visible && (
-          <div 
+          <div
             className="dm-context-menu-overlay"
             onClick={handleCloseMessageContextMenu}
           />
