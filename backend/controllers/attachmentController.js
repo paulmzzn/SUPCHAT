@@ -10,14 +10,22 @@ export const getPrivateMessageAttachments = async (req, res) => {
 
     const attachments = await Fichier.getPrivateMessageAttachments(messageId);
 
-    // Compléter les URLs des pièces jointes avec des URLs présignées si nécessaire
+    // Correction : ne pas préfixer si déjà une URL S3
     const attachmentsWithUrls = attachments.map((attachment) => {
-      const baseUrl =
-        process.env.BASE_URL || req.protocol + "://" + req.get("host");
-      return {
-        ...attachment,
-        presignedUrl: `${baseUrl}/api/files/${attachment.url}`,
-      };
+      if (attachment.url && attachment.url.startsWith("http")) {
+        return attachment;
+      }
+      // Sinon, préfixer avec l'URL S3 si possible, sinon garder l'URL brute
+      const s3Base =
+        process.env.SCW_ENDPOINT && process.env.S3_BUCKET_NAME
+          ? `${process.env.SCW_ENDPOINT.replace(/\/$/, "")}/${
+              process.env.S3_BUCKET_NAME
+            }`
+          : null;
+      if (s3Base && attachment.url) {
+        return { ...attachment, url: `${s3Base}/${attachment.url}` };
+      }
+      return attachment;
     });
 
     console.log(
@@ -29,6 +37,9 @@ export const getPrivateMessageAttachments = async (req, res) => {
       "[Attachments] Erreur lors de la récupération des pièces jointes:",
       error
     );
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: "Erreur lors de la récupération des pièces jointes",
+      error: error.message,
+    });
   }
 };

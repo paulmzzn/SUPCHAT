@@ -23,7 +23,7 @@ import {
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.63:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -670,24 +670,22 @@ function DirectMessages() {
       const data = await res.json();
       console.log("Messages récupérés:", data);
 
-      // Pour chaque message, récupérer ses pièces jointes
+      // Pour chaque message, récupérer ses pièces jointes UNIQUEMENT si non présentes
       const messagesWithAttachments = await Promise.all(
         data.map(async (message) => {
+          if (message.attachments && message.attachments.length > 0) {
+            return message; // Pas de doublon
+          }
           try {
             const attachments = await fetchMessageAttachments(
               message.id_message_prive
             );
             return { ...message, attachments };
           } catch (error) {
-            console.error(
-              `[DM] Erreur lors du chargement des pièces jointes pour le message ${message.id_message_prive}:`,
-              error
-            );
             return { ...message, attachments: [] };
           }
         })
       );
-
       setMessages(messagesWithAttachments);
 
       // Marquer les messages non lus comme lus
@@ -805,6 +803,28 @@ function DirectMessages() {
       const data = await response.json();
       console.log("[DM] Réponse upload OK :", data);
 
+      // Correction : si le backend retourne un message_prive, l'ajouter directement à l'UI
+      if (data.message_prive) {
+        // Récupérer les pièces jointes du message créé (pour cohérence UI)
+        let attachments = [];
+        try {
+          attachments = await fetchMessageAttachments(
+            data.message_prive.id_message_prive
+          );
+        } catch (err) {
+          attachments = [];
+        }
+        setMessages((prev) => [
+          ...prev,
+          { ...data.message_prive, attachments },
+        ]);
+        setNewMessage("");
+        setReplyingTo(null);
+        setAttachments([]);
+        // On ne fait PAS de sendMessage après un upload de fichier
+        return;
+      }
+
       // Ajouter le fichier à la liste des pièces jointes
       setAttachments([...attachments, data.fichier]);
       console.log("[DM] Pièce jointe ajoutée à l'état local :", data.fichier);
@@ -831,6 +851,7 @@ function DirectMessages() {
   // Modifiez la fonction d'envoi pour gérer différents états de connexion
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    // Empêcher l'envoi si un fichier vient d'être uploadé et a déjà créé un message
     if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
       return;
 
