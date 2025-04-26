@@ -188,6 +188,8 @@ function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const navigate = useNavigate(); // Ajout hook navigation
 
+  const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
+
   // Référence vers l'input de fichier caché
   const fileInputRef = useRef(null);
 
@@ -196,7 +198,7 @@ function WorkspaceDetails() {
 
   // Use the custom hook to get state and handlers
   const {
-    workspace,
+    workspace: rawWorkspace,
     loading,
     error,
     searchQuery,
@@ -283,6 +285,19 @@ function WorkspaceDetails() {
     handleDeleteMessage,
     handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
   } = useWorkspaceDetails(workspaceId);
+
+  // Correction: préfixer les URLs S3 si besoin
+  const workspace = rawWorkspace
+    ? {
+        ...rawWorkspace,
+        icon: rawWorkspace.icon && !rawWorkspace.icon.startsWith("http")
+          ? S3_BASE_URL + rawWorkspace.icon
+          : rawWorkspace.icon,
+        banner: rawWorkspace.banner && !rawWorkspace.banner.startsWith("http")
+          ? S3_BASE_URL + rawWorkspace.banner
+          : rawWorkspace.banner,
+      }
+    : null;
 
   // Handler pour ouvrir la sélection de fichier
   const handleOpenFileUpload = () => {
