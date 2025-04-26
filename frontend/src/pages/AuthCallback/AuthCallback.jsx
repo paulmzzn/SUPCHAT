@@ -11,12 +11,12 @@ function AuthCallback() {
 
     if (token && email) {
       try {
-        localStorage.setItem('userToken', token);
-        localStorage.setItem('userEmail', email);
+        // Utilise la même clé que le reste de l'app (token)
+        localStorage.setItem('token', token);
+        localStorage.setItem('email', email);
         localStorage.setItem('isValidated', 'true');
-        console.log('Token stored, redirecting to dashboard...');
-        // Force la navigation vers le dashboard
-        window.location.href = '/dashboard';
+        // Redirige proprement avec React Router
+        navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Error during redirection:', error);
         navigate('/login');

@@ -6,7 +6,7 @@ import canalRoutes from "./routes/canalRoutes.js";
 import passport from "passport";
 import session from "express-session";
 import cors from "cors"; // Import CORS
-import { googleStrategy } from "./config/passport.js"; // Import Google strategy
+import { googleStrategy, githubStrategy } from "./config/passport.js"; // Import Google and GitHub strategies
 import { createServer } from "http";
 import { Server } from "socket.io";
 import MessageModel from "./models/Message.js";
@@ -28,8 +28,8 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://127.0.0.1:3000",
   "http://127.0.0.0:3001",
-  "http://192.168.1.52:3000",
-  "http://192.168.1.52:3001"
+  "http://192.168.1.63:3000",
+  "http://192.168.1.63:3001"
 ];
 
 app.use(cors({
@@ -60,6 +60,7 @@ app.use(passport.session());
 app.use(express.static("public"));
 
 passport.use(googleStrategy);
+passport.use(githubStrategy);
 
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
@@ -103,8 +104,8 @@ try {
 
 // Démarrer l'écoute du serveur avec l'interface et le port corrects
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Serveur démarré sur http://REDACTED:${PORT}`);
-  console.log(`WebSocket URL: ws://REDACTED:${PORT}`);
+  console.log(`Serveur démarré sur http://192.168.1.63:${PORT}`);
+  console.log(`WebSocket URL: ws://192.168.1.63:${PORT}`);
   
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool.query("SELECT NOW()") // Test simple pour vérifier la connexion
