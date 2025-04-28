@@ -6,9 +6,11 @@ import path from "path";
 export const sendPrivateMessage = async (req, res) => {
   try {
     const expediteurId = req.user.id;
-    const { destinataireId, contenu, attachments } = req.body;
-    if (!destinataireId) {
-      return res.status(400).json({ message: "destinataireId requis" });
+
+    const { destinataireId, contenu, replyToId, attachments} = req.body;
+    if (!destinataireId || !contenu) {
+      return res.status(400).json({ message: 'destinataireId et contenu requis' });
+
     }
 
     // Créer le message
@@ -16,6 +18,9 @@ export const sendPrivateMessage = async (req, res) => {
       contenu: contenu || "", // Permettre des messages vides si des pièces jointes sont présentes
       fk_expediteur: expediteurId,
       fk_destinataire: destinataireId,
+
+      parent_id: replyToId || null // Ajout du support pour les réponses
+
     });
 
     // Associer les pièces jointes si elles sont fournies
@@ -133,6 +138,7 @@ export const markPrivateMessageAsRead = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const uploadAttachment = async (req, res) => {
   try {
     console.log("[PrivateMessage] Début de l'upload d'un fichier"); // Vérifier si nous avons un fichier et le destinataire    if (!req.file) {      return res.status(400).json({ message: "Aucun fichier fourni" });    }    const { recipientId, message } = req.body;    const expediteurId = req.user.id;    if (!recipientId) {      return res.status(400).json({ message: "recipientId requis" });    }    console.log("[PrivateMessage] Données reçues:", {      file: req.file.originalname,      recipientId,      expediteurId,      message: message || "(vide)"    });
@@ -232,6 +238,7 @@ export const uploadAttachment = async (req, res) => {
 };
 
 // Récupérer le nombre de messages non lus par expéditeur
+
 export const getUnreadCounts = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -241,6 +248,7 @@ export const getUnreadCounts = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Récupérer les conversations récentes d'un utilisateur
 export const getUserConversations = async (req, res) => {

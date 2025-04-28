@@ -58,6 +58,10 @@ dotenv.config();
 const router = express.Router();
 // Utiliser une variable d'environnement ou une valeur par défaut
 
+const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
+const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
+
+
 const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
 
 router.post("/register", registerUser);
@@ -75,18 +79,23 @@ router.post("/reset-password", resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.63:3001/login' }), 
+
+  passport.authenticate('google', { failureRedirect: `http://${SUPCHAT_HOST}:3001/login` }), 
+
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
       SECRET_KEY,
-      { expiresIn: "7d" } // Augmenté à 7 jours
+
+      { expiresIn: '7d' }
+
     );
 
-    // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
+
+      `http://${SUPCHAT_HOST}:3001/auth/callback?token=${token}&email=${user.email}`
+
 
     );
   }
@@ -105,6 +114,7 @@ router.get('/auth/github/callback',
     );
     res.redirect(
       `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
+
 
     );
   }
