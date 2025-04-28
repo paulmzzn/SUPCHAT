@@ -380,7 +380,7 @@
   font-size: 0.8rem;
   opacity: 0.9;
   background: var(--profile-workspace-role-bg);
-  padding: 2px 8px;
+  padding: 2px 8px; 
   border-radius: 12px;
   color: var(--profile-role-color);
 }
