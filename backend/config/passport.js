@@ -7,16 +7,19 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import UserModel from "../models/User.js";
 
-export const googleStrategy = new GoogleStrategy(
-  {
-    clientID:
-      "REDACTED",
-    clientSecret: "REDACTED",
-    callbackURL: "http://192.168.1.109:3000/api/users/auth/google/callback",
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      console.log("Google profile:", profile); // Pour le débogage
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy } from 'passport-github2';
+import UserModel from '../models/User.js';
+
+export const googleStrategy = new GoogleStrategy({
+  clientID: 'REDACTED',
+  clientSecret: 'REDACTED',
+  callbackURL: 'http://REDACTED:3000/api/users/auth/google/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    console.log('Google profile:', profile); // Pour le débogage
+
 
       const user = await UserModel.findOrCreateUser({
         nom: profile.displayName,
@@ -45,46 +48,40 @@ export const googleStrategy = new GoogleStrategy(
   }
 );
 
-export const githubStrategy = new GitHubStrategy(
-  {
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: "http://192.168.1.109:3000/api/users/auth/github/callback",
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      // Récupérer l'email principal
-      let email = null;
-      if (profile.emails && profile.emails.length > 0) {
-        // Prend l'email principal et vérifié
-        email =
-          profile.emails.find((e) => e.primary && e.verified)?.value ||
-          profile.emails.find((e) => e.primary)?.value ||
-          profile.emails.find((e) => e.verified)?.value ||
-          profile.emails[0].value;
-      }
-      // Si toujours pas d'email, tente de récupérer via l'API GitHub
-      if (!email) {
-        // Utilise l'API GitHub pour récupérer les emails (nécessite le scope user:email)
-        const fetch = (await import("node-fetch")).default;
-        const emailsResponse = await fetch(
-          "https://api.github.com/user/emails",
-          {
-            headers: {
-              Authorization: `token ${accessToken}`,
-              "User-Agent": "SUPCHAT-App",
-            },
-          }
-        );
-        if (emailsResponse.ok) {
-          const emailsData = await emailsResponse.json();
-          if (Array.isArray(emailsData)) {
-            email =
-              emailsData.find((e) => e.primary && e.verified)?.email ||
-              emailsData.find((e) => e.primary)?.email ||
-              emailsData.find((e) => e.verified)?.email ||
-              emailsData[0]?.email;
-          }
+
+export const githubStrategy = new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: 'http://REDACTED:3000/api/users/auth/github/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    // Récupérer l'email principal
+    let email = null;
+    if (profile.emails && profile.emails.length > 0) {
+      // Prend l'email principal et vérifié
+      email = profile.emails.find(e => e.primary && e.verified)?.value
+        || profile.emails.find(e => e.primary)?.value
+        || profile.emails.find(e => e.verified)?.value
+        || profile.emails[0].value;
+    }
+    // Si toujours pas d'email, tente de récupérer via l'API GitHub
+    if (!email) {
+      // Utilise l'API GitHub pour récupérer les emails (nécessite le scope user:email)
+      const fetch = (await import('node-fetch')).default;
+      const emailsResponse = await fetch('https://api.github.com/user/emails', {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'User-Agent': 'SUPCHAT-App'
+        }
+      });
+      if (emailsResponse.ok) {
+        const emailsData = await emailsResponse.json();
+        if (Array.isArray(emailsData)) {
+          email = emailsData.find(e => e.primary && e.verified)?.email
+            || emailsData.find(e => e.primary)?.email
+            || emailsData.find(e => e.verified)?.email
+            || emailsData[0]?.email;
+
         }
       }
       if (!email) {
