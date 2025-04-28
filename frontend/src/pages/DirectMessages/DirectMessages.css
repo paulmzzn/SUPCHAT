@@ -1128,3 +1128,31 @@
   50% { background-color: rgba(147, 72, 183, 0.3); }
   100% { background-color: rgba(147, 72, 183, 0.1); }
 }
+
+/* Badge de notification pour messages non lus dans la liste des conversations */
+.dm-unread-badge {
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 50% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+  z-index: 2;
+  padding: 0 6px;
+  border: 2px solid #222222;
+  aspect-ratio: 1 / 1;
+}
+
+.dm-conv-item.active .dm-unread-badge {
+  border-color: #9348b7;
+}
