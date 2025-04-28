@@ -1082,3 +1082,49 @@
   text-overflow: ellipsis;
   max-width: 300px;
 }
+
+/* --- Styles reply des workspaces (copiés pour harmonisation) --- */
+.message-reply-to {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid rgba(147, 72, 183, 0.6);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.reply-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.reply-icon {
+  color: rgba(147, 72, 183, 0.8);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.reply-author {
+  color: #b05fdf;
+  font-weight: 500;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+.reply-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+.highlight-message {
+  animation: highlightMessage 2s ease;
+}
+@keyframes highlightMessage {
+  0% { background-color: rgba(147, 72, 183, 0.1); }
+  50% { background-color: rgba(147, 72, 183, 0.3); }
+  100% { background-color: rgba(147, 72, 183, 0.1); }
+}

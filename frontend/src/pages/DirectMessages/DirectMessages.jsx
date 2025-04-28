@@ -1124,12 +1124,7 @@ function DirectMessages() {
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(
-      `@${
-        usersInfo[messageContextMenu.message.fk_expediteur]?.name ||
-        "Utilisateur"
-      } `
-    );
+    // Ne plus ajouter automatiquement le pseudo dans le champ de saisie
     handleCloseMessageContextMenu();
     const inputElement = document.querySelector(".dm-input");
     if (inputElement) inputElement.focus();
@@ -1514,21 +1509,43 @@ function DirectMessages() {
                         className={`dm-message ${isOwn ? "own" : "other"}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
-                        {/* Si c'est une réponse, afficher le message parent */}
-                        {msg.parent_id && (
-                          <div className="dm-reply-info">
-                            <div className="dm-reply-content">
-                              {/* TODO: Récupérer le message parent */}
-                              <span className="dm-reply-author">
-                                {usersInfo[replyingTo?.fk_expediteur]?.name || 
-                                  "Utilisateur"}
+                        {/* Afficher le message parent (réponse) dans les messages privés, même style que workspaces */}
+                        {msg.parent_id || msg.parent_message ? (
+                          <div
+                            className="message-reply-to"
+                            onClick={() => {
+                              const parentId = msg.parent_id || msg.parent_message?.id_message_prive;
+                              if (parentId) {
+                                const element = document.getElementById(`msg-${parentId}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.classList.add("highlight-message");
+                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                }
+                              }
+                            }}
+                          >
+                            <span className="reply-icon">
+                              <FaReply />
+                            </span>
+                            <div className="reply-content">
+                              <span className="reply-author">
+                                {msg.parent_message
+                                  ? usersInfo[msg.parent_message.fk_expediteur]?.name || "Utilisateur"
+                                  : msg.parent_id
+                                    ? usersInfo[messages.find(m => m.id_message_prive === msg.parent_id)?.fk_expediteur]?.name || "Utilisateur"
+                                    : "Utilisateur"}
                               </span>
-                              <span className="dm-reply-text">
-                                {msg.parent_contenu || "Message original"}
+                              <span className="reply-text">
+                                {msg.parent_message
+                                  ? msg.parent_message.contenu
+                                  : msg.parent_id
+                                    ? messages.find(m => m.id_message_prive === msg.parent_id)?.contenu || "Message original non disponible"
+                                    : "Message original non disponible"}
                               </span>
                             </div>
                           </div>
-                        )}
+                        ) : null}
 
                         <div className="dm-msg-avatar">
                           {avatarSrc ? (
