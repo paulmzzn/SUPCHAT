@@ -30,6 +30,7 @@ import {
   FaAt,
   FaArrowUp,
   FaArrowDown,
+  FaDownload,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
@@ -1446,24 +1447,26 @@ function WorkspaceDetails() {
                 )}
             </div>
           )}
-          {/* Files Section - Affichage réel des fichiers du canal actif */}
-          <div className="details-section">
-            <div className="section-header" onClick={toggleFiles}>
-              {showFiles ? (
-                <FaChevronDown className="toggle-icon" />
-              ) : (
-                <FaChevronRight className="toggle-icon" />
-              )}
-              <h3>Fichiers ({files.length})</h3>
-            </div>
-            {showFiles && (
-              <ul className="files-list">
-                {files.length === 0 ? (
-                  <li className="file-item">
-                    Aucun fichier partagé dans ce canal.
-                  </li>
+          {/* Files Section - Affichage réel des fichiers du canal actif, max 5, scrollable, icône download */}
+          {files.length > 0 && (
+            <div className="details-section">
+              <div className="section-header" onClick={toggleFiles}>
+                {showFiles ? (
+                  <FaChevronDown className="toggle-icon" />
                 ) : (
-                  files.map((file) => (
+                  <FaChevronRight className="toggle-icon" />
+                )}
+                <h3>Fichiers ({files.length})</h3>
+              </div>
+              {showFiles && (
+                <ul
+                  className="files-list"
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: files.length > 5 ? "auto" : "visible",
+                  }}
+                >
+                  {files.slice(0, 5).map((file) => (
                     <li key={file.id} className="file-item">
                       <div className="file-icon">{getFileIcon(file.type)}</div>
                       <div className="file-info">
@@ -1475,66 +1478,62 @@ function WorkspaceDetails() {
                         </span>
                       </div>
                       <div className="file-actions">
-                        {file.isImage ? (
-                          <button
-                            className="file-view-button"
-                            onClick={() =>
-                              handleOpenFileViewer({
-                                ...file,
-                                fullFileUrl: S3_BASE_URL + file.url,
-                              })
-                            }
-                          >
-                            Voir
-                          </button>
-                        ) : null}
                         <button
                           className="file-download-button"
+                          title="Télécharger"
                           onClick={() =>
                             handleDownloadFile(file.url, file.name)
                           }
                         >
-                          Télécharger
+                          <FaDownload />
                         </button>
                       </div>
                     </li>
-                  ))
-                )}
-              </ul>
-            )}
-          </div>
-
-          {/* Images Section - NO CHANGE */}
-          <div className="details-section">
-            <div className="section-header" onClick={toggleImages}>
-              {" "}
-              {/* Use handler from hook */}
-              {showImages ? (
-                <FaChevronDown className="toggle-icon" />
-              ) : (
-                <FaChevronRight className="toggle-icon" />
+                  ))}
+                </ul>
               )}
-              <h3>Images ({images.length})</h3> {/* Use images from hook */}
             </div>
+          )}
 
-            {showImages && (
-              <div className="images-grid">
-                {images.map(
-                  (
-                    image // Use images from hook
-                  ) => (
+          {/* Images Section - Affichage réel des images du canal actif, max 5, scrollable */}
+          {images.length > 0 && (
+            <div className="details-section">
+              <div className="section-header" onClick={toggleImages}>
+                {showImages ? (
+                  <FaChevronDown className="toggle-icon" />
+                ) : (
+                  <FaChevronRight className="toggle-icon" />
+                )}
+                <h3>Images ({images.length})</h3>
+              </div>
+              {showImages && (
+                <div
+                  className="images-grid"
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: images.length > 5 ? "auto" : "visible",
+                  }}
+                >
+                  {images.slice(0, 5).map((image) => (
                     <div key={image.id} className="image-item">
                       <img
-                        src={image.url}
-                        alt="Shared"
+                        src={S3_BASE_URL + image.url}
+                        alt={image.name}
                         className="shared-image"
+                        onClick={() =>
+                          handleOpenFileViewer({
+                            ...image,
+                            fullFileUrl: S3_BASE_URL + image.url,
+                          })
+                        }
+                        style={{ cursor: "pointer" }}
                       />
                     </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal de création de canal - Structure améliorée */}
