@@ -1,23 +1,23 @@
 .workspace-card {
-  background: linear-gradient(145deg, rgba(35, 35, 40, 0.8), rgba(25, 25, 30, 0.95));
+  background: var(--workspace-card-bg);
+  box-shadow: var(--workspace-card-shadow);
+  border: var(--workspace-card-border);
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.2, 0, 0.15, 1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 2px 5px rgba(0, 0, 0, 0.15);
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
   min-height: 290px;
   backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
   animation: fadeIn 0.5s ease forwards;
 }
 
 .workspace-card:hover:not(.add-workspace) {
   transform: translateY(-7px);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35), 0 5px 12px rgba(147, 72, 183, 0.15);
-  border-color: rgba(147, 72, 183, 0.3);
+  box-shadow: var(--workspace-card-shadow-hover);
+  border-color: var(--workspace-card-border-hover);
 }
 
 .workspace-banner {
@@ -35,7 +35,7 @@
   left: 0;
   right: 0;
   height: 30px;
-  background: linear-gradient(to top, rgba(30, 30, 35, 0.9), transparent);
+  background: var(--workspace-banner-gradient);
 }
 
 .workspace-content {
@@ -63,8 +63,8 @@
   background-size: cover;
   background-position: center;
   margin-right: 14px;
-  border: 3px solid rgba(30, 30, 35, 0.9);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+  border: var(--workspace-icon-border);
+  box-shadow: var(--workspace-icon-shadow);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -77,7 +77,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent);
+  background: var(--workspace-icon-overlay);
   pointer-events: none;
 }
 
@@ -95,7 +95,7 @@
 
 .workspace-title {
   font-size: 1.25rem;
-  color: white;
+  color: var(--workspace-title-color);
   margin: 0 8px 0 0;
   white-space: nowrap;
   overflow: hidden;
@@ -103,11 +103,11 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.3;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: var(--workspace-title-shadow);
 }
 
 .private-icon {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--workspace-private-icon);
   font-size: 0.8rem;
   flex-shrink: 0;
   margin-left: 5px;
@@ -115,7 +115,7 @@
 
 .workspace-description {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--workspace-description-color);
   margin: 0 0 12px 0; /* Espace entre description et stats si la description est courte */
   overflow: hidden;
   display: -webkit-box;
@@ -129,9 +129,9 @@
   display: flex;
   gap: 15px;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--workspace-stats-color);
   padding: 10px 0 0 0; /* Réduit de 12px à 10px */
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: var(--workspace-stats-border);
   margin-top: 8px; /* Réduit de 10px à 8px */
   margin-bottom: 0;
 }
@@ -144,7 +144,7 @@
 }
 
 .workspace-stat:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--workspace-stat-hover);
 }
 
 .stat-icon {
@@ -152,9 +152,9 @@
 }
 
 .online-icon {
-  color: #4CD964;
+  color: var(--workspace-online-icon);
   font-size: 0.7rem;
-  filter: drop-shadow(0 0 3px rgba(76, 217, 100, 0.3));
+  filter: drop-shadow(var(--workspace-online-icon-shadow));
 }
 
 .join-button-container {
@@ -166,7 +166,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--workspace-options-btn-bg);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -179,11 +179,11 @@
   transition: all 0.2s ease;
   z-index: 5;
   backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--workspace-options-btn-shadow);
 }
 
 .options-button:hover {
-  background: rgba(147, 72, 183, 0.7);
+  background: var(--workspace-options-btn-bg-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -192,14 +192,14 @@
   position: absolute;
   top: 48px;
   right: 12px;
-  background: linear-gradient(145deg, rgba(40, 40, 45, 0.95), rgba(30, 30, 35, 0.95));
+  background: var(--workspace-options-bg);
   border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--workspace-options-shadow);
   z-index: 10;
   overflow: hidden;
   min-width: 160px;
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--workspace-options-border);
   animation: fadeInMenu 0.2s ease forwards;
 }
 
@@ -223,7 +223,7 @@
 .options-dropdown li {
   padding: 10px 15px;
   transition: all 0.15s ease;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--workspace-options-color);
   cursor: pointer;
   font-size: 0.9rem;
   display: flex;
@@ -232,27 +232,28 @@
 }
 
 .options-dropdown li:hover {
-  background-color: rgba(147, 72, 183, 0.2);
-  color: rgba(255, 255, 255, 1);
+  background-color: var(--workspace-options-hover);
+  color: var(--workspace-options-color-hover);
 }
 
 .options-dropdown li.danger {
-  color: #FF3B5C;
+  color: var(--workspace-options-danger);
 }
 
 .options-dropdown li.danger:hover {
-  background-color: rgba(255, 59, 92, 0.15);
-  color: #FF5C76;
+  background-color: var(--workspace-options-danger-hover);
+  color: var(--workspace-options-danger-hover-color);
 }
 
 .workspace-details {
   padding: 30px 20px 20px;
+  background: var(--workspace-details-bg);
 }
 
 .workspace-name {
   font-size: 1.2rem;
   font-weight: 600;
-  color: white;
+  color: var(--workspace-details-title);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -264,7 +265,7 @@
 }
 
 .workspace-description {
-  color: #98A2B3;
+  color: var(--workspace-details-description);
   font-size: 0.9rem;
   margin-bottom: 20px;
   display: -webkit-box;
@@ -278,6 +279,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
+  color: var(--workspace-details-stats);
 }
 
 .online-users, .total-members {
@@ -287,20 +289,20 @@
 }
 
 .online-users {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--workspace-details-online);
 }
 
 .total-members {
-  color: #98A2B3;
+  color: var(--workspace-details-members);
 }
 
 .online-indicator {
-  color: #4CAF50;
+  color: var(--workspace-details-online-indicator);
   font-size: 0.6rem;
 }
 
 .members-icon {
-  color: #98A2B3;
+  color: var(--workspace-details-members-icon);
 }
 
 /* Animation for new cards */
