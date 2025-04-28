@@ -11,6 +11,14 @@ import {
   FaRobot,
 } from "react-icons/fa"; // Added FaRobot for consistency
 
+// Helper pour formater la taille du fichier
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return "";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+}
+
 // Helper function to get emoji for reaction type
 const getEmojiForType = (reactionType) => {
   const emojiMap = {
@@ -57,41 +65,49 @@ export const useWorkspaceDetails = (workspaceId) => {
     offline: [],
   });
 
-  // Files and Images (using placeholder data for now)
-  const [files, setFiles] = useState([
-    {
-      id: 1,
-      name: "presentation.pptx",
-      type: "powerpoint",
-      size: "2.4 MB",
-      uploadedBy: "Alice Martin",
-      uploadedAt: "2023-05-15",
-    },
-    {
-      id: 2,
-      name: "budget.xlsx",
-      type: "excel",
-      size: "1.8 MB",
-      uploadedBy: "Bob Johnson",
-      uploadedAt: "2023-05-14",
-    },
-    {
-      id: 3,
-      name: "report.pdf",
-      type: "pdf",
-      size: "3.2 MB",
-      uploadedBy: "Charlie Brown",
-      uploadedAt: "2023-05-13",
-    },
-    {
-      id: 4,
-      name: "contract.docx",
-      type: "word",
-      size: "1.5 MB",
-      uploadedBy: "David Smith",
-      uploadedAt: "2023-05-12",
-    },
-  ]);
+  const [activeChannel, setActiveChannel] = useState(null); // doit être AVANT tout useEffect qui utilise activeChannel
+  const [messages, setMessages] = useState([]); // doit être AVANT tout useEffect qui utilise messages
+
+  // Files and Images (sidebar) : extraire les fichiers à partir des messages du canal actif
+  const [files, setFiles] = useState([]);
+
+  // Met à jour la liste des fichiers à chaque changement de messages ou de canal actif
+  useEffect(() => {
+    if (!activeChannel || !messages || messages.length === 0) {
+      setFiles([]);
+      return;
+    }
+    // Extraction robuste des fichiers à partir des messages du canal actif
+    const fileMessages = messages
+      .filter((msg) => msg.fk_canal === activeChannel.id)
+      .map((msg) => {
+        let parsed = null;
+        try {
+          parsed =
+            typeof msg.contenu === "string"
+              ? JSON.parse(msg.contenu)
+              : msg.contenu;
+        } catch (e) {
+          return null;
+        }
+        if (parsed && parsed.type === "file") {
+          return {
+            id: msg.id_message,
+            name: parsed.fileName || "Fichier",
+            type: parsed.fileType || "file",
+            size: parsed.fileSize ? formatFileSize(parsed.fileSize) : "",
+            uploadedBy: msg.fk_utilisateur,
+            uploadedAt:
+              msg.date_envoi || msg.created_at || msg.date_creation || "",
+            url: parsed.fileUrl,
+            isImage: parsed.isImage || false,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+    setFiles(fileMessages);
+  }, [messages, activeChannel]);
 
   const [images, setImages] = useState([
     {
@@ -147,8 +163,6 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [updateChannelError, setUpdateChannelError] = useState("");
 
   // Chat state
-  const [activeChannel, setActiveChannel] = useState(null);
-  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [displayMessage, setDisplayMessage] = useState(""); // Added state for displayed message
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -363,16 +377,19 @@ export const useWorkspaceDetails = (workspaceId) => {
   useEffect(() => {
     async function fetchRole() {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token || !workspace) return;
         const userId = currentUserId;
         if (!userId) return;
-        const res = await fetch(`${API_URL}/api/workspaces/${workspace.id}/members`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(
+          `${API_URL}/api/workspaces/${workspace.id}/members`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!res.ok) return;
         const members = await res.json();
-        const me = members.find(m => m.id_utilisateur === userId);
+        const me = members.find((m) => m.id_utilisateur === userId);
         setCurrentUserRole(me?.role?.toLowerCase() || null);
       } catch (e) {
         setCurrentUserRole(null);
@@ -483,8 +500,9 @@ export const useWorkspaceDetails = (workspaceId) => {
               if (!r.emoji) {
                 r.emoji = getEmojiForType(r.reaction_type);
 
-                console.warn(`Emoji manquant pour ${r.reaction_type}: ${r.emoji}`);
-
+                console.warn(
+                  `Emoji manquant pour ${r.reaction_type}: ${r.emoji}`
+                );
               }
               if (
                 typeof r.emoji === "string" &&
@@ -575,16 +593,19 @@ export const useWorkspaceDetails = (workspaceId) => {
         fetchWorkspaceMembers();
       }
     };
-    socket.on('memberRoleChanged', handleRoleChange);
+    socket.on("memberRoleChanged", handleRoleChange);
     return () => {
-      socket.off('memberRoleChanged', handleRoleChange);
+      socket.off("memberRoleChanged", handleRoleChange);
     };
   }, [socket, workspaceId, fetchWorkspaceMembers]);
 
   useEffect(() => {
     if (socket && workspaceId) {
-      socket.emit('joinWorkspace', { workspaceId });
-      console.log('[WS DEBUG] Demande de joinWorkspace envoyée pour', workspaceId);
+      socket.emit("joinWorkspace", { workspaceId });
+      console.log(
+        "[WS DEBUG] Demande de joinWorkspace envoyée pour",
+        workspaceId
+      );
     }
   }, [socket, workspaceId]);
 
@@ -592,8 +613,11 @@ export const useWorkspaceDetails = (workspaceId) => {
   useEffect(() => {
     if (!socket || !activeChannel || !workspaceId) return;
     // Rejoindre la room du canal à chaque sélection
-    socket.emit('joinCanal', { canalId: activeChannel.id, workspaceId });
-    console.log('[WS DEBUG] joinCanal envoyé', { canalId: activeChannel.id, workspaceId });
+    socket.emit("joinCanal", { canalId: activeChannel.id, workspaceId });
+    console.log("[WS DEBUG] joinCanal envoyé", {
+      canalId: activeChannel.id,
+      workspaceId,
+    });
   }, [socket, activeChannel, workspaceId]);
 
   // Scroll to bottom effect
@@ -608,7 +632,8 @@ export const useWorkspaceDetails = (workspaceId) => {
   useEffect(() => {
     if (chatContainerRef.current && activeChannel && !loadingMessages) {
       setTimeout(() => {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
       }, 100);
     }
   }, [activeChannel, loadingMessages, messages.length]);
@@ -999,7 +1024,6 @@ export const useWorkspaceDetails = (workspaceId) => {
     try {
       if (!messageContextMenu.messageId || !socket || !socket.connected) return;
 
-
       // Verify the message belongs to the current user
       const message = messages.find(
         (m) => m.id_message === messageContextMenu.messageId
@@ -1010,7 +1034,6 @@ export const useWorkspaceDetails = (workspaceId) => {
         );
         return;
       }
-
 
       const token = localStorage.getItem("token");
       if (!token) {
