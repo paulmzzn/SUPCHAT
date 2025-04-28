@@ -29,7 +29,6 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-
 // Obtenir l'équivalent de __dirname pour ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -53,17 +52,17 @@ createUploadDirs();
 
 // Configuration de CORS avec plus de précision
 
-
-app.use(cors({
-  origin: true, // Autorise toutes les origines
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: true, // Autorise toutes les origines
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 // Middleware pour augmenter la limite de taille des requêtes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -138,11 +137,9 @@ try {
   console.error("Error initializing Socket.IO manager:", error);
 }
 
-
 httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`Serveur démarré sur http://192.168.1.126:${PORT}`);
-  console.log(`WebSocket URL: ws://192.168.1.126:${PORT}`);
-
+  console.log(`Serveur démarré sur http://192.168.1.109:${PORT}`);
+  console.log(`WebSocket URL: ws://192.168.1.109:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool

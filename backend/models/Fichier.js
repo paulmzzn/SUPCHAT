@@ -295,6 +295,29 @@ class Fichier {
       throw error;
     }
   }
+
+  /**
+   * Récupérer les fichiers associés à un canal (via les messages du canal)
+   * @param {String} canalId - ID du canal
+   * @returns {Array} - Fichiers du canal
+   */
+  static async getByCanalId(canalId) {
+    try {
+      const query = `
+        SELECT DISTINCT f.*
+        FROM fichier f
+        JOIN message_fichier mf ON f.id_fichier = mf.fk_fichier
+        JOIN message m ON m.id_message = mf.fk_message
+        WHERE m.fk_canal = $1
+        ORDER BY f.date_upload DESC
+      `;
+      const result = await pool.query(query, [canalId]);
+      return result.rows;
+    } catch (error) {
+      console.error("Erreur dans Fichier.getByCanalId:", error);
+      throw error;
+    }
+  }
 }
 
 export default Fichier;

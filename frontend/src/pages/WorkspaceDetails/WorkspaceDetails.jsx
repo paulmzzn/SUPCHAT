@@ -290,12 +290,14 @@ function WorkspaceDetails() {
   const workspace = rawWorkspace
     ? {
         ...rawWorkspace,
-        icon: rawWorkspace.icon && !rawWorkspace.icon.startsWith("http")
-          ? S3_BASE_URL + rawWorkspace.icon
-          : rawWorkspace.icon,
-        banner: rawWorkspace.banner && !rawWorkspace.banner.startsWith("http")
-          ? S3_BASE_URL + rawWorkspace.banner
-          : rawWorkspace.banner,
+        icon:
+          rawWorkspace.icon && !rawWorkspace.icon.startsWith("http")
+            ? S3_BASE_URL + rawWorkspace.icon
+            : rawWorkspace.icon,
+        banner:
+          rawWorkspace.banner && !rawWorkspace.banner.startsWith("http")
+            ? S3_BASE_URL + rawWorkspace.banner
+            : rawWorkspace.banner,
       }
     : null;
 
@@ -1444,37 +1446,59 @@ function WorkspaceDetails() {
                 )}
             </div>
           )}
-          {/* Files Section - NO CHANGE */}
+          {/* Files Section - Affichage réel des fichiers du canal actif */}
           <div className="details-section">
             <div className="section-header" onClick={toggleFiles}>
-              {" "}
-              {/* Use handler from hook */}
               {showFiles ? (
                 <FaChevronDown className="toggle-icon" />
               ) : (
                 <FaChevronRight className="toggle-icon" />
               )}
-              <h3>Fichiers ({files.length})</h3> {/* Use files from hook */}
+              <h3>Fichiers ({files.length})</h3>
             </div>
-
             {showFiles && (
               <ul className="files-list">
-                {files.map(
-                  (
-                    file // Use files from hook
-                  ) => (
+                {files.length === 0 ? (
+                  <li className="file-item">
+                    Aucun fichier partagé dans ce canal.
+                  </li>
+                ) : (
+                  files.map((file) => (
                     <li key={file.id} className="file-item">
-                      <div className="file-icon">
-                        {getFileIcon(file.type)} {/* Use helper function */}
-                      </div>
+                      <div className="file-icon">{getFileIcon(file.type)}</div>
                       <div className="file-info">
                         <span className="file-name">{file.name}</span>
                         <span className="file-meta">
-                          {file.size} • {file.uploadedAt}
+                          {file.size} •{" "}
+                          {file.uploadedAt &&
+                            formatMessageDate(file.uploadedAt)}
                         </span>
                       </div>
+                      <div className="file-actions">
+                        {file.isImage ? (
+                          <button
+                            className="file-view-button"
+                            onClick={() =>
+                              handleOpenFileViewer({
+                                ...file,
+                                fullFileUrl: S3_BASE_URL + file.url,
+                              })
+                            }
+                          >
+                            Voir
+                          </button>
+                        ) : null}
+                        <button
+                          className="file-download-button"
+                          onClick={() =>
+                            handleDownloadFile(file.url, file.name)
+                          }
+                        >
+                          Télécharger
+                        </button>
+                      </div>
                     </li>
-                  )
+                  ))
                 )}
               </ul>
             )}
