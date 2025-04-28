@@ -10,6 +10,8 @@ import {
   FaTimes,
   FaReply,
   FaRegSmile,
+  FaTrashAlt, // Ajout icône corbeille
+  FaEdit, // Ajout icône stylo
   FaFile,
   FaFileAlt,
   FaFileImage,
@@ -18,7 +20,7 @@ import {
   FaFileExcel,
   FaFileVideo,
   FaFileAudio,
-  FaDownload,
+  FaDownload
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
@@ -465,12 +467,14 @@ function DirectMessages() {
     };
 
     const handlePrivateMessageRead = (data) => {
-      console.log("[DM] Message read event:", data);
       if (selectedUser) {
+        
+        // Marquer silencieusement le message comme lu sans déclencher d'appels supplémentaires
+
         setMessages((prev) =>
           prev.map((m) => {
-            // Check if this is the message that was read
             if (m.id_message_prive === data.id) {
+
               console.log(
                 `[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`
               );
@@ -528,11 +532,12 @@ function DirectMessages() {
 
       const data = await res.json();
       console.log("Conversations reçues:", data);
+      // data = [{ other_user_id, last_message_date }, ...]
       setConversations(data);
 
       // Précharge les infos utilisateurs
-      for (const userId of data) {
-        fetchUserInfo(userId);
+      for (const conv of data) {
+        fetchUserInfo(conv.other_user_id);
       }
     } catch (e) {
       setError(`Erreur réseau: ${e.message}`);
@@ -986,13 +991,17 @@ function DirectMessages() {
     }
   };
 
-  // Filtre les conversations basées sur la recherche
-  const filteredConversations = searchQuery.trim()
+  // Filtre les conversations basées sur la recherche et trie par date
+
     ? conversations.filter((userId) => {
         const user = usersInfo[userId] || {};
-        return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
     : conversations;
+
+  // Trie par date décroissante (plus récent en haut)
+  filteredConversations.sort((a, b) => new Date(b.last_message_date) - new Date(a.last_message_date));
 
   // Récupérer la liste de tous les utilisateurs disponibles
   const fetchAvailableUsers = async () => {
@@ -1079,12 +1088,14 @@ function DirectMessages() {
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
+
     setNewMessage(
       `@${
         usersInfo[messageContextMenu.message.fk_expediteur]?.name ||
         "Utilisateur"
       } `
     );
+
     handleCloseMessageContextMenu();
     const inputElement = document.querySelector(".dm-input");
     if (inputElement) inputElement.focus();
@@ -1282,7 +1293,8 @@ function DirectMessages() {
                 {searchQuery ? "Aucun résultat" : "Aucune conversation"}
               </li>
             ) : (
-              filteredConversations.map((userId) => {
+              filteredConversations.map((conv) => {
+                const userId = conv.other_user_id;
                 const user = usersInfo[userId] || {};
                 return (
                   <li
@@ -1305,9 +1317,11 @@ function DirectMessages() {
                         </div>
                       </div>
                     )}
-                    <span className="dm-username">
-                      {user.name || "Utilisateur"}
-                    </span>
+                    <span className="dm-username">{user.name || "Utilisateur"}</span>
+                    {unreadMessageCounts[userId] > 0 && (
+                      <span className="dm-unread-badge">{unreadMessageCounts[userId]}</span>
+                    )}
+
                   </li>
                 );
               })
@@ -1372,6 +1386,7 @@ function DirectMessages() {
                 ) : (
                   messages.map((msg) => {
                     const isOwn = msg.fk_expediteur === currentUserId;
+
 
                     // Get the sender info, with strong fallbacks if missing
                     const senderId = msg.fk_expediteur;
@@ -1448,28 +1463,61 @@ function DirectMessages() {
                       );
                     }
 
+
+                    // Recherche du message parent
+                    let parentMessage = null;
+                    let parentAuthor = "Utilisateur";
+                    let parentText = "Message original non disponible";
+                    
+                    if (msg.parent_id) {
+                      parentMessage = messages.find(m => m.id_message_prive === msg.parent_id);
+                      
+                      if (parentMessage) {
+                        const parentSenderId = parentMessage.fk_expediteur;
+                        const parentSenderInfo = usersInfo[parentSenderId] || {};
+                        parentAuthor = parentSenderInfo.name || parentSenderInfo.nom || "Utilisateur";
+                        parentText = parentMessage.contenu;
+                      } else if (msg.parent_expediteur) {
+                        parentAuthor = usersInfo[msg.parent_expediteur]?.name || 
+                                      usersInfo[msg.parent_expediteur]?.nom || "Utilisateur";
+                        parentText = msg.parent_contenu || "Message original non disponible";
+                      }
+                    }
+
                     return (
-                      <div
-                        key={msg.id_message_prive}
-                        className={`dm-message ${isOwn ? "own" : "other"}`}
+                      <div 
+                        key={msg.id_message_prive} 
+                        className={`dm-message ${isOwn ? 'own' : 'other'}`}
+                        id={`msg-${msg.id_message_prive}`}
+
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
-                        {/* Si c'est une réponse, afficher le message parent */}
+                        {/* Bloc de réponse au format souhaité identique aux workspaces */}
                         {msg.parent_id && (
-                          <div className="dm-reply-info">
-                            <div className="dm-reply-content">
-                              {/* TODO: Récupérer le message parent */}
-                              <span className="dm-reply-author">
-                                @
-                                {usersInfo[msg.parent_expediteur]?.name ||
-                                  "Utilisateur"}
-                              </span>
-                              <span className="dm-reply-text">
-                                {msg.parent_contenu || "Message original"}
-                              </span>
+                        
+                          <div 
+                            className="message-reply-to"
+                            onClick={() => {
+                              const parentId = msg.parent_id;
+                              if (parentId) {
+                                const element = document.getElementById(`msg-${parentId}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.classList.add("highlight-message");
+                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                }
+                              }
+                            }}
+                          >
+                            <FaReply className="reply-icon" />
+                            <div className="reply-content">
+                              <span className="reply-author">@{parentAuthor}</span>
+                              <span className="reply-text">{parentText}</span>
                             </div>
                           </div>
                         )}
+                        
+                        {/* Le reste du message */}
 
                         <div className="dm-msg-avatar">
                           {avatarSrc ? (
@@ -1591,6 +1639,7 @@ function DirectMessages() {
                               </div>
                             )}
 
+
                           {isOwn && (
                             <div className="dm-msg-read">
                               {msg.date_lecture
@@ -1610,6 +1659,7 @@ function DirectMessages() {
                 {replyingTo && (
                   <div className="dm-replying-to">
                     <div className="dm-replying-info">
+                      <FaReply className="reply-icon" />
                       <span>Réponse à </span>
                       <strong>
                         {usersInfo[replyingTo.fk_expediteur]?.name ||
@@ -1789,13 +1839,13 @@ function DirectMessages() {
                   className="dm-context-menu-item"
                   onClick={handleEditMessage}
                 >
-                  Modifier
+                  <FaEdit className="dm-context-menu-icon" /> Modifier
                 </div>
                 <div
                   className="dm-context-menu-item"
                   onClick={handleDeleteMessage}
                 >
-                  Supprimer
+                  <FaTrashAlt className="dm-context-menu-icon" /> Supprimer
                 </div>
                 <div
                   className="dm-context-menu-item"
