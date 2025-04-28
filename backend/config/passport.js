@@ -2,6 +2,10 @@
 ///QUAND MISE EN LIGNE, CHANGER LE CALLBACK URL
 ///QUAND MISE EN LIGNE, CHANGER LE CALLBACK URL
 
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as GitHubStrategy } from "passport-github2";
+import UserModel from "../models/User.js";
 
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
@@ -44,6 +48,7 @@ export const googleStrategy = new GoogleStrategy({
   }
 );
 
+
 export const githubStrategy = new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
@@ -76,27 +81,34 @@ export const githubStrategy = new GitHubStrategy({
             || emailsData.find(e => e.primary)?.email
             || emailsData.find(e => e.verified)?.email
             || emailsData[0]?.email;
+
         }
       }
-    }
-    if (!email) {
-      return done(new Error("Votre compte GitHub ne fournit pas d'email public ou vérifié. Veuillez vérifier vos paramètres GitHub ou utiliser un autre moyen de connexion."), null);
-    }
-    const user = await UserModel.findOrCreateUser({
-      nom: profile.displayName || profile.username,
-      email,
-      githubId: profile.id,
-      photo_de_profil: profile.photos && profile.photos[0] ? profile.photos[0].value : null
-    });
+      if (!email) {
+        return done(
+          new Error(
+            "Votre compte GitHub ne fournit pas d'email public ou vérifié. Veuillez vérifier vos paramètres GitHub ou utiliser un autre moyen de connexion."
+          ),
+          null
+        );
+      }
+      const user = await UserModel.findOrCreateUser({
+        nom: profile.displayName || profile.username,
+        email,
+        githubId: profile.id,
+        photo_de_profil:
+          profile.photos && profile.photos[0] ? profile.photos[0].value : null,
+      });
 
-    if (!user || !user.id_utilisateur) {
-      return done(null, false);
+      if (!user || !user.id_utilisateur) {
+        return done(null, false);
+      }
+      return done(null, user);
+    } catch (error) {
+      return done(error, null);
     }
-    return done(null, user);
-  } catch (error) {
-    return done(error, null);
   }
-});
+);
 
 // Sérialisation : stocker uniquement l'ID
 passport.serializeUser((user, done) => {

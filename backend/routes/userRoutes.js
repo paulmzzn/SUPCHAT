@@ -73,9 +73,11 @@ router.get("/validate", validateUser);
 router.post("/request-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
   passport.authenticate('google', { failureRedirect: 'http://REDACTED:3001/login' }), 
+
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
@@ -86,24 +88,31 @@ router.get('/auth/google/callback',
 
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
+
       `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
 
     );
   }
 );
 
-router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+router.get(
+  "/auth/github",
+  passport.authenticate("github", { scope: ["user:email"] })
+);
+
 
 router.get('/auth/github/callback',
   passport.authenticate('github', { failureRedirect: 'http://REDACTED:3001/login' }),
+
   async (req, res) => {
     const user = req.user;
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
-      process.env.JWT_SECRET || 'REDACTED',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || "REDACTED",
+      { expiresIn: "7d" }
     );
     res.redirect(
+
       `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
 
     );
@@ -146,15 +155,20 @@ router.get("/profile", verifyToken, getUserProfile);
 router.put("/profile", verifyToken, upload.single("avatar"), updateUserProfile);
 
 // Route pour récupérer un utilisateur par ID (gère aussi l'alias "me")
-router.get('/:id', verifyToken, getUserById);
+router.get("/:id", verifyToken, getUserById);
 
 // Route pour récupérer l'utilisateur courant (via token)
-router.get('/me', verifyToken, async (req, res) => {
+router.get("/me", verifyToken, async (req, res) => {
   try {
     const user = await getUserById({ params: { id: req.user.id } }, res);
     // getUserById gère déjà la réponse
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la récupération de l\'utilisateur', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Erreur lors de la récupération de l'utilisateur",
+        error: error.message,
+      });
   }
 });
 
@@ -183,12 +197,10 @@ router.get("/:id/workspaces", async (req, res) => {
       "Erreur lors de la récupération des workspaces de l'utilisateur:",
       error
     );
-    res
-      .status(500)
-      .json({
-        message: "Erreur lors de la récupération des workspaces",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Erreur lors de la récupération des workspaces",
+      error: error.message,
+    });
   }
 });
 
