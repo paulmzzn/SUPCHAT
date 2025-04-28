@@ -392,8 +392,11 @@ const getUserProfile = async (req, res) => {
 // Ajouter cette fonction pour récupérer un utilisateur par ID
 const getUserById = async (req, res) => {
   try {
-    const userId = req.params.id;
-    
+    // Correction : gérer l'alias "me" pour l'utilisateur courant
+    let userId = req.params.id;
+    if (userId === "me" && req.user && req.user.id) {
+      userId = req.user.id;
+    }
     const user = await UserModel.getUserById(userId);
     
     if (!user) {

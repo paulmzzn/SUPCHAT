@@ -27,6 +27,7 @@ services:
     depends_on:
       - backend
     environment:
+
       - REACT_APP_API_URL=http://REDACTED:8888
       - REACT_APP_SUPCHAT_HOST=REDACTED
       - WDS_SOCKET_PORT=0

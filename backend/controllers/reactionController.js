@@ -7,14 +7,13 @@ export const addReaction = async (req, res) => {
     const { messageId } = req.params;
     const { reaction_type } = req.body;
     const userId = req.user.id;
-    const validReactionTypes = ['thumbsUp', 'heart', 'laugh', 'surprise', 'sad', 'angry'];
-    if (!validReactionTypes.includes(reaction_type)) {
-      return res.status(400).json({ message: 'Type de réaction non valide' });
+    // On autorise désormais tous les emojis, donc pas de validation stricte
+    if (!reaction_type || typeof reaction_type !== 'string' || reaction_type.length === 0) {
+      return res.status(400).json({ message: 'Emoji/réaction manquant ou invalide' });
     }
     const message = await MessageModel.getById(messageId);
     if (!message) return res.status(404).json({ message: 'Message non trouvé' });
 
-    // Créer simplement la réaction
     await Reaction.create({
       fk_message: messageId,
       fk_utilisateur: userId,
