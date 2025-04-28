@@ -15,8 +15,6 @@ function Discover() {
   const [error, setError] = useState(null);
   const [userWorkspacesLoaded, setUserWorkspacesLoaded] = useState(false); // Nouvel état pour suivre le chargement
 
-  const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
-
   // Fetch user's workspaces to check membership
   useEffect(() => {
     const fetchUserWorkspaces = async () => {
@@ -68,16 +66,15 @@ function Discover() {
           id: workspace.id_workspace,
           name: workspace.nom,
           description: workspace.description || "No description available",
-          banner: workspace.banner_url && !workspace.banner_url.startsWith('http')
-            ? S3_BASE_URL + workspace.banner_url
-            : (workspace.banner_url || defaultBanner),
-          icon: workspace.icon_url && !workspace.icon_url.startsWith('http')
-            ? S3_BASE_URL + workspace.icon_url
-            : (workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"),
+          banner: workspace.banner_url || defaultBanner,
+          icon:
+            workspace.icon_url ||
+            "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
           onlineUsers: workspace.online_users || 0,
           totalMembers: workspace.total_members || 0,
           isFavorite: workspace.is_favorite || false,
           isPrivate: workspace.is_private || false,
+          // Ajouter la propriété hasJoined pour chaque workspace
           hasJoined: userWorkspaces.includes(workspace.id_workspace)
         }));
 
