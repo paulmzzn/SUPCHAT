@@ -15,55 +15,44 @@ class MessagePrive {
 
 
   static async getConversation(userA, userB, limit = 1000, offset = 0) {
-    const result = await pool.query(
-      `SELECT mp.*,
-        u.nom AS expediteur_nom, u2.nom AS destinataire_nom,
-        u.photo_de_profil AS expediteur_avatar, u2.photo_de_profil AS destinataire_avatar,
-        parent.id_message_prive AS parent_id,
-        parent.contenu AS parent_contenu,
-        parent.fk_expediteur AS parent_expediteur,
-        pu.nom AS parent_expediteur_nom
-       FROM message_prive mp
-       JOIN utilisateur u ON mp.fk_expediteur = u.id_utilisateur
-       JOIN utilisateur u2 ON mp.fk_destinataire = u2.id_utilisateur
-       LEFT JOIN message_prive parent ON mp.parent_id = parent.id_message_prive
-       LEFT JOIN utilisateur pu ON parent.fk_expediteur = pu.id_utilisateur
-       WHERE ((mp.fk_expediteur = $1 AND mp.fk_destinataire = $2) OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1))
-       AND mp.is_deleted = false
-       ORDER BY mp.date_creation DESC
-       LIMIT $3 OFFSET $4`,
-      [userA, userB, limit, offset]
-    );
-    // On renvoie du plus ancien au plus récent pour l'affichage
-    return result.rows.reverse();
-
-
+    try {
+      const result = await pool.query(
+        `SELECT mp.*,
+          u.nom AS expediteur_nom, u2.nom AS destinataire_nom,
+          u.photo_de_profil AS expediteur_avatar, u2.photo_de_profil AS destinataire_avatar,
+          parent.id_message_prive AS parent_id,
+          parent.contenu AS parent_contenu,
+          parent.fk_expediteur AS parent_expediteur,
+          pu.nom AS parent_expediteur_nom
+         FROM message_prive mp
+         JOIN utilisateur u ON mp.fk_expediteur = u.id_utilisateur
+         JOIN utilisateur u2 ON mp.fk_destinataire = u2.id_utilisateur
+         LEFT JOIN message_prive parent ON mp.parent_id = parent.id_message_prive
+         LEFT JOIN utilisateur pu ON parent.fk_expediteur = pu.id_utilisateur
+         WHERE ((mp.fk_expediteur = $1 AND mp.fk_destinataire = $2) OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1))
+         AND mp.is_deleted = false
+         ORDER BY mp.date_creation DESC
+         LIMIT $3 OFFSET $4`,
+        [userA, userB, limit, offset]
+      );
       // Pour chaque message, récupérer les pièces jointes
       const messagesWithAttachments = await Promise.all(
         result.rows.map(async (message) => {
           const attachmentsResult = await pool.query(
             `SELECT f.* 
-           FROM fichier f
-           JOIN message_prive_fichier mpf ON f.id_fichier = mpf.fk_fichier
-           WHERE mpf.fk_message_prive = $1`,
+             FROM fichier f
+             JOIN message_prive_fichier mpf ON f.id_fichier = mpf.fk_fichier
+             WHERE mpf.fk_message_prive = $1`,
             [message.id_message_prive]
           );
-
-          if (attachmentsResult.rows.length > 0) {
-            message.attachments = attachmentsResult.rows;
-          } else {
-            message.attachments = [];
-          }
-
+          message.attachments = attachmentsResult.rows.length > 0 ? attachmentsResult.rows : [];
           return message;
         })
       );
-
-      return messagesWithAttachments;
+      // On renvoie du plus ancien au plus récent pour l'affichage
+      return messagesWithAttachments.reverse();
     } catch (error) {
-      console.error(
-        `Erreur dans MessagePrive.getConversation: ${error.message}`
-      );
+      console.error(`Erreur dans MessagePrive.getConversation: ${error.message}`);
       throw error;
     }
   }
@@ -194,6 +183,7 @@ class MessagePrive {
       counts[row.other_user_id] = Number(row.unread_count) || 0;
     }
     return counts;
+  }
 
   /**
    * Ajouter une pièce jointe à un message privé existant

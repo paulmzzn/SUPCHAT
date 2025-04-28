@@ -62,8 +62,6 @@ const SECRET_KEY = process.env.JWT_SECRET || 'REDACTED';
 const SUPCHAT_HOST = process.env.SUPCHAT_HOST || 'REDACTED';
 
 
-const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
-
 router.post("/register", registerUser);
 router.get("/", getAllUsers);
 router.post("/login", loginUser);
