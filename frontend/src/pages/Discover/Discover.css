@@ -3,7 +3,7 @@
   min-height: 100vh;
   padding: 2rem;
   padding-bottom: 100px; /* Augmente l'espace en bas de la page */
-  background-color: #262626;
+  background-color: var(--discover-bg);
   position: relative;
   overflow-x: hidden;
   overflow-y: auto; /* Assure que le défilement vertical est activé */
@@ -23,7 +23,7 @@
 .discover-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--discover-title-color);
   margin: 0;
   flex: 1;  /* Allow title to take available space but keep search fixed width */
   min-width: 200px;  /* Ensure title doesn't get too small */
@@ -39,20 +39,20 @@
   width: 100%;
   box-sizing: border-box;  /* Include padding in width calculation */
   padding: 10px 15px 10px 40px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--discover-search-bg);
   border: none;
   border-radius: 8px;
-  color: white;
+  color: var(--discover-search-color);
   font-size: 0.9rem;
 }
 
 .search-bar input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--discover-search-placeholder);
 }
 
 .search-bar input:focus {
   outline: none;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--discover-search-bg-focus);
 }
 
 .search-icon {
@@ -60,7 +60,7 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--discover-search-placeholder);
 }
 
 /* Section title */
@@ -68,7 +68,7 @@
   display: flex;
   align-items: center;
   margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--discover-section-title-color) !important;
   font-size: 1.5rem;
 }
 
@@ -90,15 +90,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(147, 72, 183, 0.05);
-  border: 2px dashed rgba(147, 72, 183, 0.3);
+  background-color: var(--discover-add-bg);
+  border: var(--discover-add-border);
   transition: all 0.3s ease;
   cursor: pointer;
   min-height: 250px;
 }
 
 .add-workspace:hover {
-  background-color: rgba(147, 72, 183, 0.1);
+  background-color: var(--discover-add-bg-hover);
   transform: translateY(-5px);
 }
 
@@ -106,19 +106,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--discover-add-content-color);
 }
 
 .plus-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
-  color: #9348B7;
+  color: var(--discover-plus-icon);
   font-weight: 300;
 }
 
 .add-workspace p {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--discover-add-content-color);
 }
 
 /* Ambient glow effects */
@@ -132,7 +132,7 @@
 }
 
 .top-right {
-  background: radial-gradient(circle, #B05FDF, #9348B7);
+  background: var(--discover-glow1);
   width: 800px;
   height: 800px;
   top: -200px;
@@ -140,7 +140,7 @@
 }
 
 .bottom-left {
-  background: radial-gradient(circle, #9348B7, #6A2F88);
+  background: var(--discover-glow2);
   width: 800px;
   height: 800px;
   bottom: -200px;
