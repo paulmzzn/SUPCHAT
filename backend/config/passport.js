@@ -7,11 +7,6 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import UserModel from "../models/User.js";
 
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import UserModel from '../models/User.js';
-
 export const googleStrategy = new GoogleStrategy({
   clientID: 'REDACTED',
   clientSecret: 'REDACTED',
@@ -81,7 +76,6 @@ export const githubStrategy = new GitHubStrategy({
             || emailsData.find(e => e.primary)?.email
             || emailsData.find(e => e.verified)?.email
             || emailsData[0]?.email;
-
         }
       }
       if (!email) {
@@ -92,23 +86,22 @@ export const githubStrategy = new GitHubStrategy({
           null
         );
       }
-      const user = await UserModel.findOrCreateUser({
-        nom: profile.displayName || profile.username,
-        email,
-        githubId: profile.id,
-        photo_de_profil:
-          profile.photos && profile.photos[0] ? profile.photos[0].value : null,
-      });
-
-      if (!user || !user.id_utilisateur) {
-        return done(null, false);
-      }
-      return done(null, user);
-    } catch (error) {
-      return done(error, null);
     }
+    const user = await UserModel.findOrCreateUser({
+      nom: profile.displayName || profile.username,
+      email,
+      githubId: profile.id,
+      photo_de_profil:
+        profile.photos && profile.photos[0] ? profile.photos[0].value : null,
+    });
+    if (!user || !user.id_utilisateur) {
+      return done(null, false);
+    }
+    return done(null, user);
+  } catch (error) {
+    return done(error, null);
   }
-);
+});
 
 // Sérialisation : stocker uniquement l'ID
 passport.serializeUser((user, done) => {
