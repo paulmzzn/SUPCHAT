@@ -1,0 +1,189 @@
+.discover-container {
+  flex: 1;
+  min-height: 100vh;
+  padding: 2rem;
+  padding-bottom: 100px; /* Augmente l'espace en bas de la page */
+  background-color: #262626;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto; /* Assure que le défilement vertical est activé */
+  box-sizing: border-box;
+}
+
+/* Header section */
+.discover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;  /* Add flex-wrap to handle narrow screens */
+  gap: 1rem;  /* Add gap between elements when they wrap */
+}
+
+.discover-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  flex: 1;  /* Allow title to take available space but keep search fixed width */
+  min-width: 200px;  /* Ensure title doesn't get too small */
+}
+
+.search-bar {
+  position: relative;
+  width: 300px;
+  max-width: 100%;  /* Ensure search bar doesn't exceed container width */
+}
+
+.search-bar input {
+  width: 100%;
+  box-sizing: border-box;  /* Include padding in width calculation */
+  padding: 10px 15px 10px 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.search-bar input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-bar input:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Section title */
+.section-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+}
+
+/* Workspaces grid section */
+.workspaces-section {
+  margin-top: 2rem;
+  margin-bottom: 0px; /* Ajoute de l'espace après la dernière section */
+}
+
+.workspaces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding-bottom: 50px; /* Ajoute de l'espace après la grille */
+}
+
+/* Create workspace card */
+.add-workspace {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(147, 72, 183, 0.05);
+  border: 2px dashed rgba(147, 72, 183, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-height: 250px;
+}
+
+.add-workspace:hover {
+  background-color: rgba(147, 72, 183, 0.1);
+  transform: translateY(-5px);
+}
+
+.add-workspace-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.plus-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #9348B7;
+  font-weight: 300;
+}
+
+.add-workspace p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Ambient glow effects */
+.glow-circle-right, .glow-circle-left {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.top-right {
+  background: radial-gradient(circle, #B05FDF, #9348B7);
+  width: 800px;
+  height: 800px;
+  top: -200px;
+  right: -200px;
+}
+
+.bottom-left {
+  background: radial-gradient(circle, #9348B7, #6A2F88);
+  width: 800px;
+  height: 800px;
+  bottom: -200px;
+  left: -200px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .discover-container {
+    margin-left: 0;
+    padding: 1.5rem;
+    padding-bottom: 120px; /* Encore plus d'espace en bas sur mobile */
+  }
+  
+  .discover-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-bar {
+    width: 100%;  /* Full width on mobile */
+  }
+}
+
+/* Add a specific media query for medium-sized screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .discover-container {
+    padding: 1.5rem;
+  }
+  
+  .search-bar {
+    width: 250px;  /* Slightly narrower on medium screens */
+  }
+}
+
+/* Assure que le contenu puisse défiler dans le conteneur principal */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-layout > div:last-child {
+  flex: 1;
+  overflow-y: auto;
+}

@@ -1,0 +1,124 @@
+/* Styles de base pour les messages */
+.message {
+  display: flex;
+  margin-bottom: 12px;
+  max-width: 85%;
+}
+
+.message.own {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 12px;
+  background-color: #9348b7;
+  flex-shrink: 0;
+}
+
+.message.own .message-avatar {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+.message-content {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.message.own .message-content {
+  background: rgba(147, 72, 183, 0.15);
+}
+
+.message-header {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.message-author {
+  font-weight: 600;
+  margin-right: 8px;
+  color: white;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.message-text {
+  color: rgba(255, 255, 255, 0.9);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-text a {
+  color: #9348b7;
+  text-decoration: underline;
+}
+
+/* Styles pour les pièces jointes */
+.message-attachments {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-image {
+  width: 200px;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.attachment-image img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.attachment-image img:hover {
+  transform: scale(1.05);
+}
+
+.attachment-file {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.attachment-file:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.attachment-file a {
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+}
+
+.attachment-icon {
+  font-size: 20px;
+  margin-right: 8px;
+  color: #9348b7;
+}
+
+.attachment-name {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}

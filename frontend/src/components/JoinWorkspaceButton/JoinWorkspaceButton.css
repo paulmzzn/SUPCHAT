@@ -1,0 +1,91 @@
+.join-button-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.join-button {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0.15, 1);
+  background: linear-gradient(135deg, #9348B7, #7a3499);
+  color: white;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.25);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.join-button:hover {
+  background: linear-gradient(135deg, #B05FDF, #9348B7);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(147, 72, 183, 0.35);
+}
+
+.join-button:active {
+  transform: translateY(1px);
+}
+
+.join-button:disabled {
+  background: linear-gradient(135deg, #6a4b77, #53395d);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.join-button.private {
+  background: linear-gradient(135deg, rgba(60, 60, 70, 0.9), rgba(45, 45, 55, 0.9));
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.join-button.private:hover {
+  background: linear-gradient(135deg, rgba(70, 70, 80, 0.9), rgba(55, 55, 65, 0.9));
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Style pour le bouton quand l'utilisateur est déjà membre */
+.join-button.joined {
+  background-color: #666;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.join-button.joined:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.join-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  text-align: center;
+  background-color: rgba(255, 107, 107, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 100%;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive styles */
+@media (max-width: 480px) {
+  .join-button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
