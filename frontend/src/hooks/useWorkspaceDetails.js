@@ -19,6 +19,13 @@ function formatFileSize(bytes) {
   return (bytes / 1048576).toFixed(1) + " MB";
 }
 
+// Helper pour trier par date décroissante
+function sortByDateDesc(a, b) {
+  const dateA = new Date(a.uploadedAt);
+  const dateB = new Date(b.uploadedAt);
+  return dateB - dateA;
+}
+
 // Helper function to get emoji for reaction type
 const getEmojiForType = (reactionType) => {
   const emojiMap = {
@@ -70,11 +77,13 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   // Files and Images (sidebar) : extraire les fichiers à partir des messages du canal actif
   const [files, setFiles] = useState([]);
+  const [images, setImages] = useState([]);
 
   // Met à jour la liste des fichiers à chaque changement de messages ou de canal actif
   useEffect(() => {
     if (!activeChannel || !messages || messages.length === 0) {
       setFiles([]);
+      setImages([]);
       return;
     }
     // Extraction robuste des fichiers à partir des messages du canal actif
@@ -101,40 +110,26 @@ export const useWorkspaceDetails = (workspaceId) => {
               msg.date_envoi || msg.created_at || msg.date_creation || "",
             url: parsed.fileUrl,
             isImage: parsed.isImage || false,
+            fileSize: parsed.fileSize || 0,
+            fileType: parsed.fileType || "",
+            fileUrl: parsed.fileUrl || "",
           };
         }
         return null;
       })
       .filter(Boolean);
-    setFiles(fileMessages);
-  }, [messages, activeChannel]);
 
-  const [images, setImages] = useState([
-    {
-      id: 1,
-      url: "https://picsum.photos/200?sig=1",
-      uploadedBy: "Alice Martin",
-      uploadedAt: "2023-05-15",
-    },
-    {
-      id: 2,
-      url: "https://picsum.photos/200?sig=2",
-      uploadedBy: "Bob Johnson",
-      uploadedAt: "2023-05-14",
-    },
-    {
-      id: 3,
-      url: "https://picsum.photos/200?sig=3",
-      uploadedBy: "Charlie Brown",
-      uploadedAt: "2023-05-13",
-    },
-    {
-      id: 4,
-      url: "https://picsum.photos/200?sig=4",
-      uploadedBy: "David Smith",
-      uploadedAt: "2023-05-12",
-    },
-  ]);
+    // Séparer images et autres fichiers
+    const images = fileMessages
+      .filter((f) => f.isImage || (f.type && f.type.startsWith("image/")))
+      .sort(sortByDateDesc);
+    const files = fileMessages
+      .filter((f) => !f.isImage && !(f.type && f.type.startsWith("image/")))
+      .sort(sortByDateDesc);
+
+    setImages(images);
+    setFiles(files);
+  }, [messages, activeChannel]);
 
   // Create Channel Modal state
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
