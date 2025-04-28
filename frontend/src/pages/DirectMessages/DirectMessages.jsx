@@ -1339,12 +1339,11 @@ function DirectMessages() {
             ) : (
               filteredConversations.map((userId) => {
                 const user = usersInfo[userId] || {};
+                const unreadCount = unreadMessageCounts[userId] || 0;
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${
-                      selectedUser === userId ? "active" : ""
-                    }`}
+                    className={`dm-conv-item ${selectedUser === userId ? "active" : ""}`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
@@ -1363,6 +1362,9 @@ function DirectMessages() {
                     <span className="dm-username">
                       {user.name || "Utilisateur"}
                     </span>
+                    {unreadCount > 0 && (
+                      <span className="dm-unread-badge">{unreadCount}</span>
+                    )}
                   </li>
                 );
               })
