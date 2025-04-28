@@ -163,12 +163,24 @@ const socketManager = (io) => {
             contenu,
             fk_expediteur: expediteurId,
             fk_destinataire: destinataireId,
-            parent_id: replyToId,
+            parent_id: replyToId, // Ajout du parent_id
           });
 
           // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
           if (tempId) {
             message.tempId = tempId;
+          }
+
+          // Ajouter le parent_message si parent_id présent
+          if (message.parent_id) {
+            const parent = await MessagePrive.getById(message.parent_id);
+            if (parent) {
+              message.parent_message = {
+                id_message_prive: parent.id_message_prive,
+                contenu: parent.contenu,
+                fk_expediteur: parent.fk_expediteur,
+              };
+            }
           }
 
           console.log(
