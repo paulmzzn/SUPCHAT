@@ -868,29 +868,28 @@ function WorkspaceDetails() {
                           const fileData = parseFileContent(message.contenu);
 
                           if (fileData) {
-                            // C'est un message contenant un fichier
                             const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
-
+                            // Si c'est une image, affichage simple (miniature, pas de bloc fichier)
+                            if (fileData.isImage) {
+                              return (
+                                <div className="message-image-container">
+                                  <img
+                                    src={fullFileUrl}
+                                    alt={fileData.fileName}
+                                    className="message-image"
+                                    onClick={() =>
+                                      handleOpenFileViewer({
+                                        ...fileData,
+                                        fullFileUrl,
+                                      })
+                                    }
+                                  />
+                                </div>
+                              );
+                            }
+                            // Sinon, bloc fichier stylé
                             return (
                               <div className="message-file">
-                                {/* Afficher l'image si c'est une image */}
-                                {fileData.isImage && (
-                                  <div className="message-image-container">
-                                    <img
-                                      src={fullFileUrl}
-                                      alt={fileData.fileName}
-                                      className="message-image"
-                                      onClick={() =>
-                                        handleOpenFileViewer({
-                                          ...fileData,
-                                          fullFileUrl,
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                )}
-
-                                {/* Information et boutons pour tous les fichiers */}
                                 <div className="file-info-container">
                                   <div className="file-details">
                                     <span className="file-name">
@@ -901,19 +900,17 @@ function WorkspaceDetails() {
                                     </span>
                                   </div>
                                   <div className="file-actions">
-                                    {!fileData.isImage && (
-                                      <button
-                                        className="file-view-button"
-                                        onClick={() =>
-                                          handleOpenFileViewer({
-                                            ...fileData,
-                                            fullFileUrl,
-                                          })
-                                        }
-                                      >
-                                        Ouvrir
-                                      </button>
-                                    )}
+                                    <button
+                                      className="file-view-button"
+                                      onClick={() =>
+                                        handleOpenFileViewer({
+                                          ...fileData,
+                                          fullFileUrl,
+                                        })
+                                      }
+                                    >
+                                      Ouvrir
+                                    </button>
                                     <button
                                       className="file-download-button"
                                       onClick={() =>
