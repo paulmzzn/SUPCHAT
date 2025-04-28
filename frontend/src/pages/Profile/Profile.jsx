@@ -5,6 +5,7 @@ import { FaUser, FaEnvelope, FaCalendarAlt, FaInfoCircle, FaExclamationTriangle,
          FaShieldAlt, FaCrown, FaUserTag } from 'react-icons/fa';
 import './Profile.css';
 import Sidebar from '../../components/Sidebar/Sidebar';
+import { API_URL } from '../../config/config';
 
 function Profile() {
   const { userId } = useParams();
@@ -36,7 +37,7 @@ function Profile() {
     setLoading(true);
     setError(null);
 
-    const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") + `/api/users/${userId}`;
+    const apiUrl = `${API_URL}/api/users/${userId}`;
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
     fetch(apiUrl, {
@@ -92,7 +93,7 @@ function Profile() {
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
     try {
-      const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") + `/api/users/${userId}/workspaces`;
+      const apiUrl = `${API_URL}/api/users/${userId}/workspaces`;
       console.log(`Fetching workspaces from: ${apiUrl}`);
       
       const response = await fetch(apiUrl, {

@@ -992,11 +992,10 @@ function DirectMessages() {
   };
 
   // Filtre les conversations basées sur la recherche et trie par date
-
-    ? conversations.filter((userId) => {
-        const user = usersInfo[userId] || {};
-
-      return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredConversations = searchQuery
+    ? conversations.filter((conv) => {
+        const user = usersInfo[conv.other_user_id] || {};
+        return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
       })
     : conversations;
 
