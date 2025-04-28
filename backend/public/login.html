@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login/Register</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .toggle-form {
+            text-align: center;
+            margin-top: 15px;
+            cursor: pointer;
+            color: blue;
+        }
+        .google-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .google-btn img {
+            width: 20px;
+            height: 20px;
+            background: white;
+            padding: 2px;
+            border-radius: 2px;
+        }
+        .or-divider {
+            text-align: center;
+            margin: 15px 0;
+            position: relative;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #ddd;
+        }
+        .or-divider::before { left: 0; }
+        .or-divider::after { right: 0; }
+    </style>
+</head>
+<body>
+    <div id="loginForm">
+        <h2>Login</h2>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="loginEmail">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="loginPassword">
+        </div>
+        <div id="loginError" class="error"></div>
+        <button onclick="login()">Login</button>
+        <div class="or-divider">OR</div>
+        <button class="google-btn" onclick="loginWithGoogle()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+            Sign in with Google
+        </button>
+        <div class="toggle-form" onclick="toggleForm()">Need to register?</div>
+    </div>
+
+    <div id="registerForm" style="display: none;">
+        <h2>Register</h2>
+        <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="registerName">
+        </div>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="registerEmail">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="registerPassword">
+        </div>
+        <div id="registerError" class="error"></div>
+        <button onclick="register()">Register</button>
+        <div class="or-divider">OR</div>
+        <button class="google-btn" onclick="loginWithGoogle()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+            Sign up with Google
+        </button>
+        <div class="toggle-form" onclick="toggleForm()">Already have an account?</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const token = localStorage.getItem('userToken');
+            const userId = localStorage.getItem('userId');
+            
+            if (token && userId) {
+                fetch('/api/users/verify-token', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/index.html';
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem('userToken');
+                    localStorage.removeItem('userId');
+                });
+            }
+        };
+
+        function toggleForm() {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
+            registerForm.style.display = registerForm.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch('/api/users/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, mot_de_passe: password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('userToken', data.token);
+                    localStorage.setItem('userId', data.user.id_utilisateur);
+                    window.location.href = '/index.html';
+                } else {
+                    document.getElementById('loginError').textContent = data.message;
+                }
+            } catch (error) {
+                document.getElementById('loginError').textContent = 'Error during login';
+            }
+        }
+
+        async function register() {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            try {
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nom: name,
+                        email,
+                        mot_de_passe: password,
+                        photo_de_profil: 'default.jpg'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('registerError').textContent = 'Registration successful! Please check your email to validate your account.';
+                    setTimeout(() => toggleForm(), 2000);
+                } else {
+                    document.getElementById('registerError').textContent = data.message;
+                }
+            } catch (error) {
+                document.getElementById('registerError').textContent = 'Error during registration';
+            }
+        }
+
+        function loginWithGoogle() {
+            window.location.href = '/api/users/auth/google';
+        }
+    </script>
+</body>
+</html>
