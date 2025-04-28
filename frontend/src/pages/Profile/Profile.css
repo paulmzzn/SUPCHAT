@@ -1,0 +1,450 @@
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #262626;
+  position: relative;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Effet de brillance comme dans les autres pages */
+.glow-circle-right, .glow-circle-left {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.top-right {
+  background: radial-gradient(circle, #B05FDF, #9348B7);
+  width: 800px;
+  height: 800px;
+  top: -200px;
+  right: -200px;
+}
+
+.bottom-left {
+  background: radial-gradient(circle, #9348B7, #6A2F88);
+  width: 800px;
+  height: 800px;
+  bottom: -200px;
+  left: -200px;
+}
+
+.profile-container {
+  position: relative;
+  z-index: 1;
+  padding: 30px;
+  background: linear-gradient(145deg, rgba(35, 35, 40, 0.8), rgba(25, 25, 30, 0.95));
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  width: 95%;
+  max-width: 95%;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(5px);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 24px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 3px solid rgba(147, 72, 183, 0.3);
+  flex-shrink: 0;
+}
+
+.profile-avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(147, 72, 183, 0.3);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(147, 72, 183, 0.3);
+  flex-shrink: 0;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: white;
+}
+
+.profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-role {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(147, 72, 183, 0.3);
+  color: white;
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.profile-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.status-online {
+  background-color: #34D399;
+  box-shadow: 0 0 5px rgba(52, 211, 153, 0.5);
+}
+
+.status-offline {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.status-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(147, 72, 183, 0.2);
+  color: white;
+  border: 1px solid rgba(147, 72, 183, 0.5);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  background: rgba(147, 72, 183, 0.4);
+  transform: translateY(-2px);
+}
+
+.action-button.message {
+  background: rgba(83, 166, 251, 0.2);
+  border-color: rgba(83, 166, 251, 0.5);
+}
+
+.action-button.message:hover {
+  background: rgba(83, 166, 251, 0.4);
+}
+
+.profile-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.profile-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(5px);
+}
+
+.profile-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  border-color: rgba(147, 72, 183, 0.3);
+}
+
+/* Style pour les sections pleine largeur */
+.profile-section.full-width {
+  grid-column: 1 / -1; /* Prend toute la largeur de la grille */
+}
+
+/* Pour que les listes de workspaces s'affichent mieux sur une rangée complète */
+.profile-section.full-width .workspaces-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.section-title {
+  font-size: 18px;
+  color: white;
+  margin-top: 0;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.section-title svg {
+  margin-right: 10px;
+  color: #9348B7;
+}
+
+.info-row {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 120px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.info-value {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.profile-bio {
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background: #262626;
+  padding: 20px;
+}
+
+.loading-icon {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #9348B7;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-icon {
+  color: #EF4444;
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.loading-text, .error-text {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.error-details {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255, 77, 77, 0.1);
+  border-radius: 8px;
+  color: #ff6b6b;
+  max-width: 90%;
+  overflow-wrap: break-word;
+}
+
+/* Responsive design */
+@media (max-width: 992px) {
+  .profile-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .profile-meta {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    padding: 8px 0;
+  }
+  
+  .info-label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}
+
+/* Animation pour les sections */
+.profile-section {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Style pour les workspaces */
+.workspaces-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workspace-item {
+  background: rgba(147, 72, 183, 0.1);
+  padding: 12px 15px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  border-left: 3px solid #9348B7;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.workspace-item:hover {
+  background: rgba(147, 72, 183, 0.2);
+  transform: translateX(5px);
+}
+
+.workspace-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.workspace-name {
+  font-weight: 600;
+}
+
+.workspace-role {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.role-icon {
+  font-size: 0.9rem;
+}
+
+.role-icon.owner {
+  color: #FFD700;
+}
+
+.role-icon.admin {
+  color: #FF6B6B;
+}
+
+.role-icon.member {
+  color: #9CA3AF;
+}
+
+.workspace-members {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.workspace-empty {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.info-icon {
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+.activity-statistique {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.statistique-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.statistique-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #9348B7;
+}
+
+.statistique-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.date-raw {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  font-family: monospace;
+  word-break: break-all;
+}

@@ -1,0 +1,169 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.login-container {
+  height: 100vh;
+  background-color: #262626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.app-title {
+  position: absolute;
+  top: 2rem;
+  left: 4rem;
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  z-index: 2;
+}
+
+.dot {
+  color: #9348B7;
+}
+
+.login-card {
+  background-color: rgba(19, 19, 22, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 2rem 4rem;
+  width: 100%;
+  margin: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.login-title {
+  color: white;
+  font-size: 1.5rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.verification-text {
+  text-align: center;
+  color: #A0A0AB;
+  margin-bottom: 2rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.code-inputs {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.code-input {
+  width: 48px;
+  height: 48px;
+  text-align: center;
+  font-size: 1.5rem;
+  background-color: transparent;
+  border: 1px solid #98A2B3;
+  border-radius: 8px;
+  color: white;
+  padding: 0;
+}
+
+.code-input:focus {
+  border-color: #9348B7;
+  outline: none;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #9348B7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  height: 45px;
+  font-size: 1rem;
+}
+
+.resend-text {
+  text-align: center;
+  color: #A0A0AB;
+  margin-top: 1.5rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.resend-link {
+  color: #9348B7;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.glow-circle-right,
+.glow-circle-left {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.2;
+}
+
+.glow-circle-right {
+  background-color: #9348B7;
+  width: 800px;
+  height: 1000px;
+  top: -250px;
+  right: -400px;
+}
+
+.glow-circle-left {
+  background-color: #9348B7;
+  width: 1000px;
+  height: 800px;
+  bottom: -300px;
+  left: -400px;
+}
+
+.error-message {
+  color: #ff4444;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Media Queries essentielles */
+@media (max-width: 576px) {
+  .login-card {
+    padding: 1.5rem;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+    top: 1rem;
+    left: 1rem;
+  }
+
+  .code-inputs {
+    gap: 0.5rem;
+  }
+
+  .code-input {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+}
