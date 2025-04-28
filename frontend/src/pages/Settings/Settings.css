@@ -100,6 +100,13 @@
   box-shadow: var(--color-tab-active-shadow);
 }
 
+.theme-light .settings-tab.active {
+  color: #fff !important;
+}
+.theme-light .settings-tab.active .tab-icon {
+  color: #fff !important;
+}
+
 .settings-tab.danger {
   color: var(--color-error);
 }
@@ -512,6 +519,14 @@ input:checked + .slider:before {
   background: var(--color-tab-active);
   color: var(--color-section-title);
   border-color: var(--color-tab-active);
+}
+
+.theme-light .font-option {
+  color: #fff !important;
+}
+
+.theme-light .font-option.active {
+  color: #fff !important;
 }
 
 /* Security settings */
