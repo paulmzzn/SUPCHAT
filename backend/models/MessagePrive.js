@@ -6,12 +6,13 @@ class MessagePrive {
     fk_expediteur,
     fk_destinataire,
     pieces_jointes = [],
+    parent_id = null,
   }) {
     const result = await pool.query(
-      `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation)
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation, parent_id)
+       VALUES ($1, $2, $3, $4, NOW(), $5)
        RETURNING *`,
-      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes)]
+      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), parent_id]
     );
     return result.rows[0];
   }
@@ -27,9 +28,10 @@ class MessagePrive {
         [userA, userB]
       );
 
-      // Pour chaque message, récupérer les pièces jointes
+      // Pour chaque message, récupérer les pièces jointes et le parent_message si besoin
       const messagesWithAttachments = await Promise.all(
         result.rows.map(async (message) => {
+          // Pièces jointes
           const attachmentsResult = await pool.query(
             `SELECT f.* 
            FROM fichier f
@@ -37,17 +39,21 @@ class MessagePrive {
            WHERE mpf.fk_message_prive = $1`,
             [message.id_message_prive]
           );
+          message.attachments = attachmentsResult.rows || [];
 
-          if (attachmentsResult.rows.length > 0) {
-            message.attachments = attachmentsResult.rows;
-          } else {
-            message.attachments = [];
+          // Ajout du parent_message si parent_id présent
+          if (message.parent_id) {
+            const parentResult = await pool.query(
+              `SELECT id_message_prive, contenu, fk_expediteur FROM message_prive WHERE id_message_prive = $1`,
+              [message.parent_id]
+            );
+            if (parentResult.rows.length > 0) {
+              message.parent_message = parentResult.rows[0];
+            }
           }
-
           return message;
         })
       );
-
       return messagesWithAttachments;
     } catch (error) {
       console.error(
@@ -84,6 +90,17 @@ class MessagePrive {
         message.attachments = attachmentsResult.rows;
       } else {
         message.attachments = [];
+      }
+
+      // Ajout du parent_message si parent_id présent
+      if (message.parent_id) {
+        const parentResult = await pool.query(
+          `SELECT id_message_prive, contenu, fk_expediteur FROM message_prive WHERE id_message_prive = $1`,
+          [message.parent_id]
+        );
+        if (parentResult.rows.length > 0) {
+          message.parent_message = parentResult.rows[0];
+        }
       }
 
       return message;

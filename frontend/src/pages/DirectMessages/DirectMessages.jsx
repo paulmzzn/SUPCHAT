@@ -23,7 +23,9 @@ import {
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.109:3000";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.111:3000";
+
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -148,19 +150,54 @@ function DirectMessages() {
   const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
+  // Add this state for current user ID
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   // Ajout des états pour gérer les pièces jointes
   const [attachments, setAttachments] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Récupère l'ID utilisateur courant
-  const currentUserId = (() => {
+  // Récupère l'ID utilisateur courant et vérifie la validité du token
+  const checkTokenValidity = () => {
     try {
-      return JSON.parse(atob(localStorage.getItem("token").split(".")[1])).id;
-    } catch {
-      return null;
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.log("[DM] Token non trouvé dans localStorage");
+        return { valid: false, error: "Token non trouvé" };
+      }
+
+      // Découper et décoder le token JWT
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.log("[DM] Format de token JWT invalide");
+        return { valid: false, error: "Format de token invalide" };
+      }
+
+      // Décoder le payload (partie centrale du token)
+      const payload = JSON.parse(atob(parts[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      console.log("[DM] Informations token:", {
+        userId: payload.id,
+        email: payload.email,
+        issued: new Date(payload.iat * 1000).toLocaleString(),
+        expires: new Date(payload.exp * 1000).toLocaleString(),
+        currentTime: new Date(currentTime * 1000).toLocaleString(),
+        isExpired: currentTime > payload.exp,
+        timeRemaining: payload.exp - currentTime > 0 ? `${Math.floor((payload.exp - currentTime) / 3600)} heures` : "Expiré"
+      });
+      
+      return {
+        valid: currentTime < payload.exp,
+        error: currentTime > payload.exp ? "Token expiré" : null,
+        details: payload
+      };
+    } catch (error) {
+      console.error("[DM] Erreur lors de la vérification du token:", error);
+      return { valid: false, error: error.message };
     }
-  })();
+  };
 
   // Ajouter cet état pour suivre l'état de connexion du socket
   const [socketStatus, setSocketStatus] = useState({
@@ -180,13 +217,17 @@ function DirectMessages() {
     setSocketStatus((prev) => ({ ...prev, connecting: true }));
 
     // Vérifier d'abord si l'API est accessible
-    fetch(`${API_URL}/api/ping`)
+    fetch(`${API_URL}/api/users/verify-token`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then((response) => {
         if (response.ok) {
-          console.log("[DM] Backend API /api/ping OK");
-          return response.text();
+          console.log("[DM] Backend API token verification OK");
+          return response.json();
         } else {
-          console.error("[DM] Backend API /api/ping ERROR:", response.status);
+          console.error("[DM] Backend API token verification ERROR:", response.status);
           setSocketStatus((prev) => ({
             ...prev,
             connecting: false,
@@ -323,6 +364,12 @@ function DirectMessages() {
     // Update the handlePrivateMessage function to safely handle message storage
     const handlePrivateMessage = async (msg) => {
       console.log("[DM] Received private message:", msg);
+
+      // Protection: skip if currentUserId is not yet defined
+      if (!currentUserId) {
+        console.log("[DM] Skipping message processing, currentUserId not defined yet");
+        return;
+      }
 
       // Only count as unread if it's not from current user and not in current conversation
       if (
@@ -700,7 +747,7 @@ function DirectMessages() {
 
   // Improve the markMessagesAsRead function to be more robust
   const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length || !selectedUser) return;
+    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId) return;
 
     const unreadMessages = msgs.filter(
       (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
@@ -1079,12 +1126,7 @@ function DirectMessages() {
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setNewMessage(
-      `@${
-        usersInfo[messageContextMenu.message.fk_expediteur]?.name ||
-        "Utilisateur"
-      } `
-    );
+    // Ne plus ajouter automatiquement le pseudo dans le champ de saisie
     handleCloseMessageContextMenu();
     const inputElement = document.querySelector(".dm-input");
     if (inputElement) inputElement.focus();
@@ -1241,6 +1283,21 @@ function DirectMessages() {
     fetchUnreadCounts();
   }, []);
 
+  // Vérifier le token au chargement du composant
+  useEffect(() => {
+    // Vérifier si le token est valide
+    const tokenStatus = checkTokenValidity();
+    console.log("[DM] Statut du token:", tokenStatus);
+    
+    if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
+      // Définir l'ID utilisateur à partir du token JWT
+      setCurrentUserId(tokenStatus.details.id);
+      console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
+    } else {
+      setError(`Erreur d'authentification: ${tokenStatus.error || "Token invalide"}. Veuillez vous reconnecter.`);
+    }
+  }, []);
+
   return (
     <div className="app-layout">
       <Sidebar unreadMessageCount={totalUnreadCount} />
@@ -1284,12 +1341,11 @@ function DirectMessages() {
             ) : (
               filteredConversations.map((userId) => {
                 const user = usersInfo[userId] || {};
+                const unreadCount = unreadMessageCounts[userId] || 0;
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${
-                      selectedUser === userId ? "active" : ""
-                    }`}
+                    className={`dm-conv-item ${selectedUser === userId ? "active" : ""}`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
@@ -1308,6 +1364,9 @@ function DirectMessages() {
                     <span className="dm-username">
                       {user.name || "Utilisateur"}
                     </span>
+                    {unreadCount > 0 && (
+                      <span className="dm-unread-badge">{unreadCount}</span>
+                    )}
                   </li>
                 );
               })
@@ -1454,22 +1513,43 @@ function DirectMessages() {
                         className={`dm-message ${isOwn ? "own" : "other"}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                       >
-                        {/* Si c'est une réponse, afficher le message parent */}
-                        {msg.parent_id && (
-                          <div className="dm-reply-info">
-                            <div className="dm-reply-content">
-                              {/* TODO: Récupérer le message parent */}
-                              <span className="dm-reply-author">
-                                @
-                                {usersInfo[msg.parent_expediteur]?.name ||
-                                  "Utilisateur"}
+                        {/* Afficher le message parent (réponse) dans les messages privés, même style que workspaces */}
+                        {msg.parent_id || msg.parent_message ? (
+                          <div
+                            className="message-reply-to"
+                            onClick={() => {
+                              const parentId = msg.parent_id || msg.parent_message?.id_message_prive;
+                              if (parentId) {
+                                const element = document.getElementById(`msg-${parentId}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.classList.add("highlight-message");
+                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                }
+                              }
+                            }}
+                          >
+                            <span className="reply-icon">
+                              <FaReply />
+                            </span>
+                            <div className="reply-content">
+                              <span className="reply-author">
+                                {msg.parent_message
+                                  ? usersInfo[msg.parent_message.fk_expediteur]?.name || "Utilisateur"
+                                  : msg.parent_id
+                                    ? usersInfo[messages.find(m => m.id_message_prive === msg.parent_id)?.fk_expediteur]?.name || "Utilisateur"
+                                    : "Utilisateur"}
                               </span>
-                              <span className="dm-reply-text">
-                                {msg.parent_contenu || "Message original"}
+                              <span className="reply-text">
+                                {msg.parent_message
+                                  ? msg.parent_message.contenu
+                                  : msg.parent_id
+                                    ? messages.find(m => m.id_message_prive === msg.parent_id)?.contenu || "Message original non disponible"
+                                    : "Message original non disponible"}
                               </span>
                             </div>
                           </div>
-                        )}
+                        ) : null}
 
                         <div className="dm-msg-avatar">
                           {avatarSrc ? (
