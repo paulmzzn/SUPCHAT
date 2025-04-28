@@ -70,6 +70,8 @@
   margin-bottom: 1rem;
   color: var(--discover-section-title-color) !important;
   font-size: 1.5rem;
+  border-bottom: 1px solid var(--discover-section-title-border) !important;
+  padding-bottom: 0.5rem;
 }
 
 /* Workspaces grid section */
