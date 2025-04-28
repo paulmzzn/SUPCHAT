@@ -17,8 +17,8 @@
   width: 280px;
   min-width: 280px;
   height: 100vh;
-  background: #222222;
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--dm-sidebar-bg);
+  border-right: var(--dm-sidebar-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -27,13 +27,13 @@
 
 .dm-sidebar-header {
   padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: var(--dm-sidebar-border);
 }
 
 .dm-title {
   font-size: 1.2rem;
   font-weight: 600;
-  color: white;
+  color: var(--dm-title-color);
   margin: 12px 0;
   text-align: center;
   letter-spacing: 0.03em;
@@ -55,8 +55,8 @@
   margin: 12px auto;
   display: block;
   padding: 10px 15px;
-  background: linear-gradient(to right, #9348b7, #b05fdf);
-  color: white;
+  background: var(--dm-new-conversation-bg);
+  color: var(--dm-new-conversation-color);
   font-weight: 600;
   font-size: 0.85rem;
   border: none;
@@ -68,7 +68,7 @@
 
 .dm-new-conversation-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 3px 10px rgba(147, 72, 183, 0.3);
+  box-shadow: var(--dm-new-conversation-hover-shadow);
 }
 
 .dm-search {
@@ -84,18 +84,18 @@
 .dm-search-input {
   width: 100%;
   padding: 10px 12px 10px 36px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--dm-search-bg);
+  border: var(--dm-search-border);
   border-radius: 6px;
-  color: white;
+  color: var(--dm-search-color);
   font-size: 0.9rem;
   box-sizing: border-box;
 }
 
 .dm-search-input:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(147, 72, 183, 0.5);
+  background: var(--dm-search-focus-bg);
+  border-color: var(--dm-search-focus-border);
 }
 
 .dm-search-icon {
@@ -103,7 +103,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--dm-search-placeholder);
   font-size: 0.9rem;
 }
 
@@ -128,15 +128,15 @@
   margin-bottom: 2px;
   transition: background 0.2s ease;
   position: relative;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--discover-section-title-border)
 }
 
 .dm-conv-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--dm-conv-item-hover-bg);
 }
 
 .dm-conv-item.active {
-  background: rgba(147, 72, 183, 0.25);
+  background: var(--dm-conv-item-active-bg);
 }
 
 .dm-avatar {
@@ -149,7 +149,7 @@
 }
 
 .dm-username {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--dm-username-color);
   font-size: 0.95rem;
   white-space: nowrap;
   overflow: hidden;
@@ -157,20 +157,20 @@
 }
 
 .dm-conv-item.active .dm-username {
-  color: white;
+  color: var(--dm-username-active-color);
   font-weight: 500;
 }
 
 .dm-empty {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--dm-empty-color);
   font-size: 0.9rem;
   text-align: center;
   margin: 20px 0;
 }
 
 .dm-error {
-  color: #ff6b6b;
-  background-color: rgba(255, 107, 107, 0.1);
+  color: var(--dm-error-color);
+  background-color: var(--dm-error-bg);
   padding: 8px;
   margin: 10px;
   border-radius: 4px;
@@ -180,7 +180,7 @@
 /* Zone principale des messages */
 .dm-main {
   flex: 1;
-  background-color: #262626;
+  background-color: var(--dm-main-bg);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -192,8 +192,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 25, 30, 0.7);
+  border-bottom: var(--dm-header-border);
+  background: var(--dm-header-bg);
 }
 
 .dm-header-info {
@@ -211,7 +211,7 @@
 
 .dm-header-username {
   font-size: 1.2rem;
-  color: white;
+  color: var(--dm-header-username-color);
   font-weight: 600;
 }
 
@@ -220,7 +220,7 @@
   align-items: center;
   margin-left: 8px;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--dm-header-status-color);
 }
 
 .dm-header-status .status-dot {
@@ -231,12 +231,12 @@
 }
 
 .dm-header-status .status-dot.online {
-  background-color: #4cd964;
-  box-shadow: 0 0 5px rgba(76, 217, 100, 0.5);
+  background-color: var(--dm-header-status-online);
+  box-shadow: var(--dm-header-status-online-shadow);
 }
 
 .dm-header-status .status-dot.offline {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--dm-header-status-offline);
 }
 
 .dm-messages {
@@ -246,6 +246,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: var(--dm-messages-bg);
 }
 
 .dm-loading,
@@ -371,18 +372,18 @@
 }
 
 .dm-msg-content {
-  background-color: rgba(255, 255, 255, 0.07);
+  background-color: var(--dm-message-other-bg);
   border-radius: 4px 16px 16px 16px;
   padding: 12px 15px;
   max-width: 420px;
   word-break: break-word;
   display: flex;
   flex-direction: column;
-  color: white;
+  color: var(--dm-msg-author-color);
 }
 
 .dm-message.own .dm-msg-content {
-  background-color: rgba(147, 72, 183, 0.15);
+  background-color: var(--dm-message-own-bg);
   border-radius: 16px 4px 16px 16px;
 }
 
@@ -398,7 +399,7 @@
 
 .dm-msg-author {
   font-weight: 600;
-  color: white;
+  color: var(--dm-msg-author-color);
   font-size: 0.95rem;
   margin-right: 8px;
 }
@@ -406,24 +407,34 @@
 .dm-message.own .dm-msg-author {
   margin-right: 0;
   margin-left: 8px;
+  color: #fff;
 }
 
 .dm-msg-date {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--dm-msg-date-color);
+}
+
+.dm-message.own .dm-msg-date {
+  color: #fff;
 }
 
 .dm-msg-bubble {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--dm-msg-bubble-color);
   line-height: 1.5;
   font-size: 0.95rem;
   word-break: break-word;
 }
 
+.dm-message.own .dm-msg-bubble {
+  color: #fff;
+}
+
 /* Improved styling for read receipts */
 .dm-msg-read {
   font-size: 0.7rem;
-  color: #888;
+  color: #fff;
+  opacity: 0.85;
   margin-top: 4px;
   text-align: right;
   user-select: none;
@@ -520,7 +531,7 @@
   margin-top: 8px;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--dm-msg-attachment-bg);
   padding: 8px;
   border-radius: 4px;
   gap: 8px;
@@ -528,11 +539,11 @@
 
 .attachment-icon {
   font-size: 1.2rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--dm-msg-attachment-icon);
 }
 
 .attachment-link {
-  color: #9348b7;
+  color: var(--dm-msg-attachment-link);
   text-decoration: none;
   font-size: 0.9rem;
   max-width: 300px;
@@ -574,7 +585,7 @@
 }
 
 .dm-msg-file-attachment {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--dm-msg-file-attachment-bg);
   border-radius: 8px;
   max-width: 300px;
   overflow: hidden;
@@ -594,7 +605,7 @@
   justify-content: center;
   font-size: 1.5rem;
   margin-right: 12px;
-  color: #9571f6;
+  color: var(--dm-msg-file-icon);
   flex-shrink: 0;
 }
 
@@ -610,32 +621,33 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--dm-msg-file-name-color);
 }
 
 .dm-msg-file-size {
   font-size: 0.75rem;
-  color: #8f8f8f;
+  color: var(--dm-msg-file-size-color);
 }
 
 .dm-msg-file-download {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9571f6;
+  color: var(--dm-msg-file-download-color);
   padding: 0 8px;
 }
 
 /* Style pour les pièces jointes dans les messages envoyés par l'utilisateur */
 .dm-message.own .dm-msg-file-attachment {
-  background-color: rgba(149, 113, 246, 0.1);
+  background-color: var(--dm-msg-file-attachment-own-bg);
 }
 
 /* Formulaire d'envoi de message */
 .dm-input-form {
   display: flex;
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 25, 30, 0.7);
+  border-top: var(--dm-input-form-border);
+  background: var(--dm-input-form-bg);
   gap: 10px;
 }
 
@@ -643,14 +655,14 @@
   flex: 1;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--dm-input-bg);
   border-radius: 8px;
   padding: 0 8px;
   transition: all 0.2s ease;
 }
 
 .dm-input-wrapper:focus-within {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--dm-input-focus-bg);
   box-shadow: 0 0 0 2px rgba(147, 72, 183, 0.3);
 }
 
@@ -659,7 +671,7 @@
   background: transparent;
   border: none;
   padding: 12px;
-  color: white;
+  color: var(--dm-input-color);
   font-size: 0.95rem;
 }
 
@@ -668,14 +680,14 @@
 }
 
 .dm-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--dm-input-placeholder);
 }
 
 .dm-attachment-btn,
 .dm-emoji-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--dm-attachment-btn-color);
   padding: 8px;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -683,11 +695,11 @@
 
 .dm-attachment-btn:hover,
 .dm-emoji-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--dm-attachment-btn-hover);
 }
 
 .dm-send-btn {
-  background: linear-gradient(to right, #9348b7, #b05fdf);
+  background: var(--dm-send-btn-bg);
   border: none;
   width: 40px;
   height: 40px;
@@ -695,7 +707,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--dm-send-btn-color);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
@@ -707,7 +719,7 @@
 }
 
 .dm-send-btn:disabled {
-  background: rgba(147, 72, 183, 0.3);
+  background: var(--dm-send-btn-disabled-bg);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -782,7 +794,7 @@
 }
 
 .dm-modal {
-  background: #2d2d2d;
+  background: var(--dm-modal-bg);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -792,7 +804,7 @@
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   animation: modalFadeIn 0.3s ease;
-  border: 1px solid rgba(147, 72, 183, 0.3);
+  border: var(--dm-modal-border);
   position: absolute;
   top: 50%;
   left: 50%;
@@ -815,11 +827,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: var(--dm-header-border);
+  background: var(--dm-modal-header-bg);
 }
 
 .dm-modal-header h3 {
-  color: white;
+  color: var(--dm-modal-header-color);
   margin: 0;
 }
 
@@ -832,20 +845,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--dm-modal-close-color);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dm-modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--dm-modal-close-hover-bg);
+  color: var(--dm-modal-close-hover-color);
 }
 
 .dm-modal-body {
   padding: 20px;
   overflow-y: auto;
   max-height: calc(80vh - 70px);
+  background: var(--dm-modal-body-bg);
+  color: var(--dm-modal-body-color);
 }
 
 .dm-search-input-wrapper.modal {
@@ -924,12 +939,12 @@
 /* Sélecteur d'emoji */
 .dm-emoji-picker {
   position: fixed;
-  background: #2a2a2a;
+  background: var(--dm-emoji-picker-bg);
   border-radius: 8px;
   padding: 8px;
   z-index: 1100;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--dm-emoji-picker-border);
   animation: fadeIn 0.15s ease;
 }
 
@@ -952,7 +967,7 @@
 }
 
 .dm-emoji-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--dm-emoji-item-hover-bg);
 }
 
 /* Edition de message */
@@ -1010,15 +1025,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(147, 72, 183, 0.1);
-  border-left: 3px solid #9348b7;
+  background: var(--dm-replying-to-bg);
+  border-left: var(--dm-replying-to-border);
   padding: 8px 12px;
   margin-bottom: 8px;
   border-radius: 4px;
 }
 
 .dm-replying-info {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--dm-replying-info-color);
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1026,7 +1041,7 @@
 }
 
 .dm-replying-content {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--dm-replying-content-color);
   margin-left: 4px;
   max-width: 200px;
   display: inline-block;
@@ -1038,13 +1053,13 @@
 .dm-cancel-reply {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--dm-cancel-reply-color);
   cursor: pointer;
   padding: 4px;
 }
 
 .dm-cancel-reply:hover {
-  color: white;
+  color: var(--dm-cancel-reply-hover-color);
 }
 
 /* Affichage des réponses */
@@ -1054,7 +1069,7 @@
   margin-bottom: 4px;
   padding: 4px 8px;
   margin-left: 48px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--dm-reply-info-bg);
   border-radius: 4px;
   max-width: 80%;
 }
@@ -1068,12 +1083,12 @@
   display: flex;
   flex-direction: column;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--dm-reply-info-color);
 }
 
 .dm-reply-author {
   font-weight: bold;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--dm-reply-author-color);
 }
 
 .dm-reply-text {
@@ -1081,6 +1096,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 300px;
+  color: var(--dm-reply-text-color);
 }
 
 /* --- Styles reply des workspaces (copiés pour harmonisation) --- */
@@ -1131,8 +1147,8 @@
 
 /* Badge de notification pour messages non lus dans la liste des conversations */
 .dm-unread-badge {
-  background: #e74c3c;
-  color: #fff;
+  background: var(--dm-unread-badge-bg);
+  color: var(--dm-unread-badge-color);
   font-size: 0.75rem;
   font-weight: bold;
   min-width: 20px;
@@ -1146,13 +1162,17 @@
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+  box-shadow: var(--dm-unread-badge-shadow);
   z-index: 2;
   padding: 0 6px;
-  border: 2px solid #222222;
+  border: var(--dm-unread-badge-border);
   aspect-ratio: 1 / 1;
 }
 
 .dm-conv-item.active .dm-unread-badge {
-  border-color: #9348b7;
+  border-color: var(--dm-unread-badge-active-border);
+}
+
+.dm-message.own .dm-msg-avatar {
+  background-color: rgba(255, 255, 255, 0.15);
 }

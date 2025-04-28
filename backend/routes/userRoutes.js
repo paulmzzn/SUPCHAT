@@ -76,7 +76,7 @@ router.post("/reset-password", resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.111:3001/login' }), 
+  passport.authenticate('google', { failureRedirect: 'http://172.20.10.2:3001/login' }), 
 
   async (req, res) => {
     const user = req.user;
@@ -89,7 +89,7 @@ router.get('/auth/google/callback',
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
 
-      `http://192.168.1.111:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://172.20.10.2:3001/auth/callback?token=${token}&email=${user.email}`
 
     );
   }
@@ -102,7 +102,7 @@ router.get(
 
 
 router.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: 'http://192.168.1.111:3001/login' }),
+  passport.authenticate('github', { failureRedirect: 'http://172.20.10.2:3001/login' }),
 
   async (req, res) => {
     const user = req.user;
@@ -113,7 +113,7 @@ router.get('/auth/github/callback',
     );
     res.redirect(
 
-      `http://192.168.1.111:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://172.20.10.2:3001/auth/callback?token=${token}&email=${user.email}`
 
     );
   }
