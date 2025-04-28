@@ -1,6 +1,7 @@
 import pool from "../config/dbConnection.js";
 import Canal from "../models/Canal.js";
 import Workspace from "../models/Workspace.js";
+import Fichier from "../models/Fichier.js";
 
 // Créer un nouveau canal
 export const createCanal = async (req, res) => {
@@ -17,11 +18,16 @@ export const createCanal = async (req, res) => {
 
     // Vérifier le rôle de l'utilisateur (owner=1, admin=2)
     const roleRes = await pool.query(
-      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, userId]
     );
-    if (!roleRes.rows.length || (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)) {
-      return res.status(403).json({ message: "Seuls les owners ou admins peuvent créer un canal" });
+    if (
+      !roleRes.rows.length ||
+      (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Seuls les owners ou admins peuvent créer un canal" });
     }
 
     const canal = await Canal.create({
@@ -74,7 +80,7 @@ export const updateCanal = async (req, res) => {
 
     const canal = await Canal.update(canalId, {
       nom,
-      is_private
+      is_private,
     });
 
     if (!canal) {
@@ -108,11 +114,18 @@ export const deleteCanal = async (req, res) => {
 
     // Vérifier le rôle de l'utilisateur (owner=1, admin=2)
     const roleRes = await pool.query(
-      'SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2',
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
       [workspaceId, userId]
     );
-    if (!roleRes.rows.length || (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)) {
-      return res.status(403).json({ message: "Seuls les owners ou admins peuvent supprimer un canal" });
+    if (
+      !roleRes.rows.length ||
+      (roleRes.rows[0].fk_role !== 1 && roleRes.rows[0].fk_role !== 2)
+    ) {
+      return res
+        .status(403)
+        .json({
+          message: "Seuls les owners ou admins peuvent supprimer un canal",
+        });
     }
 
     const result = await Canal.delete(canalId);
@@ -126,6 +139,21 @@ export const deleteCanal = async (req, res) => {
     res.status(200).json({ message: "Canal supprimé avec succès" });
   } catch (error) {
     console.error("Erreur lors de la suppression du canal:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Récupérer tous les fichiers d'un canal
+export const getCanalFiles = async (req, res) => {
+  try {
+    const { canalId } = req.params;
+    const files = await Fichier.getByCanalId(canalId);
+    res.status(200).json(files);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des fichiers du canal:",
+      error
+    );
     res.status(500).json({ message: error.message });
   }
 };

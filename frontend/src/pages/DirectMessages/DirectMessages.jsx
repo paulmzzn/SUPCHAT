@@ -23,7 +23,9 @@ import {
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
 
+
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.111:3000";
+
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
