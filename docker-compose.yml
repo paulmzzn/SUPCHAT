@@ -26,8 +26,9 @@ services:
     depends_on:
       - backend
     environment:
-      - REACT_APP_API_URL=http://192.168.1.109:8888
-      - WDS_SOCKET_PORT=0
+
+      - REACT_APP_API_URL=http://192.168.1.111:8888
+
 #   portainer:
 #     image: portainer/portainer-ce
 #     container_name: portainer

@@ -48,9 +48,9 @@ function Profile() {
     setLoading(true);
     setError(null);
 
-    const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.109:3001") +
-      `/api/users/${userId}`;
+
+    const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.1.111:3001") + `/api/users/${userId}`;
+
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
     fetch(apiUrl, {
@@ -106,9 +106,9 @@ function Profile() {
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
     try {
-      const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://192.168.1.109:3001") +
-        `/api/users/${userId}/workspaces`;
+
+      const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.1.111:3001") + `/api/users/${userId}/workspaces`;
+
       console.log(`Fetching workspaces from: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {

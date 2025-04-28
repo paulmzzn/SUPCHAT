@@ -957,7 +957,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
-    setDisplayMessage(`@${messageContextMenu.message.nom} `);
+    // Ne plus ajouter automatiquement le pseudo dans le champ de saisie
     handleCloseMessageContextMenu();
     const messageInput = document.querySelector(".chat-input-wrapper input");
     if (messageInput) messageInput.focus();
