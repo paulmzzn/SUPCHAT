@@ -1546,6 +1546,26 @@
 .theme-light .context-menu-icon {
   color: #9348b7;
 }
+.theme-light .message-context-menu {
+  background: linear-gradient(145deg, #fff, #f5f5f7);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.10), 0 0 0 1px #e0e0e0;
+}
+.theme-light .message-context-menu .context-menu-item {
+  color: #23272f;
+}
+.theme-light .message-context-menu .context-menu-item:hover {
+  background-color: #e0e0e0;
+}
+.theme-light .message-context-menu .context-menu-item.delete {
+  color: #ff6b6b;
+  border-top: 1px solid #e0e0e0;
+}
+.theme-light .message-context-menu .context-menu-item.delete:hover {
+  background-color: rgba(255, 107, 107, 0.08);
+}
+.theme-light .message-context-menu .context-menu-icon {
+  color: #9348b7;
+}
 
 /* Responsive adjustments for chat */
 @media (max-width: 768px) {
@@ -2378,4 +2398,33 @@ body
 
 .chat-message.own-message .file-name {
   color: #fff;
+}
+
+/* Support du thème clair pour la modal d'affichage de fichier */
+.theme-light .fullscreen-modal-content {
+  background: #fff;
+  color: #23272f;
+}
+.theme-light .fullscreen-modal-header {
+  background-color: #f5f5f7;
+  border-bottom: 1px solid #e0e0e0;
+}
+.theme-light .fullscreen-modal-title {
+  color: #23272f;
+}
+.theme-light .fullscreen-modal-close {
+  color: #b0b3b8;
+}
+.theme-light .fullscreen-modal-close:hover {
+  color: #9348b7;
+}
+.theme-light .fullscreen-modal-body {
+  background: #fff;
+}
+.theme-light .fullscreen-download-btn {
+  background: linear-gradient(to right, #9348b7, #b05fdf);
+  color: #fff;
+}
+.theme-light .fullscreen-download-btn:hover {
+  background: linear-gradient(to right, #b05fdf, #9348b7);
 }
