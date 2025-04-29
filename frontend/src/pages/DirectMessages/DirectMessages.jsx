@@ -24,7 +24,7 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
 
 
-const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.106:3000";
 
 
 // Helper pour formater la date
@@ -481,6 +481,8 @@ function DirectMessages() {
       ) {
         fetchConversations();
       }
+      // Ajout : toujours rafraîchir la liste des conversations pour affichage temps réel
+      fetchConversations();
     };
 
     const handlePrivateMessageUpdated = (msg) => {
