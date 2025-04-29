@@ -12,6 +12,7 @@ import WorkspaceDetails from './pages/WorkspaceDetails/WorkspaceDetails';
 import Settings from './pages/Settings/Settings';
 import Profile from './pages/Profile/Profile';
 import DirectMessages from './pages/DirectMessages/DirectMessages';
+import { SocketProvider } from './context/SocketContext';
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -79,57 +80,59 @@ function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/code" element={<Code email={localStorage.getItem('email')} />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        
-        {/* Routes protégées */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/workspaces" element={
-          <ProtectedRoute>
-            <Workspaces />
-          </ProtectedRoute>
-        } />
-        <Route path="/workspace/:workspaceId" element={
-          <ProtectedRoute>
-            <WorkspaceDetails />
-          </ProtectedRoute>
-        } />
-        <Route path="/discover" element={
-          <ProtectedRoute>
-            <Discover />
-          </ProtectedRoute>
-        } />
-        <Route path="/validate" element={
-          <ProtectedRoute>
-            <Validate />
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } />
-        <Route path="/profile/:userId" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        <Route path="/direct-messages" element={<DirectMessages />} />
-        
-        {/* Route par défaut */}
-        <Route path="/" element={
-          isAuthenticated() ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-        } />
-      </Routes>
-    </Router>
+    <SocketProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/code" element={<Code email={localStorage.getItem('email')} />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          
+          {/* Routes protégées */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/workspaces" element={
+            <ProtectedRoute>
+              <Workspaces />
+            </ProtectedRoute>
+          } />
+          <Route path="/workspace/:workspaceId" element={
+            <ProtectedRoute>
+              <WorkspaceDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/discover" element={
+            <ProtectedRoute>
+              <Discover />
+            </ProtectedRoute>
+          } />
+          <Route path="/validate" element={
+            <ProtectedRoute>
+              <Validate />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile/:userId" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/direct-messages" element={<DirectMessages />} />
+          
+          {/* Route par défaut */}
+          <Route path="/" element={
+            isAuthenticated() ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+          } />
+        </Routes>
+      </Router>
+    </SocketProvider>
   );
 }
 
