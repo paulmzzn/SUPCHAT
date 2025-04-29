@@ -22,6 +22,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
 import fs from "fs"; // Import fs
+import strawpollRoutes from './routes/strawpollRoutes.js'; // Import ES module
 
 // Load environment variables at the start
 dotenv.config();
@@ -89,6 +90,7 @@ app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
+app.use('/api/strawpoll', strawpollRoutes); // Ajout des routes pour strawpoll
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Configurer avant les routes API pour éviter les conflits d'authentification
