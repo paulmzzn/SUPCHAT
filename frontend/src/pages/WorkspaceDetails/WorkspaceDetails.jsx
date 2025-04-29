@@ -197,6 +197,9 @@ function WorkspaceDetails() {
   // État pour l'affichage du fichier en plein écran
   const [fullscreenFile, setFullscreenFile] = useState(null);
 
+  // État pour le loader de pagination
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+
   // Use the custom hook to get state and handlers
   const {
     workspace: rawWorkspace,
@@ -587,6 +590,22 @@ function WorkspaceDetails() {
     document.body.removeChild(a);
   };
 
+  // Loader pagination : affichage du loader en haut + gestion du scroll
+  const handleScrollLoadMore = (e) => {
+    if (isLoadingMoreMessages || loadingMessages) return;
+    const container = e.target;
+    if (container.scrollTop <= 30) {
+      // Déclencher le chargement de plus de messages ici (pagination)
+      setIsLoadingMoreMessages(true);
+      // Simuler un chargement (remplacer par appel API réel plus tard)
+      setTimeout(() => {
+        // Ici tu ajoutes les anciens messages récupérés en haut du tableau
+        // setMessages((prev) => [...nouveauxMessages, ...prev]);
+        setIsLoadingMoreMessages(false);
+      }, 1200);
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-layout">
@@ -735,9 +754,16 @@ function WorkspaceDetails() {
                 </div>
               </div>
 
-              <div className="chat-messages" ref={chatContainerRef}>
-                {" "}
-                {/* Use ref from hook */}
+              <div
+                className="chat-messages"
+                ref={chatContainerRef}
+                onScroll={handleScrollLoadMore}
+              >
+                {isLoadingMoreMessages && (
+                  <div className="chat-loader-top">
+                    <div className="upload-spinner"></div>
+                  </div>
+                )}
                 {loadingMessages ? (
                   <div className="chat-loading">Chargement des messages...</div>
                 ) : messages.length > 0 ? ( // Use messages from hook

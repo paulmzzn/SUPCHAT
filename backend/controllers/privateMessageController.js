@@ -66,7 +66,15 @@ export const getPrivateConversation = async (req, res) => {
   try {
     const userA = req.user.id;
     const userB = req.params.userId;
-    const messages = await MessagePrive.getConversation(userA, userB);
+    // Récupérer limit/offset depuis la query string, valeurs par défaut : 50/0
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const messages = await MessagePrive.getConversation(
+      userA,
+      userB,
+      limit,
+      offset
+    );
     res.status(200).json(messages);
   } catch (error) {
     res.status(500).json({ message: error.message });

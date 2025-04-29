@@ -23,9 +23,7 @@ import {
 import Sidebar from "../../components/Sidebar/Sidebar";
 import "./DirectMessages.css";
 
-
-const API_URL = process.env.REACT_APP_API_URL || "http://172.20.10.2:3000";
-
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.107:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -168,7 +166,7 @@ function DirectMessages() {
       }
 
       // Découper et décoder le token JWT
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length !== 3) {
         console.log("[DM] Format de token JWT invalide");
         return { valid: false, error: "Format de token invalide" };
@@ -177,7 +175,7 @@ function DirectMessages() {
       // Décoder le payload (partie centrale du token)
       const payload = JSON.parse(atob(parts[1]));
       const currentTime = Math.floor(Date.now() / 1000);
-      
+
       console.log("[DM] Informations token:", {
         userId: payload.id,
         email: payload.email,
@@ -185,13 +183,16 @@ function DirectMessages() {
         expires: new Date(payload.exp * 1000).toLocaleString(),
         currentTime: new Date(currentTime * 1000).toLocaleString(),
         isExpired: currentTime > payload.exp,
-        timeRemaining: payload.exp - currentTime > 0 ? `${Math.floor((payload.exp - currentTime) / 3600)} heures` : "Expiré"
+        timeRemaining:
+          payload.exp - currentTime > 0
+            ? `${Math.floor((payload.exp - currentTime) / 3600)} heures`
+            : "Expiré",
       });
-      
+
       return {
         valid: currentTime < payload.exp,
         error: currentTime > payload.exp ? "Token expiré" : null,
-        details: payload
+        details: payload,
       };
     } catch (error) {
       console.error("[DM] Erreur lors de la vérification du token:", error);
@@ -219,15 +220,18 @@ function DirectMessages() {
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/users/verify-token`, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     })
       .then((response) => {
         if (response.ok) {
           console.log("[DM] Backend API token verification OK");
           return response.json();
         } else {
-          console.error("[DM] Backend API token verification ERROR:", response.status);
+          console.error(
+            "[DM] Backend API token verification ERROR:",
+            response.status
+          );
           setSocketStatus((prev) => ({
             ...prev,
             connecting: false,
@@ -367,7 +371,9 @@ function DirectMessages() {
 
       // Protection: skip if currentUserId is not yet defined
       if (!currentUserId) {
-        console.log("[DM] Skipping message processing, currentUserId not defined yet");
+        console.log(
+          "[DM] Skipping message processing, currentUserId not defined yet"
+        );
         return;
       }
 
@@ -556,6 +562,62 @@ function DirectMessages() {
     scrollToBottom();
   }, [messages]);
 
+  // Gestion du scroll pour charger plus d'anciens messages privés
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    let isFetching = false;
+    let prevScrollHeight = 0;
+
+    const handleScroll = async () => {
+      console.log(
+        "[DM][SCROLL] scrollTop:",
+        container.scrollTop,
+        "loadingMessages:",
+        loadingMessages,
+        "isFetching:",
+        isFetching
+      );
+      if (container.scrollTop < 100 && !loadingMessages && !isFetching) {
+        isFetching = true;
+        prevScrollHeight = container.scrollHeight;
+        const prevFirstMessageId = messages[0]?.id_message_prive;
+        console.log(
+          "[DM][SCROLL] Début fetchMoreMessages, prevFirstMessageId:",
+          prevFirstMessageId,
+          "prevScrollHeight:",
+          prevScrollHeight
+        );
+        await fetchMoreMessages();
+        // Après chargement, ajuster le scroll pour garder la position
+        setTimeout(() => {
+          const newFirstMessage = document.getElementById(
+            `msg-${prevFirstMessageId}`
+          );
+          if (newFirstMessage) {
+            console.log(
+              "[DM][SCROLL] scrollIntoView sur",
+              `msg-${prevFirstMessageId}`
+            );
+            newFirstMessage.scrollIntoView({ block: "start" });
+          } else {
+            // Fallback : ajuster le scrollTop pour compenser la différence de hauteur
+            container.scrollTop = container.scrollHeight - prevScrollHeight;
+            console.log(
+              "[DM][SCROLL] Fallback scrollTop ajusté:",
+              container.scrollTop
+            );
+          }
+          isFetching = false;
+        }, 100);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [messages, loadingMessages]);
+
   // Récupère la liste des utilisateurs avec qui j'ai une conversation
   const fetchConversations = async () => {
     try {
@@ -702,9 +764,13 @@ function DirectMessages() {
       });
 
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Ajout de la pagination : on veut les 20 derniers messages
+      const res = await fetch(
+        `${API_URL}/api/private-messages/${userId}?limit=20`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (!res.ok) {
         setError(
@@ -733,10 +799,14 @@ function DirectMessages() {
           }
         })
       );
-      setMessages(messagesWithAttachments);
+      // Les messages sont reçus du plus récent au plus ancien, on les inverse pour affichage chronologique
+      const sortedMessages = [...messagesWithAttachments].reverse();
+      // Ajout d'un délai artificiel pour rendre le loader visible
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setMessages(sortedMessages);
 
       // Marquer les messages non lus comme lus
-      markMessagesAsRead(data);
+      markMessagesAsRead(sortedMessages);
     } catch (e) {
       setError(`Erreur lors de la récupération des messages: ${e.message}`);
       setMessages([]);
@@ -745,9 +815,55 @@ function DirectMessages() {
     }
   };
 
+  // Fonction pour charger plus d'anciens messages privés (pagination)
+  const fetchMoreMessages = async () => {
+    if (!selectedUser || loadingMessages) return;
+    // On prend l'ID du plus ancien message déjà chargé
+    const oldest = messages[0];
+    if (!oldest) return;
+    try {
+      setLoadingMessages(true);
+      const token = localStorage.getItem("token");
+      // On utilise la date ou l'id du plus ancien message pour paginer
+      const before =
+        oldest.date_creation || oldest.date_envoi || oldest.id_message_prive;
+      const res = await fetch(
+        `${API_URL}/api/private-messages/${selectedUser}?limit=20&before=${encodeURIComponent(
+          before
+        )}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      // Pour chaque message, récupérer ses pièces jointes UNIQUEMENT si non présentes
+      const messagesWithAttachments = await Promise.all(
+        data.map(async (message) => {
+          if (message.attachments && message.attachments.length > 0) {
+            return message;
+          }
+          try {
+            const attachments = await fetchMessageAttachments(
+              message.id_message_prive
+            );
+            return { ...message, attachments };
+          } catch (error) {
+            return { ...message, attachments: [] };
+          }
+        })
+      );
+      // On ajoute les anciens messages en haut de la liste (début du tableau)
+      setMessages((prev) => [...messagesWithAttachments.reverse(), ...prev]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   // Improve the markMessagesAsRead function to be more robust
   const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId) return;
+    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId)
+      return;
 
     const unreadMessages = msgs.filter(
       (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
@@ -1288,13 +1404,17 @@ function DirectMessages() {
     // Vérifier si le token est valide
     const tokenStatus = checkTokenValidity();
     console.log("[DM] Statut du token:", tokenStatus);
-    
+
     if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
       // Définir l'ID utilisateur à partir du token JWT
       setCurrentUserId(tokenStatus.details.id);
       console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
     } else {
-      setError(`Erreur d'authentification: ${tokenStatus.error || "Token invalide"}. Veuillez vous reconnecter.`);
+      setError(
+        `Erreur d'authentification: ${
+          tokenStatus.error || "Token invalide"
+        }. Veuillez vous reconnecter.`
+      );
     }
   }, []);
 
@@ -1345,7 +1465,9 @@ function DirectMessages() {
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${selectedUser === userId ? "active" : ""}`}
+                    className={`dm-conv-item ${
+                      selectedUser === userId ? "active" : ""
+                    }`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
@@ -1429,259 +1551,301 @@ function DirectMessages() {
                     <p>Envoyez le premier message !</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
-                    const isOwn = msg.fk_expediteur === currentUserId;
+                  [...messages]
+                    .sort((a, b) => {
+                      const da = new Date(a.date_creation || a.date_envoi);
+                      const db = new Date(b.date_creation || b.date_envoi);
+                      return da - db;
+                    })
+                    .map((msg, idx) => {
+                      const isOwn = msg.fk_expediteur === currentUserId;
+                      // Correction de la clé pour garantir l'unicité
+                      const messageKey =
+                        msg.id_message_prive ||
+                        (msg.tempId ? `temp-${msg.tempId}` : `idx-${idx}`);
 
-                    // Get the sender info, with strong fallbacks if missing
-                    const senderId = msg.fk_expediteur;
-                    const senderInfo = usersInfo[senderId] || {};
+                      // Get the sender info, with strong fallbacks if missing
+                      const senderId = msg.fk_expediteur;
+                      const senderInfo = usersInfo[senderId] || {};
 
-                    // Determine display name with fallbacks
-                    const displayName =
-                      senderInfo.name ||
-                      senderInfo.nom ||
-                      (isOwn ? "Vous" : "Utilisateur");
+                      // Determine display name with fallbacks
+                      const displayName =
+                        senderInfo.name ||
+                        senderInfo.nom ||
+                        (isOwn ? "Vous" : "Utilisateur");
 
-                    // Determine the avatar source with fallbacks
-                    const avatarSrc =
-                      senderInfo.avatar || senderInfo.photo_de_profil;
+                      // Determine the avatar source with fallbacks
+                      const avatarSrc =
+                        senderInfo.avatar || senderInfo.photo_de_profil;
 
-                    // Si c'est un message qu'on est en train d'éditer
-                    if (
-                      editingMessage &&
-                      editingMessage.id_message_prive === msg.id_message_prive
-                    ) {
+                      // Si c'est un message qu'on est en train d'éditer
+                      if (
+                        editingMessage &&
+                        editingMessage.id_message_prive === msg.id_message_prive
+                      ) {
+                        return (
+                          <div
+                            key={messageKey}
+                            className={`dm-message ${
+                              isOwn ? "own" : "other"
+                            } editing`}
+                          >
+                            <div className="dm-msg-avatar">
+                              {senderInfo.avatar ? (
+                                <img
+                                  src={senderInfo.avatar}
+                                  alt={
+                                    senderInfo.nom || senderInfo.name || "User"
+                                  }
+                                />
+                              ) : (
+                                <div className="dm-avatar-placeholder">
+                                  {senderInfo.nom
+                                    ? senderInfo.nom[0].toUpperCase()
+                                    : senderInfo.name
+                                    ? senderInfo.name[0].toUpperCase()
+                                    : "U"}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="dm-msg-content">
+                              <div className="dm-edit-container">
+                                <textarea
+                                  value={editMessageContent}
+                                  onChange={(e) =>
+                                    setEditMessageContent(e.target.value)
+                                  }
+                                  className="dm-edit-textarea"
+                                  autoFocus
+                                />
+                                <div className="dm-edit-actions">
+                                  <button
+                                    onClick={handleSaveEdit}
+                                    className="dm-edit-save"
+                                  >
+                                    Enregistrer
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className="dm-edit-cancel"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div
-                          key={msg.id_message_prive}
-                          className={`dm-message ${
-                            isOwn ? "own" : "other"
-                          } editing`}
+                          key={messageKey}
+                          className={`dm-message ${isOwn ? "own" : "other"}`}
+                          onContextMenu={(e) =>
+                            handleMessageContextMenu(e, msg)
+                          }
+                          id={`msg-${msg.id_message_prive}`}
                         >
-                          <div className="dm-msg-avatar">
-                            {senderInfo.avatar ? (
-                              <img
-                                src={senderInfo.avatar}
-                                alt={
-                                  senderInfo.nom || senderInfo.name || "User"
+                          {/* Afficher le message parent (réponse) dans les messages privés, même style que workspaces */}
+                          {msg.parent_id || msg.parent_message ? (
+                            <div
+                              className="message-reply-to"
+                              onClick={() => {
+                                const parentId =
+                                  msg.parent_id ||
+                                  msg.parent_message?.id_message_prive;
+                                if (parentId) {
+                                  const element = document.getElementById(
+                                    `msg-${parentId}`
+                                  );
+                                  if (element) {
+                                    element.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "center",
+                                    });
+                                    element.classList.add("highlight-message");
+                                    setTimeout(
+                                      () =>
+                                        element.classList.remove(
+                                          "highlight-message"
+                                        ),
+                                      2000
+                                    );
+                                  }
                                 }
-                              />
+                              }}
+                            >
+                              <span className="reply-icon">
+                                <FaReply />
+                              </span>
+                              <div className="reply-content">
+                                <span className="reply-author">
+                                  {msg.parent_message
+                                    ? usersInfo[
+                                        msg.parent_message.fk_expediteur
+                                      ]?.name || "Utilisateur"
+                                    : msg.parent_id
+                                    ? usersInfo[
+                                        messages.find(
+                                          (m) =>
+                                            m.id_message_prive === msg.parent_id
+                                        )?.fk_expediteur
+                                      ]?.name || "Utilisateur"
+                                    : "Utilisateur"}
+                                </span>
+                                <span className="reply-text">
+                                  {msg.parent_message
+                                    ? msg.parent_message.contenu
+                                    : msg.parent_id
+                                    ? messages.find(
+                                        (m) =>
+                                          m.id_message_prive === msg.parent_id
+                                      )?.contenu ||
+                                      "Message original non disponible"
+                                    : "Message original non disponible"}
+                                </span>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="dm-msg-avatar">
+                            {avatarSrc ? (
+                              <img src={avatarSrc} alt={displayName} />
                             ) : (
                               <div className="dm-avatar-placeholder">
-                                {senderInfo.nom
-                                  ? senderInfo.nom[0].toUpperCase()
-                                  : senderInfo.name
-                                  ? senderInfo.name[0].toUpperCase()
-                                  : "U"}
+                                {displayName[0].toUpperCase()}
                               </div>
                             )}
                           </div>
 
                           <div className="dm-msg-content">
-                            <div className="dm-edit-container">
-                              <textarea
-                                value={editMessageContent}
-                                onChange={(e) =>
-                                  setEditMessageContent(e.target.value)
-                                }
-                                className="dm-edit-textarea"
-                                autoFocus
-                              />
-                              <div className="dm-edit-actions">
-                                <button
-                                  onClick={handleSaveEdit}
-                                  className="dm-edit-save"
-                                >
-                                  Enregistrer
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="dm-edit-cancel"
-                                >
-                                  Annuler
-                                </button>
-                              </div>
+                            <div className="dm-msg-header">
+                              <span className="dm-msg-author">
+                                {displayName}
+                              </span>
+                              <span className="dm-msg-date">
+                                {formatMessageDate(
+                                  msg.date_creation || msg.date_envoi
+                                )}
+                              </span>
                             </div>
+
+                            <div className="dm-msg-bubble">{msg.contenu}</div>
+
+                            {/* Afficher les pièces jointes du message */}
+                            {msg.attachments &&
+                              Array.isArray(msg.attachments) &&
+                              msg.attachments.length > 0 && (
+                                <div className="dm-msg-attachments">
+                                  {msg.attachments.map((attachment, attIdx) => {
+                                    // Correction de la clé pour les pièces jointes
+                                    const attKey =
+                                      attachment.id_fichier ||
+                                      attachment.url ||
+                                      attachment.presignedUrl ||
+                                      `att-${attIdx}`;
+
+                                    // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
+                                    const fileUrl = getCompleteFileUrl(
+                                      attachment.presignedUrl || attachment.url
+                                    );
+
+                                    console.log(
+                                      "[DM] Affichage fichier avec URL:",
+                                      fileUrl
+                                    );
+
+                                    if (
+                                      attachment.type &&
+                                      attachment.type.startsWith("image/")
+                                    ) {
+                                      // Affichage des images
+                                      return (
+                                        <div
+                                          key={attKey}
+                                          className="dm-msg-image-attachment"
+                                        >
+                                          <a
+                                            href={fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            <img
+                                              src={fileUrl}
+                                              alt={attachment.nom_fichier}
+                                              className="dm-msg-image"
+                                              onError={(e) => {
+                                                console.error(
+                                                  `[DM] Failed to load image: ${fileUrl}`
+                                                );
+                                                e.target.src =
+                                                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
+                                                e.target.style.padding = "20px";
+                                                e.target.style.width = "80px";
+                                                e.target.style.height = "80px";
+                                                e.target.style.background =
+                                                  "rgba(0,0,0,0.1)";
+                                              }}
+                                            />
+                                          </a>
+                                          <div className="dm-msg-image-filename">
+                                            {attachment.nom_fichier}
+                                          </div>
+                                        </div>
+                                      );
+                                    } else {
+                                      // Autres types de fichiers
+                                      return (
+                                        <div
+                                          key={attKey}
+                                          className="dm-msg-file-attachment"
+                                        >
+                                          <a
+                                            href={fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download={attachment.nom_fichier}
+                                            className="dm-msg-file-download-link"
+                                          >
+                                            <div className="dm-msg-file-icon">
+                                              {getFileIcon(attachment.type)}
+                                            </div>
+                                            <div className="dm-msg-file-info">
+                                              <div className="dm-msg-file-name">
+                                                {attachment.nom_fichier}
+                                              </div>
+                                              <div className="dm-msg-file-size">
+                                                {formatFileSize(
+                                                  attachment.taille_fichier
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="dm-msg-file-download">
+                                              <FaDownload />
+                                            </div>
+                                          </a>
+                                        </div>
+                                      );
+                                    }
+                                  })}
+                                </div>
+                              )}
+
+                            {isOwn && (
+                              <div className="dm-msg-read">
+                                {msg.date_lecture
+                                  ? `✓ Lu ${formatMessageDate(
+                                      msg.date_lecture
+                                    )}`
+                                  : "✓ Envoyé"}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
-                    }
-
-                    return (
-                      <div
-                        key={msg.id_message_prive}
-                        className={`dm-message ${isOwn ? "own" : "other"}`}
-                        onContextMenu={(e) => handleMessageContextMenu(e, msg)}
-                      >
-                        {/* Afficher le message parent (réponse) dans les messages privés, même style que workspaces */}
-                        {msg.parent_id || msg.parent_message ? (
-                          <div
-                            className="message-reply-to"
-                            onClick={() => {
-                              const parentId = msg.parent_id || msg.parent_message?.id_message_prive;
-                              if (parentId) {
-                                const element = document.getElementById(`msg-${parentId}`);
-                                if (element) {
-                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
-                                  element.classList.add("highlight-message");
-                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
-                                }
-                              }
-                            }}
-                          >
-                            <span className="reply-icon">
-                              <FaReply />
-                            </span>
-                            <div className="reply-content">
-                              <span className="reply-author">
-                                {msg.parent_message
-                                  ? usersInfo[msg.parent_message.fk_expediteur]?.name || "Utilisateur"
-                                  : msg.parent_id
-                                    ? usersInfo[messages.find(m => m.id_message_prive === msg.parent_id)?.fk_expediteur]?.name || "Utilisateur"
-                                    : "Utilisateur"}
-                              </span>
-                              <span className="reply-text">
-                                {msg.parent_message
-                                  ? msg.parent_message.contenu
-                                  : msg.parent_id
-                                    ? messages.find(m => m.id_message_prive === msg.parent_id)?.contenu || "Message original non disponible"
-                                    : "Message original non disponible"}
-                              </span>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        <div className="dm-msg-avatar">
-                          {avatarSrc ? (
-                            <img src={avatarSrc} alt={displayName} />
-                          ) : (
-                            <div className="dm-avatar-placeholder">
-                              {displayName[0].toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="dm-msg-content">
-                          <div className="dm-msg-header">
-                            <span className="dm-msg-author">{displayName}</span>
-                            <span className="dm-msg-date">
-                              {formatMessageDate(
-                                msg.date_creation || msg.date_envoi
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="dm-msg-bubble">{msg.contenu}</div>
-
-                          {/* Afficher les pièces jointes du message */}
-                          {msg.attachments &&
-                            Array.isArray(msg.attachments) &&
-                            msg.attachments.length > 0 && (
-                              <div className="dm-msg-attachments">
-                                {msg.attachments.map((attachment) => {
-                                  // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
-                                  const fileUrl = getCompleteFileUrl(
-                                    attachment.presignedUrl || attachment.url
-                                  );
-
-                                  console.log(
-                                    "[DM] Affichage fichier avec URL:",
-                                    fileUrl
-                                  );
-
-                                  if (
-                                    attachment.type &&
-                                    attachment.type.startsWith("image/")
-                                  ) {
-                                    // Affichage des images
-                                    return (
-                                      <div
-                                        key={
-                                          attachment.id_fichier ||
-                                          `temp-${Date.now()}`
-                                        }
-                                        className="dm-msg-image-attachment"
-                                      >
-                                        <a
-                                          href={fileUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                        >
-                                          <img
-                                            src={fileUrl}
-                                            alt={attachment.nom_fichier}
-                                            className="dm-msg-image"
-                                            onError={(e) => {
-                                              console.error(
-                                                `[DM] Failed to load image: ${fileUrl}`
-                                              );
-                                              e.target.src =
-                                                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
-                                              e.target.style.padding = "20px";
-                                              e.target.style.width = "80px";
-                                              e.target.style.height = "80px";
-                                              e.target.style.background =
-                                                "rgba(0,0,0,0.1)";
-                                            }}
-                                          />
-                                        </a>
-                                        <div className="dm-msg-image-filename">
-                                          {attachment.nom_fichier}
-                                        </div>
-                                      </div>
-                                    );
-                                  } else {
-                                    // Autres types de fichiers
-                                    return (
-                                      <div
-                                        key={
-                                          attachment.id_fichier ||
-                                          `temp-${Date.now()}`
-                                        }
-                                        className="dm-msg-file-attachment"
-                                      >
-                                        <a
-                                          href={fileUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          download={attachment.nom_fichier}
-                                          className="dm-msg-file-download-link"
-                                        >
-                                          <div className="dm-msg-file-icon">
-                                            {getFileIcon(attachment.type)}
-                                          </div>
-                                          <div className="dm-msg-file-info">
-                                            <div className="dm-msg-file-name">
-                                              {attachment.nom_fichier}
-                                            </div>
-                                            <div className="dm-msg-file-size">
-                                              {formatFileSize(
-                                                attachment.taille_fichier
-                                              )}
-                                            </div>
-                                          </div>
-                                          <div className="dm-msg-file-download">
-                                            <FaDownload />
-                                          </div>
-                                        </a>
-                                      </div>
-                                    );
-                                  }
-                                })}
-                              </div>
-                            )}
-
-                          {isOwn && (
-                            <div className="dm-msg-read">
-                              {msg.date_lecture
-                                ? `✓ Lu ${formatMessageDate(msg.date_lecture)}`
-                                : "✓ Envoyé"}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
+                    })
                 )}
               </div>
 

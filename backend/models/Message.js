@@ -92,29 +92,48 @@ class Message {
   }
 
   // Récupérer tous les messages d'un canal avec les informations des utilisateurs
-  static async findByChannel(canalId) {
+  static async findByChannel(canalId, { limit = 20, before = null } = {}) {
     try {
-      console.log("Message.findByChannel - canalId:", canalId);
-
-      const result = await pool.query(
-        `SELECT m.*, u.nom, u.photo_de_profil 
+      console.log(
+        "Message.findByChannel - canalId:",
+        canalId,
+        "limit:",
+        limit,
+        "before:",
+        before
+      );
+      let query = `SELECT m.*, u.nom, u.photo_de_profil 
          FROM message m
          JOIN utilisateur u ON m.fk_utilisateur = u.id_utilisateur
-         WHERE m.fk_canal = $1
-         ORDER BY m.created_at ASC`,
-        [canalId]
-      );
-
+         WHERE m.fk_canal = $1`;
+      const params = [canalId];
+      if (before) {
+        // On suppose que before est un timestamp ISO ou un id_message
+        // On privilégie la date si possible
+        if (!isNaN(Date.parse(before))) {
+          query += ` AND m.created_at < $2`;
+          params.push(before);
+        } else if (!isNaN(Number(before))) {
+          // Si before est un id_message numérique, on récupère la date correspondante
+          const dateRes = await pool.query(
+            "SELECT created_at FROM message WHERE id_message = $1",
+            [before]
+          );
+          if (dateRes.rows.length > 0) {
+            query += ` AND m.created_at < $2`;
+            params.push(dateRes.rows[0].created_at);
+          }
+        }
+      }
+      query += ` ORDER BY m.created_at DESC LIMIT $${params.length + 1}`;
+      params.push(limit);
+      const result = await pool.query(query, params);
       const messages = result.rows;
-
-      // Récupérer tous les IDs de messages pour obtenir leurs parents et réactions
       if (messages.length > 0) {
         const messageIds = messages.map((m) => m.id_message);
         const parentIds = messages
           .filter((m) => m.parent_id)
           .map((m) => m.parent_id);
-
-        // Récupérer les messages parents en une seule requête
         if (parentIds.length > 0) {
           const parentsResult = await pool.query(
             `SELECT m.id_message, m.contenu, u.nom
@@ -123,29 +142,21 @@ class Message {
              WHERE m.id_message = ANY($1)`,
             [parentIds]
           );
-
           const parentsMap = {};
           parentsResult.rows.forEach((parent) => {
             parentsMap[parent.id_message] = parent;
           });
-
-          // Ajouter les informations du parent à chaque message
           messages.forEach((message) => {
             if (message.parent_id && parentsMap[message.parent_id]) {
               message.parent_message = parentsMap[message.parent_id];
             }
           });
         }
-
-        // Récupérer toutes les réactions en une seule requête
         const reactionsMap = await Reaction.getByMessages(messageIds);
-
-        // Ajouter les réactions à chaque message
         messages.forEach((message) => {
           message.reactions = reactionsMap[message.id_message] || [];
         });
       }
-
       return messages;
     } catch (error) {
       console.error("Erreur dans Message.findByChannel:", error);

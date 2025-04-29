@@ -161,8 +161,147 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [newMessage, setNewMessage] = useState("");
   const [displayMessage, setDisplayMessage] = useState(""); // Added state for displayed message
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false); // Ajout pour le loader pagination
   const chatContainerRef = useRef(null);
   const [socket, setSocket] = useState(null);
+
+  // --- Pagination des messages de canal ---
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [oldestMessage, setOldestMessage] = useState(null);
+
+  // Fonction pour charger les messages initiaux (ou lors du changement de canal)
+  const fetchInitialMessages = useCallback(async (channelId) => {
+    setLoadingMessages(true);
+    setHasMoreMessages(true);
+    setOldestMessage(null);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/messages/canal/${channelId}?limit=20`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!response.ok)
+        throw new Error("Erreur lors du chargement des messages");
+      const data = await response.json();
+      setMessages(data);
+      if (data.length < 20) setHasMoreMessages(false);
+      if (data.length > 0) setOldestMessage(data[data.length - 1]);
+    } catch (e) {
+      setMessages([]);
+      setHasMoreMessages(false);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, []);
+
+  // Fonction pour charger plus d'anciens messages (pagination)
+  const fetchMoreMessages = useCallback(async () => {
+    if (
+      !activeChannel ||
+      !hasMoreMessages ||
+      loadingMessages ||
+      isLoadingMoreMessages
+    )
+      return;
+    setIsLoadingMoreMessages(true);
+    try {
+      const token = localStorage.getItem("token");
+      const before = oldestMessage?.created_at || oldestMessage?.date_creation;
+      const url = before
+        ? `${API_URL}/api/messages/canal/${
+            activeChannel.id
+          }?limit=20&before=${encodeURIComponent(before)}`
+        : `${API_URL}/api/messages/canal/${activeChannel.id}?limit=20`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok)
+        throw new Error("Erreur lors du chargement des anciens messages");
+      const data = await response.json();
+      if (data.length === 0) {
+        setHasMoreMessages(false);
+        return;
+      }
+      setMessages((prev) => [...prev, ...data]);
+      if (data.length < 20) setHasMoreMessages(false);
+      setOldestMessage(data[data.length - 1]);
+    } catch (e) {
+      setHasMoreMessages(false);
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }, [
+    activeChannel,
+    hasMoreMessages,
+    loadingMessages,
+    isLoadingMoreMessages,
+    oldestMessage,
+  ]);
+
+  // Gestion du scroll pour charger plus de messages au scroll haut
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    let isFetching = false;
+    let prevScrollHeight = 0;
+
+    const handleScroll = async () => {
+      // Ajout de logs pour debug
+      console.log(
+        "[WS][SCROLL] scrollTop:",
+        container.scrollTop,
+        "loadingMessages:",
+        loadingMessages,
+        "isLoadingMoreMessages:",
+        isLoadingMoreMessages,
+        "isFetching:",
+        isFetching
+      );
+      if (
+        container.scrollTop < 100 &&
+        hasMoreMessages &&
+        !loadingMessages &&
+        !isLoadingMoreMessages &&
+        !isFetching
+      ) {
+        isFetching = true;
+        prevScrollHeight = container.scrollHeight;
+        const prevFirstMessageId = messages[0]?.id_message;
+        console.log(
+          "[WS][SCROLL] Début fetchMoreMessages, prevFirstMessageId:",
+          prevFirstMessageId,
+          "prevScrollHeight:",
+          prevScrollHeight
+        );
+        await fetchMoreMessages();
+        setTimeout(() => {
+          const newFirstMessage = document.getElementById(
+            `msg-${prevFirstMessageId}`
+          );
+          if (newFirstMessage) {
+            console.log(
+              "[WS][SCROLL] scrollIntoView sur",
+              `msg-${prevFirstMessageId}`
+            );
+            newFirstMessage.scrollIntoView({ block: "start" });
+          } else {
+            container.scrollTop = container.scrollHeight - prevScrollHeight;
+            console.log(
+              "[WS][SCROLL] Fallback scrollTop ajusté:",
+              container.scrollTop
+            );
+          }
+          isFetching = false;
+        }, 100);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [messages, loadingMessages, isLoadingMoreMessages, hasMoreMessages]);
 
   // Current User ID state
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -864,48 +1003,13 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
-  const handleSelectChannel = useCallback(async (channel) => {
-    try {
+  const handleSelectChannel = useCallback(
+    async (channel) => {
       setActiveChannel(channel);
-      setLoadingMessages(true);
-      const token = localStorage.getItem("token");
-      console.log(`Chargement des messages pour le canal ${channel.id}...`);
-      const response = await fetch(
-        `${API_URL}/api/messages/canal/${channel.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Erreur API:", errorData);
-        throw new Error(
-          errorData.message || "Erreur lors du chargement des messages"
-        );
-      }
-      const data = await response.json();
-      console.log("Messages récupérés:", data);
-
-      // Vérifier et logger les messages avec parent_id mais sans parent_message
-      const messagesWithParentId = data.filter(
-        (msg) => msg.parent_id && !msg.parent_message
-      );
-      if (messagesWithParentId.length > 0) {
-        console.log(
-          `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
-        );
-      }
-
-      setMessages(data);
-    } catch (error) {
-      console.error("Erreur:", error);
-      setMessages([]);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
+      await fetchInitialMessages(channel.id);
+    },
+    [fetchInitialMessages]
+  );
 
   const convertMentionsForSending = (text) => {
     let result = text;
@@ -1248,6 +1352,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     newMessage,
     displayMessage,
     loadingMessages,
+    isLoadingMoreMessages, // Return the new state
     chatContainerRef,
     socket,
     currentUserId,
@@ -1334,4 +1439,3 @@ const formatMessageDate = (dateString) => {
     return "";
   }
 };
- 

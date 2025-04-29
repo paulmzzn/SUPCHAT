@@ -80,7 +80,12 @@ export const createMessage = async (req, res) => {
 export const getMessagesByChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
-    console.log(`Récupération des messages pour canal ${channelId}`);
+    // Ajout pagination
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const before = req.query.before || null; // timestamp ISO ou id_message
+    console.log(
+      `Récupération des messages pour canal ${channelId} (limit=${limit}, before=${before})`
+    );
 
     // Vérifier que le canal existe
     const canal = await Canal.findById(channelId);
@@ -89,12 +94,15 @@ export const getMessagesByChannel = async (req, res) => {
       return res.status(404).json({ message: "Canal non trouvé" });
     }
 
-    const messages = await MessageModel.findByChannel(channelId);
+    // Appel du modèle avec pagination
+    const messages = await MessageModel.findByChannel(channelId, {
+      limit,
+      before,
+    });
     console.log(`${messages.length} messages trouvés`);
 
     // Normaliser les dates pour assurer la compatibilité avec le front-end
     const transformedMessages = messages.map((msg) => {
-      // Si le front-end s'attend à date_creation mais la BD utilise created_at
       if (msg.created_at && !msg.date_creation) {
         msg.date_creation = msg.created_at;
       }

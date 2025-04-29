@@ -12,7 +12,13 @@ class MessagePrive {
       `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation, parent_id)
        VALUES ($1, $2, $3, $4, NOW(), $5)
        RETURNING *`,
-      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), parent_id]
+      [
+        contenu,
+        fk_expediteur,
+        fk_destinataire,
+        JSON.stringify(pieces_jointes),
+        parent_id,
+      ]
     );
     return result.rows[0];
   }
@@ -24,8 +30,9 @@ class MessagePrive {
          FROM message_prive mp
          WHERE (mp.fk_expediteur = $1 AND mp.fk_destinataire = $2)
             OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1)
-         ORDER BY mp.date_envoi ASC`,
-        [userA, userB]
+         ORDER BY mp.date_envoi DESC
+         LIMIT $3 OFFSET $4`,
+        [userA, userB, limit, offset]
       );
 
       // Pour chaque message, récupérer les pièces jointes et le parent_message si besoin
