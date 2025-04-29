@@ -139,8 +139,8 @@ try {
 
 httpServer.listen(PORT, "0.0.0.0", () => {
 
-  console.log(`Serveur démarré sur http://REDACTED:${PORT}`);
-  console.log(`WebSocket URL: ws://REDACTED:${PORT}`);
+  console.log(`Serveur démarré sur http://172.20.10.2:${PORT}`);
+  console.log(`WebSocket URL: ws://172.20.10.2:${PORT}`);
 
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
