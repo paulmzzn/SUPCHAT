@@ -1,15 +1,16 @@
+/* Utilisation des variables CSS pour la sidebar */
 .sidebar {
   width: 100px;
   height: 100vh;
-  background: rgba(32, 32, 32, 0.95); /* Changé de #3C3C3C à rgba(32, 32, 32, 0.95) */
-  backdrop-filter: blur(10px);
+  background: var(--sidebar-bg);
+  backdrop-filter: var(--sidebar-bg-blur);
   display: flex;
   flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
   z-index: 100;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--sidebar-shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -39,7 +40,7 @@
   width: 55px;
   height: 55px;
   border-radius: 16px;
-  filter: drop-shadow(0 4px 8px rgba(147, 72, 183, 0.3));
+  filter: var(--sidebar-logo-shadow);
 }
 
 .sidebar-nav {
@@ -61,9 +62,9 @@
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
   width: 85%;
-  color: #3C3C3C;
-  background-color: rgba(217, 217, 217, 0.9);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  color: var(--sidebar-nav-color);
+  background-color: var(--sidebar-nav-bg);
+  box-shadow: var(--sidebar-nav-shadow);
   overflow: hidden;
 }
 
@@ -80,9 +81,9 @@
 }
 
 .nav-item:hover {
-  background-color: rgba(217, 217, 217, 1);
+  background-color: var(--sidebar-nav-bg-hover);
   width: 90%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--sidebar-nav-shadow-hover);
 }
 
 .nav-item:hover::after {
@@ -90,17 +91,17 @@
 }
 
 .nav-item.active {
-  background-color: #9348B7;
-  color: #EDF2F7;
+  background-color: var(--sidebar-nav-bg-active);
+  color: var(--sidebar-nav-color-active);
   width: 95%;
-  box-shadow: 0 4px 15px rgba(147, 72, 183, 0.5);
+  box-shadow: var(--sidebar-nav-shadow-active);
 }
 
 .nav-icon {
   width: 24px;
   height: 24px;
   transition: transform 0.3s ease;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  filter: var(--sidebar-icon-shadow);
 }
 
 .nav-item:hover .nav-icon {
@@ -122,7 +123,7 @@
   position: absolute;
   top: 6px;
   right: 20px;
-  background: linear-gradient(135deg, #FF3B5C, #FF2F90);
+  background: var(--sidebar-badge-bg);
   color: white;
   font-size: 10px;
   height: 18px;
@@ -132,7 +133,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(255, 59, 92, 0.4);
+  box-shadow: var(--sidebar-badge-shadow);
   animation: pulse 2s infinite;
 }
 
@@ -153,7 +154,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: #FF4B4B;
+  background-color: var(--sidebar-badge-bg-solid);
   color: white;
   font-size: 0.7rem;
   font-weight: bold;
@@ -163,6 +164,7 @@
   padding: 0 5px;
   margin-left: 8px;
   line-height: 1;
+  box-shadow: var(--sidebar-badge-shadow-dark);
 }
 
 /* Make the badge bounce when it appears */
@@ -186,7 +188,7 @@
   width: 24px;
   height: 24px;
   transition: transform 0.3s ease;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  filter: var(--sidebar-icon-shadow);
   outline: none; /* Empêche l'outline au focus */
   background: transparent; /* Assure que le fond est toujours transparent */
 }
@@ -197,7 +199,7 @@
 
 /* Pour les icônes actives */
 .sidebar-icon.active {
-  color: #EDF2F7;
+  color: var(--sidebar-nav-color-active);
   outline: none;
   border: none;
   box-shadow: none;
@@ -229,7 +231,7 @@ svg rect[width="24"][height="24"] {
     height: auto;
     top: auto;
     bottom: 0;
-    background-color: rgba(25, 25, 28, 0.85);
+    background-color: var(--sidebar-bg);
     backdrop-filter: blur(20px);
     box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.25);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -399,10 +401,10 @@ svg rect[width="24"][height="24"] {
     height: 18px;
     min-width: 18px;
     font-size: 10px;
-    border: 2px solid rgba(25, 25, 28, 0.95);
+    border: 2px solid var(--sidebar-bg);
     animation: pulseAndFloat 3s infinite;
     z-index: 2;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--sidebar-badge-shadow-dark);
   }
   
   @keyframes pulseAndFloat {
@@ -452,7 +454,7 @@ svg rect[width="24"][height="24"] {
   top: 50%;
   right: 10px; /* Move further to the right */
   transform: translateY(-50%);
-  background-color: #ff4b4b;
+  background-color: var(--sidebar-badge-bg-solid);
   color: white;
   font-size: 10px;
   font-weight: bold;
@@ -463,7 +465,7 @@ svg rect[width="24"][height="24"] {
   align-items: center;
   justify-content: center;
   padding: 0 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--sidebar-badge-shadow-dark);
   border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 9999;
 }

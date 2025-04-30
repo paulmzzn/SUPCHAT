@@ -18,7 +18,7 @@ services:
     container_name: container-pg
     image: postgres
 
-    hostname: 192.168.1.109
+    hostname: 172.20.10.2
 
 ports:
       - "5432:5432"
@@ -61,7 +61,7 @@ docker-compose up -d
 
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.109:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://172.20.10.2:5050
 
 
     2.	Connectez-vous avec les identifiants définis dans le docker-compose.yml :
@@ -69,7 +69,7 @@ docker-compose up -d
     •	Mot de passe : root
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.109:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://172.20.10.2:5050
 
 
     2.	Connectez-vous avec les identifiants définis dans le docker-compose.yml :

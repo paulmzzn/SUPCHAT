@@ -10,7 +10,9 @@ import UserModel from "../models/User.js";
 export const googleStrategy = new GoogleStrategy({
   clientID: 'REDACTED',
   clientSecret: 'REDACTED',
+
   callbackURL: 'http://192.168.252.234:3000/api/users/auth/google/callback'
+
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     console.log('Google profile:', profile); // Pour le débogage
@@ -47,7 +49,9 @@ export const googleStrategy = new GoogleStrategy({
 export const githubStrategy = new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
+
   callbackURL: 'http://192.168.252.234:3000/api/users/auth/github/callback'
+
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     // Récupérer l'email principal
