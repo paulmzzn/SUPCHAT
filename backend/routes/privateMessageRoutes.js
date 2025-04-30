@@ -6,6 +6,7 @@ import {
   updatePrivateMessage,
   deletePrivateMessage,
   markPrivateMessageAsRead,
+  getUnreadCounts, // <-- Ajout ici
 } from "../controllers/privateMessageController.js";
 import MessagePrive from "../models/MessagePrive.js";
 import multer from "multer";
@@ -176,6 +177,10 @@ router.get("/conversations", verifyToken, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Route pour récupérer le nombre de messages privés non lus (doit être AVANT /:userId !)
+router.get("/unread-counts", verifyToken, getUnreadCounts);
+
 router.get("/:userId", verifyToken, getPrivateConversation);
 router.put("/message/:id", verifyToken, updatePrivateMessage);
 router.delete("/message/:id", verifyToken, deletePrivateMessage);
