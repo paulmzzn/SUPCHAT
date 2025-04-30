@@ -295,6 +295,34 @@ class MessagePrive {
       throw error;
     }
   }
+
+  /**
+   * Retourne le nombre de messages privés non lus par expéditeur pour un utilisateur donné
+   * @param {string} userId - L'ID de l'utilisateur connecté (destinataire)
+   * @returns {Object} - { expéditeurId: count, ... }
+   */
+  static async getUnreadCounts(userId) {
+    try {
+      const result = await pool.query(
+        `SELECT fk_expediteur, COUNT(*) as count
+         FROM message_prive
+         WHERE fk_destinataire = $1
+           AND date_lecture IS NULL
+           AND is_deleted = false
+         GROUP BY fk_expediteur`,
+        [userId]
+      );
+      // Retourne un objet { expéditeurId: count, ... }
+      const counts = {};
+      for (const row of result.rows) {
+        counts[row.fk_expediteur] = parseInt(row.count, 10);
+      }
+      return counts;
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.getUnreadCounts:', error);
+      throw error;
+    }
+  }
 }
 
 export default MessagePrive;

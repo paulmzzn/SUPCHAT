@@ -3,6 +3,7 @@ import './Sidebar.css';
 import { useEffect, useState } from 'react';
 import { FaComment, FaCompass, FaCog } from 'react-icons/fa';
 import { MdWorkspacesFilled } from "react-icons/md";
+import { useSocket } from '../../context/SocketContext';
 
 // Import logo
 import logoSupchat from '../../assets/icons/logo_supchat.svg';
@@ -12,7 +13,8 @@ function Sidebar({ unreadMessageCount }) {
   const [isMobile, setIsMobile] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  
+  const { globalNotifications } = useSocket() || {};
+
   // Check if the current path matches the given path
   const isActive = (path) => {
     return location.pathname.startsWith(path);
@@ -68,7 +70,10 @@ function Sidebar({ unreadMessageCount }) {
   };
 
   // Determine which count to use
-  const displayCount = unreadMessageCount !== undefined ? unreadMessageCount : localUnreadCount;
+  const displayCount =
+    unreadMessageCount !== undefined
+      ? unreadMessageCount
+      : globalNotifications?.private ?? localUnreadCount;
 
   return (
     <div className="sidebar">
@@ -76,24 +81,24 @@ function Sidebar({ unreadMessageCount }) {
         <Link to="/" className="sidebar-logo">
           <img src={logoSupchat} alt="Supchat Logo" className="logo-image" />
         </Link>
-        
         <div className="sidebar-nav">
           <Link to="/direct-messages" className={`nav-item ${isActive('/direct-messages') ? 'active' : ''}`}>
             <FaComment className={getIconClasses('/direct-messages')} />
-            {unreadMessages > 0 && (
-              <span className="nav-badge">{unreadMessages}</span>
+            {displayCount > 0 && (
+              <span className="nav-badge">{displayCount}</span>
             )}
           </Link>
-          
           <Link to="/workspaces" className={`nav-item ${isActive('/workspaces') ? 'active' : ''}`}>
             <MdWorkspacesFilled className={getIconClasses('/workspaces')} />
+            {/* Exemple pour badge workspace : */}
+            {globalNotifications?.workspace > 0 && (
+              <span className="nav-badge">{globalNotifications.workspace}</span>
+            )}
           </Link>
-          
           <Link to="/discover" className={`nav-item ${isActive('/discover') ? 'active' : ''}`}>
             <FaCompass className={getIconClasses('/discover')} />
           </Link>
         </div>
-        
         <div className="sidebar-footer">
           <Link to="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`}>
             <FaCog className={getIconClasses('/settings')} />
