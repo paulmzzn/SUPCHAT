@@ -76,7 +76,9 @@ router.post("/reset-password", resetPassword);
 
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
+
   passport.authenticate('google', { failureRedirect: 'http://192.168.252.234:3001/login' }), 
+
 
   async (req, res) => {
     const user = req.user;
@@ -91,6 +93,7 @@ router.get('/auth/google/callback',
 
       `http://192.168.252.234:3001/auth/callback?token=${token}&email=${user.email}`
 
+
     );
   }
 );
@@ -102,7 +105,9 @@ router.get(
 
 
 router.get('/auth/github/callback',
+
   passport.authenticate('github', { failureRedirect: 'http://192.168.252.234:3001/login' }),
+
 
   async (req, res) => {
     const user = req.user;
@@ -113,7 +118,9 @@ router.get('/auth/github/callback',
     );
     res.redirect(
 
+
       `http://192.168.252.234:3001/auth/callback?token=${token}&email=${user.email}`
+
 
     );
   }
