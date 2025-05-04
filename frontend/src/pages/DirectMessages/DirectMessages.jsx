@@ -766,6 +766,12 @@ function DirectMessages() {
           recipientId: currentUserId,
         });
       });
+      
+      // Appel à refreshUnreadDM pour mettre à jour le compteur global sur toutes les pages
+      if (refreshUnreadDM) {
+        console.log("[DM] Rafraîchissement du compteur global de messages non lus");
+        refreshUnreadDM();
+      }
     }
   };
 
