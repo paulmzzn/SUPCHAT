@@ -51,6 +51,7 @@ function Profile() {
 
     const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.252.234:3001") + `/api/users/${userId}`;
 
+
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
     fetch(apiUrl, {
@@ -107,7 +108,9 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
 
+
       const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.252.234:3001") + `/api/users/${userId}/workspaces`;
+
 
       console.log(`Fetching workspaces from: ${apiUrl}`);
 
