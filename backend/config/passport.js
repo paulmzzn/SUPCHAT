@@ -11,7 +11,7 @@ export const googleStrategy = new GoogleStrategy({
   clientID: 'REDACTED',
   clientSecret: 'REDACTED',
 
-  callbackURL: 'http://192.168.252.234:3000/api/users/auth/google/callback'
+  callbackURL: 'http://192.168.1.63:3000/api/users/auth/google/callback'
 
 }, async (accessToken, refreshToken, profile, done) => {
   try {
@@ -50,7 +50,7 @@ export const githubStrategy = new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
 
-  callbackURL: 'http://192.168.252.234:3000/api/users/auth/github/callback'
+  callbackURL: 'http://192.168.1.63:3000/api/users/auth/github/callback'
 
 }, async (accessToken, refreshToken, profile, done) => {
   try {
