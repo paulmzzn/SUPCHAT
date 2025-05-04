@@ -22,7 +22,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
 import fs from "fs"; // Import fs
-import strawpollRoutes from './routes/strawpollRoutes.js'; // Import ES module
+import strawpollRoutes from "./routes/strawpollRoutes.js"; // Import ES module
 
 // Load environment variables at the start
 dotenv.config();
@@ -90,7 +90,7 @@ app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
-app.use('/api/strawpoll', strawpollRoutes); // Ajout des routes pour strawpoll
+app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Configurer avant les routes API pour éviter les conflits d'authentification
@@ -140,12 +140,8 @@ try {
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
-
-
-  console.log(`Serveur démarré sur http://192.168.252.234:${PORT}`);
-  console.log(`WebSocket URL: ws://192.168.252.234:${PORT}`);
-
-
+  console.log(`Serveur démarré sur http://192.168.1.29:${PORT}`);
+  console.log(`WebSocket URL: ws://192.168.1.29:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
