@@ -531,10 +531,27 @@ function DirectMessages() {
       }
     };
 
+    // Gérer les réactions aux messages privés
+    const handlePrivateMessageReaction = (data) => {
+      console.log("[DM] Message reaction event:", data);
+      if (selectedUser) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id_message_prive === data.messageId) {
+              console.log(`[DM] Updating reactions for message ${m.id_message_prive}`);
+              return { ...m, reactions: data.reactions };
+            }
+            return m;
+          })
+        );
+      }
+    };
+
     socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageRead", handlePrivateMessageRead);
+    socket.on("privateMessageReaction", handlePrivateMessageReaction);
 
     return () => {
       // Clean up event listener on unmount
@@ -543,6 +560,7 @@ function DirectMessages() {
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
       socket.off("privateMessageRead", handlePrivateMessageRead);
+      socket.off("privateMessageReaction", handlePrivateMessageReaction);
     };
   }, [socket, selectedUser, conversations, currentUserId]);
 
@@ -1567,6 +1585,30 @@ function DirectMessages() {
                           </div>
 
                           <div className="dm-msg-bubble">{msg.contenu}</div>
+
+                          {/* Afficher les réactions aux messages privés */}
+                          {msg.reactions && msg.reactions.length > 0 && (
+                            <div className="dm-msg-reactions">
+                              {msg.reactions.map((reaction, index) => (
+                                <div 
+                                  key={`${reaction.reaction_type}-${index}`} 
+                                  className="dm-msg-reaction"
+                                  onClick={() => {
+                                    // Si l'utilisateur a déjà réagi avec cet emoji, supprimer sa réaction
+                                    if (reaction.has_reacted) {
+                                      socket.emit("removePrivateMessageReaction", {
+                                        id: msg.id_message_prive,
+                                        reaction: reaction.reaction_type
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <span className="dm-reaction-emoji">{reaction.reaction_type}</span>
+                                  <span className="dm-reaction-count">{reaction.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Afficher les pièces jointes du message */}
                           {msg.attachments &&

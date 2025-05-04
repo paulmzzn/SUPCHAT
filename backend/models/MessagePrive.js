@@ -1,4 +1,5 @@
 import pool from "../config/dbConnection.js";
+import ReactionPrive from "./ReactionPrive.js";
 
 class MessagePrive {
   static async create({
@@ -28,6 +29,12 @@ class MessagePrive {
         [userA, userB]
       );
 
+      // Récupérer tous les IDs de messages pour obtenir leurs réactions en une fois
+      const messageIds = result.rows.map(m => m.id_message_prive);
+      
+      // Récupérer toutes les réactions en une seule requête pour optimiser les performances
+      const reactionsMap = await ReactionPrive.getByMessages(messageIds);
+
       // Pour chaque message, récupérer les pièces jointes et le parent_message si besoin
       const messagesWithAttachments = await Promise.all(
         result.rows.map(async (message) => {
@@ -51,6 +58,10 @@ class MessagePrive {
               message.parent_message = parentResult.rows[0];
             }
           }
+
+          // Ajouter les réactions au message
+          message.reactions = reactionsMap[message.id_message_prive] || [];
+          
           return message;
         })
       );
@@ -102,6 +113,9 @@ class MessagePrive {
           message.parent_message = parentResult.rows[0];
         }
       }
+
+      // Récupérer les réactions du message
+      message.reactions = await ReactionPrive.getByMessage(id_message_prive);
 
       return message;
     } catch (error) {
