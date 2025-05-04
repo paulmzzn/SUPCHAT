@@ -31,6 +31,7 @@ import {
   FaArrowUp,
   FaArrowDown,
   FaDownload,
+  FaWrench,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
@@ -39,6 +40,7 @@ import "./WorkspaceDetails.css";
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNavigate } from "react-router-dom"; // Ajout import
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
+import StrawpollModal from "../../components/Strawpoll/StrawpollModal";
 
 // Nouvelle fonction pour rendre les liens cliquables
 const renderTextWithLinks = (text) => {
@@ -196,6 +198,79 @@ function WorkspaceDetails() {
 
   // État pour l'affichage du fichier en plein écran
   const [fullscreenFile, setFullscreenFile] = useState(null);
+
+  // Ajout de l'état pour la boîte à outils
+  const [showToolbox, setShowToolbox] = useState(false);
+  const [showStrawpollModal, setShowStrawpollModal] = useState(false);
+
+  // Ajout de l'état pour le modal de résultats Strawpoll
+  const [showStrawpollResults, setShowStrawpollResults] = useState(false);
+  const [strawpollResults, setStrawpollResults] = useState(null);
+  const [loadingResults, setLoadingResults] = useState(false);
+
+  // Handler pour ouvrir/fermer la boîte à outils
+  const handleToggleToolbox = () => setShowToolbox((v) => !v);
+  const handleOpenStrawpoll = () => {
+    setShowToolbox(false);
+    setShowStrawpollModal(true);
+  };
+  const handleCloseStrawpollModal = () => setShowStrawpollModal(false);
+
+  // Fonction pour ouvrir le modal de résultats
+  const handleOpenStrawpollResults = async (pollId) => {
+    setLoadingResults(true);
+    setShowStrawpollResults(true);
+    try {
+      const response = await fetch(`${API_URL}/api/strawpoll/${pollId}`);
+      if (!response.ok)
+        throw new Error("Erreur lors de la récupération des résultats");
+      const data = await response.json();
+      setStrawpollResults(data);
+    } catch (err) {
+      setStrawpollResults({ error: err.message });
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+  const handleCloseStrawpollResults = () => {
+    setShowStrawpollResults(false);
+    setStrawpollResults(null);
+  };
+
+  // Ajout de la fonction pour créer un Strawpoll (appel backend sécurisé)
+  const handleStrawpollSubmit = async ({ title, options }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/strawpoll`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title, options }),
+      });
+      if (!response.ok) throw new Error("Erreur Strawpoll: " + response.status);
+      const data = await response.json();
+      // Extraire l'ID du sondage depuis l'URL (https://strawpoll.com/polls/{id} ou https://strawpoll.com/{id})
+      let pollId = null;
+      if (data.url) {
+        const match = data.url.match(/strawpoll.com\/(?:polls\/)?([a-zA-Z0-9]+)/);
+        if (match) pollId = match[1];
+      }
+      if (socket && activeChannel) {
+        socket.emit("message", {
+          canal_id: activeChannel.id,
+          // On encode l'ID du sondage dans le message pour l'affichage des résultats
+          content: `Sondage créé : [${title}](${data.url})${
+            pollId ? ` [strawpoll:${pollId}]` : ""
+          }`,
+          workspace_id: workspaceId,
+        });
+      }
+    } catch (err) {
+      alert(err.message || "Erreur lors de la création du sondage Strawpoll.");
+    }
+  };
 
   // Use the custom hook to get state and handlers
   const {
@@ -1065,6 +1140,40 @@ function WorkspaceDetails() {
                         })()}
                         {/* *** End Markdown rendering *** */}
 
+                        {/* Vérifier si le message est un sondage Strawpoll */}
+                        {(() => {
+                          // Cherche un tag [strawpoll:ID] dans le contenu du message
+                          const strawpollMatch =
+                            message.contenu &&
+                            message.contenu.match(
+                              /\[strawpoll:([a-zA-Z0-9]+)\]/
+                            );
+                          if (strawpollMatch) {
+                            const pollId = strawpollMatch[1];
+                            return (
+                              <button
+                                className="strawpoll-results-btn"
+                                style={{
+                                  marginTop: 8,
+                                  background: "#9348b7",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  padding: "6px 14px",
+                                  cursor: "pointer",
+                                  fontWeight: 500,
+                                }}
+                                onClick={() =>
+                                  handleOpenStrawpollResults(pollId)
+                                }
+                              >
+                                Voir les résultats
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         {/* Afficher les réactions avec l'emoji Unicode directement */}
                         {message.reactions && message.reactions.length > 0 && (
                           <div className="message-reactions">
@@ -1259,6 +1368,15 @@ function WorkspaceDetails() {
                     />
                     <button
                       type="button"
+                      className="chat-toolbox-btn"
+                      title="Outils"
+                      onClick={handleToggleToolbox}
+                      style={{ marginLeft: 4, marginRight: 4 }}
+                    >
+                      <FaWrench />
+                    </button>
+                    <button
+                      type="button"
                       className="chat-emoji-btn"
                       onClick={() => setShowEmojiPicker(true)}
                     >
@@ -1275,6 +1393,56 @@ function WorkspaceDetails() {
                     <FaPaperPlane />
                   </button>
                 </form>
+                {/* Boîte à outils (toolbox) */}
+                {showToolbox && (
+                  <div
+                    className="chat-toolbox-menu"
+                    style={{
+                      position: "absolute",
+                      bottom: 60,
+                      right: 30,
+                      zIndex: 2000,
+                      background: "#232323",
+                      borderRadius: 10,
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+                      minWidth: 220,
+                    }}
+                  >
+                    <button
+                      className="chat-toolbox-item"
+                      style={{
+                        width: "100%",
+                        padding: "12px 18px",
+                        background: "none",
+                        border: "none",
+                        color: "white",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: "1rem",
+                      }}
+                      onClick={handleOpenStrawpoll}
+                    >
+                      📊 Créer un sondage Strawpoll
+                    </button>
+                  </div>
+                )}
+                {/* Modal Strawpoll (intégration réelle) */}
+                {showStrawpollModal && (
+                  <div
+                    className="modal-overlay"
+                    onClick={handleCloseStrawpollModal}
+                  >
+                    <div
+                      className="modal-content"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StrawpollModal
+                        onClose={handleCloseStrawpollModal}
+                        onSubmit={handleStrawpollSubmit}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* *** End Typing Indicator *** */}
@@ -1933,6 +2101,74 @@ function WorkspaceDetails() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Modal d'affichage des résultats Strawpoll */}
+        {showStrawpollResults && (
+          <div
+            className="modal-overlay"
+            onClick={handleCloseStrawpollResults}
+          >
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2>Résultats du sondage</h2>
+              {loadingResults ? (
+                <div>Chargement...</div>
+              ) : strawpollResults && strawpollResults.error ? (
+                <div style={{ color: "red" }}>{strawpollResults.error}</div>
+              ) : strawpollResults ? (
+                <div>
+                  <div
+                    style={{ fontWeight: 600, marginBottom: 12 }}
+                  >
+                    {strawpollResults.title}
+                  </div>
+                  <ul style={{ padding: 0, listStyle: "none" }}>
+                    {strawpollResults.poll_options &&
+                      strawpollResults.poll_options.map(
+                        (opt, idx) => (
+                          <li
+                            key={idx}
+                            style={{ marginBottom: 6 }}
+                          >
+                            <span style={{ fontWeight: 500 }}>
+                              {opt.value}
+                            </span>{" "}
+                            : {opt.vote_count || 0} vote
+                            {opt.vote_count > 1 ? "s" : ""}
+                          </li>
+                        )
+                      )}
+                  </ul>
+                  <div
+                    style={{
+                      marginTop: 18,
+                      fontSize: "0.95em",
+                      color: "#b05fdf",
+                    }}
+                  >
+                    <a
+                      href={strawpollResults.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Voir sur Strawpoll
+                    </a>
+                  </div>
+                </div>
+              ) : null}
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={handleCloseStrawpollResults}
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
