@@ -48,9 +48,15 @@ function Profile() {
     setLoading(true);
     setError(null);
 
+<<<<<<< HEAD
     const apiUrl =
       (process.env.REACT_APP_API_URL || "http://192.168.1.107:3001") +
       `/api/users/${userId}`;
+=======
+
+    const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.252.234:3001") + `/api/users/${userId}`;
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
 
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
@@ -107,9 +113,16 @@ function Profile() {
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
     try {
+<<<<<<< HEAD
       const apiUrl =
         (process.env.REACT_APP_API_URL || "http://192.168.1.107:3001") +
         `/api/users/${userId}/workspaces`;
+=======
+
+
+      const apiUrl = (process.env.REACT_APP_API_URL || "http://192.168.252.234:3001") + `/api/users/${userId}/workspaces`;
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
 
       console.log(`Fetching workspaces from: ${apiUrl}`);
 

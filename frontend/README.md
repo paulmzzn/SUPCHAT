@@ -10,7 +10,12 @@ In the project directory, you can run:
 
 Runs the app in the development mode.\
 
+<<<<<<< HEAD
 Open [http://192.168.1.107:3000](http://192.168.1.107:3000) to view it in your browser.
+=======
+
+Open [http://192.168.252.234:3000](http://192.168.252.234:3000) to view it in your browser.
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
 
 The page will reload when you make changes.\
 You may also see any lint errors in the console.

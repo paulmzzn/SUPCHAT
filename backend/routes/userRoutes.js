@@ -73,6 +73,7 @@ router.get("/validate", validateUser);
 router.post("/request-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+<<<<<<< HEAD
 router.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -82,6 +83,14 @@ router.get(
   passport.authenticate("google", {
     failureRedirect: "http://192.168.1.107:3001/login",
   }),
+=======
+
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google/callback', 
+
+  passport.authenticate('google', { failureRedirect: 'http://192.168.252.234:3001/login' }), 
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
 
   async (req, res) => {
     const user = req.user;
@@ -93,7 +102,14 @@ router.get(
 
     // Redirection directe vers le dashboard via AuthCallback
     res.redirect(
+<<<<<<< HEAD
       `http://192.168.1.107:3001/auth/callback?token=${token}&email=${user.email}`
+=======
+
+      `http://192.168.252.234:3001/auth/callback?token=${token}&email=${user.email}`
+
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
     );
   }
 );
@@ -103,11 +119,19 @@ router.get(
   passport.authenticate("github", { scope: ["user:email"] })
 );
 
+<<<<<<< HEAD
 router.get(
   "/auth/github/callback",
   passport.authenticate("github", {
     failureRedirect: "http://192.168.1.107:3001/login",
   }),
+=======
+
+router.get('/auth/github/callback',
+
+  passport.authenticate('github', { failureRedirect: 'http://192.168.252.234:3001/login' }),
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
 
   async (req, res) => {
     const user = req.user;
@@ -117,7 +141,15 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
+<<<<<<< HEAD
       `http://192.168.1.107:3001/auth/callback?token=${token}&email=${user.email}`
+=======
+
+
+      `http://192.168.252.234:3001/auth/callback?token=${token}&email=${user.email}`
+
+
+>>>>>>> 6050c0e09738175ec30d2b9614d3c0e6e7cdc0ef
     );
   }
 );

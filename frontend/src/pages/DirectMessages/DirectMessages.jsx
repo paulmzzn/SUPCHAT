@@ -21,6 +21,7 @@ import {
   FaDownload,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
+import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.107:3000";
@@ -110,6 +111,7 @@ const getCompleteFileUrl = (fileUrl) => {
 };
 
 function DirectMessages() {
+  const { refreshUnreadDM } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState(null);
@@ -487,6 +489,8 @@ function DirectMessages() {
       ) {
         fetchConversations();
       }
+      // Ajout : toujours rafraîchir la liste des conversations pour affichage temps réel
+      fetchConversations();
     };
 
     const handlePrivateMessageUpdated = (msg) => {
@@ -762,6 +766,8 @@ function DirectMessages() {
         setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
         return newCounts;
       });
+      // Rafraîchir le compteur global (Sidebar) immédiatement
+      if (refreshUnreadDM) refreshUnreadDM();
 
       const token = localStorage.getItem("token");
       // Ajout de la pagination : on veut les 20 derniers messages
@@ -1352,25 +1358,10 @@ function DirectMessages() {
   // Add this effect to update the unread count in localStorage for the Sidebar
   useEffect(() => {
     localStorage.setItem("unreadPrivateMessages", totalUnreadCount.toString());
-
-    // Create a custom event to notify other components about the change
     const event = new CustomEvent("unreadMessagesUpdated", {
       detail: { count: totalUnreadCount },
     });
     window.dispatchEvent(event);
-  }, [totalUnreadCount]);
-
-  // Make sure this effect properly updates the localStorage and dispatches an event
-  useEffect(() => {
-    localStorage.setItem("unreadPrivateMessages", totalUnreadCount.toString());
-
-    // Dispatch event to notify other components about the change
-    const event = new CustomEvent("unreadMessagesUpdated", {
-      detail: { count: totalUnreadCount },
-    });
-    window.dispatchEvent(event);
-
-    console.log(`[DM] Updated unread message count: ${totalUnreadCount}`);
   }, [totalUnreadCount]);
 
   // Add an effect to load initial unread counts when component mounts
