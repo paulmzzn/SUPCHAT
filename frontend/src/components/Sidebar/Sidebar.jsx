@@ -12,8 +12,7 @@ function Sidebar({ unreadMessageCount }) {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const { globalNotifications } = useSocket() || {};
+  const { globalNotifications } = useSocket() || { globalNotifications: { private: 0, workspace: 0 } };
 
   // Check if the current path matches the given path
   const isActive = (path) => {
@@ -31,36 +30,20 @@ function Sidebar({ unreadMessageCount }) {
   }, []);
 
   useEffect(() => {
+    // Fonction pour gérer la mise à jour du compteur de messages non lus
     const handleUnreadMessagesUpdate = (event) => {
       setLocalUnreadCount(event.detail.count);
     };
     
-    // Get initial count from localStorage
+    // Récupérer le compteur initial depuis localStorage
     const storedCount = parseInt(localStorage.getItem('unreadPrivateMessages') || '0', 10);
     setLocalUnreadCount(storedCount);
     
-    // Listen for updates
+    // Écouter les événements de mise à jour
     window.addEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
     
     return () => {
       window.removeEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Load initial count from localStorage
-    const storedCount = parseInt(localStorage.getItem('unreadPrivateMessages') || '0', 10);
-    setUnreadMessages(storedCount);
-    
-    // Listen for custom event when unread messages change
-    const handleUnreadUpdate = (event) => {
-      setUnreadMessages(event.detail.count);
-    };
-    
-    window.addEventListener('unreadMessagesUpdated', handleUnreadUpdate);
-    
-    return () => {
-      window.removeEventListener('unreadMessagesUpdated', handleUnreadUpdate);
     };
   }, []);
 
@@ -69,11 +52,16 @@ function Sidebar({ unreadMessageCount }) {
     return `sidebar-icon ${isActive(path) ? 'active' : ''}`;
   };
 
-  // Determine which count to use
+  // Logique de priorité pour déterminer le compteur à afficher
+  // 1. Utiliser unreadMessageCount si fourni (pour la page DirectMessages)
+  // 2. Sinon utiliser globalNotifications.private du contexte Socket
+  // 3. En dernier recours, utiliser localUnreadCount depuis localStorage
   const displayCount =
     unreadMessageCount !== undefined
       ? unreadMessageCount
-      : globalNotifications?.private ?? localUnreadCount;
+      : globalNotifications?.private !== undefined
+        ? globalNotifications.private
+        : localUnreadCount;
 
   return (
     <div className="sidebar">
@@ -90,7 +78,7 @@ function Sidebar({ unreadMessageCount }) {
           </Link>
           <Link to="/workspaces" className={`nav-item ${isActive('/workspaces') ? 'active' : ''}`}>
             <MdWorkspacesFilled className={getIconClasses('/workspaces')} />
-            {/* Exemple pour badge workspace : */}
+            {/* Badge pour les notifications workspace */}
             {globalNotifications?.workspace > 0 && (
               <span className="nav-badge">{globalNotifications.workspace}</span>
             )}
