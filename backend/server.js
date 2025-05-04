@@ -142,8 +142,8 @@ try {
 httpServer.listen(PORT, "0.0.0.0", () => {
 
 
-  console.log(`Serveur démarré sur http://192.168.252.234:${PORT}`);
-  console.log(`WebSocket URL: ws://192.168.252.234:${PORT}`);
+  console.log(`Serveur démarré sur http://REDACTED:${PORT}`);
+  console.log(`WebSocket URL: ws://REDACTED:${PORT}`);
 
 
 
