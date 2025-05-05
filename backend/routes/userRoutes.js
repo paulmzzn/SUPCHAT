@@ -77,7 +77,9 @@ router.post("/reset-password", resetPassword);
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
 
+
   passport.authenticate('google', { failureRedirect: 'http://192.168.1.132:3001/login' }), 
+
 
 
   async (req, res) => {
@@ -106,6 +108,7 @@ router.get(
 
 router.get('/auth/github/callback',
 
+
   passport.authenticate('github', { failureRedirect: 'http://192.168.1.132:3001/login' }),
 
 
@@ -117,6 +120,7 @@ router.get('/auth/github/callback',
       { expiresIn: "7d" }
     );
     res.redirect(
+
 
 
       `http://192.168.1.132:3001/auth/callback?token=${token}&email=${user.email}`
