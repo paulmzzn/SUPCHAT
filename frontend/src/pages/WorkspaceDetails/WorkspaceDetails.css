@@ -1092,9 +1092,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 25, 30, 0.7);
+  padding: 16px;
+  border-bottom: var(--workspace-details-sidebar-border);
+  background: var(--workspace-details-content-bg);
 }
 
 .chat-header-info {
@@ -1116,6 +1116,7 @@
 
 .chat-header-actions {
   display: flex;
+  align-items: center;
   gap: 12px;
 }
 
@@ -1359,6 +1360,42 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Style du bouton d'appel vidéo dans l'entête du chat */
+.video-call-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, #9348b7, #b05fdf);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.video-call-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.25);
+}
+
+.video-call-button svg {
+  font-size: 1rem;
+}
+
+/* Styles pour les écrans plus petits */
+@media (max-width: 768px) {
+  .video-call-button span {
+    display: none;
+  }
+
+  .video-call-button {
+    padding: 8px;
+  }
 }
 
 /* Support du thème clair */
@@ -1958,6 +1995,29 @@
   border-radius: 16px 4px 16px 16px;
   padding: 12px 15px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Styles pour les messages système */
+.chat-message.system-message {
+  align-self: center;
+  max-width: 80%;
+  margin: 8px 0;
+}
+
+.system-content {
+  background-color: rgba(147, 72, 183, 0.1);
+  border: 1px solid rgba(147, 72, 183, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.system-content .message-header {
+  display: none;
+}
+
+.system-content .message-text {
+  font-weight: 500;
 }
 
 /* --- Styles pour le menu d'autocomplétion des mentions --- */

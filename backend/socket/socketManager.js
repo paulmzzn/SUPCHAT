@@ -20,6 +20,10 @@ const MISTRAL_USERNAME = "Mistral AI";
 const MISTRAL_AVATAR =
   "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
 
+// Ajouter l'UUID système pour les messages système
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000003";
+const SYSTEM_USERNAME = "Système";
+
 const MISTRAL_API_TIMEOUT_MS = 120000; // 120 secondes = 2 minutes
 
 const socketManager = (io) => {
@@ -278,7 +282,7 @@ const socketManager = (io) => {
     socket.on("message", async (data) => {
       try {
         console.log("Socket.IO: Message reçu", data);
-        const { canal_id, content, workspace_id, parent_id } = data; // Ajout de parent_id
+        const { canal_id, content, workspace_id, parent_id, is_system_message } = data;
 
         if (!canal_id || !content) {
           console.error("Socket.IO: Données de message incomplètes");
@@ -286,7 +290,59 @@ const socketManager = (io) => {
           return;
         }
 
-        // Enregistrer le message de l'utilisateur en base de données
+        // Pour les messages système, on les enregistre avec l'UUID système
+        if (is_system_message) {
+          console.log("Socket.IO: Message système détecté, enregistrement en base:", content);
+          
+          try {
+            // Créer le message système en base de données avec l'UUID système
+            const systemDbMessage = await MessageModel.create({
+              contenu: content,
+              fk_canal: canal_id,
+              fk_utilisateur: SYSTEM_USER_ID, // Utiliser l'UUID système
+              system_type: data.system_type || "video_call"
+            });
+            
+            // Récupérer le message avec toutes ses infos
+            const fullSystemMessage = await MessageModel.getById(systemDbMessage.id_message);
+            
+            if (fullSystemMessage) {
+              // Formater le message pour l'émission
+              const formattedSystemMessage = {
+                ...fullSystemMessage,
+                nom: SYSTEM_USERNAME,
+                is_system_message: true,
+                date_creation: fullSystemMessage.date_creation || 
+                              fullSystemMessage.created_at || 
+                              new Date().toISOString()
+              };
+              
+              console.log("Socket.IO: Émission du message système enregistré:", formattedSystemMessage);
+              io.to(`${canal_id}`).emit("message", formattedSystemMessage);
+            } else {
+              console.warn("Socket.IO: Message système créé mais non trouvé pour l'émission");
+            }
+          } catch (error) {
+            console.error("Socket.IO: Erreur lors de l'enregistrement du message système:", error);
+            
+            // En cas d'erreur, on crée un message temporaire sans enregistrement en base
+            const fallbackSystemMessage = {
+              id_message: `system-${Date.now()}`,
+              contenu: content,
+              fk_canal: canal_id,
+              fk_utilisateur: SYSTEM_USER_ID,
+              nom: SYSTEM_USERNAME,
+              date_creation: new Date().toISOString(),
+              is_system_message: true,
+              system_type: data.system_type || "video_call"
+            };
+            
+            io.to(`${canal_id}`).emit("message", fallbackSystemMessage);
+          }
+          return;
+        }
+
+        // Pour les messages normaux, continuer avec le processus habituel
         const userMessage = await MessageModel.create({
           contenu: content,
           fk_canal: canal_id,
