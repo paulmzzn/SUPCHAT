@@ -442,8 +442,27 @@ export const useWorkspaceDetails = (workspaceId) => {
   useEffect(() => {
     if (!socket) return;
 
-    // Gestionnaire de messages
+    // Abonnement à l'événement "message"
+    socket.on("message", (message) => {
+      console.log("[DEBUG] Message reçu:", message);
+      console.log("[DEBUG] Type de message:", typeof message);
+      console.log("[DEBUG] Propriétés:", Object.keys(message));
+      
+      // Vérifie si c'est un message système pour l'appel vidéo
+      const isVideoCallMessage = message.contenu && 
+        (message.contenu.includes("appel vidéo") || message.contenu.includes("video call"));
+      
+      if (isVideoCallMessage) {
+        console.log("[DEBUG] Message d'appel vidéo détecté");
+        message.is_system_message = true;
+      }
+      
+      handleNewMessage(message);
+    });
+
     const handleNewMessage = (message) => {
+      console.log("[DEBUG] Traitement du message:", message);
+      // Reste de la fonction handleNewMessage
       console.log("🎉 Nouveau message reçu via socket:", message);
 
       // S'assurer que le format de date est cohérent
@@ -482,9 +501,6 @@ export const useWorkspaceDetails = (workspaceId) => {
         }, 100);
       }
     };
-
-    // Abonnement à l'événement "message"
-    socket.on("message", handleNewMessage);
 
     // Abonnement aux réactions
     socket.on("messageReaction", ({ messageId, reactions }) => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll } from "react-icons/fa";
+import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll, FaVideo } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -46,6 +46,7 @@ function ChatContainer({
   renderTextWithLinks,
   isUuid,
   handleSelectActiveItem,
+  setShowVideoCallModal, // Nouveau prop pour gérer l'ouverture du modal d'appel vidéo
 }) {
   return (
     <div className="workspace-content-area">
@@ -67,6 +68,16 @@ function ChatContainer({
               )}
               <h2>{activeChannel.name}</h2>
             </div>
+            <div className="chat-header-actions">
+              <button 
+                className="video-call-button"
+                onClick={() => setShowVideoCallModal(true)}
+                title="Démarrer un appel vidéo"
+              >
+                <FaVideo />
+                <span>Appel vidéo</span>
+              </button>
+            </div>
           </div>
 
           <div className="chat-messages" ref={chatContainerRef}>
@@ -78,21 +89,29 @@ function ChatContainer({
                   key={message.id_message}
                   id={`msg-${message.id_message}`}
                   className={`chat-message ${
-                    message.fk_utilisateur === currentUserId ? "own-message" : "other-message"
+                    message.is_system_message 
+                      ? "system-message" 
+                      : message.fk_utilisateur === currentUserId 
+                        ? "own-message" 
+                        : "other-message"
                   }`}
-                  onContextMenu={(e) => handleMessageContextMenu(e, message)}
+                  onContextMenu={(e) => !message.is_system_message && handleMessageContextMenu(e, message)}
                 >
-                  <div className="message-avatar">
-                    {message.photo_de_profil ? (
-                      <img src={message.photo_de_profil} alt={message.nom} />
-                    ) : (
-                      <div className="avatar-placeholder">
-                        {message.nom ? message.nom[0].toUpperCase() : "?"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="message-content">
-                    {(message.parent_id || message.parent_message) && (() => {
+                  {!message.is_system_message && (
+                    <div className="message-avatar">
+                      {message.photo_de_profil ? (
+                        <img src={message.photo_de_profil} alt={message.nom} />
+                      ) : (
+                        <div className="avatar-placeholder">
+                          {message.nom ? message.nom[0].toUpperCase() : "?"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={`message-content ${message.is_system_message ? "system-content" : ""}`}>
+                    {/* Si c'est un message normal (pas système), on affiche le fil de réponse si nécessaire */}
+                    {!message.is_system_message && (message.parent_id || message.parent_message) && (() => {
                       let replyContent = null;
                       if (message.parent_message) {
                         replyContent = (
