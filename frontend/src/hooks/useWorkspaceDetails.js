@@ -36,6 +36,9 @@ const getEmojiForType = (reactionType) => {
     sad: "😢",
     angry: "😠",
   };
+  // Si c'est déjà un emoji unicode, retourne-le directement
+  if (Object.values(emojiMap).includes(reactionType)) return reactionType;
+  // Sinon, retourne l'emoji du mapping ou le texte brut
   return emojiMap[reactionType] || reactionType;
 };
 
@@ -898,7 +901,18 @@ export const useWorkspaceDetails = (workspaceId) => {
         );
       }
 
-      setMessages(data);
+      // Ajout du mapping des emojis sur les réactions (pour affichage correct)
+      const messagesWithEmojis = data.map((msg) => {
+        if (msg.reactions && Array.isArray(msg.reactions)) {
+          msg.reactions = msg.reactions.map((r) => ({
+            ...r,
+            emoji: r.emoji || getEmojiForType(r.reaction_type),
+          }));
+        }
+        return msg;
+      });
+
+      setMessages(messagesWithEmojis);
     } catch (error) {
       console.error("Erreur:", error);
       setMessages([]);
@@ -1334,4 +1348,3 @@ const formatMessageDate = (dateString) => {
     return "";
   }
 };
- 

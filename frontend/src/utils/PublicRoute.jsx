@@ -4,7 +4,7 @@ const PublicRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('userToken') && localStorage.getItem('isValidated') === 'true';
   
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/direct-messages" />;
   }
 
   return children;

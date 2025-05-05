@@ -77,7 +77,9 @@ router.post("/reset-password", resetPassword);
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback', 
 
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.60:3001/login' }), 
+
+  passport.authenticate('google', { failureRedirect: 'http://192.168.1.132:3001/login' }), 
+
 
 
   async (req, res) => {
@@ -88,10 +90,10 @@ router.get('/auth/google/callback',
       { expiresIn: "7d" } // Augmenté à 7 jours
     );
 
-    // Redirection directe vers le dashboard via AuthCallback
+    // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
 
-      `http://192.168.1.60:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.132:3001/auth/callback?token=${token}&email=${user.email}`
 
 
     );
@@ -106,7 +108,8 @@ router.get(
 
 router.get('/auth/github/callback',
 
-  passport.authenticate('github', { failureRedirect: 'http://192.168.1.60:3001/login' }),
+
+  passport.authenticate('github', { failureRedirect: 'http://192.168.1.132:3001/login' }),
 
 
   async (req, res) => {
@@ -119,7 +122,8 @@ router.get('/auth/github/callback',
     res.redirect(
 
 
-      `http://192.168.1.60:3001/auth/callback?token=${token}&email=${user.email}`
+
+      `http://192.168.1.132:3001/auth/callback?token=${token}&email=${user.email}`
 
 
     );

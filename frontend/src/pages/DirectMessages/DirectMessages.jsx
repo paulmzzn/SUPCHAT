@@ -24,7 +24,8 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.60:3000";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.132:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
