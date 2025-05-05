@@ -132,7 +132,7 @@ function App() {
           
           {/* Route par défaut */}
           <Route path="/" element={
-            isAuthenticated() ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+            isAuthenticated() ? <Navigate to="/workspaces" /> : <Navigate to="/login" />
           } />
         </Routes>
       </Router>

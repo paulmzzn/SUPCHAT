@@ -1,38 +1,15 @@
 import React, { useRef, useState } from "react"; // Ajout de useState
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
-import {
-  FaSearch,
-  FaPlus,
-  FaHashtag,
-  FaLock,
-  FaChevronDown,
-  FaChevronRight,
-  FaUserCircle,
-  FaFile,
-  FaImage,
-  FaFileAlt,
-  FaFileWord,
-  FaFilePdf,
-  FaFileExcel,
-  FaGlobe,
-  FaCrown,
-  FaUserShield,
-  FaUser,
-  FaEdit,
-  FaTrashAlt,
-  FaPaperPlane,
-  FaSmile,
-  FaPaperclip,
-  FaReply,
-  FaRegSmile,
-  FaRobot,
-  FaAt,
-  FaArrowUp,
-  FaArrowDown,
-  FaDownload,
-  FaWrench,
-} from "react-icons/fa";
+import WorkspaceSidebar from "./WorkspaceSidebar";
+import ChatContainer from "./ChatContainer";
+import WorkspaceDetailsSidebar from "./WorkspaceDetailsSidebar";
+import CreateChannelModal from "./CreateChannelModal";
+import EditChannelModal from "./EditChannelModal";
+import EmojiPickerModal from "./EmojiPickerModal";
+import FileViewerModal from "./FileViewerModal";
+import StrawpollResultsModal from "./StrawpollResultsModal";
+import StrawpollModalWrapper from "./StrawpollModalWrapper";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -40,152 +17,17 @@ import "./WorkspaceDetails.css";
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNavigate } from "react-router-dom"; // Ajout import
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
-import StrawpollModal from "../../components/Strawpoll/StrawpollModal";
-
-// Nouvelle fonction pour rendre les liens cliquables
-const renderTextWithLinks = (text) => {
-  if (!text) return "";
-
-  // Regex pour identifier les URLs dans le texte
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-  // Diviser le texte en parties (texte normal et liens)
-  const parts = text.split(urlRegex);
-
-  // Trouver tous les liens dans le texte
-  const matches = text.match(urlRegex) || [];
-
-  // Reconstruire le texte avec les liens cliquables
-  return parts.map((part, i) => {
-    // Si la partie correspond à un lien
-    if (matches.includes(part)) {
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="message-link"
-        >
-          {part}
-        </a>
-      );
-    }
-    // Sinon, c'est du texte normal
-    return part;
-  });
-};
-
-// Helper pour afficher le bon icône de fichier
-const getFileIcon = (type) => {
-  switch (type) {
-    case "pdf":
-      return <FaFilePdf />;
-    case "word":
-      return <FaFileWord />;
-    case "excel":
-      return <FaFileExcel />;
-    default:
-      return <FaFileAlt />;
-  }
-};
-
-// Function pour obtenir l'icône du rôle
-const getRoleIcon = (role) => {
-  switch (role) {
-    case "owner":
-      return <FaCrown className="role-icon owner" title="Propriétaire" />;
-    case "admin":
-      return (
-        <FaUserShield className="role-icon admin" title="Administrateur" />
-      );
-    case "member":
-      return <FaUser className="role-icon member" title="Membre" />;
-    default:
-      return <FaUser className="role-icon member" title="Membre" />;
-  }
-};
-
-// Helper function moved outside the hook for potential reuse or testing
-const formatMessageDate = (dateString) => {
-  if (!dateString) {
-    console.warn("formatMessageDate: date invalide", dateString);
-    return "";
-  }
-  try {
-    // 1. Créer une date à partir du string
-    const date = new Date(dateString);
-
-    // 2. Correction MANUELLE du décalage total (4h de la DB + 2h d'affichage = 6h)
-    // Nous créons une nouvelle date avec le décalage appliqué
-    const correctedDate = new Date(date.getTime() + 2 * 60 * 60 * 1000); // +2h pour compenser le décalage d'affichage
-
-    const now = new Date();
-    const nowParis = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Appliquer le même décalage à "maintenant"
-
-    // 3. Formater l'heure sans utiliser les options de fuseau horaire qui peuvent causer des problèmes
-    const hours = correctedDate.getHours().toString().padStart(2, "0");
-    const minutes = correctedDate.getMinutes().toString().padStart(2, "0");
-
-    // 4. Comparer si c'est aujourd'hui (après correction)
-    const isSameDay =
-      correctedDate.getDate() === nowParis.getDate() &&
-      correctedDate.getMonth() === nowParis.getMonth() &&
-      correctedDate.getFullYear() === nowParis.getFullYear();
-
-    if (isSameDay) {
-      return `${hours}:${minutes}`;
-    } else {
-      // Si ce n'est pas aujourd'hui, inclure la date
-      const day = correctedDate.getDate().toString().padStart(2, "0");
-      const month = (correctedDate.getMonth() + 1).toString().padStart(2, "0");
-      const year = correctedDate.getFullYear();
-      return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-  } catch (error) {
-    console.error("Erreur de formatage de date:", error, dateString);
-    return "";
-  }
-};
-
-// Ajouter une fonction d'aide pour logger les interactions avec Mistral
-const debugMistralInteraction = (message) => {
-  console.log(`[Mistral Debug] ${message}`);
-};
-
-// Helper pour vérifier si le contenu est un fichier et l'analyser
-const parseFileContent = (content) => {
-  if (!content) return null;
-
-  try {
-    // Essayer de parser le contenu JSON
-    const parsed = JSON.parse(content);
-
-    // Vérifier si c'est un message de type fichier
-    if (parsed && parsed.type === "file") {
-      return {
-        isFile: true,
-        isImage: parsed.isImage,
-        fileUrl: parsed.fileUrl,
-        fileName: parsed.fileName,
-        fileSize: parsed.fileSize,
-        fileType: parsed.fileType,
-      };
-    }
-  } catch (e) {
-    // Si ce n'est pas du JSON valide, ce n'est pas un message de fichier
-    return null;
-  }
-
-  return null;
-};
-
-// Helper pour formater la taille du fichier
-const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + " B";
-  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  else return (bytes / 1048576).toFixed(1) + " MB";
-};
+import {
+  formatMessageDate,
+  parseFileContent,
+  formatFileSize,
+  getFileIcon,
+  getRoleIcon,
+  isUuid,
+  debugMistralInteraction,
+  renderTextWithLinks,
+} from "../../utils/helpers";
+import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll } from "react-icons/fa";
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
@@ -567,12 +409,6 @@ function WorkspaceDetails() {
     }
   };
 
-  // Helper pour vérifier si une chaîne est un UUID (pour identifier les user IDs dans les href)
-  const isUuid = (str) =>
-    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-      str
-    );
-
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
@@ -662,6 +498,9 @@ function WorkspaceDetails() {
     document.body.removeChild(a);
   };
 
+  // Permet d'ouvrir la modal Strawpoll depuis n'importe quel bouton du chat
+  window.handleOpenStrawpollResults = handleOpenStrawpollResults;
+
   if (loading) {
     return (
       <div className="app-layout">
@@ -690,1129 +529,105 @@ function WorkspaceDetails() {
 
       <div className="workspace-detail-layout">
         {/* Workspace Sidebar */}
-        <div className="workspace-sidebar">
-          <div className="workspace-sidebar-header">
-            <div className="workspace-profile">
-              {workspace && (
-                <>
-                  <div
-                    className="workspace-avatar"
-                    style={{ backgroundImage: `url(${workspace.icon})` }}
-                  ></div>
-                  <h2 className="workspace-name">{workspace.name}</h2>
-                </>
-              )}
-            </div>
-
-            <div className="workspace-search">
-              <div className="search-input-wrapper">
-                <FaSearch className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Rechercher des canaux..."
-                  value={searchQuery}
-                  onChange={handleSearchChange} // Use handler from hook
-                  className="search-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="workspace-sidebar-content">
-            <div className="channels-section">
-              <div
-                className="section-header"
-                onClick={toggleChannelsVisibility}
-              >
-                {" "}
-                {/* Use handler from hook */}
-                {showChannels ? (
-                  <FaChevronDown className="toggle-icon" />
-                ) : (
-                  <FaChevronRight className="toggle-icon" />
-                )}
-                <h3>Canaux</h3>
-                {/* Afficher le bouton d'ajout de canal seulement si owner ou admin */}
-                {(currentUserRole === "owner" ||
-                  currentUserRole === "admin") && (
-                  <button
-                    className="add-channel-btn"
-                    onClick={handleCreateChannel}
-                  >
-                    {" "}
-                    {/* Use handler from hook */}
-                    <FaPlus />
-                  </button>
-                )}
-              </div>
-
-              {showChannels && (
-                <ul className="channels-list">
-                  {canalsLoading ? (
-                    <li className="channel-loading">
-                      Chargement des canaux...
-                    </li>
-                  ) : canalsError ? (
-                    <li className="channel-error">Erreur: {canalsError}</li>
-                  ) : channels.length > 0 ? ( // Use channels from hook
-                    channels.map((channel) => (
-                      <li
-                        key={channel.id}
-                        className={`channel-item ${
-                          activeChannel && activeChannel.id === channel.id
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() => handleSelectChannel(channel)} // Use handler from hook
-                        onContextMenu={(e) =>
-                          (currentUserRole === "owner" ||
-                            currentUserRole === "admin") &&
-                          handleChannelContextMenu(e, channel)
-                        } // Restrict context menu
-                      >
-                        {channel.isPrivate ? (
-                          <FaLock className="channel-icon" />
-                        ) : (
-                          <FaHashtag className="channel-icon" />
-                        )}
-                        <span className="channel-name">{channel.name}</span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="no-channels">Aucun canal trouvé</li>
-                  )}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
+        <WorkspaceSidebar
+          workspace={workspace}
+          searchQuery={searchQuery}
+          handleSearchChange={handleSearchChange}
+          showChannels={showChannels}
+          toggleChannelsVisibility={toggleChannelsVisibility}
+          channels={channels}
+          canalsLoading={canalsLoading}
+          canalsError={canalsError}
+          activeChannel={activeChannel}
+          handleSelectChannel={handleSelectChannel}
+          handleChannelContextMenu={handleChannelContextMenu}
+          currentUserRole={currentUserRole}
+          handleCreateChannel={handleCreateChannel}
+        />
 
         {/* Main Content Area - Modified for chat */}
-        <div className="workspace-content-area">
-          <div className="glow-circle-right top-right"></div>
-          <div className="glow-circle-left bottom-left"></div>
+        <ChatContainer
+          activeChannel={activeChannel}
+          loadingMessages={loadingMessages}
+          messages={messages}
+          currentUserId={currentUserId}
+          chatContainerRef={chatContainerRef}
+          handleMessageContextMenu={handleMessageContextMenu}
+          formatMessageDate={formatMessageDate}
+          parseFileContent={parseFileContent}
+          handleOpenFileViewer={handleOpenFileViewer}
+          handleDownloadFile={handleDownloadFile}
+          isMistralTyping={isMistralTyping}
+          getEmojiForType={getEmojiForType}
+          handleReplyMessage={handleReplyMessage}
+          handleShowEmojiPicker={handleShowEmojiPicker}
+          handleDeleteMessage={handleDeleteMessage}
+          messageContextMenu={messageContextMenu}
+          replyingTo={replyingTo}
+          handleCancelReply={handleCancelReply}
+          fileInputRef={fileInputRef}
+          handleFileUpload={handleFileUpload}
+          displayMessage={displayMessage}
+          handleNewMessageChange={handleNewMessageChange}
+          handleChatInputKeyDown={handleChatInputKeyDown}
+          setShowEmojiPicker={setShowEmojiPicker}
+          showMentionSuggestions={showMentionSuggestions}
+          mentionSuggestions={mentionSuggestions}
+          activeMentionIndex={activeMentionIndex}
+          handleSelectMention={handleSelectMention}
+          handleSendMessageWithMistralCheck={handleSendMessageWithMistralCheck}
+          showToolbox={showToolbox}
+          handleToggleToolbox={handleToggleToolbox}
+          handleOpenStrawpoll={handleOpenStrawpoll}
+          showStrawpollModal={showStrawpollModal}
+          handleCloseStrawpollModal={handleCloseStrawpollModal}
+          handleStrawpollSubmit={handleStrawpollSubmit}
+          commonEmojis={commonEmojis}
+          showEmojiPicker={showEmojiPicker}
+          handleAddReaction={handleAddReaction}
+          renderTextWithLinks={renderTextWithLinks}
+          isUuid={isUuid}
+          handleSelectActiveItem={handleSelectActiveItem}
+        />
 
-          {!activeChannel ? (
-            <div className="workspace-welcome">
-              <h1>Bienvenue sur {workspace?.name}</h1>
-              <p>Sélectionnez un canal pour commencer à discuter</p>
-            </div>
-          ) : (
-            <div className="chat-container">
-              <div className="chat-header">
-                <div className="chat-header-info">
-                  {activeChannel.isPrivate ? (
-                    <FaLock className="chat-header-icon" />
-                  ) : (
-                    <FaHashtag className="chat-header-icon" />
-                  )}
-                  <h2>{activeChannel.name}</h2>
-                </div>
-              </div>
-
-              <div className="chat-messages" ref={chatContainerRef}>
-                {" "}
-                {/* Use ref from hook */}
-                {loadingMessages ? (
-                  <div className="chat-loading">Chargement des messages...</div>
-                ) : messages.length > 0 ? ( // Use messages from hook
-                  messages.map((message) => (
-                    <div
-                      key={message.id_message}
-                      id={`msg-${message.id_message}`} // Add ID for scrolling to parent
-                      className={`chat-message ${
-                        message.fk_utilisateur === currentUserId
-                          ? "own-message"
-                          : "other-message"
-                      }`}
-                      onContextMenu={(e) =>
-                        handleMessageContextMenu(e, message)
-                      } // Use handler from hook
-                    >
-                      <div className="message-avatar">
-                        {/* Cette logique devrait fonctionner pour le bot aussi */}
-                        {message.photo_de_profil ? (
-                          <img
-                            src={message.photo_de_profil}
-                            alt={message.nom}
-                          />
-                        ) : (
-                          <div className="avatar-placeholder">
-                            {message.nom ? message.nom[0].toUpperCase() : "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="message-content">
-                        {/* Affichage amélioré du message parent s'il s'agit d'une réponse */}
-                        {(message.parent_id || message.parent_message) &&
-                          (() => {
-                            let replyContent = null;
-                            if (message.parent_message) {
-                              replyContent = (
-                                <>
-                                  <span className="reply-author">
-                                    @{message.parent_message.nom}
-                                  </span>
-                                  <span className="reply-text">
-                                    {message.parent_message.contenu}
-                                  </span>
-                                </>
-                              );
-                            } else {
-                              const parentMessage = messages.find(
-                                (m) => m.id_message === message.parent_id
-                              );
-                              replyContent = parentMessage ? (
-                                <>
-                                  <span className="reply-author">
-                                    @{parentMessage.nom}
-                                  </span>
-                                  <span className="reply-text">
-                                    {parentMessage.contenu}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="reply-text">
-                                  Message original non disponible
-                                </span>
-                              );
-                            }
-                            return (
-                              <div
-                                className="message-reply-to"
-                                onClick={() => {
-                                  const parentId =
-                                    message.parent_id ||
-                                    (message.parent_message &&
-                                      message.parent_message.id_message);
-                                  if (parentId) {
-                                    const element = document.getElementById(
-                                      `msg-${parentId}`
-                                    );
-                                    if (element) {
-                                      element.scrollIntoView({
-                                        behavior: "smooth",
-                                        block: "center",
-                                      });
-                                      element.classList.add(
-                                        "highlight-message"
-                                      );
-                                      setTimeout(
-                                        () =>
-                                          element.classList.remove(
-                                            "highlight-message"
-                                          ),
-                                        2000
-                                      );
-                                    } else {
-                                      console.log(
-                                        `Message parent avec ID ${parentId} non trouvé dans la vue actuelle`
-                                      );
-                                    }
-                                  }
-                                }}
-                              >
-                                <FaReply className="reply-icon" />
-                                <div className="reply-content">
-                                  {replyContent}
-                                </div>
-                              </div>
-                            );
-                          })()}
-
-                        <div className="message-header">
-                          <span className="message-author">
-                            {message.fk_utilisateur ===
-                            "00000000-0000-0000-0000-000000000001" ? (
-                              <>
-                                <span>{message.nom}</span>
-                                <span className="bot-icon-spacer"> </span>
-                                <FaRobot className="bot-icon" />
-                              </>
-                            ) : (
-                              message.nom
-                            )}
-                          </span>
-                          <span className="message-time">
-                            {formatMessageDate(message.date_creation)}
-                          </span>
-                        </div>
-
-                        {/* Vérifier si le message contient un fichier */}
-                        {(() => {
-                          const fileData = parseFileContent(message.contenu);
-
-                          if (fileData) {
-                            const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
-                            // Si c'est une image, affichage simple (miniature, pas de bloc fichier)
-                            if (fileData.isImage) {
-                              return (
-                                <div className="message-image-container">
-                                  <img
-                                    src={fullFileUrl}
-                                    alt={fileData.fileName}
-                                    className="message-image"
-                                    onClick={() =>
-                                      handleOpenFileViewer({
-                                        ...fileData,
-                                        fullFileUrl,
-                                      })
-                                    }
-                                  />
-                                </div>
-                              );
-                            }
-                            // Sinon, bloc fichier stylé
-                            return (
-                              <div className="message-file">
-                                <div className="file-info-container">
-                                  <div className="file-details">
-                                    <span className="file-name">
-                                      {fileData.fileName}
-                                    </span>
-                                    <span className="file-size">
-                                      {formatFileSize(fileData.fileSize)}
-                                    </span>
-                                  </div>
-                                  <div className="file-actions">
-                                    <button
-                                      className="file-view-button"
-                                      onClick={() =>
-                                        handleOpenFileViewer({
-                                          ...fileData,
-                                          fullFileUrl,
-                                        })
-                                      }
-                                    >
-                                      Ouvrir
-                                    </button>
-                                    <button
-                                      className="file-download-button"
-                                      onClick={() =>
-                                        handleDownloadFile(
-                                          fileData.fileUrl,
-                                          fileData.fileName
-                                        )
-                                      }
-                                    >
-                                      Télécharger
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            // C'est un message texte normal, utiliser le rendu existant
-                            return (
-                              <div className="message-text">
-                                {(() => {
-                                  // Vérifier si message.contenu est null ou undefined
-                                  if (!message.contenu) {
-                                    return (
-                                      <p className="message-paragraph"></p>
-                                    );
-                                  }
-
-                                  // Prétraiter le contenu pour retirer les @ avant les mentions
-                                  // Recherche les motifs de type @[nom](uuid)
-                                  const mentionRegex =
-                                    /@\[([^\]]+)\]\(([0-9a-fA-F-]+)\)/g;
-
-                                  // Remplacer par [nom](uuid) sans le @ initial
-                                  const processedContent =
-                                    message.contenu.replace(
-                                      mentionRegex,
-                                      (match, name, uuid) => {
-                                        if (isUuid(uuid)) {
-                                          return `[${name}](${uuid})`;
-                                        }
-                                        return match; // Si ce n'est pas un UUID valide, laisser tel quel
-                                      }
-                                    );
-
-                                  return (
-                                    <ReactMarkdown
-                                      components={{
-                                        p: ({ node, ...props }) => (
-                                          <p
-                                            {...props}
-                                            className="message-paragraph"
-                                          />
-                                        ),
-                                        a: ({
-                                          node,
-                                          href,
-                                          children,
-                                          ...props
-                                        }) => {
-                                          const potentialUserId = href;
-
-                                          // Extraire le texte complet du lien plus efficacement
-                                          let fullText = "";
-                                          if (children && children.length) {
-                                            // Parcourir tous les éléments enfants et extraire leur texte
-                                            React.Children.forEach(
-                                              children,
-                                              (child) => {
-                                                if (typeof child === "string") {
-                                                  fullText += child;
-                                                } else if (
-                                                  child &&
-                                                  child.props &&
-                                                  child.props.children
-                                                ) {
-                                                  // Traiter les enfants qui sont des éléments React
-                                                  if (
-                                                    typeof child.props
-                                                      .children === "string"
-                                                  ) {
-                                                    fullText +=
-                                                      child.props.children;
-                                                  } else if (
-                                                    Array.isArray(
-                                                      child.props.children
-                                                    )
-                                                  ) {
-                                                    // Aplatir les tableaux d'enfants
-                                                    fullText +=
-                                                      child.props.children
-                                                        .filter(
-                                                          (c) =>
-                                                            typeof c ===
-                                                            "string"
-                                                        )
-                                                        .join("");
-                                                  }
-                                                }
-                                              }
-                                            );
-                                          }
-
-                                          // Si le href est un UUID, c'est une mention
-                                          if (isUuid(potentialUserId)) {
-                                            const isCurrentUser =
-                                              potentialUserId === currentUserId;
-                                            return (
-                                              <span
-                                                className={`mention-highlight ${
-                                                  isCurrentUser
-                                                    ? "current-user-mention"
-                                                    : ""
-                                                }`}
-                                                data-userid={potentialUserId}
-                                              >
-                                                @{fullText}{" "}
-                                                {/* Utilise le texte complet extrait */}
-                                              </span>
-                                            );
-                                          }
-
-                                          return (
-                                            <a
-                                              href={href}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="message-link"
-                                            >
-                                              {children}
-                                            </a>
-                                          );
-                                        },
-                                        // Version simplifiée du gestionnaire de texte
-                                        text: ({ node, ...props }) => {
-                                          return (
-                                            <>
-                                              {renderTextWithLinks(node.value)}
-                                            </>
-                                          );
-                                        },
-                                      }}
-                                      remarkPlugins={[remarkGfm]}
-                                      rehypePlugins={[rehypeRaw]}
-                                    >
-                                      {processedContent}
-                                    </ReactMarkdown>
-                                  );
-                                })()}
-                              </div>
-                            );
-                          }
-                        })()}
-                        {/* *** End Markdown rendering *** */}
-
-                        {/* Vérifier si le message est un sondage Strawpoll */}
-                        {(() => {
-                          // Cherche un tag [strawpoll:ID] dans le contenu du message
-                          const strawpollMatch =
-                            message.contenu &&
-                            message.contenu.match(
-                              /\[strawpoll:([a-zA-Z0-9]+)\]/
-                            );
-                          if (strawpollMatch) {
-                            const pollId = strawpollMatch[1];
-                            return (
-                              <button
-                                className="strawpoll-results-btn"
-                                style={{
-                                  marginTop: 8,
-                                  background: "#9348b7",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: 6,
-                                  padding: "6px 14px",
-                                  cursor: "pointer",
-                                  fontWeight: 500,
-                                }}
-                                onClick={() =>
-                                  handleOpenStrawpollResults(pollId)
-                                }
-                              >
-                                Voir les résultats
-                              </button>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                        {/* Afficher les réactions avec l'emoji Unicode directement */}
-                        {message.reactions && message.reactions.length > 0 && (
-                          <div className="message-reactions">
-                            {message.reactions.map((reaction, index) => (
-                              <div
-                                key={index}
-                                className={`reaction-badge ${
-                                  reaction.user_reacted ? "user-reacted" : ""
-                                }`} // Add class if user reacted
-                                onClick={() => {
-                                  if (socket && socket.connected) {
-                                    if (reaction.user_reacted) {
-                                      socket.emit("removeReaction", {
-                                        messageId: message.id_message,
-                                        reaction_type: reaction.reaction_type,
-                                        canalId: activeChannel.id,
-                                      });
-                                    } else {
-                                      socket.emit("addReaction", {
-                                        messageId: message.id_message,
-                                        reaction_type: reaction.reaction_type, // emoji unicode
-                                        canalId: activeChannel.id,
-                                      });
-                                    }
-                                  }
-                                }}
-                              >
-                                <span className="reaction-emoji">
-                                  {getEmojiForType(reaction.reaction_type)}
-                                </span>
-                                <span className="reaction-count">
-                                  {reaction.count}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="no-messages">
-                    <p>Aucun message dans ce canal.</p>
-                    <p>Envoyez le premier message !</p>
-                  </div>
-                )}
-                {/* *** Display Typing Indicator *** */}
-                {isMistralTyping && (
-                  <div className="chat-message other-message typing-indicator">
-                    <div className="message-avatar">
-                      <img
-                        src="https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp"
-                        alt="Mistral AI"
-                      />
-                    </div>
-                    <div className="message-content">
-                      <div className="message-header">
-                        <span className="message-author">
-                          Mistral AI
-                          <span className="bot-icon-spacer"> </span>
-                          <FaRobot className="bot-icon" />
-                        </span>
-                        <span className="message-time"></span>
-                      </div>
-                      <div className="message-text">
-                        <p className="message-paragraph">
-                          <i>est en train d'écrire...</i>
-                          <span className="typing-animation"></span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {/* *** End Typing Indicator *** */}
-              </div>
-
-              {/* Nouvelle implémentation de l'autocomplétion des mentions avec des IDs uniques */}
-              <div className="chat-input-area">
-                {showMentionSuggestions && (
-                  <div id="supchat-mentions-dropdown">
-                    <div id="supchat-mentions-header">
-                      <FaAt id="supchat-mentions-header-icon" />
-                      <span>Mentionner un utilisateur</span>
-                    </div>
-                    <div id="supchat-mentions-list">
-                      {mentionSuggestions.length > 0 ? (
-                        mentionSuggestions.map((user, index) => (
-                          <button
-                            key={user.id}
-                            className={`supchat-mention-item ${
-                              index === activeMentionIndex ? "active" : ""
-                            }`}
-                            onClick={() => handleSelectMention(user)}
-                            type="button"
-                          >
-                            <div className="supchat-mention-avatar-wrapper">
-                              {user.avatar ? (
-                                <img
-                                  src={user.avatar}
-                                  alt={user.name}
-                                  className="supchat-mention-avatar"
-                                />
-                              ) : (
-                                <div className="supchat-mention-avatar">
-                                  {user.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              {user.isBot && (
-                                <div className="supchat-mention-bot-badge">
-                                  <FaRobot style={{ fontSize: "8px" }} />
-                                </div>
-                              )}
-                            </div>
-                            <div className="supchat-mention-details">
-                              <div className="supchat-mention-name">
-                                {user.name}
-                              </div>
-                              <div className="supchat-mention-info">
-                                {user.isBot ? (
-                                  <>Assistant IA</>
-                                ) : (
-                                  <>
-                                    <span
-                                      className={`supchat-mention-status ${
-                                        user.status || "offline"
-                                      }`}
-                                    ></span>
-                                    {user.status === "online"
-                                      ? "En ligne"
-                                      : "Hors ligne"}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="supchat-mention-no-results">
-                          Aucun utilisateur ne correspond à votre recherche
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <form
-                  className="chat-input-container"
-                  onSubmit={handleSendMessageWithMistralCheck}
-                >
-                  {/* Afficher l'indicateur de réponse si on répond à un message */}
-                  {replyingTo && (
-                    <div className="replying-to">
-                      <div className="reply-info">
-                        <FaReply className="reply-icon" />
-                        <span>
-                          Réponse à <strong>{replyingTo.nom}</strong>
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="cancel-reply"
-                        onClick={handleCancelReply}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Input de fichier caché */}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    style={{ display: "none" }}
-                    id="file-upload-input"
-                  />
-
-                  <div className="chat-input-wrapper">
-                    <button
-                      type="button"
-                      className="chat-attachment-btn"
-                      onClick={handleOpenFileUpload}
-                    >
-                      <FaPaperclip />
-                    </button>
-                    <input
-                      type="text"
-                      placeholder={`Message dans #${activeChannel.name}`}
-                      value={displayMessage} // <-- Utilise displayMessage
-                      onChange={(e) => handleNewMessageChange(e.target.value)} // <-- Utilise handleNewMessageChange
-                      onKeyDown={handleChatInputKeyDown} // Apply the new handler
-                    />
-                    <button
-                      type="button"
-                      className="chat-toolbox-btn"
-                      title="Outils"
-                      onClick={handleToggleToolbox}
-                      style={{ marginLeft: 4, marginRight: 4 }}
-                    >
-                      <FaWrench />
-                    </button>
-                    <button
-                      type="button"
-                      className="chat-emoji-btn"
-                      onClick={() => setShowEmojiPicker(true)}
-                    >
-                      {" "}
-                      {/* Use setter from hook */}
-                      <FaSmile />
-                    </button>
-                  </div>
-                  <button
-                    type="submit"
-                    className="chat-send-btn"
-                    disabled={!displayMessage.trim()} // <-- Utilise displayMessage
-                  >
-                    <FaPaperPlane />
-                  </button>
-                </form>
-                {/* Boîte à outils (toolbox) */}
-                {showToolbox && (
-                  <div
-                    className="chat-toolbox-menu"
-                    style={{
-                      position: "absolute",
-                      bottom: 60,
-                      right: 30,
-                      zIndex: 2000,
-                      background: "#232323",
-                      borderRadius: 10,
-                      boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                      minWidth: 220,
-                    }}
-                  >
-                    <button
-                      className="chat-toolbox-item"
-                      style={{
-                        width: "100%",
-                        padding: "12px 18px",
-                        background: "none",
-                        border: "none",
-                        color: "white",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        fontSize: "1rem",
-                      }}
-                      onClick={handleOpenStrawpoll}
-                    >
-                      📊 Créer un sondage Strawpoll
-                    </button>
-                  </div>
-                )}
-                {/* Modal Strawpoll (intégration réelle) */}
-                {showStrawpollModal && (
-                  <div
-                    className="modal-overlay"
-                    onClick={handleCloseStrawpollModal}
-                  >
-                    <div
-                      className="modal-content"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <StrawpollModal
-                        onClose={handleCloseStrawpollModal}
-                        onSubmit={handleStrawpollSubmit}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* *** End Typing Indicator *** */}
-            </div>
-          )}
-        </div>
-
-        {/* Details Sidebar - UPDATED with role icons */}
-        <div className="details-sidebar">
-          {/* Members Section - RESTRUCTURED */}
-          <div className="details-section">
-            <div className="section-header" onClick={toggleMembers}>
-              {" "}
-              {/* Use handler from hook */}
-              {showMembers ? (
-                <FaChevronDown className="toggle-icon" />
-              ) : (
-                <FaChevronRight className="toggle-icon" />
-              )}
-              <h3>
-                Membres ({members.online.length + members.offline.length})
-              </h3>{" "}
-              {/* Use members from hook */}
-            </div>
-
-            {showMembers && (
-              <div className="members-container">
-                {/* Online Members Subsection */}
-                <div className="members-subsection">
-                  <div
-                    className="subsection-header"
-                    onClick={toggleOnlineMembers}
-                  >
-                    {showOnlineMembers ? (
-                      <FaChevronDown className="toggle-icon" />
-                    ) : (
-                      <FaChevronRight className="toggle-icon" />
-                    )}
-                    <h4>En ligne ({members.online.length})</h4>
-                  </div>
-
-                  {showOnlineMembers && (
-                    <ul className="members-list">
-                      {members.online.map((member) => (
-                        <li
-                          key={member.id}
-                          className="member-item online"
-                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          onContextMenu={(e) =>
-                            handleMemberContextMenu(e, member)
-                          }
-                          style={{
-                            cursor:
-                              currentUserRole === "owner" &&
-                              member.role !== "owner"
-                                ? "context-menu"
-                                : "pointer",
-                          }}
-                        >
-                          {member.avatar ? (
-                            <img
-                              src={member.avatar}
-                              alt={member.name}
-                              className="member-avatar"
-                            />
-                          ) : (
-                            <FaUserCircle className="member-avatar-placeholder" />
-                          )}
-                          <div className="member-info">
-                            {getRoleIcon(member.role)}
-                            <span className="member-name">{member.name}</span>
-                          </div>
-                          <span className="status-indicator online"></span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* Offline Members Subsection */}
-                <div className="members-subsection">
-                  <div
-                    className="subsection-header"
-                    onClick={toggleOfflineMembers}
-                  >
-                    {showOfflineMembers ? (
-                      <FaChevronDown className="toggle-icon" />
-                    ) : (
-                      <FaChevronRight className="toggle-icon" />
-                    )}
-                    <h4>Hors ligne ({members.offline.length})</h4>
-                  </div>
-
-                  {showOfflineMembers && (
-                    <ul className="members-list">
-                      {members.offline.map((member) => (
-                        <li
-                          key={member.id}
-                          className="member-item offline"
-                          onClick={() => handleOpenProfile(member)} // Ajout navigation profil
-                          onContextMenu={(e) =>
-                            handleMemberContextMenu(e, member)
-                          }
-                          style={{
-                            cursor:
-                              currentUserRole === "owner" &&
-                              member.role !== "owner"
-                                ? "context-menu"
-                                : "pointer",
-                          }}
-                        >
-                          {member.avatar ? (
-                            <img
-                              src={member.avatar}
-                              alt={member.name}
-                              className="member-avatar"
-                            />
-                          ) : (
-                            <FaUserCircle className="member-avatar-placeholder" />
-                          )}
-                          <div className="member-info">
-                            {getRoleIcon(member.role)}
-                            <span className="member-name">{member.name}</span>
-                          </div>
-                          <span className="status-indicator offline"></span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Menu contextuel pour la gestion des rôles des membres */}
-          {memberContextMenu.visible && memberContextMenu.member && (
-            <div
-              className="channel-context-menu"
-              style={{
-                top: memberContextMenu.y,
-                left: memberContextMenu.x,
-                zIndex: 2000,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Owner : peut promouvoir/déclasser. Admin : peut seulement promouvoir un membre */}
-              {((currentUserRole === "owner" &&
-                memberContextMenu.member.role === "member") ||
-                (currentUserRole === "admin" &&
-                  memberContextMenu.member.role === "member")) && (
-                <div
-                  className="context-menu-item"
-                  onClick={() => handleChangeMemberRole("admin")}
-                >
-                  <FaArrowUp className="context-menu-icon" />
-                  Promouvoir en admin
-                </div>
-              )}
-              {currentUserRole === "owner" &&
-                memberContextMenu.member.role === "admin" && (
-                  <div
-                    className="context-menu-item"
-                    onClick={() => handleChangeMemberRole("member")}
-                  >
-                    <FaArrowDown className="context-menu-icon" />
-                    Rétrograder en membre
-                  </div>
-                )}
-            </div>
-          )}
-          {/* Files Section - Affichage réel des fichiers du canal actif, max 5, scrollable, icône download */}
-          {files.length > 0 && (
-            <div className="details-section">
-              <div className="section-header" onClick={toggleFiles}>
-                {showFiles ? (
-                  <FaChevronDown className="toggle-icon" />
-                ) : (
-                  <FaChevronRight className="toggle-icon" />
-                )}
-                <h3>Fichiers ({files.length})</h3>
-              </div>
-              {showFiles && (
-                <ul
-                  className="files-list"
-                  style={{
-                    maxHeight: "220px",
-                    overflowY: files.length > 5 ? "auto" : "visible",
-                  }}
-                >
-                  {files.slice(0, 5).map((file) => (
-                    <li key={file.id} className="file-item">
-                      <div className="file-icon">{getFileIcon(file.type)}</div>
-                      <div className="file-info">
-                        <span className="file-name">{file.name}</span>
-                        <span className="file-meta">
-                          {file.size} •{" "}
-                          {file.uploadedAt &&
-                            formatMessageDate(file.uploadedAt)}
-                        </span>
-                      </div>
-                      <div className="file-actions">
-                        <button
-                          className="file-download-button"
-                          title="Télécharger"
-                          onClick={() =>
-                            handleDownloadFile(file.url, file.name)
-                          }
-                        >
-                          <FaDownload />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-
-          {/* Images Section - Affichage réel des images du canal actif, max 5, scrollable */}
-          {images.length > 0 && (
-            <div className="details-section">
-              <div className="section-header" onClick={toggleImages}>
-                {showImages ? (
-                  <FaChevronDown className="toggle-icon" />
-                ) : (
-                  <FaChevronRight className="toggle-icon" />
-                )}
-                <h3>Images ({images.length})</h3>
-              </div>
-              {showImages && (
-                <div
-                  className="images-grid"
-                  style={{
-                    maxHeight: "220px",
-                    overflowY: images.length > 5 ? "auto" : "visible",
-                  }}
-                >
-                  {images.slice(0, 5).map((image) => (
-                    <div key={image.id} className="image-item">
-                      <img
-                        src={S3_BASE_URL + image.url}
-                        alt={image.name}
-                        className="shared-image"
-                        onClick={() =>
-                          handleOpenFileViewer({
-                            ...image,
-                            fullFileUrl: S3_BASE_URL + image.url,
-                          })
-                        }
-                        style={{ cursor: "pointer" }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Details Sidebar - Replaced with WorkspaceDetailsSidebar */}
+        <WorkspaceDetailsSidebar
+          showMembers={showMembers}
+          showOnlineMembers={showOnlineMembers}
+          showOfflineMembers={showOfflineMembers}
+          showFiles={showFiles}
+          showImages={showImages}
+          members={members}
+          files={files}
+          images={images}
+          currentUserRole={currentUserRole}
+          handleOpenProfile={handleOpenProfile}
+          handleMemberContextMenu={handleMemberContextMenu}
+          memberContextMenu={memberContextMenu}
+          handleChangeMemberRole={handleChangeMemberRole}
+          toggleMembers={toggleMembers}
+          toggleOnlineMembers={toggleOnlineMembers}
+          toggleOfflineMembers={toggleOfflineMembers}
+          toggleFiles={toggleFiles}
+          toggleImages={toggleImages}
+          getRoleIcon={getRoleIcon}
+          formatMessageDate={formatMessageDate}
+          handleDownloadFile={handleDownloadFile}
+          S3_BASE_URL={S3_BASE_URL}
+          handleOpenFileViewer={handleOpenFileViewer}
+        />
 
         {/* Modal de création de canal - Structure améliorée */}
-        {showCreateChannelModal && ( // Use state from hook
-          <div className="modal-overlay" onClick={handleCloseModal}>
-            {" "}
-            {/* Use handler from hook */}
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Nouveau canal</h2>
-
-              {channelError && ( // Use state from hook
-                <p className="error-message">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ marginRight: "8px" }}
-                  >
-                    <path
-                      d="M8 15A7 7 0 108 1a7 7 0 000 14z"
-                      stroke="#ff6b6b"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M8 5v3"
-                      stroke="#ff6b6b"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="8" cy="11" r="0.5" fill="#ff6b6b" />
-                  </svg>
-                  {channelError}
-                </p>
-              )}
-
-              <form onSubmit={handleSubmitChannel}>
-                {" "}
-                {/* Use handler from hook */}
-                <div className="form-group">
-                  <label htmlFor="name">Nom du canal</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={newChannel.name} // Use state from hook
-                    onChange={handleChannelInputChange} // Use handler from hook
-                    placeholder="ex: general, marketing, dev..."
-                    autoFocus
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Visibilité du canal</label>
-                  <div className="channel-visibility-selector">
-                    <button
-                      type="button"
-                      className={`visibility-option ${
-                        !newChannel.isPrivate ? "selected" : ""
-                      }`}
-                      onClick={() =>
-                        setNewChannel((prev) => ({ ...prev, isPrivate: false }))
-                      }
-                    >
-                      <FaGlobe className="visibility-icon" />
-                      <div className="visibility-info">
-                        <span className="visibility-title">Public</span>
-                        <span className="visibility-desc">
-                          Accessible à tous les membres
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`visibility-option ${
-                        newChannel.isPrivate ? "selected" : ""
-                      }`}
-                      onClick={() =>
-                        setNewChannel((prev) => ({ ...prev, isPrivate: true }))
-                      }
-                    >
-                      <FaLock className="visibility-icon" />
-                      <div className="visibility-info">
-                        <span className="visibility-title">Privé</span>
-                        <span className="visibility-desc">
-                          Accessible sur invitation
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="cancel-btn"
-                  >
-                    {" "}
-                    {/* Use handler from hook */}
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="create-btn"
-                    disabled={isCreatingChannel} // Use state from hook
-                  >
-                    {isCreatingChannel ? "Création..." : "Créer le canal"}{" "}
-                    {/* Use state from hook */}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+        {showCreateChannelModal && (
+          <CreateChannelModal
+            channelError={channelError}
+            newChannel={newChannel}
+            isCreatingChannel={isCreatingChannel}
+            handleCloseModal={handleCloseModal}
+            handleSubmitChannel={handleSubmitChannel}
+            handleChannelInputChange={handleChannelInputChange}
+            setNewChannel={setNewChannel}
+          />
         )}
 
         {/* Menu contextuel pour les canaux */}
@@ -1841,131 +656,15 @@ function WorkspaceDetails() {
         )}
 
         {/* Modal d'édition de canal */}
-        {showEditChannelModal && ( // Use state from hook
-          <div
-            className="modal-overlay"
-            onClick={() => setShowEditChannelModal(false)}
-          >
-            {" "}
-            {/* Use setter from hook */}
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Modifier le canal</h2>
-
-              {updateChannelError && ( // Use state from hook
-                <p className="error-message">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ marginRight: "8px" }}
-                  >
-                    <path
-                      d="M8 15A7 7 0 108 1a7 7 0 000 14z"
-                      stroke="#ff6b6b"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M8 5v3"
-                      stroke="#ff6b6b"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="8" cy="11" r="0.5" fill="#ff6b6b" />
-                  </svg>
-                  {updateChannelError}
-                </p>
-              )}
-
-              <form onSubmit={handleSubmitEditChannel}>
-                {" "}
-                {/* Use handler from hook */}
-                <div className="form-group">
-                  <label htmlFor="edit-name">Nom du canal</label>
-                  <input
-                    type="text"
-                    id="edit-name"
-                    name="name"
-                    value={editingChannel.name} // Use state from hook
-                    onChange={(e) =>
-                      setEditingChannel({
-                        ...editingChannel,
-                        name: e.target.value,
-                      })
-                    } // Use setter from hook
-                    placeholder="ex: general, marketing, dev..."
-                    autoFocus
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Visibilité du canal</label>
-                  <div className="channel-visibility-selector">
-                    <button
-                      type="button"
-                      className={`visibility-option ${
-                        !editingChannel.isPrivate ? "selected" : ""
-                      }`} // Use state from hook
-                      onClick={() =>
-                        setEditingChannel((prev) => ({
-                          ...prev,
-                          isPrivate: false,
-                        }))
-                      } // Use setter from hook
-                    >
-                      <FaGlobe className="visibility-icon" />
-                      <div className="visibility-info">
-                        <span className="visibility-title">Public</span>
-                        <span className="visibility-desc">
-                          Accessible à tous les membres
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`visibility-option ${
-                        editingChannel.isPrivate ? "selected" : ""
-                      }`} // Use state from hook
-                      onClick={() =>
-                        setEditingChannel((prev) => ({
-                          ...prev,
-                          isPrivate: true,
-                        }))
-                      } // Use setter from hook
-                    >
-                      <FaLock className="visibility-icon" />
-                      <div className="visibility-info">
-                        <span className="visibility-title">Privé</span>
-                        <span className="visibility-desc">
-                          Accessible sur invitation
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditChannelModal(false)}
-                    className="cancel-btn"
-                  >
-                    {" "}
-                    {/* Use setter from hook */}
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="create-btn"
-                    disabled={isUpdatingChannel} // Use state from hook
-                  >
-                    {isUpdatingChannel ? "Mise à jour..." : "Mettre à jour"}{" "}
-                    {/* Use state from hook */}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+        {showEditChannelModal && (
+          <EditChannelModal
+            updateChannelError={updateChannelError}
+            editingChannel={editingChannel}
+            isUpdatingChannel={isUpdatingChannel}
+            setShowEditChannelModal={setShowEditChannelModal}
+            handleSubmitEditChannel={handleSubmitEditChannel}
+            setEditingChannel={setEditingChannel}
+          />
         )}
 
         {/* Menu contextuel pour les messages */}
@@ -2007,169 +706,37 @@ function WorkspaceDetails() {
         )}
 
         {/* Modal pour la sélection d'emoji */}
-        {showEmojiPicker && ( // Use state from hook
-          <div
-            className="modal-overlay"
-            onClick={() => setShowEmojiPicker(false)}
-          >
-            {" "}
-            {/* Use setter from hook */}
-            <div
-              className="emoji-picker-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3>Choisissez une réaction</h3>
-              <div className="emoji-grid">
-                {commonEmojis.map(
-                  (
-                    emoji // Use state from hook
-                  ) => (
-                    <button
-                      key={emoji.name}
-                      className="emoji-button"
-                      onClick={() => handleAddReaction(emoji.name)} // Use handler from hook
-                      title={emoji.name}
-                    >
-                      {emoji.label}
-                    </button>
-                  )
-                )}
-              </div>
-              <div className="emoji-picker-actions">
-                <button
-                  className="cancel-btn"
-                  onClick={() => setShowEmojiPicker(false)} // Use setter from hook
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          </div>
+        {showEmojiPicker && (
+          <EmojiPickerModal
+            commonEmojis={commonEmojis}
+            handleAddReaction={handleAddReaction}
+            setShowEmojiPicker={setShowEmojiPicker}
+          />
         )}
 
         {/* Modal pour afficher un fichier en plein écran */}
         {fullscreenFile && (
-          <>
-            <div
-              className="fullscreen-modal-overlay"
-              onClick={handleCloseFileViewer}
-            ></div>
-            <div
-              className="fullscreen-modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="fullscreen-modal-header">
-                <h3 className="fullscreen-modal-title">
-                  {fullscreenFile.fileName}
-                </h3>
-                <button
-                  className="fullscreen-modal-close"
-                  onClick={handleCloseFileViewer}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="fullscreen-modal-body">
-                {fullscreenFile.isImage ? (
-                  <img
-                    src={fullscreenFile.fullFileUrl}
-                    alt={fullscreenFile.fileName}
-                    className="fullscreen-image"
-                  />
-                ) : (
-                  <div className="fullscreen-file">
-                    <iframe
-                      src={fullscreenFile.fullFileUrl}
-                      title={fullscreenFile.fileName}
-                      className="file-preview-frame"
-                    ></iframe>
-                  </div>
-                )}
-              </div>
-              <div className="fullscreen-modal-footer">
-                <button
-                  className="fullscreen-download-btn"
-                  onClick={() =>
-                    handleDownloadFile(
-                      fullscreenFile.fileUrl,
-                      fullscreenFile.fileName
-                    )
-                  }
-                >
-                  Télécharger
-                </button>
-              </div>
-            </div>
-          </>
+          <FileViewerModal
+            fullscreenFile={fullscreenFile}
+            handleCloseFileViewer={handleCloseFileViewer}
+            handleDownloadFile={handleDownloadFile}
+          />
         )}
 
         {/* Modal d'affichage des résultats Strawpoll */}
-        {showStrawpollResults && (
-          <div
-            className="modal-overlay"
-            onClick={handleCloseStrawpollResults}
-          >
-            <div
-              className="modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2>Résultats du sondage</h2>
-              {loadingResults ? (
-                <div>Chargement...</div>
-              ) : strawpollResults && strawpollResults.error ? (
-                <div style={{ color: "red" }}>{strawpollResults.error}</div>
-              ) : strawpollResults ? (
-                <div>
-                  <div
-                    style={{ fontWeight: 600, marginBottom: 12 }}
-                  >
-                    {strawpollResults.title}
-                  </div>
-                  <ul style={{ padding: 0, listStyle: "none" }}>
-                    {strawpollResults.poll_options &&
-                      strawpollResults.poll_options.map(
-                        (opt, idx) => (
-                          <li
-                            key={idx}
-                            style={{ marginBottom: 6 }}
-                          >
-                            <span style={{ fontWeight: 500 }}>
-                              {opt.value}
-                            </span>{" "}
-                            : {opt.vote_count || 0} vote
-                            {opt.vote_count > 1 ? "s" : ""}
-                          </li>
-                        )
-                      )}
-                  </ul>
-                  <div
-                    style={{
-                      marginTop: 18,
-                      fontSize: "0.95em",
-                      color: "#b05fdf",
-                    }}
-                  >
-                    <a
-                      href={strawpollResults.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Voir sur Strawpoll
-                    </a>
-                  </div>
-                </div>
-              ) : null}
-              <div className="modal-actions">
-                <button
-                  className="cancel-btn"
-                  onClick={handleCloseStrawpollResults}
-                >
-                  Fermer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <StrawpollResultsModal
+          showStrawpollResults={showStrawpollResults}
+          handleCloseStrawpollResults={handleCloseStrawpollResults}
+          loadingResults={loadingResults}
+          strawpollResults={strawpollResults}
+        />
+
+        {/* Modal Strawpoll */}
+        <StrawpollModalWrapper
+          show={showStrawpollModal}
+          onClose={handleCloseStrawpollModal}
+          onSubmit={handleStrawpollSubmit}
+        />
       </div>
     </div>
   );
