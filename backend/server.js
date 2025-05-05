@@ -13,6 +13,7 @@ import MessageModel from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
+import privateMessageReactionRoutes from "./routes/privateMessageReactionRoutes.js"; // Import des routes pour les réactions aux messages privés
 import dotenv from "dotenv";
 import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachment routes
@@ -91,6 +92,7 @@ app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
 app.use('/api/strawpoll', strawpollRoutes); // Ajout des routes pour strawpoll
+app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Configurer avant les routes API pour éviter les conflits d'authentification
@@ -140,6 +142,7 @@ try {
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
+
 
 
   console.log(`Serveur démarré sur http://192.168.1.132:${PORT}`);

@@ -124,7 +124,11 @@ function App() {
               <Profile />
             </ProtectedRoute>
           } />
-          <Route path="/direct-messages" element={<DirectMessages />} />
+          <Route path="/direct-messages" element={
+            <ProtectedRoute>
+              <DirectMessages />
+            </ProtectedRoute>
+          } />
           
           {/* Route par défaut */}
           <Route path="/" element={

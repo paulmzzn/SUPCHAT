@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import MessageModel from "../models/Message.js";
 import Reaction from "../models/Reaction.js";
 import MessagePrive from "../models/MessagePrive.js"; // Ajout de l'importation de MessagePrive
+import ReactionPrive from "../models/ReactionPrive.js"; // Ajout de l'importation de ReactionPrive
 import pool from "../config/dbConnection.js"; // Add this import
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
@@ -759,6 +760,124 @@ const socketManager = (io) => {
     // Ajouter des handlers pour différents événements d'erreur de socket
     socket.on("error", (err) => {
       console.error("Socket.IO: Erreur socket individuelle:", err);
+    });
+
+    // Nouvel événement pour gérer les réactions aux messages privés
+    socket.on("addPrivateMessageReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Réaction à message privé reçue", data);
+        const { id: messageId, reaction: reaction_type } = data;
+
+        if (!messageId || !reaction_type) {
+          console.error("Socket.IO: Données de réaction incomplètes");
+          socket.emit("error", { message: "Données de réaction incomplètes" });
+          return;
+        }
+
+        // Récupérer le message privé
+        const message = await MessagePrive.getById(messageId);
+        if (!message) {
+          socket.emit("error", { message: "Message privé non trouvé" });
+          return;
+        }
+
+        // Vérifier que l'utilisateur est soit l'expéditeur soit le destinataire du message
+        if (message.fk_expediteur !== socket.user.id && message.fk_destinataire !== socket.user.id) {
+          socket.emit("error", { message: "Non autorisé à réagir à ce message" });
+          return;
+        }
+
+        // Ajouter la réaction en base de données
+        await ReactionPrive.create({
+          fk_message_prive: messageId,
+          fk_utilisateur: socket.user.id,
+          reaction_type,
+        });
+
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await ReactionPrive.getByMessage(
+          messageId,
+          socket.user.id
+        );
+
+        // Diffuser aux deux utilisateurs concernés par le message privé
+        io.to(`dm:${message.fk_expediteur}`)
+          .to(`dm:${message.fk_destinataire}`)
+          .emit("privateMessageReaction", {
+            messageId,
+            reactions: updatedReactions,
+          });
+      } catch (error) {
+        // Gérer l'erreur si la réaction existe déjà (contrainte unique)
+        if (error.code === "23505") {
+          // Code d'erreur PostgreSQL pour violation d'unicité
+          console.log(
+            `L'utilisateur ${socket.user.id} a déjà réagi au message privé ${data.id}`
+          );
+          // Optionnel: renvoyer les réactions actuelles pour synchroniser le client
+          const message = await MessagePrive.getById(data.id);
+          if (message) {
+            const currentReactions = await ReactionPrive.getByMessage(
+              data.id,
+              socket.user.id
+            );
+            socket.emit("privateMessageReaction", {
+              messageId: data.id,
+              reactions: currentReactions,
+            });
+          }
+        } else {
+          console.error("Socket.IO: Erreur de traitement de réaction au message privé", error);
+          socket.emit("error", {
+            message: "Erreur lors du traitement de la réaction",
+          });
+        }
+      }
+    });
+
+    // Nouvel événement pour gérer la suppression des réactions aux messages privés
+    socket.on("removePrivateMessageReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Suppression de réaction de message privé", data);
+        const { id: messageId, reaction: reaction_type } = data;
+
+        if (!messageId || !reaction_type) {
+          console.error(
+            "Socket.IO: Données de suppression de réaction incomplètes"
+          );
+          socket.emit("error", { message: "Données incomplètes" });
+          return;
+        }
+
+        // Récupérer le message privé
+        const message = await MessagePrive.getById(messageId);
+        if (!message) {
+          socket.emit("error", { message: "Message privé non trouvé" });
+          return;
+        }
+
+        // Supprimer la réaction en base de données
+        await ReactionPrive.delete(messageId, socket.user.id, reaction_type);
+
+        // Récupérer toutes les réactions mises à jour pour ce message
+        const updatedReactions = await ReactionPrive.getByMessage(
+          messageId,
+          socket.user.id
+        );
+
+        // Diffuser aux deux utilisateurs concernés par le message privé
+        io.to(`dm:${message.fk_expediteur}`)
+          .to(`dm:${message.fk_destinataire}`)
+          .emit("privateMessageReaction", {
+            messageId,
+            reactions: updatedReactions,
+          });
+      } catch (error) {
+        console.error("Socket.IO: Erreur de suppression de réaction de message privé", error);
+        socket.emit("error", {
+          message: "Erreur lors de la suppression de la réaction",
+        });
+      }
     });
 
     socket.on("disconnect", (reason) => {
