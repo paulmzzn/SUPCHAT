@@ -88,7 +88,7 @@ router.get('/auth/google/callback',
       { expiresIn: "7d" } // Augmenté à 7 jours
     );
 
-    // Redirection directe vers le dashboard via AuthCallback
+    // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
 
       `http://192.168.1.132:3001/auth/callback?token=${token}&email=${user.email}`
