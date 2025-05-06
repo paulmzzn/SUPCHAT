@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import { setupSocketDebugger } from "../utils/socketDebug";
 
 const SocketContext = createContext(null);
 
@@ -12,8 +13,11 @@ export function SocketProvider({ children }) {
   const [globalNotifications, setGlobalNotifications] = useState({
     private: 0,
     workspace: 0,
-    // Ajoute d'autres types si besoin
   });
+  
+  // Ajouter un state pour les statuts utilisateur
+  const [userStatuses, setUserStatuses] = useState({});
+  
   const socketRef = useRef(null);
   const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.132:3000';
 
@@ -120,12 +124,129 @@ export function SocketProvider({ children }) {
     };
   }, [socket]);
 
+  // Connexion WebSocket AMÉLIORÉE - écoute direct et synchrone des statuts
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Handler direct pour les changements de statut WebSocket
+    const handleStatusChange = (data) => {
+      const { userId, status } = data;
+      
+      if (!userId) {
+        console.error("[WEBSOCKET] Réception d'un changement de statut sans userId:", data);
+        return;
+      }
+      
+      console.log(`[WEBSOCKET] Changement de statut reçu: ${userId} -> ${status}`);
+      
+      // Mise à jour synchrone des statuts (mise à jour en DIRECT)
+      setUserStatuses(prevStatuses => {
+        const newStatuses = { ...prevStatuses, [userId]: status };
+        
+        // Déboguer les détails des statuts après mise à jour
+        const userIds = Object.keys(newStatuses);
+        console.log(`[WEBSOCKET] ${userIds.length} statuts utilisateur dans le tableau:`, 
+          userIds.map(id => `${id}: ${newStatuses[id]}`).join(', '));
+        
+        return newStatuses;
+      });
+    };
+    
+    // Écouter UNIQUEMENT sur le socket
+    socket.on('userStatusChanged', handleStatusChange);
+    
+    // Demander l'état des statuts au moment du chargement
+    console.log("[WEBSOCKET] Demande de l'état initial des statuts");
+    socket.emit('getUserStatuses');
+    
+    // Configuration du débogage
+    if (process.env.NODE_ENV === 'development') {
+      setupSocketDebugger(socket);
+    }
+    
+    return () => {
+      socket.off('userStatusChanged', handleStatusChange);
+    };
+  }, [socket]);
+
+  // Ajouter un gestionnaire pour recevoir les statuts initiaux
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleInitialStatuses = (statusData) => {
+      console.log("[WEBSOCKET] Réception des statuts initiaux:", statusData);
+      if (statusData && typeof statusData === 'object') {
+        setUserStatuses(currentStatuses => ({
+          ...currentStatuses,
+          ...statusData
+        }));
+      }
+    };
+    
+    socket.on('initialUserStatuses', handleInitialStatuses);
+    
+    return () => {
+      socket.off('initialUserStatuses', handleInitialStatuses);
+    };
+  }, [socket]);
+
+  // Fonction pour envoyer un changement de statut - simplifiée et directe
+  const setUserStatus = (status) => {
+    if (!socket || !socket.connected) {
+      console.error("[Socket] Impossible de définir le statut: Socket non connecté");
+      return false;
+    }
+    
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error("[Socket] Impossible de définir le statut: ID utilisateur non trouvé");
+      return false;
+    }
+    
+    console.log(`[Socket] Envoi du changement de statut au serveur: ${userId} -> ${status}`);
+    
+    // Mise à jour optimiste locale AVANT envoi au serveur
+    setUserStatuses(prev => ({ ...prev, [userId]: status }));
+    
+    // Émission au serveur - communication WebSocket pure
+    socket.emit('setUserStatus', { status, userId });
+    return true;
+  };
+
+  // Notifier le backend des workspaces rejoints au chargement
+  useEffect(() => {
+    if (!socket || !socket.connected) return;
+    
+    const loadWorkspaces = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/workspaces/user`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const workspaces = await response.json();
+          const workspaceIds = workspaces.map(w => w.id_workspace);
+          
+          // Informer le serveur des workspaces rejoints
+          socket.emit('userJoinedWorkspaces', { workspaces: workspaceIds });
+        }
+      } catch (error) {
+        console.error("[Socket] Erreur lors du chargement des workspaces:", error);
+      }
+    };
+    
+    loadWorkspaces();
+  }, [socket, API_URL]);
+
   return (
     <SocketContext.Provider value={{ 
       socket, 
       globalNotifications, 
       setGlobalNotifications,
-      refreshUnreadDM // Exposer la fonction pour l'utiliser dans d'autres composants
+      refreshUnreadDM,
+      userStatuses, // Statuts en direct
+      setUserStatus  // Fonction pour changer le statut
     }}>
       {children}
     </SocketContext.Provider>

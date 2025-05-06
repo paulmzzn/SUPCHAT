@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import io from "socket.io-client";
 import { API_URL } from "../config/config";
+import { useSocket } from "../context/SocketContext";
 import {
   FaThumbsUp,
   FaHeart,
@@ -81,6 +82,9 @@ export const useWorkspaceDetails = (workspaceId) => {
   // Files and Images (sidebar) : extraire les fichiers à partir des messages du canal actif
   const [files, setFiles] = useState([]);
   const [images, setImages] = useState([]);
+
+  // Utiliser le contexte Socket pour accéder aux statuts utilisateur
+  const { userStatuses } = useSocket();
 
   // Met à jour la liste des fichiers à chaque changement de messages ou de canal actif
   useEffect(() => {
@@ -269,27 +273,49 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
 
       const data = await response.json();
-      console.log("Workspace members:", data);
+      console.log("[HOOK] Members data from API:", data);
 
+      // CORRECTION: Modification de la logique de filtrage pour inclure les utilisateurs en ligne par défaut
       const onlineMembers = data
-        .filter((member) => member.status === 1)
+        .filter((member) => {
+          // Vérifier le statut WebSocket en temps réel
+          const wsStatus = userStatuses[member.id_utilisateur];
+          console.log(`[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`);
+          
+          // Si un statut WebSocket existe, l'utiliser
+          if (wsStatus !== undefined) {
+            return wsStatus === 'online';
+          }
+          // Sinon utiliser le statut par défaut de la base de données (1 = online)
+          return member.status === 1;
+        })
         .map((member) => ({
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_de_profil || null,
-          status: "online",
+          status: userStatuses[member.id_utilisateur] || 'online',
           role: member.role.toLowerCase(),
         }));
 
       const offlineMembers = data
-        .filter((member) => member.status !== 1)
+        .filter((member) => {
+          const wsStatus = userStatuses[member.id_utilisateur];
+          // Logique inversée par rapport aux membres en ligne
+          if (wsStatus !== undefined) {
+            return wsStatus !== 'online';
+          }
+          return member.status !== 1;
+        })
         .map((member) => ({
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_de_profil || null,
-          status: "offline",
+          status: userStatuses[member.id_utilisateur] || 'offline',
           role: member.role.toLowerCase(),
         }));
+
+      console.log("[HOOK] Online members count:", onlineMembers.length);
+      console.log("[HOOK] Offline members count:", offlineMembers.length);
 
       setMembers({
         online: onlineMembers,
@@ -302,7 +328,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     } finally {
       setLoadingMembers(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, userStatuses]);
 
   // Fetch workspace details effect
   useEffect(() => {
@@ -615,13 +641,15 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   useEffect(() => {
     if (socket && workspaceId) {
-      socket.emit("joinWorkspace", { workspaceId });
+      socket.emit("joinWorkspace", { workspaceId, userId: currentUserId });
       console.log(
         "[WS DEBUG] Demande de joinWorkspace envoyée pour",
-        workspaceId
+        workspaceId,
+        "avec userId:",
+        currentUserId
       );
     }
-  }, [socket, workspaceId]);
+  }, [socket, workspaceId, currentUserId]);
 
   // Socket: join canal à chaque changement de canal actif
   useEffect(() => {
@@ -633,6 +661,14 @@ export const useWorkspaceDetails = (workspaceId) => {
       workspaceId,
     });
   }, [socket, activeChannel, workspaceId]);
+
+  // Écouter les changements de statut utilisateur et mettre à jour les membres en temps réel
+  useEffect(() => {
+    console.log("[HOOK] userStatuses changed, refetching members");
+    if (workspaceId) {
+      fetchWorkspaceMembers();
+    }
+  }, [userStatuses, fetchWorkspaceMembers, workspaceId]);
 
   // Scroll to bottom effect
   useEffect(() => {
@@ -1332,6 +1368,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleMistralMention, // Exposer cette fonction
     currentUserRole, // Expose le rôle courant
     setReplyingTo, // Ensure setReplyingTo is returned
+    userStatuses, // Expose userStatuses
   };
 };
 
