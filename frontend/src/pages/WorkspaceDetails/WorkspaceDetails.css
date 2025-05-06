@@ -1346,26 +1346,30 @@
   gap: 10px;
 }
 
+/* Amélioration des boutons d'interaction pour le chat */
 .chat-input-wrapper {
   flex: 1;
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  border-radius: 24px;
   padding: 0 8px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  overflow: hidden;
 }
 
 .chat-input-wrapper:focus-within {
   background: rgba(255, 255, 255, 0.12);
   box-shadow: 0 0 0 2px rgba(147, 72, 183, 0.3);
+  border-color: rgba(147, 72, 183, 0.5);
 }
 
 .chat-input-wrapper input {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 12px;
+  padding: 12px 16px;
   color: white;
   font-size: 0.95rem;
 }
@@ -1379,38 +1383,82 @@
 }
 
 .chat-attachment-btn,
-.chat-emoji-btn {
+.chat-emoji-btn,
+.chat-toolbox-btn {
   background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 8px;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.chat-attachment-btn:hover,
-.chat-emoji-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.chat-send-btn {
-  background: linear-gradient(to right, #9348b7, #b05fdf);
   border: none;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.chat-attachment-btn:hover,
+.chat-emoji-btn:hover,
+.chat-toolbox-btn:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.chat-toolbox-btn.active {
+  color: #9348b7;
+  background-color: rgba(147, 72, 183, 0.15);
+}
+
+.chat-toolbox-btn .toolbox-tooltip {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(40, 40, 45, 0.95);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.chat-toolbox-btn:hover .toolbox-tooltip {
+  opacity: 1;
+}
+
+/* Nouveau style pour le bouton d'envoi */
+.chat-send-btn {
+  background: linear-gradient(to right, #9348b7, #b05fdf);
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  transition: all 0.3s ease;
+  position: relative;
+  margin-left: 10px;
+  box-shadow: 0 3px 10px rgba(147, 72, 183, 0.3);
+  font-size: 1.1rem;
+  overflow: hidden;
 }
 
 .chat-send-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 10px rgba(147, 72, 183, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 5px 15px rgba(147, 72, 183, 0.4);
+}
+
+.chat-send-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .chat-send-btn:disabled {
@@ -1418,6 +1466,123 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+.send-btn-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.chat-send-btn:not(:disabled):hover .send-btn-pulse {
+  animation: pulse-animation 1.5s ease-out infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { opacity: 0.3; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* Menu de la boîte à outils amélioré */
+.chat-toolbox-menu {
+  position: absolute;
+  bottom: 70px;
+  right: 20px;
+  z-index: 2000;
+  background: linear-gradient(145deg, rgba(38, 38, 45, 0.95), rgba(28, 28, 35, 0.98));
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  min-width: 240px;
+  padding: 8px;
+  animation: toolbox-slide-in 0.2s ease-out;
+  transform-origin: bottom right;
+  overflow: hidden;
+}
+
+@keyframes toolbox-slide-in {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.chat-toolbox-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  border-radius: 8px;
+}
+
+.chat-toolbox-item:hover {
+  background: rgba(147, 72, 183, 0.15);
+}
+
+.toolbox-item-icon {
+  margin-right: 12px;
+  color: #9348b7;
+  font-size: 1rem;
+}
+
+.toolbox-item-text {
+  flex-grow: 1;
+}
+
+/* Support du thème clair */
+.theme-light .chat-input-wrapper {
+  background: #e0e0e0;
+  border-color: transparent;
+}
+
+.theme-light .chat-input-wrapper:focus-within {
+  background: #f5f5f7;
+  border-color: #9348b7;
+}
+
+.theme-light .chat-input-wrapper input {
+  color: #23272f;
+}
+
+.theme-light .chat-attachment-btn,
+.theme-light .chat-emoji-btn,
+.theme-light .chat-toolbox-btn {
+  color: #666;
+}
+
+.theme-light .chat-attachment-btn:hover,
+.theme-light .chat-emoji-btn:hover,
+.theme-light .chat-toolbox-btn:hover {
+  color: #333;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .chat-toolbox-btn.active {
+  color: #9348b7;
+  background-color: rgba(147, 72, 183, 0.1);
+}
+
+.theme-light .chat-toolbox-menu {
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .chat-toolbox-item {
+  color: #333;
+}
+
+.theme-light .chat-toolbox-item:hover {
+  background: rgba(147, 72, 183, 0.08);
 }
 
 /* Style du bouton d'appel vidéo dans l'entête du chat */
@@ -2545,4 +2710,879 @@ body
 }
 .theme-light .fullscreen-download-btn:hover {
   background: linear-gradient(to right, #b05fdf, #9348b7);
+}
+
+/* Styles pour les boutons de sondage dans les messages */
+.message-poll-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.poll-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.poll-button svg {
+  font-size: 1.2rem;
+}
+
+.poll-results-button {
+  background: linear-gradient(135deg, #9348b7, #b05fdf);
+}
+
+.poll-results-button:hover {
+  background: linear-gradient(135deg, #a54dd0, #c471fd);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.3);
+}
+
+.poll-vote-button {
+  background: linear-gradient(135deg, #4e54c8, #8f94fb);
+}
+
+.poll-vote-button:hover {
+  background: linear-gradient(135deg, #5d62e0, #9da3ff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(78, 84, 200, 0.3);
+}
+
+/* Styles pour la webview modale */
+.webview-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+.webview-modal {
+  background: #1a1a1f;
+  width: 90%;
+  max-width: 900px;
+  height: 90vh;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.webview-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.webview-modal-header h2 {
+  font-size: 1.3rem;
+  color: white;
+  margin: 0;
+  font-weight: 500;
+}
+
+.webview-close-button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 1.2rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.webview-close-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.webview-modal-content {
+  flex: 1;
+  position: relative;
+  background: white;
+}
+
+.strawpoll-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  transition: opacity 0.3s ease;
+}
+
+.webview-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 1;
+}
+
+.loading-spinner {
+  font-size: 2rem;
+  color: #9348b7;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+  .webview-modal {
+    width: 95%;
+    height: 80vh;
+  }
+}
+
+/* Styles pour la webview modale - Ajout de styles pour les erreurs */
+.webview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px;
+  text-align: center;
+  color: #333;
+  gap: 20px;
+}
+
+.webview-error p {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #666;
+}
+
+.open-external-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #9348b7, #b05fdf);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(147, 72, 183, 0.3);
+}
+
+.open-external-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(147, 72, 183, 0.4);
+}
+
+/* Styles pour la webview externe - remplacement de l'iframe par un bouton */
+.webview-external-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px;
+  text-align: center;
+  background: #f5f5f7;
+}
+
+.strawpoll-redirect-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 500px;
+  padding: 30px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  gap: 20px;
+}
+
+.strawpoll-icon {
+  font-size: 4rem;
+  color: #9348b7;
+  margin-bottom: 10px;
+}
+
+.strawpoll-redirect-message h3 {
+  font-size: 1.6rem;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.strawpoll-redirect-message p {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.open-external-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #9348b7, #b05fdf);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(147, 72, 183, 0.3);
+  margin: 15px 0;
+}
+
+.open-external-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(147, 72, 183, 0.4);
+}
+
+.open-external-button:active {
+  transform: translateY(-1px);
+}
+
+.strawpoll-note {
+  font-size: 0.9rem !important;
+  color: #888 !important;
+  font-style: italic;
+}
+
+/* Adaptation du thème sombre */
+.theme-dark .webview-external-content {
+  background: #1a1a1f;
+}
+
+.theme-dark .strawpoll-redirect-message {
+  background: #2a2a30;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .strawpoll-redirect-message h3 {
+  color: #eee;
+}
+
+.theme-dark .strawpoll-redirect-message p {
+  color: #ccc;
+}
+
+.theme-dark .strawpoll-note {
+  color: #aaa !important;
+}
+
+/* Styles modernes pour le modal de résultats de sondage */
+.strawpoll-results-modal {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 30, 35, 0.97),
+    rgba(25, 25, 30, 0.99)
+  );
+  border-radius: 16px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 20px rgba(147, 72, 183, 0.2);
+  animation: modalScale 0.3s ease;
+  position: relative;
+}
+
+@keyframes modalScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.strawpoll-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.strawpoll-results-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: white;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: rotate(90deg);
+}
+
+.strawpoll-tabs {
+  display: flex;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.strawpoll-tab {
+  padding: 14px 20px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.strawpoll-tab svg {
+  font-size: 1rem;
+}
+
+.strawpoll-tab:hover {
+  color: white;
+}
+
+.strawpoll-tab.active {
+  color: #b05fdf;
+}
+
+.strawpoll-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, #9348b7, #b05fdf);
+  border-radius: 3px 3px 0 0;
+}
+
+.strawpoll-external-link {
+  margin-left: auto;
+  padding: 6px 12px;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border-radius: 6px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.strawpoll-external-link:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.strawpoll-results-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.strawpoll-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.loading-spinner {
+  font-size: 2.5rem;
+  animation: spin 1.5s linear infinite;
+  color: #9348b7;
+}
+
+.strawpoll-error {
+  background: rgba(255, 76, 76, 0.1);
+  border-left: 3px solid #ff6b6b;
+  padding: 16px;
+  border-radius: 8px;
+  color: #ff6b6b;
+}
+
+.error-details {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.strawpoll-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.poll-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poll-option-text {
+  font-weight: 500;
+  font-size: 1rem;
+  color: white;
+  padding: 0 4px;
+}
+
+.poll-result-bar-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  height: 24px;
+  overflow: hidden;
+  position: relative;
+}
+
+.poll-result-bar {
+  height: 100%;
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  border-radius: 10px;
+}
+
+.poll-result-percent {
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.poll-votes-count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  text-align: right;
+  padding: 0 4px;
+}
+
+.poll-total-votes {
+  margin-top: 24px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  text-align: center;
+  color: white;
+  font-size: 1rem;
+}
+
+/* Statistiques */
+.strawpoll-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.stats-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.stats-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #b05fdf;
+}
+
+.stats-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.winning-option {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(
+    145deg,
+    rgba(147, 72, 183, 0.15),
+    rgba(176, 95, 223, 0.2)
+  );
+  border-radius: 12px;
+}
+
+.winning-option h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.winner {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.winner-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.winner-votes {
+  color: #b05fdf;
+  font-size: 0.9rem;
+}
+
+.winner-percent {
+  margin-left: 6px;
+  opacity: 0.8;
+}
+
+.tie {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.tie-text {
+  color: white;
+  font-size: 1.1rem;
+}
+
+.tie-votes {
+  color: #b05fdf;
+  font-size: 0.9rem;
+}
+
+.tie-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.tie-option {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  color: white;
+  text-align: center;
+}
+
+.no-votes {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  padding: 20px;
+}
+
+@media (max-width: 640px) {
+  .strawpoll-tabs {
+    overflow-x: auto;
+    padding: 0 6px;
+  }
+  
+  .strawpoll-tab {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  
+  .strawpoll-external-link {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+  
+  .strawpoll-results-header {
+    padding: 16px 20px;
+  }
+  
+  .strawpoll-results-content {
+    padding: 16px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stats-card {
+    padding: 12px;
+  }
+}
+
+/* Support du thème clair */
+.theme-light .strawpoll-results-modal {
+  background: linear-gradient(
+    145deg,
+    rgba(250, 250, 252, 0.97),
+    rgba(245, 245, 250, 0.99)
+  );
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px rgba(147, 72, 183, 0.1);
+}
+
+.theme-light .strawpoll-results-header {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .strawpoll-results-header h2 {
+  color: #333;
+}
+
+.theme-light .strawpoll-tabs {
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .modal-close-btn {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.theme-light .strawpoll-tab {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .strawpoll-tab:hover {
+  color: #333;
+}
+
+.theme-light .poll-option-text {
+  color: #333;
+}
+
+.theme-light .poll-result-bar-container {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .poll-votes-count {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .poll-total-votes {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.theme-light .stats-card {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.theme-light .stats-card:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .stats-label {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .winning-option {
+  background: linear-gradient(
+    145deg,
+    rgba(147, 72, 183, 0.08),
+    rgba(176, 95, 223, 0.12)
+  );
+}
+
+.theme-light .winning-option h4 {
+  color: #333;
+}
+
+.theme-light .winner {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.theme-light .winner-text {
+  color: #333;
+}
+
+.theme-light .tie-text {
+  color: #333;
+}
+
+.theme-light .tie-option {
+  background: rgba(255, 255, 255, 0.5);
+  color: #333;
+}
+
+/* Styles pour le débogage du modal Strawpoll */
+.strawpoll-debug {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  color: #fff;
+}
+
+.strawpoll-debug h3 {
+  margin-top: 0;
+  color: #ff6b6b;
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+}
+
+.debug-section {
+  margin-bottom: 24px;
+}
+
+.debug-section h4 {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.debug-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #ff9898;
+}
+
+.debug-section li {
+  margin-bottom: 4px;
+}
+
+.debug-data {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #7abbff;
+  overflow: auto;
+  max-height: 300px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Support du thème clair pour le débogage */
+.theme-light .strawpoll-debug {
+  background: rgba(0, 0, 0, 0.04);
+  color: #333;
+}
+
+.theme-light .strawpoll-debug h3 {
+  color: #e53935;
+}
+
+.theme-light .debug-section h4 {
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .debug-section ul {
+  color: #e57373;
+}
+
+.theme-light .debug-data {
+  background: rgba(0, 0, 0, 0.06);
+  color: #2196f3;
 }

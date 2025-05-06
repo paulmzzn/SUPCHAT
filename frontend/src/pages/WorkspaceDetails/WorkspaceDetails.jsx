@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react"; // Ajout de useState
+import React, { useRef, useState, useEffect } from "react"; // Ajout de useState et useEffect
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceSidebar from "./WorkspaceSidebar";
@@ -11,6 +11,7 @@ import FileViewerModal from "./FileViewerModal";
 import StrawpollResultsModal from "./StrawpollResultsModal";
 import StrawpollModalWrapper from "./StrawpollModalWrapper";
 import VideoCallModal from "./VideoCallModal"; // Import du composant d'appel vidéo
+import StrawpollWebviewModal from "./StrawpollWebviewModal"; // Import du composant de webview pour voter
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -28,7 +29,7 @@ import {
   debugMistralInteraction,
   renderTextWithLinks,
 } from "../../utils/helpers";
-import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll } from "react-icons/fa";
+import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll, FaVoteYea } from "react-icons/fa";
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
@@ -53,6 +54,10 @@ function WorkspaceDetails() {
 
   // Ajout de l'état pour le modal d'appel vidéo
   const [showVideoCallModal, setShowVideoCallModal] = useState(false);
+
+  // Nouvel état pour la webview de vote
+  const [showStrawpollVote, setShowStrawpollVote] = useState(false);
+  const [currentPollId, setCurrentPollId] = useState(null);
 
   // Handler pour ouvrir/fermer la boîte à outils
   const handleToggleToolbox = () => setShowToolbox((v) => !v);
@@ -82,6 +87,26 @@ function WorkspaceDetails() {
     setShowStrawpollResults(false);
     setStrawpollResults(null);
   };
+
+  // Handler pour ouvrir la webview de vote
+  const handleOpenStrawpollVote = (pollId) => {
+    setCurrentPollId(pollId);
+    setShowStrawpollVote(true);
+  };
+
+  // Handler pour fermer la webview de vote
+  const handleCloseStrawpollVote = () => {
+    setShowStrawpollVote(false);
+    setCurrentPollId(null);
+  };
+
+  // Ajouter la fonction au contexte global pour être accessible depuis ChatContainer
+  useEffect(() => {
+    window.handleOpenStrawpollVote = handleOpenStrawpollVote;
+    return () => {
+      window.handleOpenStrawpollVote = undefined;
+    };
+  }, []);
 
   // Ajout de la fonction pour créer un Strawpoll (appel backend sécurisé)
   const handleStrawpollSubmit = async ({ title, options }) => {
@@ -773,6 +798,13 @@ function WorkspaceDetails() {
           activeChannel={activeChannel}
           currentUserName={currentUserName}
           socket={socket}
+        />
+
+        {/* Ajouter le modal de webview pour voter */}
+        <StrawpollWebviewModal 
+          show={showStrawpollVote}
+          pollId={currentPollId}
+          onClose={handleCloseStrawpollVote}
         />
       </div>
     </div>
