@@ -1,5 +1,5 @@
 import React from "react";
-import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll, FaVideo } from "react-icons/fa";
+import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll, FaVideo, FaPaperPlane, FaTools, FaImage, FaCode, FaVoteYea } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -46,12 +46,9 @@ function ChatContainer({
   renderTextWithLinks,
   isUuid,
   handleSelectActiveItem,
-  setShowVideoCallModal, // Nouveau prop pour gérer l'ouverture du modal d'appel vidéo
+  setShowVideoCallModal,
+  handleOpenStrawpollVote
 }) {
-  // Helper function to determine if a message is a system message
-  const isSystemMessage = (message) => {
-    return message.is_system_message || message.fk_utilisateur === '00000000-0000-0000-0000-000000000003';
-  };
 
   return (
     <div className="workspace-content-area">
@@ -90,7 +87,7 @@ function ChatContainer({
               <div className="chat-loading">Chargement des messages...</div>
             ) : messages.length > 0 ? (
               messages.map((message) => {
-                const systemMsg = isSystemMessage(message);
+                const systemMsg = message.is_system_message || message.fk_utilisateur === '00000000-0000-0000-0000-000000000003';
                 return (
                   <div
                     key={message.id_message}
@@ -117,7 +114,6 @@ function ChatContainer({
                     )}
 
                     <div className={`message-content ${systemMsg ? "system-content" : ""}`}>
-                      {/* Render reply info only for non-system messages */}
                       {!systemMsg && (message.parent_id || message.parent_message) && (() => {
                         let replyContent = null;
                         if (message.parent_message) {
@@ -156,7 +152,6 @@ function ChatContainer({
                         );
                       })()}
 
-                      {/* Render header only for non-system messages */}
                       {!systemMsg && (
                         <div className="message-header">
                           <span className="message-author">
@@ -174,10 +169,9 @@ function ChatContainer({
                         </div>
                       )}
 
-                      {/* Affichage du contenu du message (texte, fichier, image, markdown, etc.) */}
                       {(() => {
                         const fileData = parseFileContent(message.contenu);
-                        if (fileData && !systemMsg) { // Don't render files for system messages
+                        if (fileData && !systemMsg) {
                           const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
                           if (fileData.isImage) {
                             return (
@@ -232,7 +226,6 @@ function ChatContainer({
                         }
                       })()}
 
-                      {/* Affichage des réactions (only for non-system messages) */}
                       {!systemMsg && message.reactions && message.reactions.length > 0 && (
                         <div className="message-reactions">
                           {message.reactions.map((reaction) => (
@@ -244,29 +237,24 @@ function ChatContainer({
                         </div>
                       )}
 
-                      {/* BOUTON STRAWPOLL RESULTATS (only for non-system messages) */}
                       {!systemMsg && (() => {
                         const strawpollMatch = message.contenu && message.contenu.match(/\[strawpoll:([a-zA-Z0-9]+)\]/);
                         if (strawpollMatch) {
                           const pollId = strawpollMatch[1];
                           return (
-                            <div style={{display:'flex',gap:8,marginTop:8}}>
+                            <div className="message-poll-buttons">
                               <button
-                                className="strawpoll-results-btn"
-                                style={{background:"linear-gradient(90deg,#9348b7,#b05fdf)",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}
+                                className="poll-button poll-results-button"
                                 onClick={() => window.handleOpenStrawpollResults && window.handleOpenStrawpollResults(pollId)}
                               >
-                                <FaPoll style={{fontSize:18}} /> Voir les résultats du sondage
+                                <FaPoll /> Voir les résultats
                               </button>
-                              <a
-                                href={`https://strawpoll.com/${pollId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="strawpoll-vote-btn"
-                                style={{background:"linear-gradient(90deg,#7abbff,#9348b7)",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8,textDecoration:'none'}}
+                              <button
+                                className="poll-button poll-vote-button"
+                                onClick={() => window.handleOpenStrawpollVote && window.handleOpenStrawpollVote(pollId)}
                               >
-                                Voter
-                              </a>
+                                <FaVoteYea /> Voter
+                              </button>
                             </div>
                           );
                         }
@@ -324,7 +312,6 @@ function ChatContainer({
                         key={user.id}
                         className={`supchat-mention-item ${index === activeMentionIndex ? "active" : ""}`}
                         onClick={() => handleSelectMention(user)}
-                        type="button"
                       >
                         <div className="supchat-mention-avatar-wrapper">
                           {user.avatar ? (
@@ -390,7 +377,11 @@ function ChatContainer({
                 id="file-upload-input"
               />
               <div className="chat-input-wrapper">
-                <button type="button" className="chat-attachment-btn" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                <button 
+                  type="button" 
+                  className="chat-attachment-btn" 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                >
                   <FaPaperclip />
                 </button>
                 <input
@@ -400,30 +391,49 @@ function ChatContainer({
                   onChange={(e) => handleNewMessageChange(e.target.value)}
                   onKeyDown={handleChatInputKeyDown}
                 />
-                <button type="button" className="chat-toolbox-btn" title="Outils" onClick={handleToggleToolbox} style={{ marginLeft: 4, marginRight: 4 }}>
-                  <FaWrench />
+                <button 
+                  type="button" 
+                  className={`chat-toolbox-btn ${showToolbox ? 'active' : ''}`} 
+                  title="Outils" 
+                  onClick={handleToggleToolbox}
+                >
+                  <FaTools />
+                  <span className="toolbox-tooltip">Outils</span>
                 </button>
-                <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}>
+                <button 
+                  type="button" 
+                  className="chat-emoji-btn" 
+                  onClick={() => setShowEmojiPicker(true)}
+                >
                   <FaSmile />
                 </button>
-              </div>
-              <button type="submit" className="chat-send-btn" disabled={!displayMessage.trim()}>
-                Envoyer
-              </button>
-            </form>
-            {showToolbox && (
-              <div className="chat-toolbox-menu" style={{ position: "absolute", bottom: 60, right: 30, zIndex: 2000, background: "#232323", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.18)", minWidth: 220 }}>
-                <button className="chat-toolbox-item" style={{ width: "100%", padding: "12px 18px", background: "none", border: "none", color: "white", textAlign: "left", cursor: "pointer", fontSize: "1rem" }} onClick={handleOpenStrawpoll}>
-                  📊 Créer un sondage Strawpoll
+                <button 
+                  type="submit" 
+                  className="chat-send-btn" 
+                  disabled={!displayMessage.trim()}
+                  aria-label="Envoyer le message"
+                >
+                  <FaPaperPlane />
+                  <span className="send-btn-pulse"></span>
                 </button>
               </div>
-            )}
-            {showStrawpollModal && (
-              <div className="modal-overlay" onClick={handleCloseStrawpollModal}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              {showToolbox && (
+                <div className="chat-toolbox-menu">
+                  <button className="chat-toolbox-item" onClick={handleOpenStrawpoll}>
+                    <FaPoll className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Créer un sondage</span>
+                  </button>
+                  <button className="chat-toolbox-item">
+                    <FaImage className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Rechercher une image</span>
+                  </button>
+                  <button className="chat-toolbox-item">
+                    <FaCode className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Formater du code</span>
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </form>
           </div>
         </div>
       )}
