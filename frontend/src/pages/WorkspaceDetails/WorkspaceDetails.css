@@ -401,10 +401,68 @@
 }
 
 .status-indicator {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   margin-left: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+}
+
+.status-indicator.online {
+  background-color: #44b700;
+  box-shadow: 0 0 0 2px rgba(68, 183, 0, 0.2);
+  color: #44b700;
+}
+
+.status-indicator.away {
+  background-color: #ffc107;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.status-indicator.dnd {
+  background-color: #f44336;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.status-indicator.offline {
+  background-color: #9e9e9e;
+  box-shadow: none;
+  color: #9e9e9e;
+}
+
+/* Styles pour mettre en évidence l'utilisateur actuel */
+.member-item.current-user {
+  position: relative;
+  font-weight: 500;
+}
+
+.member-item.current-user::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 70%;
+  background: linear-gradient(to bottom, #9348b7, #b05fdf);
+  border-radius: 3px;
+}
+
+/* Style pour le menu contextuel de statut */
+.status-context-menu {
+  animation: menuFadeIn 0.15s ease forwards;
+  transform-origin: top left;
+}
+
+/* Améliore l'apparence du membre survolé */
+.member-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .status-indicator.online {
