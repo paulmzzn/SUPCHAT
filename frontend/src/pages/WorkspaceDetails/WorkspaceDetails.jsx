@@ -182,6 +182,10 @@ function WorkspaceDetails() {
     loading,
     error,
     searchQuery,
+    handleSearchChange,
+    searchResults,
+    isSearching,
+    handleSelectSearchResult,
     channels,
     showChannels,
     canalsLoading,
@@ -227,7 +231,6 @@ function WorkspaceDetails() {
     mentionSuggestions,
     activeMentionIndex,
     // Handlers
-    handleSearchChange,
     toggleChannelsVisibility,
     handleChannelInputChange,
     handleCreateChannel,
@@ -683,6 +686,12 @@ function WorkspaceDetails() {
           handleChannelContextMenu={handleChannelContextMenu}
           currentUserRole={currentUserRole}
           handleCreateChannel={handleCreateChannel}
+          // Nouvelles props pour la recherche unifiée
+          members={members}
+          messages={messages}
+          searchResults={searchResults}
+          handleSelectSearchResult={handleSelectSearchResult}
+          isSearching={isSearching}
         />
 
         {/* Main Content Area - Modified for chat */}

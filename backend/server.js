@@ -19,6 +19,7 @@ import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachment routes
 import fichierRoutes from "./routes/fichierRoutes.js"; // Import fichier routes
 import fileRoutes from "./routes/fileRoutes.js"; // Import des routes
+import searchRoutes from "./routes/searchRoutes.js"; // Import des routes de recherche
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
@@ -141,6 +142,7 @@ app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
 app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
+app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Configurer avant les routes API pour éviter les conflits d'authentification

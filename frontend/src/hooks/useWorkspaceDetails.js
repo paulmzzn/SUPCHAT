@@ -53,6 +53,12 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState({
+    channels: [],
+    users: [],
+    messages: [],
+  });
+  const [isSearching, setIsSearching] = useState(false);
   const [channels, setChannels] = useState([]);
   const [filteredChannels, setFilteredChannels] = useState([]);
   const [showChannels, setShowChannels] = useState(true);
@@ -280,11 +286,13 @@ export const useWorkspaceDetails = (workspaceId) => {
         .filter((member) => {
           // Vérifier le statut WebSocket en temps réel
           const wsStatus = userStatuses[member.id_utilisateur];
-          console.log(`[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`);
-          
+          console.log(
+            `[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`
+          );
+
           // Si un statut WebSocket existe, l'utiliser
           if (wsStatus !== undefined) {
-            return wsStatus === 'online';
+            return wsStatus === "online";
           }
           // Sinon utiliser le statut par défaut de la base de données (1 = online)
           return member.status === 1;
@@ -293,7 +301,7 @@ export const useWorkspaceDetails = (workspaceId) => {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || 'online',
+          status: userStatuses[member.id_utilisateur] || "online",
           role: member.role.toLowerCase(),
         }));
 
@@ -302,7 +310,7 @@ export const useWorkspaceDetails = (workspaceId) => {
           const wsStatus = userStatuses[member.id_utilisateur];
           // Logique inversée par rapport aux membres en ligne
           if (wsStatus !== undefined) {
-            return wsStatus !== 'online';
+            return wsStatus !== "online";
           }
           return member.status !== 1;
         })
@@ -310,7 +318,7 @@ export const useWorkspaceDetails = (workspaceId) => {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || 'offline',
+          status: userStatuses[member.id_utilisateur] || "offline",
           role: member.role.toLowerCase(),
         }));
 
@@ -473,16 +481,18 @@ export const useWorkspaceDetails = (workspaceId) => {
       console.log("[DEBUG] Message reçu:", message);
       console.log("[DEBUG] Type de message:", typeof message);
       console.log("[DEBUG] Propriétés:", Object.keys(message));
-      
+
       // Vérifie si c'est un message système pour l'appel vidéo
-      const isVideoCallMessage = message.contenu && 
-        (message.contenu.includes("appel vidéo") || message.contenu.includes("video call"));
-      
+      const isVideoCallMessage =
+        message.contenu &&
+        (message.contenu.includes("appel vidéo") ||
+          message.contenu.includes("video call"));
+
       if (isVideoCallMessage) {
         console.log("[DEBUG] Message d'appel vidéo détecté");
         message.is_system_message = true;
       }
-      
+
       handleNewMessage(message);
     });
 
@@ -750,6 +760,113 @@ export const useWorkspaceDetails = (workspaceId) => {
     setMentionableUsers(uniqueUsers);
   }, [members]);
 
+  // Effet pour la recherche unifiée
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchQuery.trim() || searchQuery.length < 2 || !workspaceId) {
+        setSearchResults({ channels: [], users: [], messages: [] });
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+
+      try {
+        const token = localStorage.getItem("token");
+        // Utiliser une requête GET avec query dans l'URL comme attendu par le backend
+        const response = await fetch(
+          `${API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(
+            searchQuery
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la recherche");
+        }
+
+        const data = await response.json();
+
+        // Formater les données pour l'affichage
+        const formattedResults = {
+          channels:
+            data.canaux?.map((channel) => ({
+              id: channel.id_canal,
+              name: channel.nom,
+              description: channel.description || "",
+              isPrivate: channel.is_private || false,
+            })) || [],
+          users:
+            data.utilisateurs?.map((user) => ({
+              id: user.id_utilisateur,
+              name: user.nom,
+              avatar: user.photo_de_profil || null,
+              status:
+                userStatuses[user.id_utilisateur] || user.status || "offline",
+            })) || [],
+          messages:
+            data.messages?.map((message) => ({
+              id: message.id_message,
+              contenu: message.contenu,
+              date_creation: message.date_creation || message.created_at,
+              userName: message.nom_utilisateur || message.nom,
+              userId: message.id_utilisateur,
+              channelId: message.id_canal,
+              channelName: message.nom_canal,
+            })) || [],
+        };
+
+        setSearchResults(formattedResults);
+      } catch (err) {
+        console.error("Erreur lors de la recherche:", err);
+        setSearchResults({ channels: [], users: [], messages: [] });
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    // Ajout d'un délai pour éviter trop d'appels API pendant la frappe
+    const debounceTimer = setTimeout(() => {
+      performSearch();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, workspaceId, userStatuses]);
+
+  // Fonction pour sélectionner un résultat de recherche
+  const handleSelectSearchResult = (type, result) => {
+    if (type === "channel") {
+      handleSelectChannel(result);
+    } else if (type === "message") {
+      // D'abord sélectionner le canal
+      const channel = channels.find((c) => c.id === result.channelId);
+      if (channel) {
+        handleSelectChannel(channel).then(() => {
+          // Puis mettre en évidence le message
+          setTimeout(() => {
+            const messageElement = document.getElementById(
+              `message-${result.id}`
+            );
+            if (messageElement) {
+              messageElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              messageElement.classList.add("highlighted-message");
+              setTimeout(() => {
+                messageElement.classList.remove("highlighted-message");
+              }, 5000);
+            }
+          }, 500);
+        });
+      }
+    }
+  };
+
   // Handlers
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
   const toggleChannelsVisibility = () => setShowChannels(!showChannels);
@@ -919,117 +1036,126 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
-  const handleSelectChannel = useCallback(async (channel) => {
-    try {
-      setActiveChannel(channel);
-      setLoadingMessages(true);
-      const token = localStorage.getItem("token");
-      console.log(`Chargement des messages pour le canal ${channel.id}...`);
-      const response = await fetch(
-        `${API_URL}/api/messages/canal/${channel.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Erreur API:", errorData);
-        throw new Error(
-          errorData.message || "Erreur lors du chargement des messages"
-        );
-      }
-      const data = await response.json();
-      console.log("Messages récupérés:", data);
-
-      // Vérifier et logger les messages avec parent_id mais sans parent_message
-      const messagesWithParentId = data.filter(
-        (msg) => msg.parent_id && !msg.parent_message
-      );
-      if (messagesWithParentId.length > 0) {
-        console.log(
-          `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
-        );
-      }
-
-      // Ajout du mapping des emojis sur les réactions (pour affichage correct)
-      const messagesWithEmojis = data.map((msg) => {
-        if (msg.reactions && Array.isArray(msg.reactions)) {
-          msg.reactions = msg.reactions.map((r) => ({
-            ...r,
-            emoji: r.emoji || getEmojiForType(r.reaction_type),
-          }));
-        }
-        return msg;
-      });
-
-      setMessages(messagesWithEmojis);
-
-      // Marquer le canal comme lu une fois que les messages sont chargés
-      // et que l'utilisateur a interagi avec ce canal
-      if (socket && socket.connected) {
-        console.log(`Marquage du canal ${channel.id} comme lu`);
-        socket.emit("markChannelAsRead", { channelId: channel.id });
-      } else {
-        // Appel API de secours si le socket n'est pas connecté
-        try {
-          const markReadResponse = await fetch(
-            `${API_URL}/api/messages/channel/${channel.id}/read`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          if (markReadResponse.ok) {
-            console.log(`Canal ${channel.id} marqué comme lu via API REST`);
+  const handleSelectChannel = useCallback(
+    async (channel) => {
+      try {
+        setActiveChannel(channel);
+        setLoadingMessages(true);
+        const token = localStorage.getItem("token");
+        console.log(`Chargement des messages pour le canal ${channel.id}...`);
+        const response = await fetch(
+          `${API_URL}/api/messages/canal/${channel.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        } catch (markReadError) {
-          console.error("Erreur pour marquer le canal comme lu:", markReadError);
+        );
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Erreur API:", errorData);
+          throw new Error(
+            errorData.message || "Erreur lors du chargement des messages"
+          );
         }
+        const data = await response.json();
+        console.log("Messages récupérés:", data);
+
+        // Vérifier et logger les messages avec parent_id mais sans parent_message
+        const messagesWithParentId = data.filter(
+          (msg) => msg.parent_id && !msg.parent_message
+        );
+        if (messagesWithParentId.length > 0) {
+          console.log(
+            `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
+          );
+        }
+
+        // Ajout du mapping des emojis sur les réactions (pour affichage correct)
+        const messagesWithEmojis = data.map((msg) => {
+          if (msg.reactions && Array.isArray(msg.reactions)) {
+            msg.reactions = msg.reactions.map((r) => ({
+              ...r,
+              emoji: r.emoji || getEmojiForType(r.reaction_type),
+            }));
+          }
+          return msg;
+        });
+
+        setMessages(messagesWithEmojis);
+
+        // Marquer le canal comme lu une fois que les messages sont chargés
+        // et que l'utilisateur a interagi avec ce canal
+        if (socket && socket.connected) {
+          console.log(`Marquage du canal ${channel.id} comme lu`);
+          socket.emit("markChannelAsRead", { channelId: channel.id });
+        } else {
+          // Appel API de secours si le socket n'est pas connecté
+          try {
+            const markReadResponse = await fetch(
+              `${API_URL}/api/messages/channel/${channel.id}/read`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            if (markReadResponse.ok) {
+              console.log(`Canal ${channel.id} marqué comme lu via API REST`);
+            }
+          } catch (markReadError) {
+            console.error(
+              "Erreur pour marquer le canal comme lu:",
+              markReadError
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Erreur:", error);
+        setMessages([]);
+      } finally {
+        setLoadingMessages(false);
       }
-    } catch (error) {
-      console.error("Erreur:", error);
-      setMessages([]);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, [socket]);
+    },
+    [socket]
+  );
 
   // Fonction pour marquer un canal comme lu
-  const markChannelAsRead = useCallback(async (channel) => {
-    try {
-      if (!channel || !channel.id) {
-        console.warn("Tentative de marquer un canal sans ID comme lu");
-        return;
-      }
+  const markChannelAsRead = useCallback(
+    async (channel) => {
+      try {
+        if (!channel || !channel.id) {
+          console.warn("Tentative de marquer un canal sans ID comme lu");
+          return;
+        }
 
-      console.log(`Marquage du canal ${channel.id} comme lu`);
+        console.log(`Marquage du canal ${channel.id} comme lu`);
 
-      // Essayer d'abord via socket.io si disponible
-      if (socket && socket.connected) {
-        console.log(`Marquage du canal ${channel.id} comme lu via socket.io`);
-        socket.emit("markChannelAsRead", { channelId: channel.id });
-        
-        // Créer un délai pour vérifier si nous recevons une confirmation
-        setTimeout(async () => {
-          // Si nous n'avons pas reçu de confirmation après 1 seconde, utiliser le fallback API REST
-          const event = new CustomEvent('checkSocketConfirmation', {
-            detail: { channelId: channel.id }
-          });
-          window.dispatchEvent(event);
-        }, 1000);
-      } else {
-        // Appel API de secours si le socket n'est pas connecté
-        await markChannelAsReadViaAPI(channel.id);
+        // Essayer d'abord via socket.io si disponible
+        if (socket && socket.connected) {
+          console.log(`Marquage du canal ${channel.id} comme lu via socket.io`);
+          socket.emit("markChannelAsRead", { channelId: channel.id });
+
+          // Créer un délai pour vérifier si nous recevons une confirmation
+          setTimeout(async () => {
+            // Si nous n'avons pas reçu de confirmation après 1 seconde, utiliser le fallback API REST
+            const event = new CustomEvent("checkSocketConfirmation", {
+              detail: { channelId: channel.id },
+            });
+            window.dispatchEvent(event);
+          }, 1000);
+        } else {
+          // Appel API de secours si le socket n'est pas connecté
+          await markChannelAsReadViaAPI(channel.id);
+        }
+      } catch (error) {
+        console.error("Erreur:", error);
       }
-    } catch (error) {
-      console.error("Erreur:", error);
-    }
-  }, [socket]);
+    },
+    [socket]
+  );
 
   // Fonction de fallback pour marquer un canal comme lu via API REST
   const markChannelAsReadViaAPI = async (channelId) => {
@@ -1045,51 +1171,63 @@ export const useWorkspaceDetails = (workspaceId) => {
           },
         }
       );
-      
+
       if (markReadResponse.ok) {
         console.log(`Canal ${channelId} marqué comme lu via API REST`);
-        
+
         // Après avoir marqué le canal comme lu via API, rafraîchir les compteurs de messages non lus
         await refreshUnreadChannelCounts();
       } else {
-        console.error("Erreur API lors du marquage du canal comme lu:", await markReadResponse.text());
+        console.error(
+          "Erreur API lors du marquage du canal comme lu:",
+          await markReadResponse.text()
+        );
       }
     } catch (markReadError) {
-      console.error("Erreur pour marquer le canal comme lu via API:", markReadError);
+      console.error(
+        "Erreur pour marquer un canal comme lu via API:",
+        markReadError
+      );
     }
   };
 
   // Fonction pour rafraîchir les compteurs de messages non lus
   const refreshUnreadChannelCounts = async () => {
     try {
-      const unreadResponse = await fetch(
-        `${API_URL}/api/messages/unread`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
+      const unreadResponse = await fetch(`${API_URL}/api/messages/unread`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (unreadResponse.ok) {
         const unreadData = await unreadResponse.json();
         console.log("Compteurs de messages non lus mis à jour:", unreadData);
-        
+
         // Émettre un événement pour mettre à jour les badges
-        const event = new CustomEvent('unreadChannelMessagesUpdated', {
-          detail: { 
+        const event = new CustomEvent("unreadChannelMessagesUpdated", {
+          detail: {
             total: unreadData.total,
-            channels: unreadData.channels
-          }
+            channels: unreadData.channels,
+          },
         });
         window.dispatchEvent(event);
-        
+
         // Mettre à jour localStorage
-        localStorage.setItem('unreadChannelMessages', unreadData.total.toString());
-        localStorage.setItem('unreadChannelMessagesDetails', JSON.stringify(unreadData.channels));
+        localStorage.setItem(
+          "unreadChannelMessages",
+          unreadData.total.toString()
+        );
+        localStorage.setItem(
+          "unreadChannelMessagesDetails",
+          JSON.stringify(unreadData.channels)
+        );
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des compteurs de messages non lus:", error);
+      console.error(
+        "Erreur lors de la récupération des compteurs de messages non lus:",
+        error
+      );
     }
   };
 
@@ -1407,6 +1545,9 @@ export const useWorkspaceDetails = (workspaceId) => {
     loading,
     error,
     searchQuery,
+    searchResults, // Ajout des résultats de recherche
+    isSearching, // Ajout de l'état de chargement de la recherche
+    handleSelectSearchResult, // Ajout de la fonction pour sélectionner un résultat
     channels: filteredChannels, // Use filteredChannels for display
     showChannels,
     canalsLoading,
