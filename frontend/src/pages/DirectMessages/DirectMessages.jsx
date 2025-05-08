@@ -4,7 +4,6 @@ import {
   FaUserCircle,
   FaPaperPlane,
   FaPaperclip,
-  FaSmile,
   FaSearch,
   FaPlus,
   FaTimes,
@@ -21,6 +20,7 @@ import {
   FaDownload,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
+import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
@@ -169,7 +169,7 @@ function DirectMessages() {
       }
 
       // Découper et décoder le token JWT
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length !== 3) {
         console.log("[DM] Format de token JWT invalide");
         return { valid: false, error: "Format de token invalide" };
@@ -178,7 +178,7 @@ function DirectMessages() {
       // Décoder le payload (partie centrale du token)
       const payload = JSON.parse(atob(parts[1]));
       const currentTime = Math.floor(Date.now() / 1000);
-      
+
       console.log("[DM] Informations token:", {
         userId: payload.id,
         email: payload.email,
@@ -186,13 +186,16 @@ function DirectMessages() {
         expires: new Date(payload.exp * 1000).toLocaleString(),
         currentTime: new Date(currentTime * 1000).toLocaleString(),
         isExpired: currentTime > payload.exp,
-        timeRemaining: payload.exp - currentTime > 0 ? `${Math.floor((payload.exp - currentTime) / 3600)} heures` : "Expiré"
+        timeRemaining:
+          payload.exp - currentTime > 0
+            ? `${Math.floor((payload.exp - currentTime) / 3600)} heures`
+            : "Expiré",
       });
-      
+
       return {
         valid: currentTime < payload.exp,
         error: currentTime > payload.exp ? "Token expiré" : null,
-        details: payload
+        details: payload,
       };
     } catch (error) {
       console.error("[DM] Erreur lors de la vérification du token:", error);
@@ -220,15 +223,18 @@ function DirectMessages() {
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/users/verify-token`, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     })
       .then((response) => {
         if (response.ok) {
           console.log("[DM] Backend API token verification OK");
           return response.json();
         } else {
-          console.error("[DM] Backend API token verification ERROR:", response.status);
+          console.error(
+            "[DM] Backend API token verification ERROR:",
+            response.status
+          );
           setSocketStatus((prev) => ({
             ...prev,
             connecting: false,
@@ -245,12 +251,12 @@ function DirectMessages() {
           auth: { token },
           transports: ["websocket", "polling"], // Try websocket first, then polling
           reconnection: true,
-          reconnectionAttempts: 15,  // Increased from 10
-          reconnectionDelay: 1000,   // Decreased initial delay to reconnect faster
+          reconnectionAttempts: 15, // Increased from 10
+          reconnectionDelay: 1000, // Decreased initial delay to reconnect faster
           reconnectionDelayMax: 10000,
-          timeout: 30000,            // Increased from 20000
+          timeout: 30000, // Increased from 20000
           autoConnect: true,
-          forceNew: false            // Changed to false to reuse existing connection when possible
+          forceNew: false, // Changed to false to reuse existing connection when possible
         };
 
         console.log("[DM] Creating socket with options:", socketOptions);
@@ -368,7 +374,9 @@ function DirectMessages() {
 
       // Protection: skip if currentUserId is not yet defined
       if (!currentUserId) {
-        console.log("[DM] Skipping message processing, currentUserId not defined yet");
+        console.log(
+          "[DM] Skipping message processing, currentUserId not defined yet"
+        );
         return;
       }
 
@@ -539,7 +547,9 @@ function DirectMessages() {
         setMessages((prev) =>
           prev.map((m) => {
             if (m.id_message_prive === data.messageId) {
-              console.log(`[DM] Updating reactions for message ${m.id_message_prive}`);
+              console.log(
+                `[DM] Updating reactions for message ${m.id_message_prive}`
+              );
               return { ...m, reactions: data.reactions };
             }
             return m;
@@ -770,7 +780,8 @@ function DirectMessages() {
 
   // Improve the markMessagesAsRead function to be more robust
   const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId) return;
+    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId)
+      return;
 
     const unreadMessages = msgs.filter(
       (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
@@ -785,10 +796,12 @@ function DirectMessages() {
           recipientId: currentUserId,
         });
       });
-      
+
       // Appel à refreshUnreadDM pour mettre à jour le compteur global sur toutes les pages
       if (refreshUnreadDM) {
-        console.log("[DM] Rafraîchissement du compteur global de messages non lus");
+        console.log(
+          "[DM] Rafraîchissement du compteur global de messages non lus"
+        );
         refreshUnreadDM();
       }
     }
@@ -1302,15 +1315,90 @@ function DirectMessages() {
     // Vérifier si le token est valide
     const tokenStatus = checkTokenValidity();
     console.log("[DM] Statut du token:", tokenStatus);
-    
+
     if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
       // Définir l'ID utilisateur à partir du token JWT
       setCurrentUserId(tokenStatus.details.id);
       console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
     } else {
-      setError(`Erreur d'authentification: ${tokenStatus.error || "Token invalide"}. Veuillez vous reconnecter.`);
+      setError(
+        `Erreur d'authentification: ${
+          tokenStatus.error || "Token invalide"
+        }. Veuillez vous reconnecter.`
+      );
     }
   }, []);
+
+  // Fonction pour télécharger un fichier
+  const handleDownloadFile = (fileUrl, fileName) => {
+    // Si l'URL est déjà complète, extraire le chemin du fichier
+    const extractFilePath = (url) => {
+      if (url.startsWith("http")) {
+        try {
+          // Si l'URL contient le bucket S3, extraire le chemin
+          if (url.includes("s3-supchat.s3.fr-par.scw.cloud")) {
+            const parts = url.split("s3-supchat.s3.fr-par.scw.cloud/");
+            if (parts.length > 1) {
+              return parts[1];
+            }
+          }
+          // Sinon, retourner l'URL complète
+          return url;
+        } catch (error) {
+          console.error(
+            "Erreur lors de l'extraction du chemin de fichier:",
+            error
+          );
+          return url;
+        }
+      }
+      // Si ce n'est pas une URL complète, c'est déjà un chemin relatif
+      return fileUrl;
+    };
+
+    // Extraire le chemin du fichier
+    const filePath = extractFilePath(fileUrl);
+
+    // Construire l'URL de téléchargement via le backend
+    const token = localStorage.getItem("token");
+    const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
+      filePath
+    )}`;
+
+    if (token) {
+      // Utiliser fetch pour envoyer le token dans l'en-tête
+      fetch(downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("Erreur de téléchargement");
+          return response.blob();
+        })
+        .then((blob) => {
+          // Créer une URL d'objet pour le blob
+          const objectUrl = window.URL.createObjectURL(blob);
+
+          // Créer un élément a temporaire pour déclencher le téléchargement
+          const a = document.createElement("a");
+          a.href = objectUrl;
+          a.download = fileName || "download";
+          document.body.appendChild(a);
+          a.click();
+
+          // Nettoyer
+          window.URL.revokeObjectURL(objectUrl);
+          document.body.removeChild(a);
+        })
+        .catch((error) => {
+          console.error("Erreur lors du téléchargement du fichier:", error);
+          alert("Impossible de télécharger le fichier. Veuillez réessayer.");
+        });
+    } else {
+      alert("Vous devez être connecté pour télécharger des fichiers.");
+    }
+  };
 
   return (
     <div className="app-layout">
@@ -1347,7 +1435,14 @@ function DirectMessages() {
 
           <ul className="dm-conv-list">
             {loading ? (
-              <li className="dm-empty">Chargement des conversations...</li>
+              <li className="dm-empty">
+                <div className="loading-container">
+                  <Spinner size="small" />
+                  <span className="loading-text">
+                    Chargement des conversations...
+                  </span>
+                </div>
+              </li>
             ) : filteredConversations.length === 0 ? (
               <li className="dm-empty">
                 {searchQuery ? "Aucun résultat" : "Aucune conversation"}
@@ -1359,7 +1454,9 @@ function DirectMessages() {
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${selectedUser === userId ? "active" : ""}`}
+                    className={`dm-conv-item ${
+                      selectedUser === userId ? "active" : ""
+                    }`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
@@ -1532,13 +1629,26 @@ function DirectMessages() {
                           <div
                             className="message-reply-to"
                             onClick={() => {
-                              const parentId = msg.parent_id || msg.parent_message?.id_message_prive;
+                              const parentId =
+                                msg.parent_id ||
+                                msg.parent_message?.id_message_prive;
                               if (parentId) {
-                                const element = document.getElementById(`msg-${parentId}`);
+                                const element = document.getElementById(
+                                  `msg-${parentId}`
+                                );
                                 if (element) {
-                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "center",
+                                  });
                                   element.classList.add("highlight-message");
-                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                  setTimeout(
+                                    () =>
+                                      element.classList.remove(
+                                        "highlight-message"
+                                      ),
+                                    2000
+                                  );
                                 }
                               }
                             }}
@@ -1549,17 +1659,27 @@ function DirectMessages() {
                             <div className="reply-content">
                               <span className="reply-author">
                                 {msg.parent_message
-                                  ? usersInfo[msg.parent_message.fk_expediteur]?.name || "Utilisateur"
+                                  ? usersInfo[msg.parent_message.fk_expediteur]
+                                      ?.name || "Utilisateur"
                                   : msg.parent_id
-                                    ? usersInfo[messages.find(m => m.id_message_prive === msg.parent_id)?.fk_expediteur]?.name || "Utilisateur"
-                                    : "Utilisateur"}
+                                  ? usersInfo[
+                                      messages.find(
+                                        (m) =>
+                                          m.id_message_prive === msg.parent_id
+                                      )?.fk_expediteur
+                                    ]?.name || "Utilisateur"
+                                  : "Utilisateur"}
                               </span>
                               <span className="reply-text">
                                 {msg.parent_message
                                   ? msg.parent_message.contenu
                                   : msg.parent_id
-                                    ? messages.find(m => m.id_message_prive === msg.parent_id)?.contenu || "Message original non disponible"
-                                    : "Message original non disponible"}
+                                  ? messages.find(
+                                      (m) =>
+                                        m.id_message_prive === msg.parent_id
+                                    )?.contenu ||
+                                    "Message original non disponible"
+                                  : "Message original non disponible"}
                               </span>
                             </div>
                           </div>
@@ -1591,21 +1711,28 @@ function DirectMessages() {
                           {msg.reactions && msg.reactions.length > 0 && (
                             <div className="dm-msg-reactions">
                               {msg.reactions.map((reaction, index) => (
-                                <div 
-                                  key={`${reaction.reaction_type}-${index}`} 
+                                <div
+                                  key={`${reaction.reaction_type}-${index}`}
                                   className="dm-msg-reaction"
                                   onClick={() => {
                                     // Si l'utilisateur a déjà réagi avec cet emoji, supprimer sa réaction
                                     if (reaction.has_reacted) {
-                                      socket.emit("removePrivateMessageReaction", {
-                                        id: msg.id_message_prive,
-                                        reaction: reaction.reaction_type
-                                      });
+                                      socket.emit(
+                                        "removePrivateMessageReaction",
+                                        {
+                                          id: msg.id_message_prive,
+                                          reaction: reaction.reaction_type,
+                                        }
+                                      );
                                     }
                                   }}
                                 >
-                                  <span className="dm-reaction-emoji">{reaction.reaction_type}</span>
-                                  <span className="dm-reaction-count">{reaction.count}</span>
+                                  <span className="dm-reaction-emoji">
+                                    {reaction.reaction_type}
+                                  </span>
+                                  <span className="dm-reaction-count">
+                                    {reaction.count}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -1678,13 +1805,7 @@ function DirectMessages() {
                                         }
                                         className="dm-msg-file-attachment"
                                       >
-                                        <a
-                                          href={fileUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          download={attachment.nom_fichier}
-                                          className="dm-msg-file-download-link"
-                                        >
+                                        <div className="dm-msg-file-download-link">
                                           <div className="dm-msg-file-icon">
                                             {getFileIcon(attachment.type)}
                                           </div>
@@ -1698,10 +1819,18 @@ function DirectMessages() {
                                               )}
                                             </div>
                                           </div>
-                                          <div className="dm-msg-file-download">
+                                          <div
+                                            className="dm-msg-file-download"
+                                            onClick={() =>
+                                              handleDownloadFile(
+                                                fileUrl,
+                                                attachment.nom_fichier
+                                              )
+                                            }
+                                          >
                                             <FaDownload />
                                           </div>
-                                        </a>
+                                        </div>
                                       </div>
                                     );
                                   }
@@ -1803,20 +1932,17 @@ function DirectMessages() {
                     className="dm-input"
                     disabled={uploadingFile}
                   />
-                  <button type="button" className="dm-emoji-btn">
-                    <FaSmile />
+                  <button
+                    type="submit"
+                    className="dm-send-btn"
+                    disabled={
+                      (!newMessage.trim() && attachments.length === 0) ||
+                      uploadingFile
+                    }
+                  >
+                    <FaPaperPlane />
                   </button>
                 </div>
-                <button
-                  type="submit"
-                  className="dm-send-btn"
-                  disabled={
-                    (!newMessage.trim() && attachments.length === 0) ||
-                    uploadingFile
-                  }
-                >
-                  <FaPaperPlane />
-                </button>
               </form>
             </>
           )}

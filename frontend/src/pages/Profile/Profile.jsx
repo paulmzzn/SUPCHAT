@@ -17,6 +17,7 @@ import {
 } from "react-icons/fa";
 import "./Profile.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
+import Spinner from "../../components/Spinner/Spinner";
 
 function Profile() {
   const { userId } = useParams();
@@ -186,8 +187,7 @@ function Profile() {
       <div className="app-layout">
         <Sidebar />
         <div className="loading-container">
-          <div className="loading-icon"></div>
-          <p className="loading-text">Chargement du profil...</p>
+          <Spinner />
         </div>
       </div>
     );
