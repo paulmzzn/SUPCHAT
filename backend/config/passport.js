@@ -7,9 +7,11 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import UserModel from "../models/User.js";
 
-export const googleStrategy = new GoogleStrategy({
-  clientID: '976557604598-ooefiik9hsad0nlr1fq41gpn3aj4c5mg.apps.googleusercontent.com',
-  clientSecret: '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',
+export const googleStrategy = new GoogleStrategy(
+  {
+    clientID:
+      "976557604598-ooefiik9hsad0nlr1fq41gpn3aj4c5mg.apps.googleusercontent.com",
+    clientSecret: "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",
 
 
   callbackURL: 'http://192.168.1.60:3000/api/users/auth/google/callback'
@@ -47,10 +49,10 @@ export const googleStrategy = new GoogleStrategy({
   }
 );
 
-
-export const githubStrategy = new GitHubStrategy({
-  clientID: process.env.GITHUB_CLIENT_ID,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+export const githubStrategy = new GitHubStrategy(
+  {
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
 
 
   callbackURL: 'http://192.168.1.60:3000/api/users/auth/github/callback'

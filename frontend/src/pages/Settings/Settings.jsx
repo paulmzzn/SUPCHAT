@@ -1,45 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { FaUser, FaBell, FaLock, FaPalette, FaLanguage, FaShieldAlt, FaSignOutAlt, FaSave } from 'react-icons/fa';
-import Sidebar from '../../components/Sidebar/Sidebar';
-import './Settings.css';
-import { API_URL } from '../../config/config';
-import { useTheme } from '../../context/ThemeContext';
+import React, { useState, useEffect } from "react";
+import {
+  FaUser,
+  FaBell,
+  FaLock,
+  FaPalette,
+  FaShieldAlt,
+  FaSignOutAlt,
+  FaSave,
+} from "react-icons/fa";
+import Sidebar from "../../components/Sidebar/Sidebar";
+import "./Settings.css";
+import { API_URL } from "../../config/config";
+import { useTheme } from "../../context/ThemeContext";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    bio: '',
-    status: '', // Déjà défini comme 'online' par défaut
+    name: "",
+    email: "",
+    bio: "",
+    status: "", // Déjà défini comme 'online' par défaut
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   // Nouvel état pour suivre si des modifications ont été effectuées
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // Notification settings
   const [notifications, setNotifications] = useState({
     messages: true,
     mentions: true,
     sounds: true,
     email: false,
-    desktop: true
+    desktop: true,
   });
-  
+
   // Appearance settings
   const { theme, setTheme } = useTheme(); // Utilise le contexte pour le thème
-  const [fontSize, setFontSize] = useState('medium');
-  const [language, setLanguage] = useState('fr');
 
   // Privacy settings
   const [privacy, setPrivacy] = useState({
-    onlineStatus: 'all',
+    onlineStatus: "all",
     readReceipts: true,
-    messageRequests: 'all'
+    messageRequests: "all",
   });
 
   // Fetch user data
@@ -47,49 +53,51 @@ const Settings = () => {
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem('token');
-        
+        const token = localStorage.getItem("token");
+
         if (!token) {
-          throw new Error('No authentication token found');
+          throw new Error("No authentication token found");
         }
 
         const response = await fetch(`${API_URL}/api/users/profile`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch user data');
+          throw new Error("Failed to fetch user data");
         }
 
         const data = await response.json();
-        
+
         // Vérifier que le statut est valide, sinon utiliser 'online' comme défaut
-        const validStatuses = ['online', 'away', 'dnd', 'invisible'];
-        const defaultStatus = 'online';
-        const userStatus = validStatuses.includes(data.status) ? data.status : defaultStatus;
-        
+        const validStatuses = ["online", "away", "dnd", "invisible"];
+        const defaultStatus = "online";
+        const userStatus = validStatuses.includes(data.status)
+          ? data.status
+          : defaultStatus;
+
         setUserData(data);
         setFormData({
-          name: data.nom || '',
-          email: data.email || '',
-          bio: data.bio || '',
-          status: userStatus // Utiliser le statut validé
+          name: data.nom || "",
+          email: data.email || "",
+          bio: data.bio || "",
+          status: userStatus, // Utiliser le statut validé
         });
-        
+
         if (data.photo_url) {
           setAvatarPreview(data.photo_url);
         }
-        
+
         // You could also fetch actual settings from the API here
       } catch (err) {
         // En cas d'erreur, s'assurer que le statut par défaut est 'online'
-        setFormData(prevState => ({
+        setFormData((prevState) => ({
           ...prevState,
-          status: 'online'
+          status: "online",
         }));
-        console.error('Error fetching user data:', err);
+        console.error("Error fetching user data:", err);
         setError(err.message);
       } finally {
         setIsLoading(false);
@@ -103,7 +111,7 @@ const Settings = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
     setHasChanges(true);
   };
@@ -124,7 +132,7 @@ const Settings = () => {
   const handleNotificationChange = (setting) => {
     setNotifications({
       ...notifications,
-      [setting]: !notifications[setting]
+      [setting]: !notifications[setting],
     });
     setHasChanges(true);
   };
@@ -132,7 +140,7 @@ const Settings = () => {
   const handlePrivacyChange = (setting, value) => {
     setPrivacy({
       ...privacy,
-      [setting]: value
+      [setting]: value,
     });
     setHasChanges(true);
   };
@@ -147,71 +155,71 @@ const Settings = () => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const formDataToSend = new FormData();
-      
-      formDataToSend.append('nom', formData.name);
-      formDataToSend.append('bio', formData.bio);
-      
+
+      formDataToSend.append("nom", formData.name);
+      formDataToSend.append("bio", formData.bio);
+
       // Convertir le statut en identifiant numérique correspondant
       const statusMap = {
-        'online': 1,    // En ligne
-        'away': 2,      // Absent
-        'dnd': 3,       // Ne pas déranger
-        'invisible': 4  // Invisible
+        online: 1, // En ligne
+        away: 2, // Absent
+        dnd: 3, // Ne pas déranger
+        invisible: 4, // Invisible
       };
 
       // Obtenir l'ID du statut ou utiliser 1 (en ligne) par défaut
       const statusId = statusMap[formData.status] || 1;
-      console.log('Envoi du statut:', { status: formData.status, statusId });
-      
+      console.log("Envoi du statut:", { status: formData.status, statusId });
+
       // S'assurer que le statut est envoyé comme un nombre, pas une chaîne
-      formDataToSend.append('fk_statut', statusId.toString());
-      
+      formDataToSend.append("fk_statut", statusId.toString());
+
       // Log pour débogage - vérifier ce qui est réellement envoyé
       for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
+        console.log(pair[0] + ": " + pair[1]);
       }
-      
+
       if (avatarFile) {
-        formDataToSend.append('avatar', avatarFile);
+        formDataToSend.append("avatar", avatarFile);
       }
 
       // S'assurer que nous utilisons l'URL correcte
       const response = await fetch(`${API_URL}/api/users/profile`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: formDataToSend
+        body: formDataToSend,
       });
 
       // Analyser la réponse même en cas d'erreur pour le débogage
       const responseData = await response.json();
-      console.log('Réponse du serveur:', responseData);
+      console.log("Réponse du serveur:", responseData);
 
       if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to update profile');
+        throw new Error(responseData.message || "Failed to update profile");
       }
 
       // Mise à jour du state local avec les données renvoyées
       if (responseData.user) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           name: responseData.user.nom || prev.name,
-          bio: responseData.user.bio || prev.bio
+          bio: responseData.user.bio || prev.bio,
         }));
-        
+
         // Mettre à jour l'avatar si nécessaire
         if (responseData.user.photo_url) {
           setAvatarPreview(responseData.user.photo_url);
         }
       }
 
-      alert('Profile updated successfully');
+      alert("Profile updated successfully");
       resetChangesState();
     } catch (err) {
-      console.error('Error updating profile:', err);
+      console.error("Error updating profile:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -220,11 +228,15 @@ const Settings = () => {
 
   const handleSaveSettings = (settingType) => {
     // Simuler la sauvegarde des paramètres
-    console.log(`Saving ${settingType} settings:`, 
-      settingType === 'notifications' ? notifications :
-      settingType === 'privacy' ? privacy :
-      settingType === 'appearance' ? { theme, fontSize, language } :
-      null
+    console.log(
+      `Saving ${settingType} settings:`,
+      settingType === "notifications"
+        ? notifications
+        : settingType === "privacy"
+        ? privacy
+        : settingType === "appearance"
+        ? { theme }
+        : null
     );
     alert(`${settingType} settings saved!`);
     resetChangesState();
@@ -233,20 +245,17 @@ const Settings = () => {
   // Fonction pour gérer l'action du bouton flottant en fonction de l'onglet actif
   const handleFloatingButtonAction = () => {
     switch (activeTab) {
-      case 'profile':
+      case "profile":
         handleSubmit();
         break;
-      case 'notifications':
-        handleSaveSettings('notifications');
+      case "notifications":
+        handleSaveSettings("notifications");
         break;
-      case 'privacy':
-        handleSaveSettings('privacy');
+      case "privacy":
+        handleSaveSettings("privacy");
         break;
-      case 'appearance':
-        handleSaveSettings('appearance');
-        break;
-      case 'language':
-        handleSaveSettings('language');
+      case "appearance":
+        handleSaveSettings("appearance");
         break;
       default:
         break;
@@ -260,8 +269,8 @@ const Settings = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    localStorage.removeItem("token");
+    window.location.href = "/login";
   };
 
   const handleDeleteAccount = () => {
@@ -296,7 +305,7 @@ const Settings = () => {
       <div className="settings-container">
         <div className="glow-circle-right top-right"></div>
         <div className="glow-circle-left bottom-left"></div>
-        
+
         <div className="settings-header">
           <h1>Paramètres</h1>
           <p>Personnalisez votre expérience SUPCHAT</p>
@@ -304,50 +313,55 @@ const Settings = () => {
 
         <div className="settings-layout">
           <div className="settings-sidebar">
-            <button 
-              className={`settings-tab ${activeTab === 'profile' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('profile')}
+            <button
+              className={`settings-tab ${
+                activeTab === "profile" ? "active" : ""
+              }`}
+              onClick={() => handleTabChange("profile")}
             >
               <FaUser className="tab-icon" />
               <span>Profil</span>
             </button>
-            <button 
-              className={`settings-tab ${activeTab === 'notifications' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('notifications')}
+            <button
+              className={`settings-tab ${
+                activeTab === "notifications" ? "active" : ""
+              }`}
+              onClick={() => handleTabChange("notifications")}
             >
               <FaBell className="tab-icon" />
               <span>Notifications</span>
             </button>
-            <button 
-              className={`settings-tab ${activeTab === 'privacy' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('privacy')}
+            <button
+              className={`settings-tab ${
+                activeTab === "privacy" ? "active" : ""
+              }`}
+              onClick={() => handleTabChange("privacy")}
             >
               <FaLock className="tab-icon" />
               <span>Confidentialité</span>
             </button>
-            <button 
-              className={`settings-tab ${activeTab === 'appearance' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('appearance')}
+            <button
+              className={`settings-tab ${
+                activeTab === "appearance" ? "active" : ""
+              }`}
+              onClick={() => handleTabChange("appearance")}
             >
               <FaPalette className="tab-icon" />
               <span>Apparence</span>
             </button>
-            <button 
-              className={`settings-tab ${activeTab === 'language' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('language')}
-            >
-              <FaLanguage className="tab-icon" />
-              <span>Langue</span>
-            </button>
-            <button 
-              className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`} 
-              onClick={() => handleTabChange('security')}
+            <button
+              className={`settings-tab ${
+                activeTab === "security" ? "active" : ""
+              }`}
+              onClick={() => handleTabChange("security")}
             >
               <FaShieldAlt className="tab-icon" />
               <span>Sécurité</span>
             </button>
-            <button 
-              className={`settings-tab danger ${activeTab === 'logout' ? 'active' : ''}`} 
+            <button
+              className={`settings-tab danger ${
+                activeTab === "logout" ? "active" : ""
+              }`}
               onClick={handleLogout}
             >
               <FaSignOutAlt className="tab-icon" />
@@ -357,11 +371,11 @@ const Settings = () => {
 
           <div className="settings-content">
             {/* Profile Settings */}
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <div className="settings-section">
                 <h2>Mon Profil</h2>
                 {error && <div className="error-message">{error}</div>}
-                
+
                 <form onSubmit={handleSubmit} className="settings-form">
                   {/* Avatar et présentation */}
                   <div className="profile-header">
@@ -371,11 +385,16 @@ const Settings = () => {
                           <img src={avatarPreview} alt="Avatar preview" />
                         ) : (
                           <div className="avatar-placeholder">
-                            {formData.name ? formData.name[0].toUpperCase() : '?'}
+                            {formData.name
+                              ? formData.name[0].toUpperCase()
+                              : "?"}
                           </div>
                         )}
                         <div className="avatar-overlay">
-                          <label htmlFor="avatar-input" className="change-avatar-btn">
+                          <label
+                            htmlFor="avatar-input"
+                            className="change-avatar-btn"
+                          >
                             Changer
                           </label>
                           <input
@@ -383,41 +402,74 @@ const Settings = () => {
                             id="avatar-input"
                             accept="image/*"
                             onChange={handleAvatarChange}
-                            style={{ display: 'none' }}
+                            style={{ display: "none" }}
                           />
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="profile-user-info">
-                      <h3>{formData.name || 'Votre nom'}</h3>
+                      <h3>{formData.name || "Votre nom"}</h3>
                       <p className="user-email">{formData.email}</p>
-                      
+
                       {/* Nouveau sélecteur de statut moderne */}
                       <div className="status-selector">
                         <div className="status-dropdown">
                           <div className="current-status">
-                            <span className={`status-dot status-${formData.status}`}></span>
+                            <span
+                              className={`status-dot status-${formData.status}`}
+                            ></span>
                             <span className="status-text">
-                              {formData.status === 'online' && 'En ligne'}
-                              {formData.status === 'away' && 'Absent'}
-                              {formData.status === 'dnd' && 'Ne pas déranger'}
-                              {formData.status === 'invisible' && 'Invisible'}
+                              {formData.status === "online" && "En ligne"}
+                              {formData.status === "away" && "Absent"}
+                              {formData.status === "dnd" && "Ne pas déranger"}
+                              {formData.status === "invisible" && "Invisible"}
                             </span>
                             <div className="status-options">
-                              <div className="status-option" onClick={() => handleInputChange({target: {name: 'status', value: 'online'}})}>
+                              <div
+                                className="status-option"
+                                onClick={() =>
+                                  handleInputChange({
+                                    target: { name: "status", value: "online" },
+                                  })
+                                }
+                              >
                                 <span className="status-dot status-online"></span>
                                 <span>En ligne</span>
                               </div>
-                              <div className="status-option" onClick={() => handleInputChange({target: {name: 'status', value: 'away'}})}>
+                              <div
+                                className="status-option"
+                                onClick={() =>
+                                  handleInputChange({
+                                    target: { name: "status", value: "away" },
+                                  })
+                                }
+                              >
                                 <span className="status-dot status-away"></span>
                                 <span>Absent</span>
                               </div>
-                              <div className="status-option" onClick={() => handleInputChange({target: {name: 'status', value: 'dnd'}})}>
+                              <div
+                                className="status-option"
+                                onClick={() =>
+                                  handleInputChange({
+                                    target: { name: "status", value: "dnd" },
+                                  })
+                                }
+                              >
                                 <span className="status-dot status-dnd"></span>
                                 <span>Ne pas déranger</span>
                               </div>
-                              <div className="status-option" onClick={() => handleInputChange({target: {name: 'status', value: 'invisible'}})}>
+                              <div
+                                className="status-option"
+                                onClick={() =>
+                                  handleInputChange({
+                                    target: {
+                                      name: "status",
+                                      value: "invisible",
+                                    },
+                                  })
+                                }
+                              >
                                 <span className="status-dot status-invisible"></span>
                                 <span>Invisible</span>
                               </div>
@@ -431,7 +483,7 @@ const Settings = () => {
                   <div className="settings-separator">
                     <span>Informations personnelles</span>
                   </div>
-                  
+
                   <div className="profile-section">
                     <div className="form-group">
                       <label htmlFor="name">Nom d'affichage</label>
@@ -443,9 +495,11 @@ const Settings = () => {
                         onChange={handleInputChange}
                         className="form-input"
                       />
-                      <small>Ce nom sera visible par tous les utilisateurs</small>
+                      <small>
+                        Ce nom sera visible par tous les utilisateurs
+                      </small>
                     </div>
-                    
+
                     <div className="form-group">
                       <label htmlFor="email">Adresse e-mail</label>
                       <input
@@ -463,7 +517,7 @@ const Settings = () => {
                   <div className="settings-separator">
                     <span>Personnalisation</span>
                   </div>
-                  
+
                   <div className="profile-section">
                     <div className="form-group">
                       <label htmlFor="bio">Bio</label>
@@ -486,22 +540,25 @@ const Settings = () => {
             )}
 
             {/* Notifications Settings */}
-            {activeTab === 'notifications' && (
+            {activeTab === "notifications" && (
               <div className="settings-section">
                 <h2>Paramètres de notification</h2>
-                
+
                 <div className="settings-group">
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications de messages</h3>
-                      <p>Recevez des notifications lorsque vous recevez des messages</p>
+                      <p>
+                        Recevez des notifications lorsque vous recevez des
+                        messages
+                      </p>
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={notifications.messages} 
-                          onChange={() => handleNotificationChange('messages')}
+                        <input
+                          type="checkbox"
+                          checked={notifications.messages}
+                          onChange={() => handleNotificationChange("messages")}
                         />
                         <span className="slider"></span>
                       </label>
@@ -511,14 +568,16 @@ const Settings = () => {
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications de mentions</h3>
-                      <p>Recevez des notifications lorsque vous êtes mentionné</p>
+                      <p>
+                        Recevez des notifications lorsque vous êtes mentionné
+                      </p>
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={notifications.mentions} 
-                          onChange={() => handleNotificationChange('mentions')}
+                        <input
+                          type="checkbox"
+                          checked={notifications.mentions}
+                          onChange={() => handleNotificationChange("mentions")}
                         />
                         <span className="slider"></span>
                       </label>
@@ -532,10 +591,10 @@ const Settings = () => {
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={notifications.sounds} 
-                          onChange={() => handleNotificationChange('sounds')}
+                        <input
+                          type="checkbox"
+                          checked={notifications.sounds}
+                          onChange={() => handleNotificationChange("sounds")}
                         />
                         <span className="slider"></span>
                       </label>
@@ -545,14 +604,17 @@ const Settings = () => {
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications par e-mail</h3>
-                      <p>Recevez des notifications par e-mail lorsque vous êtes hors ligne</p>
+                      <p>
+                        Recevez des notifications par e-mail lorsque vous êtes
+                        hors ligne
+                      </p>
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={notifications.email} 
-                          onChange={() => handleNotificationChange('email')}
+                        <input
+                          type="checkbox"
+                          checked={notifications.email}
+                          onChange={() => handleNotificationChange("email")}
                         />
                         <span className="slider"></span>
                       </label>
@@ -566,10 +628,10 @@ const Settings = () => {
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={notifications.desktop} 
-                          onChange={() => handleNotificationChange('desktop')}
+                        <input
+                          type="checkbox"
+                          checked={notifications.desktop}
+                          onChange={() => handleNotificationChange("desktop")}
                         />
                         <span className="slider"></span>
                       </label>
@@ -582,20 +644,22 @@ const Settings = () => {
             )}
 
             {/* Privacy Settings */}
-            {activeTab === 'privacy' && (
+            {activeTab === "privacy" && (
               <div className="settings-section">
                 <h2>Paramètres de confidentialité</h2>
-                
+
                 <div className="settings-group">
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Qui peut voir mon statut en ligne</h3>
                     </div>
                     <div className="setting-control">
-                      <select 
-                        className="form-select" 
+                      <select
+                        className="form-select"
                         value={privacy.onlineStatus}
-                        onChange={(e) => handlePrivacyChange('onlineStatus', e.target.value)}
+                        onChange={(e) =>
+                          handlePrivacyChange("onlineStatus", e.target.value)
+                        }
                       >
                         <option value="all">Tout le monde</option>
                         <option value="friends">Seulement mes amis</option>
@@ -607,14 +671,22 @@ const Settings = () => {
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Accusés de lecture</h3>
-                      <p>Permettre aux autres de savoir quand vous avez lu leurs messages</p>
+                      <p>
+                        Permettre aux autres de savoir quand vous avez lu leurs
+                        messages
+                      </p>
                     </div>
                     <div className="setting-control">
                       <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={privacy.readReceipts} 
-                          onChange={() => handlePrivacyChange('readReceipts', !privacy.readReceipts)}
+                        <input
+                          type="checkbox"
+                          checked={privacy.readReceipts}
+                          onChange={() =>
+                            handlePrivacyChange(
+                              "readReceipts",
+                              !privacy.readReceipts
+                            )
+                          }
                         />
                         <span className="slider"></span>
                       </label>
@@ -626,10 +698,12 @@ const Settings = () => {
                       <h3>Qui peut m'envoyer des demandes de messages</h3>
                     </div>
                     <div className="setting-control">
-                      <select 
+                      <select
                         className="form-select"
                         value={privacy.messageRequests}
-                        onChange={(e) => handlePrivacyChange('messageRequests', e.target.value)}
+                        onChange={(e) =>
+                          handlePrivacyChange("messageRequests", e.target.value)
+                        }
                       >
                         <option value="all">Tout le monde</option>
                         <option value="friends">Seulement mes amis</option>
@@ -644,89 +718,41 @@ const Settings = () => {
             )}
 
             {/* Appearance Settings */}
-            {activeTab === 'appearance' && (
+            {activeTab === "appearance" && (
               <div className="settings-section">
                 <h2>Paramètres d'apparence</h2>
-                
+
                 <div className="settings-group">
                   <div className="theme-selector">
                     <h3>Thème</h3>
                     <div className="theme-options">
-                      <div 
-                        className={`theme-option ${theme === 'dark' ? 'active' : ''}`}
-                        onClick={() => setTheme('dark')}
+                      <div
+                        className={`theme-option ${
+                          theme === "dark" ? "active" : ""
+                        }`}
+                        onClick={() => setTheme("dark")}
                       >
                         <div className="theme-preview dark-theme"></div>
                         <span>Sombre</span>
                       </div>
-                      <div 
-                        className={`theme-option ${theme === 'light' ? 'active' : ''}`}
-                        onClick={() => setTheme('light')}
+                      <div
+                        className={`theme-option ${
+                          theme === "light" ? "active" : ""
+                        }`}
+                        onClick={() => setTheme("light")}
                       >
                         <div className="theme-preview light-theme"></div>
                         <span>Clair</span>
                       </div>
-                      <div 
-                        className={`theme-option ${theme === 'system' ? 'active' : ''}`}
-                        onClick={() => setTheme('system')}
+                      <div
+                        className={`theme-option ${
+                          theme === "system" ? "active" : ""
+                        }`}
+                        onClick={() => setTheme("system")}
                       >
                         <div className="theme-preview system-theme"></div>
                         <span>Système</span>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="font-size-selector">
-                    <h3>Taille du texte</h3>
-                    <div className="font-options">
-                      <button 
-                        className={`font-option ${fontSize === 'small' ? 'active' : ''}`}
-                        onClick={() => setFontSize('small')}
-                      >
-                        Petit
-                      </button>
-                      <button 
-                        className={`font-option ${fontSize === 'medium' ? 'active' : ''}`}
-                        onClick={() => setFontSize('medium')}
-                      >
-                        Moyen
-                      </button>
-                      <button 
-                        className={`font-option ${fontSize === 'large' ? 'active' : ''}`}
-                        onClick={() => setFontSize('large')}
-                      >
-                        Grand
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Suppression du bouton d'enregistrement statique */}
-              </div>
-            )}
-
-            {/* Language Settings */}
-            {activeTab === 'language' && (
-              <div className="settings-section">
-                <h2>Paramètres de langue</h2>
-                
-                <div className="settings-group">
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Langue de l'application</h3>
-                    </div>
-                    <div className="setting-control">
-                      <select 
-                        className="form-select" 
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                      >
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="de">Deutsch</option>
-                        <option value="it">Italiano</option>
-                      </select>
                     </div>
                   </div>
                 </div>
@@ -736,33 +762,41 @@ const Settings = () => {
             )}
 
             {/* Security Settings */}
-            {activeTab === 'security' && (
+            {activeTab === "security" && (
               <div className="settings-section">
                 <h2>Paramètres de sécurité</h2>
-                
+
                 <div className="settings-group">
                   <div className="security-option">
                     <h3>Changer de mot de passe</h3>
-                    <p>Mettez à jour votre mot de passe pour sécuriser votre compte</p>
-                    <button className="btn-secondary">Changer de mot de passe</button>
+                    <p>
+                      Mettez à jour votre mot de passe pour sécuriser votre
+                      compte
+                    </p>
+                    <button className="btn-secondary">
+                      Changer de mot de passe
+                    </button>
                   </div>
 
                   <div className="security-option">
                     <h3>Authentification à deux facteurs</h3>
-                    <p>Ajoutez une couche de protection supplémentaire à votre compte</p>
+                    <p>
+                      Ajoutez une couche de protection supplémentaire à votre
+                      compte
+                    </p>
                     <button className="btn-secondary">Configurer l'A2F</button>
-                  </div>
-
-                  <div className="security-option">
-                    <h3>Sessions actives</h3>
-                    <p>Gérez les appareils connectés à votre compte</p>
-                    <button className="btn-secondary">Voir les sessions</button>
                   </div>
 
                   <div className="security-option danger-zone">
                     <h3>Supprimer mon compte</h3>
-                    <p>Cette action est irréversible et supprimera toutes vos données</p>
-                    <button className="btn-danger" onClick={handleDeleteAccount}>
+                    <p>
+                      Cette action est irréversible et supprimera toutes vos
+                      données
+                    </p>
+                    <button
+                      className="btn-danger"
+                      onClick={handleDeleteAccount}
+                    >
                       Supprimer mon compte
                     </button>
                   </div>
@@ -773,16 +807,18 @@ const Settings = () => {
         </div>
 
         {/* Bouton d'enregistrement flottant */}
-        {hasChanges && activeTab !== 'security' && (
+        {hasChanges && activeTab !== "security" && (
           <div className="floating-save-button">
-            <button 
-              className="btn-floating" 
+            <button
+              className="btn-floating"
               onClick={handleFloatingButtonAction}
               disabled={isLoading}
             >
               <FaSave className="floating-icon" />
               <span>
-                {isLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                {isLoading
+                  ? "Enregistrement..."
+                  : "Enregistrer les modifications"}
               </span>
             </button>
           </div>

@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaTimes, FaUsers } from "react-icons/fa";
+import {
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaVideo,
+  FaVideoSlash,
+  FaTimes,
+  FaUsers,
+} from "react-icons/fa";
 import "./VideoCallModal.css";
+import Spinner from "../../components/Spinner/Spinner";
 import { API_URL } from "../../config/config";
 
-const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserName, socket }) => {
+const VideoCallModal = ({
+  show,
+  onClose,
+  workspace,
+  activeChannel,
+  currentUserName,
+  socket,
+}) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [participants, setParticipants] = useState(0);
@@ -20,18 +35,19 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
         try {
           setIsLoading(true);
           setError("");
-          
+
           // Générer un ID stable pour la salle basé uniquement sur le workspace et le canal
           const roomId = `supchat-${workspace.id}-${activeChannel.id}`;
-          
+
           // Créer l'URL kMeet avec les paramètres
-          const url = `https://kmeet.infomaniak.com/${roomId}?userName=${encodeURIComponent(currentUserName || "Utilisateur")}&autoJoin=true&enableChat=true&lang=fr`;
-          
+          const url = `https://kmeet.infomaniak.com/${roomId}?userName=${encodeURIComponent(
+            currentUserName || "Utilisateur"
+          )}&autoJoin=true&enableChat=true&lang=fr`;
+
           setMeetLink(url);
-          
+
           // On va vérifier si on est le premier participant quand on reçoit les données de participants
           isFirstParticipant.current = true;
-          
         } catch (err) {
           console.error("Erreur lors de la génération de l'appel visio:", err);
           setError("Erreur lors de la création de l'appel visio");
@@ -42,7 +58,7 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
 
       generateMeetLink();
     }
-    
+
     // Nettoyage lors de la fermeture du modal
     return () => {
       setMeetLink("");
@@ -51,52 +67,62 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
       isFirstParticipant.current = false;
     };
   }, [show, workspace, activeChannel, currentUserName]);
-  
+
   // Fonction pour basculer le micro
   const toggleMute = () => {
     setIsMuted(!isMuted);
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
-        { action: isMuted ? 'unmute' : 'mute' },
-        'https://kmeet.infomaniak.com'
+        { action: isMuted ? "unmute" : "mute" },
+        "https://kmeet.infomaniak.com"
       );
     }
   };
-  
+
   // Fonction pour basculer la caméra
   const toggleVideo = () => {
     setIsVideoOff(!isVideoOff);
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
-        { action: isVideoOff ? 'startVideo' : 'stopVideo' },
-        'https://kmeet.infomaniak.com'
+        { action: isVideoOff ? "startVideo" : "stopVideo" },
+        "https://kmeet.infomaniak.com"
       );
     }
   };
-  
+
   // Gestionnaire pour les événements de l'iframe
   useEffect(() => {
     const handleMessage = (event) => {
       // Vérifier que le message vient bien de kMeet
-      if (event.origin === 'https://kmeet.infomaniak.com') {
+      if (event.origin === "https://kmeet.infomaniak.com") {
         try {
           console.log("🔍 Message reçu de kMeet:", event.data);
           const data = event.data;
           if (data.participantCount !== undefined) {
-            console.log(`🔍 Nombre de participants détecté: ${data.participantCount}. Premier participant? ${isFirstParticipant.current}. A déjà rejoint? ${hasJoinedCall}`);
+            console.log(
+              `🔍 Nombre de participants détecté: ${data.participantCount}. Premier participant? ${isFirstParticipant.current}. A déjà rejoint? ${hasJoinedCall}`
+            );
             const newParticipantCount = data.participantCount;
             setParticipants(newParticipantCount);
-            
+
             // Si on est le premier participant (participantCount === 1) et qu'on vient de rejoindre
             // C'est qu'on a lancé un nouvel appel
-            if (newParticipantCount === 1 && isFirstParticipant.current && !hasJoinedCall) {
-              console.log("🔔 DÉCLENCHEMENT de sendVideoCallNotification - Conditions remplies ✓");
+            if (
+              newParticipantCount === 1 &&
+              isFirstParticipant.current &&
+              !hasJoinedCall
+            ) {
+              console.log(
+                "🔔 DÉCLENCHEMENT de sendVideoCallNotification - Conditions remplies ✓"
+              );
               // On est la première personne à rejoindre la réunion, donc on lance une notification
               setTimeout(() => {
-                console.log("🔔 Exécution de sendVideoCallNotification avec délai");
+                console.log(
+                  "🔔 Exécution de sendVideoCallNotification avec délai"
+                );
                 sendVideoCallNotification();
               }, 1000); // Petit délai pour être sûr que tout est initialisé
-              
+
               isFirstParticipant.current = false;
               setHasJoinedCall(true);
             } else {
@@ -105,9 +131,12 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
                 "newParticipantCount === 1": newParticipantCount === 1,
                 "isFirstParticipant.current": isFirstParticipant.current,
                 "!hasJoinedCall": !hasJoinedCall,
-                "Toutes les conditions remplies": newParticipantCount === 1 && isFirstParticipant.current && !hasJoinedCall
+                "Toutes les conditions remplies":
+                  newParticipantCount === 1 &&
+                  isFirstParticipant.current &&
+                  !hasJoinedCall,
               });
-              
+
               // On a rejoint une réunion existante, donc on ne fait pas de notification
               if (!hasJoinedCall) {
                 isFirstParticipant.current = false;
@@ -120,11 +149,11 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
         }
       }
     };
-    
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, [hasJoinedCall, socket, activeChannel, workspace, currentUserName]);
-  
+
   // Fonction pour envoyer une notification d'appel vidéo au chat
   const sendVideoCallNotification = () => {
     console.log("📞 Tentative d'envoi de notification d'appel vidéo", {
@@ -132,44 +161,56 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
       socketConnecté: socket?.connected,
       canal: activeChannel?.id,
       workspace: workspace?.id,
-      utilisateur: currentUserName
+      utilisateur: currentUserName,
     });
-    
+
     if (socket && socket.connected && activeChannel && workspace) {
-      console.log("📞 CONDITIONS REMPLIES: Envoi de la notification d'appel vidéo au chat", {
-        canal_id: activeChannel.id,
-        content: `📹 **${currentUserName || "Un utilisateur"}** a lancé un appel vidéo dans ce canal.`,
-        workspace_id: workspace.id
-      });
-      
+      console.log(
+        "📞 CONDITIONS REMPLIES: Envoi de la notification d'appel vidéo au chat",
+        {
+          canal_id: activeChannel.id,
+          content: `📹 **${
+            currentUserName || "Un utilisateur"
+          }** a lancé un appel vidéo dans ce canal.`,
+          workspace_id: workspace.id,
+        }
+      );
+
       // Envoyer un message système au canal
       socket.emit("message", {
         canal_id: activeChannel.id,
-        content: `📹 **${currentUserName || "Un utilisateur"}** a lancé un appel vidéo dans ce canal.`,
+        content: `📹 **${
+          currentUserName || "Un utilisateur"
+        }** a lancé un appel vidéo dans ce canal.`,
         workspace_id: workspace.id,
-        is_system_message: true // Indiquer que c'est un message système
+        is_system_message: true, // Indiquer que c'est un message système
       });
-      
+
       console.log("📞 Notification d'appel vidéo ENVOYÉE ✅");
     } else {
-      console.error("📞 ERREUR: Impossible d'envoyer la notification d'appel vidéo:", {
-        socketExiste: !!socket,
-        socketConnecté: socket?.connected,
-        canal: activeChannel?.id,
-        workspace: workspace?.id
-      });
+      console.error(
+        "📞 ERREUR: Impossible d'envoyer la notification d'appel vidéo:",
+        {
+          socketExiste: !!socket,
+          socketConnecté: socket?.connected,
+          canal: activeChannel?.id,
+          workspace: workspace?.id,
+        }
+      );
     }
   };
-  
+
   // Si le modal n'est pas affiché, ne rien rendre
   if (!show) return null;
-  
+
   return (
     <div className="video-call-modal-overlay">
       <div className="video-call-modal">
         <div className="video-call-header">
           <h2>
-            {activeChannel ? `Appel vidéo • #${activeChannel.name}` : "Appel vidéo"}
+            {activeChannel
+              ? `Appel vidéo • #${activeChannel.name}`
+              : "Appel vidéo"}
           </h2>
           <div className="video-call-participants">
             <FaUsers /> {participants}
@@ -178,11 +219,11 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
             <FaTimes />
           </button>
         </div>
-        
+
         <div className="video-call-content">
           {isLoading ? (
             <div className="video-call-loading">
-              <div className="loading-spinner"></div>
+              <Spinner />
               <p>Préparation de l'appel visio...</p>
             </div>
           ) : error ? (
@@ -200,16 +241,16 @@ const VideoCallModal = ({ show, onClose, workspace, activeChannel, currentUserNa
             ></iframe>
           )}
         </div>
-        
+
         <div className="video-call-controls">
-          <button 
-            className={`control-button ${isMuted ? 'control-off' : ''}`}
+          <button
+            className={`control-button ${isMuted ? "control-off" : ""}`}
             onClick={toggleMute}
           >
             {isMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
           </button>
-          <button 
-            className={`control-button ${isVideoOff ? 'control-off' : ''}`}
+          <button
+            className={`control-button ${isVideoOff ? "control-off" : ""}`}
             onClick={toggleVideo}
           >
             {isVideoOff ? <FaVideoSlash /> : <FaVideo />}
