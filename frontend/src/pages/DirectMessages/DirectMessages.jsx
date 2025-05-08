@@ -4,7 +4,6 @@ import {
   FaUserCircle,
   FaPaperPlane,
   FaPaperclip,
-  FaSmile,
   FaSearch,
   FaPlus,
   FaTimes,
@@ -21,6 +20,7 @@ import {
   FaDownload,
 } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
+import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
@@ -1363,7 +1363,14 @@ function DirectMessages() {
 
           <ul className="dm-conv-list">
             {loading ? (
-              <li className="dm-empty">Chargement des conversations...</li>
+              <li className="dm-empty">
+                <div className="loading-container">
+                  <Spinner size="small" />
+                  <span className="loading-text">
+                    Chargement des conversations...
+                  </span>
+                </div>
+              </li>
             ) : filteredConversations.length === 0 ? (
               <li className="dm-empty">
                 {searchQuery ? "Aucun résultat" : "Aucune conversation"}

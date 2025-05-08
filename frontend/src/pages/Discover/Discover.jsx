@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceCard from "../Workspaces/WorkspaceCard";
+import Spinner from "../../components/Spinner/Spinner";
 import defaultBanner from "../../assets/images/baniere_default.png";
 import "./Discover.css";
 import { API_URL } from "../../config/config";
@@ -21,25 +22,28 @@ function Discover() {
   useEffect(() => {
     const fetchUserWorkspaces = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token) {
           setUserWorkspacesLoaded(true); // Marquer comme chargé même si pas de token
           return;
         }
-        
-        const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+
+        const response = await fetch(
+          `${API_URL}/api/workspaces/user/workspaces`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
-        
+        );
+
         if (response.ok) {
           const data = await response.json();
           // Extraire juste les IDs des workspaces de l'utilisateur
-          const userWorkspaceIds = data.map(ws => ws.id_workspace);
+          const userWorkspaceIds = data.map((ws) => ws.id_workspace);
           setUserWorkspaces(userWorkspaceIds);
         }
-        
+
         setUserWorkspacesLoaded(true); // Marquer comme chargé dans tous les cas
       } catch (err) {
         console.error("Error fetching user workspaces:", err);
@@ -48,7 +52,7 @@ function Discover() {
     };
 
     fetchUserWorkspaces();
-  }, []); 
+  }, []);
 
   // Fetch all workspaces from backend API
   useEffect(() => {
@@ -68,17 +72,20 @@ function Discover() {
           id: workspace.id_workspace,
           name: workspace.nom,
           description: workspace.description || "No description available",
-          banner: workspace.banner_url && !workspace.banner_url.startsWith('http')
-            ? S3_BASE_URL + workspace.banner_url
-            : (workspace.banner_url || defaultBanner),
-          icon: workspace.icon_url && !workspace.icon_url.startsWith('http')
-            ? S3_BASE_URL + workspace.icon_url
-            : (workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"),
+          banner:
+            workspace.banner_url && !workspace.banner_url.startsWith("http")
+              ? S3_BASE_URL + workspace.banner_url
+              : workspace.banner_url || defaultBanner,
+          icon:
+            workspace.icon_url && !workspace.icon_url.startsWith("http")
+              ? S3_BASE_URL + workspace.icon_url
+              : workspace.icon_url ||
+                "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
           onlineUsers: workspace.online_users || 0,
           totalMembers: workspace.total_members || 0,
           isFavorite: workspace.is_favorite || false,
           isPrivate: workspace.is_private || false,
-          hasJoined: userWorkspaces.includes(workspace.id_workspace)
+          hasJoined: userWorkspaces.includes(workspace.id_workspace),
         }));
 
         setWorkspaces(transformedWorkspaces);
@@ -95,7 +102,7 @@ function Discover() {
     if (userWorkspacesLoaded) {
       fetchWorkspaces();
     }
-  }, [userWorkspaces, userWorkspacesLoaded]); 
+  }, [userWorkspaces, userWorkspacesLoaded]);
 
   // Filter workspaces based on search query
   useEffect(() => {
@@ -145,17 +152,20 @@ function Discover() {
           <h2 className="section-title">All Workspaces</h2>
 
           {isLoading ? (
-            <div className="loading-state">Loading workspaces...</div>
+            <div className="loading-state">
+              <Spinner />
+              <span className="loading-text">Chargement des workspaces...</span>
+            </div>
           ) : error ? (
             <div className="error-state">Error: {error}</div>
           ) : (
             <div className="workspaces-grid">
               {filteredWorkspaces.length > 0 ? (
                 filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard 
-                    key={workspace.id} 
+                  <WorkspaceCard
+                    key={workspace.id}
                     workspace={workspace}
-                    showJoinButton={true} 
+                    showJoinButton={true}
                     hasJoined={workspace.hasJoined} // Passer l'information si l'utilisateur est membre
                   />
                 ))
