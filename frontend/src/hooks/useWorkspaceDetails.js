@@ -1225,7 +1225,9 @@ export const useWorkspaceDetails = (workspaceId) => {
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       const textAfterCursor = currentDisplay.substring(cursorPos);
-      const mentionText = `@${user.name} `;
+      // Format the mention to include the user's ID in a markdown link format
+      // This will be parsed later to create the badge with the correct styling
+      const mentionText = `@[${user.name}](${user.id}) `; // Format: @[username](userId)
       const newDisplayValue =
         currentDisplay.substring(0, lastAtIndex) +
         mentionText +
