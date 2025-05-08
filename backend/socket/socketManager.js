@@ -513,6 +513,47 @@ const socketManager = (io) => {
       }
     });
     
+    // Nouvel événement pour marquer un canal comme lu
+    socket.on("markChannelAsRead", async ({ channelId }) => {
+      try {
+        const userId = socket.user.id;
+        
+        if (!channelId) {
+          socket.emit("error", { message: "ID du canal manquant" });
+          return;
+        }
+        
+        console.log(`Socket.IO: Marquage du canal ${channelId} comme lu par l'utilisateur ${userId}`);
+        
+        // Marquer le canal comme lu
+        await MessageModel.markChannelAsRead(userId, channelId);
+        
+        // Récupérer le nouveau décompte des messages non lus
+        const unreadCounts = await MessageModel.getUnreadCountByChannel(userId);
+        
+        // Calculer le total des messages non lus
+        let total = 0;
+        if (unreadCounts && unreadCounts.channels) {
+          Object.values(unreadCounts.channels).forEach(channel => {
+            total += channel.count || 0;
+          });
+        }
+        
+        // Notifier l'utilisateur pour mettre à jour les badges
+        socket.emit("unreadChannelMessagesUpdated", { 
+          channels: unreadCounts.channels || {}, 
+          total: total 
+        });
+        
+        // Envoyer une confirmation
+        socket.emit("channelMarkedAsRead", { channelId, success: true });
+        
+        console.log(`Socket.IO: Canal ${channelId} marqué comme lu avec succès, compteurs mis à jour`);
+      } catch (error) {
+        console.error("Socket.IO: Erreur lors du marquage du canal comme lu:", error);
+        socket.emit("error", { message: "Erreur lors du marquage du canal comme lu" });
+      }
+    });
 
     // Nouvel événement pour gérer directement les requêtes adressées à Mistral
     socket.on("mistralRequest", async (data) => {

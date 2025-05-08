@@ -913,13 +913,133 @@ export const useWorkspaceDetails = (workspaceId) => {
       });
 
       setMessages(messagesWithEmojis);
+
+      // Marquer le canal comme lu une fois que les messages sont chargés
+      // et que l'utilisateur a interagi avec ce canal
+      if (socket && socket.connected) {
+        console.log(`Marquage du canal ${channel.id} comme lu`);
+        socket.emit("markChannelAsRead", { channelId: channel.id });
+      } else {
+        // Appel API de secours si le socket n'est pas connecté
+        try {
+          const markReadResponse = await fetch(
+            `${API_URL}/api/messages/channel/${channel.id}/read`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          if (markReadResponse.ok) {
+            console.log(`Canal ${channel.id} marqué comme lu via API REST`);
+          }
+        } catch (markReadError) {
+          console.error("Erreur pour marquer le canal comme lu:", markReadError);
+        }
+      }
     } catch (error) {
       console.error("Erreur:", error);
       setMessages([]);
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [socket]);
+
+  // Fonction pour marquer un canal comme lu
+  const markChannelAsRead = useCallback(async (channel) => {
+    try {
+      if (!channel || !channel.id) {
+        console.warn("Tentative de marquer un canal sans ID comme lu");
+        return;
+      }
+
+      console.log(`Marquage du canal ${channel.id} comme lu`);
+
+      // Essayer d'abord via socket.io si disponible
+      if (socket && socket.connected) {
+        console.log(`Marquage du canal ${channel.id} comme lu via socket.io`);
+        socket.emit("markChannelAsRead", { channelId: channel.id });
+        
+        // Créer un délai pour vérifier si nous recevons une confirmation
+        setTimeout(async () => {
+          // Si nous n'avons pas reçu de confirmation après 1 seconde, utiliser le fallback API REST
+          const event = new CustomEvent('checkSocketConfirmation', {
+            detail: { channelId: channel.id }
+          });
+          window.dispatchEvent(event);
+        }, 1000);
+      } else {
+        // Appel API de secours si le socket n'est pas connecté
+        await markChannelAsReadViaAPI(channel.id);
+      }
+    } catch (error) {
+      console.error("Erreur:", error);
+    }
+  }, [socket]);
+
+  // Fonction de fallback pour marquer un canal comme lu via API REST
+  const markChannelAsReadViaAPI = async (channelId) => {
+    try {
+      console.log(`Canal ${channelId} marqué comme lu via API REST (fallback)`);
+      const markReadResponse = await fetch(
+        `${API_URL}/api/messages/channel/${channelId}/read`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      if (markReadResponse.ok) {
+        console.log(`Canal ${channelId} marqué comme lu via API REST`);
+        
+        // Après avoir marqué le canal comme lu via API, rafraîchir les compteurs de messages non lus
+        await refreshUnreadChannelCounts();
+      } else {
+        console.error("Erreur API lors du marquage du canal comme lu:", await markReadResponse.text());
+      }
+    } catch (markReadError) {
+      console.error("Erreur pour marquer le canal comme lu via API:", markReadError);
+    }
+  };
+
+  // Fonction pour rafraîchir les compteurs de messages non lus
+  const refreshUnreadChannelCounts = async () => {
+    try {
+      const unreadResponse = await fetch(
+        `${API_URL}/api/messages/unread`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      if (unreadResponse.ok) {
+        const unreadData = await unreadResponse.json();
+        console.log("Compteurs de messages non lus mis à jour:", unreadData);
+        
+        // Émettre un événement pour mettre à jour les badges
+        const event = new CustomEvent('unreadChannelMessagesUpdated', {
+          detail: { 
+            total: unreadData.total,
+            channels: unreadData.channels
+          }
+        });
+        window.dispatchEvent(event);
+        
+        // Mettre à jour localStorage
+        localStorage.setItem('unreadChannelMessages', unreadData.total.toString());
+        localStorage.setItem('unreadChannelMessagesDetails', JSON.stringify(unreadData.channels));
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des compteurs de messages non lus:", error);
+    }
+  };
 
   const convertMentionsForSending = (text) => {
     let result = text;
