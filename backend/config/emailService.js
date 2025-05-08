@@ -21,7 +21,7 @@ const sendInvitation = async (
 ) => {
 
 
-  const inviteLink = `http://192.168.1.63:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
+  const inviteLink = `http://REDACTED:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
 
 
     toEmail
