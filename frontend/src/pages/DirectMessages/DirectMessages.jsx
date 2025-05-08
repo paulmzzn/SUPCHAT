@@ -1851,20 +1851,17 @@ function DirectMessages() {
                     className="dm-input"
                     disabled={uploadingFile}
                   />
-                  <button type="button" className="dm-emoji-btn">
-                    <FaSmile />
+                  <button
+                    type="submit"
+                    className="dm-send-btn"
+                    disabled={
+                      (!newMessage.trim() && attachments.length === 0) ||
+                      uploadingFile
+                    }
+                  >
+                    <FaPaperPlane />
                   </button>
                 </div>
-                <button
-                  type="submit"
-                  className="dm-send-btn"
-                  disabled={
-                    (!newMessage.trim() && attachments.length === 0) ||
-                    uploadingFile
-                  }
-                >
-                  <FaPaperPlane />
-                </button>
               </form>
             </>
           )}
