@@ -1328,6 +1328,77 @@ function DirectMessages() {
     }
   }, []);
 
+  // Fonction pour télécharger un fichier
+  const handleDownloadFile = (fileUrl, fileName) => {
+    // Si l'URL est déjà complète, extraire le chemin du fichier
+    const extractFilePath = (url) => {
+      if (url.startsWith("http")) {
+        try {
+          // Si l'URL contient le bucket S3, extraire le chemin
+          if (url.includes("s3-supchat.s3.fr-par.scw.cloud")) {
+            const parts = url.split("s3-supchat.s3.fr-par.scw.cloud/");
+            if (parts.length > 1) {
+              return parts[1];
+            }
+          }
+          // Sinon, retourner l'URL complète
+          return url;
+        } catch (error) {
+          console.error(
+            "Erreur lors de l'extraction du chemin de fichier:",
+            error
+          );
+          return url;
+        }
+      }
+      // Si ce n'est pas une URL complète, c'est déjà un chemin relatif
+      return fileUrl;
+    };
+
+    // Extraire le chemin du fichier
+    const filePath = extractFilePath(fileUrl);
+
+    // Construire l'URL de téléchargement via le backend
+    const token = localStorage.getItem("token");
+    const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
+      filePath
+    )}`;
+
+    if (token) {
+      // Utiliser fetch pour envoyer le token dans l'en-tête
+      fetch(downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("Erreur de téléchargement");
+          return response.blob();
+        })
+        .then((blob) => {
+          // Créer une URL d'objet pour le blob
+          const objectUrl = window.URL.createObjectURL(blob);
+
+          // Créer un élément a temporaire pour déclencher le téléchargement
+          const a = document.createElement("a");
+          a.href = objectUrl;
+          a.download = fileName || "download";
+          document.body.appendChild(a);
+          a.click();
+
+          // Nettoyer
+          window.URL.revokeObjectURL(objectUrl);
+          document.body.removeChild(a);
+        })
+        .catch((error) => {
+          console.error("Erreur lors du téléchargement du fichier:", error);
+          alert("Impossible de télécharger le fichier. Veuillez réessayer.");
+        });
+    } else {
+      alert("Vous devez être connecté pour télécharger des fichiers.");
+    }
+  };
+
   return (
     <div className="app-layout">
       <Sidebar unreadMessageCount={totalUnreadCount} />
@@ -1733,13 +1804,7 @@ function DirectMessages() {
                                         }
                                         className="dm-msg-file-attachment"
                                       >
-                                        <a
-                                          href={fileUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          download={attachment.nom_fichier}
-                                          className="dm-msg-file-download-link"
-                                        >
+                                        <div className="dm-msg-file-download-link">
                                           <div className="dm-msg-file-icon">
                                             {getFileIcon(attachment.type)}
                                           </div>
@@ -1753,10 +1818,18 @@ function DirectMessages() {
                                               )}
                                             </div>
                                           </div>
-                                          <div className="dm-msg-file-download">
+                                          <div
+                                            className="dm-msg-file-download"
+                                            onClick={() =>
+                                              handleDownloadFile(
+                                                fileUrl,
+                                                attachment.nom_fichier
+                                              )
+                                            }
+                                          >
                                             <FaDownload />
                                           </div>
-                                        </a>
+                                        </div>
                                       </div>
                                     );
                                   }

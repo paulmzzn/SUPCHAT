@@ -170,6 +170,34 @@ export const deleteFileFromS3 = async (url) => {
 };
 
 /**
+ * Récupérer un fichier depuis Scaleway S3
+ * @param {String} key - Clé du fichier à récupérer
+ * @returns {Promise<Object>} - Données du fichier récupéré
+ */
+export const getObjectFromS3 = async (key) => {
+  if (!key) {
+    throw new Error("No file key provided");
+  }
+
+  try {
+    console.log(
+      `Retrieving object with key: ${key} from bucket: ${BUCKET_NAME}`
+    );
+
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: key,
+    };
+
+    const data = await s3.getObject(params).promise();
+    return data;
+  } catch (error) {
+    console.error("Error retrieving file from Scaleway S3:", error);
+    throw error;
+  }
+};
+
+/**
  * Extraire la clé du fichier depuis une URL Scaleway S3
  * @param {String} url - URL complète du fichier
  * @returns {String|null} - Clé du fichier ou null si non trouvée
@@ -222,6 +250,7 @@ const getFileType = (extension) => {
 export default {
   uploadFileToS3,
   deleteFileFromS3,
+  getObjectFromS3,
   getFileType,
   ALLOWED_FILE_TYPES,
 };
