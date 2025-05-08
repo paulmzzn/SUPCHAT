@@ -14,7 +14,8 @@ import {
   removeMember,
   uploadWorkspaceImages,
   getUserWorkspaces, // Ajout de la nouvelle fonction
-  changeMemberRole // Ajout de la fonction pour changer le rôle d'un membre
+  changeMemberRole, // Ajout de la fonction pour changer le rôle d'un membre
+  deleteWorkspaceCascade // Ajout de la fonction pour la suppression en cascade
 } from '../controllers/workspaceController.js';
 import {
   addFavorite,
@@ -64,6 +65,9 @@ router.delete('/:workspaceId/members/:userId', verifyToken, removeMember); // Aj
 
 // Changer le rôle d'un membre (owner only)
 router.put('/:workspaceId/members/:userId/role', verifyToken, changeMemberRole);
+
+// Suppression en cascade d'un workspace
+router.delete('/:id/cascade', verifyToken, deleteWorkspaceCascade);
 
 // Route for image uploads, now using S3
 router.post('/:workspaceId/images', upload.fields([

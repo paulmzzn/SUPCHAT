@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaLock, FaUsers, FaCircle, FaEllipsisV, FaStar, FaSignOutAlt, FaCog } from "react-icons/fa";
+import { FaLock, FaUsers, FaCircle, FaEllipsisV, FaStar, FaSignOutAlt, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import JoinWorkspaceButton from "../../components/JoinWorkspaceButton/JoinWorkspaceButton";
 import { API_URL } from "../../config/config";
@@ -179,9 +179,38 @@ function WorkspaceCard({ workspace, showJoinButton = false, hasJoined = false, o
               </li>
             )}
             {workspace.userRole === 'owner' && (
-              <li onClick={(e) => handleOptionClick('settings', e)}>
-                <FaCog />
-                Paramètres
+              <li onClick={async (e) => {
+                e.stopPropagation();
+                if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce workspace ? Cette action est irréversible et supprimera toutes les données associées.")) {
+                  setShowOptions(false);
+                  return;
+                }
+                try {
+                  const token = localStorage.getItem('token');
+                  const response = await fetch(`${API_URL}/api/workspaces/${workspace.id}/cascade`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || "Erreur lors de la suppression du workspace");
+                  }
+                  alert("Workspace supprimé avec succès.");
+                  if (typeof onWorkspaceLeave === 'function') {
+                    onWorkspaceLeave(workspace.id);
+                  } else {
+                    navigate('/workspaces');
+                  }
+                } catch (error) {
+                  console.error('Erreur lors de la suppression du workspace:', error);
+                  alert(error.message || "Erreur lors de la suppression du workspace");
+                }
+                setShowOptions(false);
+              }} className="danger">
+                <FaTrash />
+                Supprimer
               </li>
             )}
           </ul>

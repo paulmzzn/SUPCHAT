@@ -139,6 +139,20 @@ export const deleteWorkspace = async (req, res) => {
   }
 };
 
+export const deleteWorkspaceCascade = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const workspace = await Workspace.deleteWorkspaceWithCascade(id);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+    res.status(200).json({ message: "Workspace deleted with cascade successfully" });
+  } catch (error) {
+    console.error("Erreur lors de la suppression en cascade du workspace:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const sendWorkspaceInvitation = async (req, res) => {
   try {
     const { workspaceId } = req.params;
