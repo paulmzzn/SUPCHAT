@@ -2353,6 +2353,7 @@ span.mention-highlight,
   cursor: pointer !important;
   text-decoration: none !important;
   border: none !important;
+  white-space: nowrap !important;
 }
 
 .mention-highlight:hover,
@@ -2366,6 +2367,7 @@ span.mention-highlight:hover,
   text-decoration: none !important;
 }
 
+/* Special styling for mentions of the current user */
 .mention-highlight.current-user-mention,
 a.mention-highlight.current-user-mention,
 span.mention-highlight.current-user-mention {

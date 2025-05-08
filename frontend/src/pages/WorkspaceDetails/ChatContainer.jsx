@@ -206,9 +206,27 @@ function ChatContainer({
                                 components={{
                                   p: ({ node, ...props }) => <p {...props} className="message-paragraph" />,
                                   a: ({ node, href, children, ...props }) => {
-                                    if (isUuid && isUuid(href)) {
-                                      return <span className="mention-highlight" data-userid={href}>@{children}</span>;
+                                    // Enhanced mention handling - detect mentions formatted as @[username](userId)
+                                    const mentionMatch = Array.isArray(children) && 
+                                      children[0]?.props?.children &&
+                                      typeof children[0].props.children === 'string' &&
+                                      children[0].props.children.match(/^@(.+)$/);
+                                      
+                                    if (mentionMatch && isUuid(href)) {
+                                      // This is a mention - create a styled badge
+                                      const mentionName = mentionMatch[1];
+                                      const isCurrentUser = href === currentUserId;
+                                      return (
+                                        <span 
+                                          className={`mention-highlight ${isCurrentUser ? 'current-user-mention' : ''}`}
+                                          data-userid={href}
+                                        >
+                                          @{mentionName}
+                                        </span>
+                                      );
                                     }
+                                    
+                                    // For regular links or system messages with strawpoll links
                                     if (systemMsg && href && href.includes('strawpoll.com')) {
                                       return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
                                     }
