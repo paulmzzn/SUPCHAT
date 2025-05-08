@@ -121,3 +121,22 @@ export const renderTextWithLinks = (text) => {
     return part;
   });
 };
+
+/**
+ * Formats a mention with user ID in markdown format
+ * @param {string} username - The username to mention
+ * @param {string} userId - The user ID
+ * @returns {string} Formatted mention string
+ */
+export const formatMention = (username, userId) => {
+  return `@[${username}](${userId})`;
+};
+
+/**
+ * Checks if a string is a proper mention format
+ * @param {string} text - The text to check
+ * @returns {boolean} True if it's a valid mention format
+ */
+export const isMention = (text) => {
+  return /^@\[.+\]\([0-9a-f-]+\)$/.test(text);
+};

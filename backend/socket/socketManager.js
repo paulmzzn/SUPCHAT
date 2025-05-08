@@ -20,7 +20,29 @@ const MISTRAL_USERNAME = "Mistral AI";
 const MISTRAL_AVATAR =
   "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
 
+// Ajouter l'UUID système pour les messages système
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000003";
+const SYSTEM_USERNAME = "Système";
+
 const MISTRAL_API_TIMEOUT_MS = 120000; // 120 secondes = 2 minutes
+
+// Ajouter un objet pour suivre les utilisateurs en ligne par workspace
+const onlineUsers = {
+  // Format: { workspaceId: Set([userId1, userId2, ...]) }
+};
+
+// Ajouter une fonction pour mettre à jour le statut utilisateur dans la BD
+const updateUserStatus = async (userId, status) => {
+  try {
+    await pool.query(
+      "UPDATE utilisateur SET fk_statut = $1 WHERE id_utilisateur = $2",
+      [status, userId]
+    );
+    console.log(`Status de l'utilisateur ${userId} mis à jour: ${status}`);
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du statut utilisateur:", error);
+  }
+};
 
 const socketManager = (io) => {
   console.log("socketManager initialized with Socket.IO instance");
@@ -60,6 +82,44 @@ const socketManager = (io) => {
       `Utilisateur connecté: ${socket.id}, User ID: ${socket.user?.id}`
     );
 
+    const userId = socket.user?.id;
+
+    // Si l'utilisateur est authentifié, mettre à jour son statut
+    if (userId) {
+      // Mettre à jour le statut dans la BD (1 = en ligne)
+      updateUserStatus(userId, 1);
+
+      // Informer tous les workspaces de l'utilisateur qu'il est en ligne
+      socket.on("userJoinedWorkspaces", ({ workspaces }) => {
+        if (Array.isArray(workspaces)) {
+          workspaces.forEach((workspaceId) => {
+            // Initialiser le set si nécessaire
+            if (!onlineUsers[workspaceId]) {
+              onlineUsers[workspaceId] = new Set();
+            }
+
+            // Ajouter l'utilisateur à la liste des utilisateurs en ligne
+            onlineUsers[workspaceId].add(userId);
+
+            // Émettre l'événement vers tous les membres du workspace
+            io.to(`${workspaceId}`).emit("userStatusChanged", {
+              userId,
+              status: "online",
+              workspaceId,
+            });
+
+            console.log(
+              `Utilisateur ${userId} en ligne dans le workspace ${workspaceId}`
+            );
+            console.log(
+              `Utilisateurs en ligne dans ce workspace:`,
+              Array.from(onlineUsers[workspaceId])
+            );
+          });
+        }
+      });
+    }
+
     // Joindre un canal
     socket.on("joinCanal", (data) => {
       const { canalId, workspaceId } = data;
@@ -74,13 +134,13 @@ const socketManager = (io) => {
       socket.currentRoom = `${canalId}`;
       socket.join(`${canalId}`);
 
-      
       // --- AJOUT : rejoindre aussi la room du workspace pour les events globaux ---
       if (workspaceId) {
         socket.join(`${workspaceId}`);
-        console.log(`Socket ${socket.id} rejoint la room workspace ${workspaceId}`);
+        console.log(
+          `Socket ${socket.id} rejoint la room workspace ${workspaceId}`
+        );
       }
-      
 
       // Informer le client que le canal a été rejoint
       socket.emit("canalJoined", { canalId, status: "success" });
@@ -98,11 +158,13 @@ const socketManager = (io) => {
     });
 
     // Nouveau handler pour rejoindre explicitement la room du workspace
-    socket.on('joinWorkspace', (data) => {
+    socket.on("joinWorkspace", (data) => {
       const { workspaceId } = data;
       if (workspaceId) {
         socket.join(`${workspaceId}`);
-        console.log(`[WS DEBUG] Socket ${socket.id} rejoint explicitement la room workspace ${workspaceId}`);
+        console.log(
+          `[WS DEBUG] Socket ${socket.id} rejoint explicitement la room workspace ${workspaceId}`
+        );
       }
     });
 
@@ -248,7 +310,6 @@ const socketManager = (io) => {
         io.to(`dm:${deleted.fk_expediteur}`)
           .to(`dm:${deleted.fk_destinataire}`)
           .emit("privateMessageDeleted", { id });
-
       } catch (error) {
         socket.emit("error", {
           message: "Erreur lors de la suppression du message privé",
@@ -278,7 +339,8 @@ const socketManager = (io) => {
     socket.on("message", async (data) => {
       try {
         console.log("Socket.IO: Message reçu", data);
-        const { canal_id, content, workspace_id, parent_id } = data; // Ajout de parent_id
+        const { canal_id, content, workspace_id, parent_id, is_system_message } =
+          data;
 
         if (!canal_id || !content) {
           console.error("Socket.IO: Données de message incomplètes");
@@ -286,7 +348,73 @@ const socketManager = (io) => {
           return;
         }
 
-        // Enregistrer le message de l'utilisateur en base de données
+        // Pour les messages système, on les enregistre avec l'UUID système
+        if (is_system_message) {
+          console.log(
+            "Socket.IO: Message système détecté, enregistrement en base:",
+            content
+          );
+
+          try {
+            // Créer le message système en base de données avec l'UUID système
+            const systemDbMessage = await MessageModel.create({
+              contenu: content,
+              fk_canal: canal_id,
+              fk_utilisateur: SYSTEM_USER_ID, // Utiliser l'UUID système
+              system_type: data.system_type || "video_call",
+            });
+
+            // Récupérer le message avec toutes ses infos
+            const fullSystemMessage = await MessageModel.getById(
+              systemDbMessage.id_message
+            );
+
+            if (fullSystemMessage) {
+              // Formater le message pour l'émission
+              const formattedSystemMessage = {
+                ...fullSystemMessage,
+                nom: SYSTEM_USERNAME,
+                is_system_message: true,
+                date_creation:
+                  fullSystemMessage.date_creation ||
+                  fullSystemMessage.created_at ||
+                  new Date().toISOString(),
+              };
+
+              console.log(
+                "Socket.IO: Émission du message système enregistré:",
+                formattedSystemMessage
+              );
+              io.to(`${canal_id}`).emit("message", formattedSystemMessage);
+            } else {
+              console.warn(
+                "Socket.IO: Message système créé mais non trouvé pour l'émission"
+              );
+            }
+          } catch (error) {
+            console.error(
+              "Socket.IO: Erreur lors de l'enregistrement du message système:",
+              error
+            );
+
+            // En cas d'erreur, on crée un message temporaire sans enregistrement en base
+            const fallbackSystemMessage = {
+              id_message: `system-${Date.now()}`,
+              contenu: content,
+              fk_canal: canal_id,
+              fk_utilisateur: SYSTEM_USER_ID,
+              nom: SYSTEM_USERNAME,
+              date_creation: new Date().toISOString(),
+              is_system_message: true,
+              system_type: data.system_type || "video_call",
+            };
+
+            io.to(`${canal_id}`).emit("message", fallbackSystemMessage);
+          }
+          return;
+        }
+
+        // Pour les messages normaux, continuer avec le processus habituel
         const userMessage = await MessageModel.create({
           contenu: content,
           fk_canal: canal_id,
@@ -487,32 +615,37 @@ const socketManager = (io) => {
       }
     });
 
-    
     // Suppression d'un message de canal (WebSocket)
-    socket.on('deleteMessage', async ({ messageId }) => {
+    socket.on("deleteMessage", async ({ messageId }) => {
       try {
         if (!messageId) {
-          socket.emit('error', { message: 'ID du message manquant' });
+          socket.emit("error", { message: "ID du message manquant" });
           return;
         }
         const userId = socket.user.id;
         const message = await MessageModel.getById(messageId);
         if (!message) {
-          socket.emit('error', { message: 'Message non trouvé' });
+          socket.emit("error", { message: "Message non trouvé" });
           return;
         }
         if (message.fk_utilisateur !== userId) {
-          socket.emit('error', { message: 'Vous ne pouvez supprimer que vos propres messages' });
+          socket.emit("error", {
+            message: "Vous ne pouvez supprimer que vos propres messages",
+          });
           return;
         }
         await MessageModel.delete(messageId);
-        io.to(`${message.fk_canal}`).emit('deleteMessage', { messageId });
+        io.to(`${message.fk_canal}`).emit("deleteMessage", { messageId });
       } catch (error) {
-        console.error('Erreur lors de la suppression du message via WebSocket:', error);
-        socket.emit('error', { message: 'Erreur lors de la suppression du message' });
+        console.error(
+          "Erreur lors de la suppression du message via WebSocket:",
+          error
+        );
+        socket.emit("error", {
+          message: "Erreur lors de la suppression du message",
+        });
       }
     });
-    
 
     // Nouvel événement pour gérer directement les requêtes adressées à Mistral
     socket.on("mistralRequest", async (data) => {
@@ -782,8 +915,13 @@ const socketManager = (io) => {
         }
 
         // Vérifier que l'utilisateur est soit l'expéditeur soit le destinataire du message
-        if (message.fk_expediteur !== socket.user.id && message.fk_destinataire !== socket.user.id) {
-          socket.emit("error", { message: "Non autorisé à réagir à ce message" });
+        if (
+          message.fk_expediteur !== socket.user.id &&
+          message.fk_destinataire !== socket.user.id
+        ) {
+          socket.emit("error", {
+            message: "Non autorisé à réagir à ce message",
+          });
           return;
         }
 
@@ -827,7 +965,10 @@ const socketManager = (io) => {
             });
           }
         } else {
-          console.error("Socket.IO: Erreur de traitement de réaction au message privé", error);
+          console.error(
+            "Socket.IO: Erreur de traitement de réaction au message privé",
+            error
+          );
           socket.emit("error", {
             message: "Erreur lors du traitement de la réaction",
           });
@@ -873,17 +1014,107 @@ const socketManager = (io) => {
             reactions: updatedReactions,
           });
       } catch (error) {
-        console.error("Socket.IO: Erreur de suppression de réaction de message privé", error);
+        console.error(
+          "Socket.IO: Erreur de suppression de réaction de message privé",
+          error
+        );
         socket.emit("error", {
           message: "Erreur lors de la suppression de la réaction",
         });
       }
     });
 
-    socket.on("disconnect", (reason) => {
-      console.log(
-        `Socket.IO: Utilisateur déconnecté: ${socket.id}, Raison: ${reason}`
-      );
+    // Nouvel événement pour le changement manuel de statut
+    socket.on("setUserStatus", async ({ status }) => {
+      if (!socket.user?.id) return;
+
+      const userId = socket.user.id;
+      let statusCode;
+
+      // Convertir le statut textuel en code numérique
+      switch (status) {
+        case "online":
+          statusCode = 1;
+          break;
+        case "away":
+          statusCode = 2;
+          break;
+        case "dnd":
+          statusCode = 3;
+          break;
+        case "invisible":
+          statusCode = 4;
+          break;
+        default:
+          statusCode = 1; // Par défaut: en ligne
+      }
+
+      // Mettre à jour dans la base de données
+      await updateUserStatus(userId, statusCode);
+
+      // Récupérer les workspaces de l'utilisateur depuis la base de données
+      try {
+        const workspacesResult = await pool.query(
+          "SELECT workspace_id FROM workspace_membre WHERE user_id = $1",
+          [userId]
+        );
+
+        const userWorkspaces = workspacesResult.rows.map(
+          (row) => row.workspace_id
+        );
+
+        // Informer tous les workspaces de l'utilisateur
+        userWorkspaces.forEach((workspaceId) => {
+          // Émettre l'événement à tous les membres du workspace, qu'ils soient en ligne ou non
+          io.to(`${workspaceId}`).emit("userStatusChanged", {
+            userId,
+            status: status === "invisible" ? "offline" : status,
+            workspaceId,
+          });
+
+          console.log(
+            `Statut utilisateur ${userId} mis à jour à ${status} dans workspace ${workspaceId}`
+          );
+        });
+
+        // Émission globale pour tous les sockets (pour les messages privés)
+        io.emit("userStatusChanged", {
+          userId,
+          status: status === "invisible" ? "offline" : status,
+        });
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération des workspaces pour mise à jour de statut:",
+          error
+        );
+      }
+    });
+
+    // Gérer la déconnexion
+    socket.on("disconnect", async () => {
+      const userId = socket.user?.id;
+
+      if (userId) {
+        console.log(`Utilisateur déconnecté: ${socket.id}, User ID: ${userId}`);
+
+        // Mettre à jour le statut dans la BD (4 = invisible/déconnecté)
+        await updateUserStatus(userId, 4);
+
+        // Informer tous les workspaces où l'utilisateur était en ligne
+        Object.keys(onlineUsers).forEach((workspaceId) => {
+          if (onlineUsers[workspaceId].has(userId)) {
+            // Retirer l'utilisateur de la liste des utilisateurs en ligne
+            onlineUsers[workspaceId].delete(userId);
+
+            // Émettre l'événement vers tous les membres du workspace
+            io.to(`${workspaceId}`).emit("userStatusChanged", {
+              userId,
+              status: "offline",
+              workspaceId,
+            });
+          }
+        });
+      }
     });
 
     socket.on("disconnecting", (reason) => {
