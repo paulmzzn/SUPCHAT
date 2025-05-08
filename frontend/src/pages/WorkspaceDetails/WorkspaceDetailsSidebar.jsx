@@ -2,6 +2,17 @@ import React, { useEffect } from "react";
 import { FaChevronDown, FaChevronRight, FaUserCircle, FaArrowUp, FaArrowDown, FaDownload, FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCircle, FaClock, FaTimesCircle, FaRegMoon } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 
+// Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
+const DEBUG_LOGGING = false;
+const isProd = process.env.NODE_ENV === 'production';
+
+// Fonction utilitaire pour logger uniquement en développement ou si DEBUG_LOGGING est activé
+const debugLog = (message, ...args) => {
+  if (!isProd && DEBUG_LOGGING) {
+    console.log(message, ...args);
+  }
+};
+
 function WorkspaceDetailsSidebar({
   showMembers,
   showOnlineMembers,
@@ -30,11 +41,11 @@ function WorkspaceDetailsSidebar({
 }) {
   const { userStatuses, setUserStatus } = useSocket();
 
-  // Log pour le débogage - s'exécute à chaque rendu
+  // Log pour le débogage - s'exécute à chaque rendu mais uniquement si DEBUG_LOGGING est activé
   useEffect(() => {
-    console.log("[SIDEBAR] Statuts utilisateurs reçus:", userStatuses);
-    console.log("[SIDEBAR] Nombre de membres en ligne:", members.online.length);
-    console.log("[SIDEBAR] Nombre de membres hors ligne:", members.offline.length);
+    debugLog("[SIDEBAR] Statuts utilisateurs reçus:", userStatuses);
+    debugLog("[SIDEBAR] Nombre de membres en ligne:", members.online.length);
+    debugLog("[SIDEBAR] Nombre de membres hors ligne:", members.offline.length);
   }, [userStatuses, members]);
 
   const renderStatusIndicator = (member) => {
@@ -42,7 +53,8 @@ function WorkspaceDetailsSidebar({
     const realTimeStatus = userStatuses[member.id];
     const status = realTimeStatus || member.status;
 
-    console.log(`[SIDEBAR] Indicateur de statut pour ${member.name}: ${status} (from WS: ${realTimeStatus || 'non'})`);
+    // On supprime ce log qui est appelé pour chaque membre et qui cause le flood
+    // debugLog(`[SIDEBAR] Indicateur de statut pour ${member.name}: ${status} (from WS: ${realTimeStatus || 'non'})`);
 
     // Utiliser une couleur différente pour les indicateurs de statut selon la source
     const baseClasses = {
@@ -130,7 +142,7 @@ function WorkspaceDetailsSidebar({
 
       option.addEventListener('click', () => {
         const success = setUserStatus(status.id);
-        console.log(`[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`);
+        debugLog(`[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`);
         document.body.removeChild(statusMenu);
       });
 
