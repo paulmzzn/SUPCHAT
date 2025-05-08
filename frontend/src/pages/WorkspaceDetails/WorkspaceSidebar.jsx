@@ -1,7 +1,14 @@
-import React from "react";
-import { FaSearch, FaPlus, FaHashtag, FaLock, FaChevronDown, FaChevronRight } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  FaSearch,
+  FaPlus,
+  FaHashtag,
+  FaChevronDown,
+  FaChevronRight,
+} from "react-icons/fa";
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
+import SearchResults from "../../components/SearchResults";
 
 function WorkspaceSidebar({
   workspace,
@@ -17,7 +24,82 @@ function WorkspaceSidebar({
   handleChannelContextMenu,
   currentUserRole,
   handleCreateChannel,
+  // Nouveaux props pour la recherche unifiée
+  searchResults,
+  handleSelectSearchResult,
+  isSearching,
 }) {
+  // État pour gérer l'affichage des résultats de recherche
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  // Référence pour le dropdown des résultats
+  const searchResultsRef = useRef(null);
+
+  // Effet pour montrer/cacher les résultats de recherche
+  useEffect(() => {
+    if (searchQuery) {
+      setShowSearchResults(true);
+    } else {
+      setShowSearchResults(false);
+    }
+  }, [searchQuery]);
+
+  // Effet pour fermer les résultats au clic ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchResultsRef.current &&
+        !searchResultsRef.current.contains(event.target) &&
+        !event.target.classList.contains("search-input")
+      ) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Adapter le format des résultats de l'API au format attendu par le composant SearchResults
+  const adaptedResults = searchResults
+    ? {
+        channels:
+          searchResults.canaux?.map((canal) => ({
+            ...canal,
+            id: canal.id_canal,
+            nom: canal.nom, // Correction: conserver le nom original de la propriété
+          })) || [],
+        users:
+          searchResults.utilisateurs?.map((user) => ({
+            ...user,
+            id: user.id_utilisateur,
+            nom: user.nom, // Correction: conserver le nom original de la propriété
+          })) || [],
+        messages:
+          searchResults.messages?.map((message) => ({
+            ...message,
+            id: message.id_message,
+            nom_utilisateur: message.nom_utilisateur || "Utilisateur inconnu", // Correction: utiliser le nom réel
+            nom_canal: message.nom_canal || "Canal inconnu", // Correction: utiliser le nom réel du canal
+            date_creation: message.date_creation || message.created_at, // Correction: utiliser la date correcte
+          })) || [],
+      }
+    : { channels: [], users: [], messages: [] };
+
+  // Gère la sélection d'un résultat de recherche avec adaptation des clés
+  const handleAdaptedSelectResult = (type, item) => {
+    const adaptedItem = { ...item };
+
+    // Fermer les résultats de recherche
+    setShowSearchResults(false);
+
+    // Appeler le handler parent
+    if (handleSelectSearchResult) {
+      handleSelectSearchResult(type, adaptedItem);
+    }
+  };
+
   return (
     <div className="workspace-sidebar">
       <div className="workspace-sidebar-header">
@@ -37,12 +119,27 @@ function WorkspaceSidebar({
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Rechercher des canaux..."
+              placeholder="Rechercher dans ce workspace..."
               value={searchQuery}
               onChange={handleSearchChange}
               className="search-input"
+              onFocus={() => searchQuery && setShowSearchResults(true)}
             />
+            {isSearching && <div className="search-spinner"></div>}
           </div>
+
+          {/* Dropdown des résultats de recherche avec le nouveau composant */}
+          {showSearchResults && (
+            <div className="search-results-dropdown" ref={searchResultsRef}>
+              <SearchResults
+                searchQuery={searchQuery}
+                searchResults={adaptedResults}
+                workspace={workspace}
+                isSearching={isSearching}
+                handleSelectSearchResult={handleAdaptedSelectResult}
+              />
+            </div>
+          )}
         </div>
       </div>
       <div className="workspace-sidebar-content">
