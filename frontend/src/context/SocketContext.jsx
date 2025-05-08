@@ -359,7 +359,7 @@ export function SocketProvider({ children }) {
       globalNotifications, 
       setGlobalNotifications,
       refreshUnreadDM, // Exposer la fonction pour l'utiliser dans d'autres composants
-      refreshUnreadChannels // Exposer la nouvelle fonction
+      refreshUnreadChannels, // Exposer la nouvelle fonction
       userStatuses, // Statuts en direct
       setUserStatus  // Fonction pour changer le statut
     }}>
