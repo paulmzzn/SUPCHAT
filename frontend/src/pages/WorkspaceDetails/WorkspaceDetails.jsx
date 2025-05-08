@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react"; // Added useEffect
+import React, { useRef, useState, useEffect } from "react"; // Ajout de useState et useEffect
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceSidebar from "./WorkspaceSidebar";
@@ -10,6 +10,8 @@ import EmojiPickerModal from "./EmojiPickerModal";
 import FileViewerModal from "./FileViewerModal";
 import StrawpollResultsModal from "./StrawpollResultsModal";
 import StrawpollModalWrapper from "./StrawpollModalWrapper";
+import VideoCallModal from "./VideoCallModal"; // Import du composant d'appel vidéo
+import StrawpollWebviewModal from "./StrawpollWebviewModal"; // Import du composant de webview pour voter
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -28,7 +30,7 @@ import {
   debugMistralInteraction,
   renderTextWithLinks,
 } from "../../utils/helpers";
-import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll } from "react-icons/fa";
+import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll, FaVoteYea } from "react-icons/fa";
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
@@ -51,6 +53,13 @@ function WorkspaceDetails() {
   const [showStrawpollResults, setShowStrawpollResults] = useState(false);
   const [strawpollResults, setStrawpollResults] = useState(null);
   const [loadingResults, setLoadingResults] = useState(false);
+
+  // Ajout de l'état pour le modal d'appel vidéo
+  const [showVideoCallModal, setShowVideoCallModal] = useState(false);
+
+  // Nouvel état pour la webview de vote
+  const [showStrawpollVote, setShowStrawpollVote] = useState(false);
+  const [currentPollId, setCurrentPollId] = useState(null);
 
   // Handler pour ouvrir/fermer la boîte à outils
   const handleToggleToolbox = () => setShowToolbox((v) => !v);
@@ -80,6 +89,26 @@ function WorkspaceDetails() {
     setShowStrawpollResults(false);
     setStrawpollResults(null);
   };
+
+  // Handler pour ouvrir la webview de vote
+  const handleOpenStrawpollVote = (pollId) => {
+    setCurrentPollId(pollId);
+    setShowStrawpollVote(true);
+  };
+
+  // Handler pour fermer la webview de vote
+  const handleCloseStrawpollVote = () => {
+    setShowStrawpollVote(false);
+    setCurrentPollId(null);
+  };
+
+  // Ajouter la fonction au contexte global pour être accessible depuis ChatContainer
+  useEffect(() => {
+    window.handleOpenStrawpollVote = handleOpenStrawpollVote;
+    return () => {
+      window.handleOpenStrawpollVote = undefined;
+    };
+  }, []);
 
   // Ajout de la fonction pour créer un Strawpoll (appel backend sécurisé)
   const handleStrawpollSubmit = async ({ title, options }) => {
@@ -114,6 +143,28 @@ function WorkspaceDetails() {
     } catch (err) {
       alert(err.message || "Erreur lors de la création du sondage Strawpoll.");
     }
+  };
+
+  // Fonction pour envoyer un message système pour les appels vidéo
+  const sendVideoCallSystemMessage = () => {
+    console.log("Envoi d'un message système pour l'appel vidéo");
+    if (socket && activeChannel) {
+      // Créer un message système pour notifier l'appel vidéo
+      socket.emit("message", {
+        canal_id: activeChannel.id,
+        content: `${currentUserName} a démarré un appel vidéo`,
+        workspace_id: workspaceId,
+        is_system_message: true,
+        system_type: "video_call"
+      });
+    }
+  };
+
+  const handleStartVideoCall = () => {
+    // Envoyer un message système avant d'afficher la fenêtre d'appel
+    sendVideoCallSystemMessage();
+    // Ouvrir la fenêtre d'appel vidéo
+    setShowVideoCallModal(true);
   };
 
   // Use the custom hook to get state and handlers
@@ -607,6 +658,7 @@ function WorkspaceDetails() {
           renderTextWithLinks={renderTextWithLinks}
           isUuid={isUuid}
           handleSelectActiveItem={handleSelectActiveItem}
+          setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
         />
 
         {/* Details Sidebar - Replaced with WorkspaceDetailsSidebar */}
@@ -755,6 +807,23 @@ function WorkspaceDetails() {
           show={showStrawpollModal}
           onClose={handleCloseStrawpollModal}
           onSubmit={handleStrawpollSubmit}
+        />
+
+        {/* Modal d'appel vidéo */}
+        <VideoCallModal
+          show={showVideoCallModal}
+          onClose={() => setShowVideoCallModal(false)}
+          workspace={workspace}
+          activeChannel={activeChannel}
+          currentUserName={currentUserName}
+          socket={socket}
+        />
+
+        {/* Ajouter le modal de webview pour voter */}
+        <StrawpollWebviewModal 
+          show={showStrawpollVote}
+          pollId={currentPollId}
+          onClose={handleCloseStrawpollVote}
         />
       </div>
     </div>

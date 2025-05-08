@@ -1,5 +1,5 @@
 import React from "react";
-import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll } from "react-icons/fa";
+import { FaLock, FaHashtag, FaReply, FaRobot, FaSmile, FaPaperclip, FaWrench, FaPoll, FaVideo, FaPaperPlane, FaTools, FaImage, FaCode, FaVoteYea } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -46,7 +46,10 @@ function ChatContainer({
   renderTextWithLinks,
   isUuid,
   handleSelectActiveItem,
+  setShowVideoCallModal,
+  handleOpenStrawpollVote
 }) {
+
   return (
     <div className="workspace-content-area">
       <div className="glow-circle-right top-right"></div>
@@ -67,180 +70,218 @@ function ChatContainer({
               )}
               <h2>{activeChannel.name}</h2>
             </div>
+            <div className="chat-header-actions">
+              <button 
+                className="video-call-button"
+                onClick={() => setShowVideoCallModal(true)}
+                title="Démarrer un appel vidéo"
+              >
+                <FaVideo />
+                <span>Appel vidéo</span>
+              </button>
+            </div>
           </div>
 
           <div className="chat-messages" ref={chatContainerRef}>
             {loadingMessages ? (
               <div className="chat-loading">Chargement des messages...</div>
             ) : messages.length > 0 ? (
-              messages.map((message) => (
-                <div
-                  key={message.id_message}
-                  id={`msg-${message.id_message}`}
-                  className={`chat-message ${
-                    message.fk_utilisateur === currentUserId ? "own-message" : "other-message"
-                  }`}
-                  onContextMenu={(e) => handleMessageContextMenu(e, message)}
-                >
-                  <div className="message-avatar">
-                    {message.photo_de_profil ? (
-                      <img src={message.photo_de_profil} alt={message.nom} />
-                    ) : (
-                      <div className="avatar-placeholder">
-                        {message.nom ? message.nom[0].toUpperCase() : "?"}
+              messages.map((message) => {
+                const systemMsg = message.is_system_message || message.fk_utilisateur === '00000000-0000-0000-0000-000000000003';
+                return (
+                  <div
+                    key={message.id_message}
+                    id={`msg-${message.id_message}`}
+                    className={`chat-message ${
+                      systemMsg
+                        ? "system-message"
+                        : message.fk_utilisateur === currentUserId
+                          ? "own-message"
+                          : "other-message"
+                    }`}
+                    onContextMenu={(e) => !systemMsg && handleMessageContextMenu(e, message)}
+                  >
+                    {!systemMsg && (
+                      <div className="message-avatar">
+                        {message.photo_de_profil ? (
+                          <img src={message.photo_de_profil} alt={message.nom} />
+                        ) : (
+                          <div className="avatar-placeholder">
+                            {message.nom ? message.nom[0].toUpperCase() : "?"}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                  <div className="message-content">
-                    {(message.parent_id || message.parent_message) && (() => {
-                      let replyContent = null;
-                      if (message.parent_message) {
-                        replyContent = (
-                          <>
-                            <span className="reply-author">@{message.parent_message.nom}</span>
-                            <span className="reply-text">{message.parent_message.contenu}</span>
-                          </>
-                        );
-                      } else {
-                        const parentMessage = messages.find((m) => m.id_message === message.parent_id);
-                        replyContent = parentMessage ? (
-                          <>
-                            <span className="reply-author">@{parentMessage.nom}</span>
-                            <span className="reply-text">{parentMessage.contenu}</span>
-                          </>
-                        ) : (
-                          <span className="reply-text">Message original non disponible</span>
-                        );
-                      }
-                      return (
-                        <div className="message-reply-to" onClick={() => {
-                          const parentId = message.parent_id || (message.parent_message && message.parent_message.id_message);
-                          if (parentId) {
-                            const element = document.getElementById(`msg-${parentId}`);
-                            if (element) {
-                              element.scrollIntoView({ behavior: "smooth", block: "center" });
-                              element.classList.add("highlight-message");
-                              setTimeout(() => element.classList.remove("highlight-message"), 2000);
-                            }
-                          }
-                        }}>
-                          <FaReply className="reply-icon" />
-                          <div className="reply-content">{replyContent}</div>
-                        </div>
-                      );
-                    })()}
-                    <div className="message-header">
-                      <span className="message-author">
-                        {message.fk_utilisateur === "00000000-0000-0000-0000-000000000001" ? (
-                          <>
-                            <span>{message.nom}</span>
-                            <span className="bot-icon-spacer"> </span>
-                            <FaRobot className="bot-icon" />
-                          </>
-                        ) : (
-                          message.nom
-                        )}
-                      </span>
-                      <span className="message-time">{formatMessageDate(message.date_creation)}</span>
-                    </div>
-                    {/* Affichage du contenu du message (texte, fichier, image, markdown, etc.) */}
-                    {(() => {
-                      const fileData = parseFileContent(message.contenu);
-                      if (fileData) {
-                        const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
-                        if (fileData.isImage) {
-                          return (
-                            <div className="message-image-container">
-                              <img
-                                src={fullFileUrl}
-                                alt={fileData.fileName}
-                                className="message-image"
-                                onClick={() => handleOpenFileViewer({ ...fileData, fullFileUrl })}
-                              />
-                            </div>
+
+                    <div className={`message-content ${systemMsg ? "system-content" : ""}`}>
+                      {!systemMsg && (message.parent_id || message.parent_message) && (() => {
+                        let replyContent = null;
+                        if (message.parent_message) {
+                          replyContent = (
+                            <>
+                              <span className="reply-author">@{message.parent_message.nom}</span>
+                              <span className="reply-text">{message.parent_message.contenu}</span>
+                            </>
+                          );
+                        } else {
+                          const parentMessage = messages.find((m) => m.id_message === message.parent_id);
+                          replyContent = parentMessage ? (
+                            <>
+                              <span className="reply-author">@{parentMessage.nom}</span>
+                              <span className="reply-text">{parentMessage.contenu}</span>
+                            </>
+                          ) : (
+                            <span className="reply-text">Message original non disponible</span>
                           );
                         }
                         return (
-                          <div className="message-file">
-                            <div className="file-info-container">
-                              <div className="file-details">
-                                <span className="file-name">{fileData.fileName}</span>
-                                <span className="file-size">{fileData.fileSize}</span>
+                          <div className="message-reply-to" onClick={() => {
+                            const parentId = message.parent_id || (message.parent_message && message.parent_message.id_message);
+                            if (parentId) {
+                              const element = document.getElementById(`msg-${parentId}`);
+                              if (element) {
+                                element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                element.classList.add("highlight-message");
+                                setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                              }
+                            }
+                          }}>
+                            <FaReply className="reply-icon" />
+                            <div className="reply-content">{replyContent}</div>
+                          </div>
+                        );
+                      })()}
+
+                      {!systemMsg && (
+                        <div className="message-header">
+                          <span className="message-author">
+                            {message.fk_utilisateur === "00000000-0000-0000-0000-000000000001" ? (
+                              <>
+                                <span>{message.nom}</span>
+                                <span className="bot-icon-spacer"> </span>
+                                <FaRobot className="bot-icon" />
+                              </>
+                            ) : (
+                              message.nom
+                            )}
+                          </span>
+                          <span className="message-time">{formatMessageDate(message.date_creation)}</span>
+                        </div>
+                      )}
+
+                      {(() => {
+                        const fileData = parseFileContent(message.contenu);
+                        if (fileData && !systemMsg) {
+                          const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
+                          if (fileData.isImage) {
+                            return (
+                              <div className="message-image-container">
+                                <img
+                                  src={fullFileUrl}
+                                  alt={fileData.fileName}
+                                  className="message-image"
+                                  onClick={() => handleOpenFileViewer({ ...fileData, fullFileUrl })}
+                                />
                               </div>
-                              <div className="file-actions">
-                                <button className="file-view-button" onClick={() => handleOpenFileViewer({ ...fileData, fullFileUrl })}>Ouvrir</button>
-                                <button className="file-download-button" onClick={() => handleDownloadFile(fileData.fileUrl, fileData.fileName)}>Télécharger</button>
+                            );
+                          }
+                          return (
+                            <div className="message-file">
+                              <div className="file-info-container">
+                                <div className="file-details">
+                                  <span className="file-name">{fileData.fileName}</span>
+                                  <span className="file-size">{fileData.fileSize}</span>
+                                </div>
+                                <div className="file-actions">
+                                  <button className="file-view-button" onClick={() => handleOpenFileViewer({ ...fileData, fullFileUrl })}>Ouvrir</button>
+                                  <button className="file-download-button" onClick={() => handleDownloadFile(fileData.fileUrl, fileData.fileName)}>Télécharger</button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      } else {
-                        // Affichage markdown/texte
-                        return (
-                          <div className="message-text">
-                            <ReactMarkdown
-                              components={{
-                                p: ({ node, ...props }) => <p {...props} className="message-paragraph" />,
-                                a: ({ node, href, children, ...props }) => {
-                                  if (isUuid && isUuid(href)) {
-                                    return <span className="mention-highlight" data-userid={href}>@{children}</span>;
-                                  }
-                                  return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
-                                },
-                                text: ({ node, ...props }) => <>{renderTextWithLinks(node.value)}</>,
-                              }}
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeRaw]}
-                            >
-                              {message.contenu || ''}
-                            </ReactMarkdown>
-                          </div>
-                        );
-                      }
-                    })()}
-                    {/* Affichage des réactions */}
-                    {message.reactions && message.reactions.length > 0 && (
-                      <div className="message-reactions">
-                        {message.reactions.map((reaction) => (
-                          <span className="reaction-badge" key={reaction.reaction_type}>
-                            <span className="reaction-emoji">{reaction.emoji}</span>
-                            <span className="reaction-count">{reaction.count}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* BOUTON STRAWPOLL RESULTATS */}
-                    {(() => {
-                      // Détection d'un sondage Strawpoll dans le contenu du message
-                      const strawpollMatch = message.contenu && message.contenu.match(/\[strawpoll:([a-zA-Z0-9]+)\]/);
-                      if (strawpollMatch) {
-                        const pollId = strawpollMatch[1];
-                        return (
-                          <div style={{display:'flex',gap:8,marginTop:8}}>
-                            <button
-                              className="strawpoll-results-btn"
-                              style={{background:"linear-gradient(90deg,#9348b7,#b05fdf)",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}
-                              onClick={() => window.handleOpenStrawpollResults && window.handleOpenStrawpollResults(pollId)}
-                            >
-                              <FaPoll style={{fontSize:18}} /> Voir les résultats du sondage
-                            </button>
-                            <a
-                              href={`https://strawpoll.com/${pollId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="strawpoll-vote-btn"
-                              style={{background:"linear-gradient(90deg,#7abbff,#9348b7)",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8,textDecoration:'none'}}
-                            >
-                              Voter
-                            </a>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
+                          );
+                        } else {
+                          return (
+                            <div className="message-text">
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ node, ...props }) => <p {...props} className="message-paragraph" />,
+                                  a: ({ node, href, children, ...props }) => {
+                                    // Enhanced mention handling - detect mentions formatted as @[username](userId)
+                                    const mentionMatch = Array.isArray(children) && 
+                                      children[0]?.props?.children &&
+                                      typeof children[0].props.children === 'string' &&
+                                      children[0].props.children.match(/^@(.+)$/);
+                                      
+                                    if (mentionMatch && isUuid(href)) {
+                                      // This is a mention - create a styled badge
+                                      const mentionName = mentionMatch[1];
+                                      const isCurrentUser = href === currentUserId;
+                                      return (
+                                        <span 
+                                          className={`mention-highlight ${isCurrentUser ? 'current-user-mention' : ''}`}
+                                          data-userid={href}
+                                        >
+                                          @{mentionName}
+                                        </span>
+                                      );
+                                    }
+                                    
+                                    // For regular links or system messages with strawpoll links
+                                    if (systemMsg && href && href.includes('strawpoll.com')) {
+                                      return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
+                                    }
+                                    return <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>;
+                                  },
+                                  text: ({ node, ...props }) => <>{renderTextWithLinks(node.value)}</>,
+                                }}
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                              >
+                                {message.contenu || ''}
+                              </ReactMarkdown>
+                            </div>
+                          );
+                        }
+                      })()}
+
+                      {!systemMsg && message.reactions && message.reactions.length > 0 && (
+                        <div className="message-reactions">
+                          {message.reactions.map((reaction) => (
+                            <span className="reaction-badge" key={reaction.reaction_type}>
+                              <span className="reaction-emoji">{reaction.emoji}</span>
+                              <span className="reaction-count">{reaction.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {!systemMsg && (() => {
+                        const strawpollMatch = message.contenu && message.contenu.match(/\[strawpoll:([a-zA-Z0-9]+)\]/);
+                        if (strawpollMatch) {
+                          const pollId = strawpollMatch[1];
+                          return (
+                            <div className="message-poll-buttons">
+                              <button
+                                className="poll-button poll-results-button"
+                                onClick={() => window.handleOpenStrawpollResults && window.handleOpenStrawpollResults(pollId)}
+                              >
+                                <FaPoll /> Voir les résultats
+                              </button>
+                              <button
+                                className="poll-button poll-vote-button"
+                                onClick={() => window.handleOpenStrawpollVote && window.handleOpenStrawpollVote(pollId)}
+                              >
+                                <FaVoteYea /> Voter
+                              </button>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="no-messages">
                 <p>Aucun message dans ce canal.</p>
@@ -289,7 +330,6 @@ function ChatContainer({
                         key={user.id}
                         className={`supchat-mention-item ${index === activeMentionIndex ? "active" : ""}`}
                         onClick={() => handleSelectMention(user)}
-                        type="button"
                       >
                         <div className="supchat-mention-avatar-wrapper">
                           {user.avatar ? (
@@ -355,7 +395,11 @@ function ChatContainer({
                 id="file-upload-input"
               />
               <div className="chat-input-wrapper">
-                <button type="button" className="chat-attachment-btn" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                <button 
+                  type="button" 
+                  className="chat-attachment-btn" 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                >
                   <FaPaperclip />
                 </button>
                 <input
@@ -365,30 +409,49 @@ function ChatContainer({
                   onChange={(e) => handleNewMessageChange(e.target.value)}
                   onKeyDown={handleChatInputKeyDown}
                 />
-                <button type="button" className="chat-toolbox-btn" title="Outils" onClick={handleToggleToolbox} style={{ marginLeft: 4, marginRight: 4 }}>
-                  <FaWrench />
+                <button 
+                  type="button" 
+                  className={`chat-toolbox-btn ${showToolbox ? 'active' : ''}`} 
+                  title="Outils" 
+                  onClick={handleToggleToolbox}
+                >
+                  <FaTools />
+                  <span className="toolbox-tooltip">Outils</span>
                 </button>
-                <button type="button" className="chat-emoji-btn" onClick={() => setShowEmojiPicker(true)}>
+                <button 
+                  type="button" 
+                  className="chat-emoji-btn" 
+                  onClick={() => setShowEmojiPicker(true)}
+                >
                   <FaSmile />
                 </button>
-              </div>
-              <button type="submit" className="chat-send-btn" disabled={!displayMessage.trim()}>
-                Envoyer
-              </button>
-            </form>
-            {showToolbox && (
-              <div className="chat-toolbox-menu" style={{ position: "absolute", bottom: 60, right: 30, zIndex: 2000, background: "#232323", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.18)", minWidth: 220 }}>
-                <button className="chat-toolbox-item" style={{ width: "100%", padding: "12px 18px", background: "none", border: "none", color: "white", textAlign: "left", cursor: "pointer", fontSize: "1rem" }} onClick={handleOpenStrawpoll}>
-                  📊 Créer un sondage Strawpoll
+                <button 
+                  type="submit" 
+                  className="chat-send-btn" 
+                  disabled={!displayMessage.trim()}
+                  aria-label="Envoyer le message"
+                >
+                  <FaPaperPlane />
+                  <span className="send-btn-pulse"></span>
                 </button>
               </div>
-            )}
-            {showStrawpollModal && (
-              <div className="modal-overlay" onClick={handleCloseStrawpollModal}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              {showToolbox && (
+                <div className="chat-toolbox-menu">
+                  <button className="chat-toolbox-item" onClick={handleOpenStrawpoll}>
+                    <FaPoll className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Créer un sondage</span>
+                  </button>
+                  <button className="chat-toolbox-item">
+                    <FaImage className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Rechercher une image</span>
+                  </button>
+                  <button className="chat-toolbox-item">
+                    <FaCode className="toolbox-item-icon" />
+                    <span className="toolbox-item-text">Formater du code</span>
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </form>
           </div>
         </div>
       )}
