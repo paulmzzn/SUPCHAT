@@ -1,12 +1,13 @@
-import React, { useRef, useState, useEffect } from "react"; // Ajout de useState et useEffect
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
-import WorkspaceSidebar from "./WorkspaceSidebar";
+import Spinner from "../../components/Spinner/Spinner";
 import ChatContainer from "./ChatContainer";
+import EmojiPickerModal from "./EmojiPickerModal";
+import WorkspaceSidebar from "./WorkspaceSidebar";
 import WorkspaceDetailsSidebar from "./WorkspaceDetailsSidebar";
 import CreateChannelModal from "./CreateChannelModal";
 import EditChannelModal from "./EditChannelModal";
-import EmojiPickerModal from "./EmojiPickerModal";
 import FileViewerModal from "./FileViewerModal";
 import StrawpollResultsModal from "./StrawpollResultsModal";
 import StrawpollModalWrapper from "./StrawpollModalWrapper";
@@ -18,7 +19,6 @@ import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
-import { useNavigate } from "react-router-dom"; // Ajout import
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
 import {
   formatMessageDate,
@@ -30,7 +30,14 @@ import {
   debugMistralInteraction,
   renderTextWithLinks,
 } from "../../utils/helpers";
-import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll, FaVoteYea } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrashAlt,
+  FaReply,
+  FaRegSmile,
+  FaPoll,
+  FaVoteYea,
+} from "react-icons/fa";
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
@@ -127,7 +134,9 @@ function WorkspaceDetails() {
       // Extraire l'ID du sondage depuis l'URL (https://strawpoll.com/polls/{id} ou https://strawpoll.com/{id})
       let pollId = null;
       if (data.url) {
-        const match = data.url.match(/strawpoll.com\/(?:polls\/)?([a-zA-Z0-9]+)/);
+        const match = data.url.match(
+          /strawpoll.com\/(?:polls\/)?([a-zA-Z0-9]+)/
+        );
         if (match) pollId = match[1];
       }
       if (socket && activeChannel) {
@@ -155,7 +164,7 @@ function WorkspaceDetails() {
         content: `${currentUserName} a démarré un appel vidéo`,
         workspace_id: workspaceId,
         is_system_message: true,
-        system_type: "video_call"
+        system_type: "video_call",
       });
     }
   };
@@ -261,13 +270,13 @@ function WorkspaceDetails() {
   useEffect(() => {
     // Only mark channel as read when we have a valid channel ID that's different from the last one
     if (activeChannel && activeChannel.id) {
-      const lastChannelId = sessionStorage.getItem('lastActiveChannel');
-      
+      const lastChannelId = sessionStorage.getItem("lastActiveChannel");
+
       // Only mark as read if this is a different channel from the last one
       if (lastChannelId !== activeChannel.id) {
         // Store the current channel ID
-        sessionStorage.setItem('lastActiveChannel', activeChannel.id);
-        
+        sessionStorage.setItem("lastActiveChannel", activeChannel.id);
+
         // Mark the channel as read when it's selected (with less frequent updates)
         markChannelAsRead(activeChannel.id);
       }
@@ -576,7 +585,12 @@ function WorkspaceDetails() {
       <div className="app-layout">
         <Sidebar />
         <div className="workspace-details-container">
-          <div className="loading">Chargement des détails du workspace...</div>
+          <div className="loading-container">
+            <Spinner size="medium" />
+            <span className="loading-text">
+              Chargement des détails du workspace...
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -820,7 +834,7 @@ function WorkspaceDetails() {
         />
 
         {/* Ajouter le modal de webview pour voter */}
-        <StrawpollWebviewModal 
+        <StrawpollWebviewModal
           show={showStrawpollVote}
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}

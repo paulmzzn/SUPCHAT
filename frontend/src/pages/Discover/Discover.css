@@ -16,8 +16,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  flex-wrap: wrap;  /* Add flex-wrap to handle narrow screens */
-  gap: 1rem;  /* Add gap between elements when they wrap */
+  flex-wrap: wrap; /* Add flex-wrap to handle narrow screens */
+  gap: 1rem; /* Add gap between elements when they wrap */
 }
 
 .discover-title {
@@ -25,19 +25,19 @@
   font-weight: 700;
   color: var(--discover-title-color);
   margin: 0;
-  flex: 1;  /* Allow title to take available space but keep search fixed width */
-  min-width: 200px;  /* Ensure title doesn't get too small */
+  flex: 1; /* Allow title to take available space but keep search fixed width */
+  min-width: 200px; /* Ensure title doesn't get too small */
 }
 
 .search-bar {
   position: relative;
   width: 300px;
-  max-width: 100%;  /* Ensure search bar doesn't exceed container width */
+  max-width: 100%; /* Ensure search bar doesn't exceed container width */
 }
 
 .search-bar input {
   width: 100%;
-  box-sizing: border-box;  /* Include padding in width calculation */
+  box-sizing: border-box; /* Include padding in width calculation */
   padding: 10px 15px 10px 40px;
   background-color: var(--discover-search-bg);
   border: none;
@@ -124,7 +124,8 @@
 }
 
 /* Ambient glow effects */
-.glow-circle-right, .glow-circle-left {
+.glow-circle-right,
+.glow-circle-left {
   position: fixed;
   border-radius: 50%;
   filter: blur(120px);
@@ -156,14 +157,14 @@
     padding: 1.5rem;
     padding-bottom: 120px; /* Encore plus d'espace en bas sur mobile */
   }
-  
+
   .discover-header {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .search-bar {
-    width: 100%;  /* Full width on mobile */
+    width: 100%; /* Full width on mobile */
   }
 }
 
@@ -172,9 +173,9 @@
   .discover-container {
     padding: 1.5rem;
   }
-  
+
   .search-bar {
-    width: 250px;  /* Slightly narrower on medium screens */
+    width: 250px; /* Slightly narrower on medium screens */
   }
 }
 
@@ -188,4 +189,33 @@
 .app-layout > div:last-child {
   flex: 1;
   overflow-y: auto;
+}
+
+/* Styles pour le spinner de chargement centré */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh; /* Prend la moitié de la hauteur de la vue */
+  width: 100%;
+  margin: 2rem 0;
+}
+
+/* Ajouter un texte en dessous du spinner */
+.loading-state .loading-text {
+  margin-top: 1rem;
+  color: var(--discover-title-color, #ffffff);
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.error-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  width: 100%;
+  color: #ff6b6b;
+  font-size: 1.2rem;
 }
