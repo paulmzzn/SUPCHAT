@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 // Charger les variables d'environnement
 dotenv.config();
 
-// Utiliser la même clé que dans tous les autres fichiers
+// Définition d'une clé secrète constante
 const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
 
 export const verifyToken = (req, res, next) => {
@@ -26,19 +26,30 @@ export const verifyToken = (req, res, next) => {
   try {
     // Format attendu: "Bearer TOKEN"
     const bearer = bearerHeader.split(" ");
+    
+    // Vérifier que le format est correct (Bearer + token)
+    if (bearer.length !== 2 || bearer[0] !== "Bearer") {
+      return res.status(401).json({ message: "Format de token invalide. Format attendu: 'Bearer TOKEN'" });
+    }
+    
     const token = bearer[1];
 
-    if (!token) {
-      return res.status(401).json({ message: "Format de token invalide." });
+    if (!token || token.trim() === "") {
+      return res.status(401).json({ message: "Token vide ou invalide." });
     }
 
-    // Vérification du token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Vérification du token avec la clé constante
+    const decoded = jwt.verify(token, SECRET_KEY);
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("Erreur de vérification du token:", error);
-    return res.status(401).json({ message: "Token invalide ou expiré." });
+    console.error("Erreur de vérification du token:", error.name, error.message);
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Token JWT malformé ou invalide." });
+    } else if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expiré. Veuillez vous reconnecter." });
+    }
+    return res.status(401).json({ message: "Erreur d'authentification: " + error.message });
   }
 };
 
@@ -62,6 +73,7 @@ export const optionalAuth = (req, res, next) => {
       req.user = null;
     }
   } catch (error) {
+    console.error("Erreur optionalAuth:", error.name, error.message);
     req.user = null;
   }
 

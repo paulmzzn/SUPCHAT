@@ -349,3 +349,69 @@ export const uploadFile = async (req, res) => {
   }
   console.log("🏁 Fin de uploadFile - serveur");
 };
+
+// Récupérer le nombre de messages non lus par canal pour un utilisateur
+export const getUnreadCounts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`Récupération des messages non lus pour l'utilisateur ${userId}`);
+    
+    const unreadData = await MessageModel.getUnreadCountByChannel(userId);
+    
+    // Pas besoin de recalculer le total, il est déjà fourni par le modèle
+    res.status(200).json(unreadData);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des messages non lus:", error);
+    res.status(500).json({ 
+      message: error.message || "Erreur lors de la récupération des messages non lus" 
+    });
+  }
+};
+
+// Obtenir tous les messages non lus par canal pour l'utilisateur courant
+export const getUnreadMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "ID utilisateur requis" });
+    }
+
+    const unreadData = await MessageModel.getUnreadCountByChannel(userId);
+    
+    // Pas besoin de recalculer le total, il est déjà fourni par le modèle
+    res.status(200).json(unreadData);
+  } catch (error) {
+    console.error("Erreur dans getUnreadMessages:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Marquer un canal comme lu pour l'utilisateur courant
+export const markChannelAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { channelId } = req.params;
+    
+    if (!userId || !channelId) {
+      return res.status(400).json({ message: "ID utilisateur et ID canal requis" });
+    }
+
+    const result = await MessageModel.markChannelAsRead(userId, channelId);
+    
+    // Diffuser l'événement à l'utilisateur pour mettre à jour son UI
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`user:${userId}`).emit("channelRead", { channelId });
+    }
+    
+    res.status(200).json({ 
+      message: "Canal marqué comme lu", 
+      channel: channelId,
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error("Erreur dans markChannelAsRead:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

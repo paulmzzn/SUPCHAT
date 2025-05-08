@@ -1,36 +1,30 @@
 import express from "express";
-import {
-  createMessage,
-  getMessagesByChannel,
-  getMessageById,
-  deleteMessage,
-  updateMessage,
-  uploadFile,
-} from "../controllers/messageController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import * as messageController from "../controllers/messageController.js";
+import { verifyToken as authenticateToken } from "../middleware/authMiddleware.js";
 import multer from "multer";
-
-// Configuration améliorée pour multer
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    // Accepter tous les types de fichiers
-    cb(null, true);
-  },
-});
 
 const router = express.Router();
 
-// Routes existantes
-router.post("/", verifyToken, createMessage);
-router.get("/canal/:channelId", verifyToken, getMessagesByChannel);
-router.get("/:id", verifyToken, getMessageById);
-router.put("/:id", verifyToken, updateMessage);
-router.delete("/:id", verifyToken, deleteMessage);
+// Configuration de multer pour la gestion des fichiers
+const storage = multer.memoryStorage(); // Stockage en mémoire pour traiter le fichier
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
+});
 
-// Route pour l'upload de fichiers
-router.post("/upload", verifyToken, upload.single("file"), uploadFile);
+// Routes existantes
+router.post("/", authenticateToken, messageController.createMessage);
+router.get("/canal/:channelId", authenticateToken, messageController.getMessagesByChannel);
+
+// Routes pour les notifications - placer AVANT les routes avec paramètres dynamiques
+router.get("/unread/counts", authenticateToken, messageController.getUnreadCounts);
+router.get("/unread", authenticateToken, messageController.getUnreadMessages);
+router.post("/channel/:channelId/read", authenticateToken, messageController.markChannelAsRead);
+
+// Routes avec paramètres dynamiques - placer APRÈS les routes spécifiques
+router.get("/:id", authenticateToken, messageController.getMessageById);
+router.put("/:messageId", authenticateToken, messageController.updateMessage);
+router.delete("/:id", authenticateToken, messageController.deleteMessage);
+router.post("/upload", authenticateToken, upload.single("file"), messageController.uploadFile);
 
 export default router;

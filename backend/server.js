@@ -25,6 +25,53 @@ import path from "path"; // Import path
 import fs from "fs"; // Import fs
 import strawpollRoutes from './routes/strawpollRoutes.js'; // Import ES module
 
+// Système de logging simple
+// Niveaux: error, warn, info, debug
+const LOG_LEVELS = {
+  ERROR: 0,
+  WARN: 1, 
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Définir le niveau de log actuel (changez cette valeur pour filtrer les logs)
+// Par défaut: INFO en production, DEBUG en développement
+const currentLogLevel = process.env.NODE_ENV === 'production' ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
+
+// Remplacer les méthodes console standard
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+// Nouvelle fonction de log avec niveau
+global.logger = {
+  error: (message, ...args) => {
+    if (currentLogLevel >= LOG_LEVELS.ERROR) {
+      originalConsoleError(`[ERROR] ${message}`, ...args);
+    }
+  },
+  warn: (message, ...args) => {
+    if (currentLogLevel >= LOG_LEVELS.WARN) {
+      originalConsoleWarn(`[WARN] ${message}`, ...args);
+    }
+  },
+  info: (message, ...args) => {
+    if (currentLogLevel >= LOG_LEVELS.INFO) {
+      originalConsoleLog(`[INFO] ${message}`, ...args);
+    }
+  },
+  debug: (message, ...args) => {
+    if (currentLogLevel >= LOG_LEVELS.DEBUG) {
+      originalConsoleLog(`[DEBUG] ${message}`, ...args);
+    }
+  }
+};
+
+// Remplacer console.log pour rediriger automatiquement vers le niveau info
+console.log = (message, ...args) => {
+  logger.info(message, ...args);
+};
+
 // Load environment variables at the start
 dotenv.config();
 
@@ -44,7 +91,7 @@ const createUploadDirs = () => {
   // Créer les dossiers s'ils n'existent pas
   [uploadsDir, privateMessagesDir, privateMessagesFilesDir].forEach((dir) => {
     if (!fs.existsSync(dir)) {
-      console.log(`[Server] Création du répertoire: ${dir}`);
+      logger.info(`Création du répertoire: ${dir}`);
       fs.mkdirSync(dir, { recursive: true });
     }
   });
@@ -102,15 +149,15 @@ app.use(
 );
 app.use("/api/files", express.static(path.join(__dirname, "uploads")));
 
-// Middleware pour logguer les requêtes de fichiers
+// Middleware pour logguer les requêtes de fichiers (niveau debug seulement)
 app.use("/api/files", (req, res, next) => {
-  console.log(`[File Access] ${req.method} ${req.url}`);
+  logger.debug(`File Access: ${req.method} ${req.url}`);
   next();
 });
 
 // Ajouter une route API pour vérifier que le serveur est en ligne
 app.get("/api/ping", (req, res) => {
-  console.log("PING request received");
+  logger.debug("PING request received");
   res.status(200).send("pong");
 });
 
@@ -136,32 +183,27 @@ app.set("io", io);
 // Initialiser le gestionnaire de socket avec un try/catch pour capturer les erreurs d'initialisation
 try {
   socketManager(io);
-  console.log("Socket.IO manager initialized successfully");
+  logger.info("Socket.IO manager initialized successfully");
 } catch (error) {
-  console.error("Error initializing Socket.IO manager:", error);
+  logger.error("Error initializing Socket.IO manager:", error);
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
-
-
-
-  console.log(`Serveur démarré sur http://192.168.1.132:${PORT}`);
-  console.log(`WebSocket URL: ws://192.168.1.132:${PORT}`);
-
-
+  logger.info(`Serveur démarré sur http://192.168.1.63:${PORT}`);
+  logger.info(`WebSocket URL: ws://192.168.1.63:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
     .query("SELECT NOW()") // Test simple pour vérifier la connexion
     .then(() => {
-      console.log("Connexion réussie avec PostgreSQL");
+      logger.info("Connexion réussie avec PostgreSQL");
     })
     .catch((error) => {
-      console.error("Erreur de connexion à PostgreSQL:", error.message);
+      logger.error("Erreur de connexion à PostgreSQL:", error.message);
     });
 });
 
 // Gestion des erreurs non capturées
 process.on("unhandledRejection", (error) => {
-  console.error("Erreur non gérée:", error);
+  logger.error("Erreur non gérée:", error);
 });
