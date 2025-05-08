@@ -565,16 +565,72 @@ function WorkspaceDetails() {
 
   // Fonction pour télécharger un fichier
   const handleDownloadFile = (fileUrl, fileName) => {
-    // Construire l'URL complète vers le fichier sur S3
-    const fullUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileUrl}`;
+    // Si l'URL est déjà complète, extraire le chemin du fichier
+    const extractFilePath = (url) => {
+      if (url.startsWith("http")) {
+        try {
+          // Si l'URL contient le bucket S3, extraire le chemin
+          if (url.includes("s3-supchat.s3.fr-par.scw.cloud")) {
+            const parts = url.split("s3-supchat.s3.fr-par.scw.cloud/");
+            if (parts.length > 1) {
+              return parts[1];
+            }
+          }
+          // Sinon, retourner l'URL complète
+          return url;
+        } catch (error) {
+          console.error(
+            "Erreur lors de l'extraction du chemin de fichier:",
+            error
+          );
+          return url;
+        }
+      }
+      // Si ce n'est pas une URL complète, c'est déjà un chemin relatif
+      return fileUrl;
+    };
+
+    // Extraire le chemin du fichier
+    const filePath = extractFilePath(fileUrl);
+
+    // Construire l'URL de téléchargement via le backend
+    const token = localStorage.getItem("token");
+    const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
+      filePath
+    )}`;
 
     // Créer un élément a temporaire pour déclencher le téléchargement
     const a = document.createElement("a");
-    a.href = fullUrl;
-    a.download = fileName || "download"; // Utiliser le nom du fichier ou un nom par défaut
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = downloadUrl;
+    a.download = fileName || "download";
+    // Ajouter le token d'authentification
+    if (token) {
+      a.setAttribute("data-token", token);
+      // Utiliser un hack pour envoyer le token dans l'en-tête
+      fetch(downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("Erreur de téléchargement");
+          return response.blob();
+        })
+        .then((blob) => {
+          const objectUrl = window.URL.createObjectURL(blob);
+          a.href = objectUrl;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(objectUrl);
+          document.body.removeChild(a);
+        })
+        .catch((error) => {
+          console.error("Erreur lors du téléchargement du fichier:", error);
+          alert("Impossible de télécharger le fichier. Veuillez réessayer.");
+        });
+    } else {
+      alert("Vous devez être connecté pour télécharger des fichiers.");
+    }
   };
 
   // Permet d'ouvrir la modal Strawpoll depuis n'importe quel bouton du chat

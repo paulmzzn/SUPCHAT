@@ -8,11 +8,22 @@ function FileViewerModal({
   if (!fullscreenFile) return null;
   return (
     <>
-      <div className="fullscreen-modal-overlay" onClick={handleCloseFileViewer}></div>
-      <div className="fullscreen-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fullscreen-modal-overlay"
+        onClick={handleCloseFileViewer}
+      ></div>
+      <div
+        className="fullscreen-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="fullscreen-modal-header">
           <h3 className="fullscreen-modal-title">{fullscreenFile.fileName}</h3>
-          <button className="fullscreen-modal-close" onClick={handleCloseFileViewer}>×</button>
+          <button
+            className="fullscreen-modal-close"
+            onClick={handleCloseFileViewer}
+          >
+            ×
+          </button>
         </div>
         <div className="fullscreen-modal-body">
           {fullscreenFile.isImage ? (
@@ -34,7 +45,12 @@ function FileViewerModal({
         <div className="fullscreen-modal-footer">
           <button
             className="fullscreen-download-btn"
-            onClick={() => handleDownloadFile(fullscreenFile.fileUrl, fullscreenFile.fileName)}
+            onClick={() =>
+              handleDownloadFile(
+                fullscreenFile.fullFileUrl || fullscreenFile.fileUrl,
+                fullscreenFile.fileName
+              )
+            }
           >
             Télécharger
           </button>
