@@ -336,9 +336,9 @@ function WorkspaceDetails() {
     }
 
     try {
-      if (activeChannel && socket && socket.connected) {
+      if (activeChannel && socket) {
         console.log(
-          `📡 Canal actif: ${activeChannel.id}, Socket connecté: ${socket.connected}`
+          `📡 Canal actif: ${activeChannel.id}, Socket disponible: ${!!socket}`
         );
 
         // Création de FormData pour l'envoi du fichier
@@ -385,19 +385,16 @@ function WorkspaceDetails() {
           `🌐 Début de l'appel API vers ${API_URL}/api/messages/upload`
         );
 
-        // Affichage du contenu FormData pour debug
-        console.log("📦 Vérification du FormData:");
-        for (let pair of formData.entries()) {
-          console.log(`${pair[0]}: ${pair[1]}`);
-        }
-
-        // Upload du fichier vers l'API
+        // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
+        // Ce qui évite les problèmes de timeout avec Socket.IO
         const response = await fetch(`${API_URL}/api/messages/upload`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
+          // Augmenter le timeout pour les fichiers volumineux
+          timeout: 60000, // 60 secondes de timeout
         });
 
         console.log(`📡 Réponse reçue - Status: ${response.status}`);
@@ -438,11 +435,9 @@ function WorkspaceDetails() {
         if (!activeChannel) {
           console.log("❌ Aucun canal actif");
           alert("Veuillez d'abord sélectionner un canal");
-        } else if (!socket || !socket.connected) {
+        } else if (!socket) {
           console.log(
-            `❌ Problème de socket - socket existe: ${!!socket}, connecté: ${
-              socket?.connected
-            }`
+            `❌ Problème de socket - socket n'est pas disponible`
           );
           alert(
             "Problème de connexion au serveur. Veuillez rafraîchir la page."
