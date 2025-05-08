@@ -243,14 +243,14 @@ function DirectMessages() {
         // Configuration complète pour Socket.IO
         const socketOptions = {
           auth: { token },
-          transports: ["polling", "websocket"], // Try polling first then websocket
+          transports: ["websocket", "polling"], // Try websocket first, then polling
           reconnection: true,
-          reconnectionAttempts: 10,
-          reconnectionDelay: 2000, // Start with 2 seconds
-          reconnectionDelayMax: 10000, // Max 10 seconds
-          timeout: 20000,
+          reconnectionAttempts: 15,  // Increased from 10
+          reconnectionDelay: 1000,   // Decreased initial delay to reconnect faster
+          reconnectionDelayMax: 10000,
+          timeout: 30000,            // Increased from 20000
           autoConnect: true,
-          forceNew: true,
+          forceNew: false            // Changed to false to reuse existing connection when possible
         };
 
         console.log("[DM] Creating socket with options:", socketOptions);

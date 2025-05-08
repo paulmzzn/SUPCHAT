@@ -5,7 +5,7 @@
 -- Dumped from database version 16.8
 -- Dumped by pg_dump version 17.2
 
--- Started on 2025-05-05 13:55:16
+-- Started on 2025-05-05 15:03:28
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +20,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 4333 (class 1262 OID 5)
+-- TOC entry 4351 (class 1262 OID 5)
 -- Name: postgres; Type: DATABASE; Schema: -; Owner: azure_pg_admin
 --
 
@@ -44,8 +44,8 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 4334 (class 0 OID 0)
--- Dependencies: 4333
+-- TOC entry 4352 (class 0 OID 0)
+-- Dependencies: 4351
 -- Name: DATABASE postgres; Type: COMMENT; Schema: -; Owner: azure_pg_admin
 --
 
@@ -63,7 +63,7 @@ CREATE SCHEMA public;
 ALTER SCHEMA public OWNER TO azure_pg_admin;
 
 --
--- TOC entry 4336 (class 0 OID 0)
+-- TOC entry 4354 (class 0 OID 0)
 -- Dependencies: 7
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: azure_pg_admin
 --
@@ -72,7 +72,7 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
--- TOC entry 249 (class 1255 OID 81930)
+-- TOC entry 251 (class 1255 OID 81930)
 -- Name: random_uuid(); Type: FUNCTION; Schema: public; Owner: rootmath
 --
 
@@ -109,6 +109,91 @@ CREATE TABLE public.canal (
 
 
 ALTER TABLE public.canal OWNER TO rootmath;
+
+--
+-- TOC entry 247 (class 1259 OID 286780)
+-- Name: canal_lecture; Type: TABLE; Schema: public; Owner: rootmath
+--
+
+CREATE TABLE public.canal_lecture (
+    id_canal_lecture integer NOT NULL,
+    fk_utilisateur uuid NOT NULL,
+    fk_canal uuid NOT NULL,
+    derniere_lecture timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.canal_lecture OWNER TO rootmath;
+
+--
+-- TOC entry 4357 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: TABLE canal_lecture; Type: COMMENT; Schema: public; Owner: rootmath
+--
+
+COMMENT ON TABLE public.canal_lecture IS 'Enregistre quand un utilisateur a lu un canal pour la dernière fois';
+
+
+--
+-- TOC entry 4358 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: COLUMN canal_lecture.id_canal_lecture; Type: COMMENT; Schema: public; Owner: rootmath
+--
+
+COMMENT ON COLUMN public.canal_lecture.id_canal_lecture IS 'Identifiant unique de l''enregistrement de lecture';
+
+
+--
+-- TOC entry 4359 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: COLUMN canal_lecture.fk_utilisateur; Type: COMMENT; Schema: public; Owner: rootmath
+--
+
+COMMENT ON COLUMN public.canal_lecture.fk_utilisateur IS 'Identifiant de l''utilisateur qui a lu le canal';
+
+
+--
+-- TOC entry 4360 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: COLUMN canal_lecture.fk_canal; Type: COMMENT; Schema: public; Owner: rootmath
+--
+
+COMMENT ON COLUMN public.canal_lecture.fk_canal IS 'Identifiant du canal qui a été lu';
+
+
+--
+-- TOC entry 4361 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: COLUMN canal_lecture.derniere_lecture; Type: COMMENT; Schema: public; Owner: rootmath
+--
+
+COMMENT ON COLUMN public.canal_lecture.derniere_lecture IS 'Date et heure de la dernière lecture du canal par l''utilisateur';
+
+
+--
+-- TOC entry 246 (class 1259 OID 286779)
+-- Name: canal_lecture_id_canal_lecture_seq; Type: SEQUENCE; Schema: public; Owner: rootmath
+--
+
+CREATE SEQUENCE public.canal_lecture_id_canal_lecture_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.canal_lecture_id_canal_lecture_seq OWNER TO rootmath;
+
+--
+-- TOC entry 4363 (class 0 OID 0)
+-- Dependencies: 246
+-- Name: canal_lecture_id_canal_lecture_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
+--
+
+ALTER SEQUENCE public.canal_lecture_id_canal_lecture_seq OWNED BY public.canal_lecture.id_canal_lecture;
+
 
 --
 -- TOC entry 222 (class 1259 OID 82281)
@@ -240,7 +325,7 @@ CREATE TABLE public.message_prive (
 ALTER TABLE public.message_prive OWNER TO rootmath;
 
 --
--- TOC entry 4346 (class 0 OID 0)
+-- TOC entry 4372 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: TABLE message_prive; Type: COMMENT; Schema: public; Owner: rootmath
 --
@@ -293,7 +378,7 @@ CREATE SEQUENCE public.message_read_id_seq
 ALTER SEQUENCE public.message_read_id_seq OWNER TO rootmath;
 
 --
--- TOC entry 4350 (class 0 OID 0)
+-- TOC entry 4376 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: message_read_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
 --
@@ -386,7 +471,7 @@ CREATE SEQUENCE public.private_message_reaction_id_reaction_seq
 ALTER SEQUENCE public.private_message_reaction_id_reaction_seq OWNER TO rootmath;
 
 --
--- TOC entry 4356 (class 0 OID 0)
+-- TOC entry 4382 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: private_message_reaction_id_reaction_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
 --
@@ -429,7 +514,7 @@ CREATE SEQUENCE public.push_subscriptions_id_seq
 ALTER SEQUENCE public.push_subscriptions_id_seq OWNER TO rootmath;
 
 --
--- TOC entry 4359 (class 0 OID 0)
+-- TOC entry 4385 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: push_subscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
 --
@@ -470,7 +555,7 @@ CREATE SEQUENCE public.reaction_id_reaction_seq
 ALTER SEQUENCE public.reaction_id_reaction_seq OWNER TO rootmath;
 
 --
--- TOC entry 4362 (class 0 OID 0)
+-- TOC entry 4388 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: reaction_id_reaction_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
 --
@@ -592,7 +677,7 @@ CREATE SEQUENCE public.workspace_favoris_id_workspace_favoris_seq
 ALTER SEQUENCE public.workspace_favoris_id_workspace_favoris_seq OWNER TO rootmath;
 
 --
--- TOC entry 4370 (class 0 OID 0)
+-- TOC entry 4396 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: workspace_favoris_id_workspace_favoris_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rootmath
 --
@@ -618,7 +703,7 @@ CREATE TABLE public.workspace_invitations (
 ALTER TABLE public.workspace_invitations OWNER TO rootmath;
 
 --
--- TOC entry 4372 (class 0 OID 0)
+-- TOC entry 4398 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: TABLE workspace_invitations; Type: COMMENT; Schema: public; Owner: rootmath
 --
@@ -627,7 +712,7 @@ COMMENT ON TABLE public.workspace_invitations IS 'Stocke les invitations envoyé
 
 
 --
--- TOC entry 4373 (class 0 OID 0)
+-- TOC entry 4399 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: COLUMN workspace_invitations.token_invitation; Type: COMMENT; Schema: public; Owner: rootmath
 --
@@ -636,7 +721,15 @@ COMMENT ON COLUMN public.workspace_invitations.token_invitation IS 'Token unique
 
 
 --
--- TOC entry 4045 (class 2604 OID 253975)
+-- TOC entry 4057 (class 2604 OID 286783)
+-- Name: canal_lecture id_canal_lecture; Type: DEFAULT; Schema: public; Owner: rootmath
+--
+
+ALTER TABLE ONLY public.canal_lecture ALTER COLUMN id_canal_lecture SET DEFAULT nextval('public.canal_lecture_id_canal_lecture_seq'::regclass);
+
+
+--
+-- TOC entry 4050 (class 2604 OID 253975)
 -- Name: message_read id; Type: DEFAULT; Schema: public; Owner: rootmath
 --
 
@@ -644,7 +737,7 @@ ALTER TABLE ONLY public.message_read ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 4050 (class 2604 OID 278630)
+-- TOC entry 4055 (class 2604 OID 278630)
 -- Name: private_message_reaction id_reaction; Type: DEFAULT; Schema: public; Owner: rootmath
 --
 
@@ -652,7 +745,7 @@ ALTER TABLE ONLY public.private_message_reaction ALTER COLUMN id_reaction SET DE
 
 
 --
--- TOC entry 4035 (class 2604 OID 229474)
+-- TOC entry 4040 (class 2604 OID 229474)
 -- Name: push_subscriptions id; Type: DEFAULT; Schema: public; Owner: rootmath
 --
 
@@ -660,7 +753,7 @@ ALTER TABLE ONLY public.push_subscriptions ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 4043 (class 2604 OID 245828)
+-- TOC entry 4048 (class 2604 OID 245828)
 -- Name: reaction id_reaction; Type: DEFAULT; Schema: public; Owner: rootmath
 --
 
@@ -668,7 +761,7 @@ ALTER TABLE ONLY public.reaction ALTER COLUMN id_reaction SET DEFAULT nextval('p
 
 
 --
--- TOC entry 4033 (class 2604 OID 229399)
+-- TOC entry 4038 (class 2604 OID 229399)
 -- Name: workspace_favoris id_workspace_favoris; Type: DEFAULT; Schema: public; Owner: rootmath
 --
 
@@ -676,7 +769,7 @@ ALTER TABLE ONLY public.workspace_favoris ALTER COLUMN id_workspace_favoris SET 
 
 
 --
--- TOC entry 4303 (class 0 OID 82251)
+-- TOC entry 4319 (class 0 OID 82251)
 -- Dependencies: 220
 -- Data for Name: canal; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -689,7 +782,17 @@ b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	files	f	2025-04-28 13:08:05.531983	d4f1cff0
 
 
 --
--- TOC entry 4305 (class 0 OID 82281)
+-- TOC entry 4345 (class 0 OID 286780)
+-- Dependencies: 247
+-- Data for Name: canal_lecture; Type: TABLE DATA; Schema: public; Owner: rootmath
+--
+
+COPY public.canal_lecture (id_canal_lecture, fk_utilisateur, fk_canal, derniere_lecture) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4321 (class 0 OID 82281)
 -- Dependencies: 222
 -- Data for Name: fichier; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -699,7 +802,7 @@ COPY public.fichier (id_fichier, nom_fichier, url, type, date_upload, taille_fic
 
 
 --
--- TOC entry 4308 (class 0 OID 82301)
+-- TOC entry 4324 (class 0 OID 82301)
 -- Dependencies: 225
 -- Data for Name: hashtag; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -709,7 +812,7 @@ COPY public.hashtag (id_hashtag, label) FROM stdin;
 
 
 --
--- TOC entry 4309 (class 0 OID 82307)
+-- TOC entry 4325 (class 0 OID 82307)
 -- Dependencies: 226
 -- Data for Name: membre_workspace; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -724,7 +827,7 @@ a5c1b268-937f-af11-4ca2-2c96634fbe2e	d4f1cff0-3ef5-7ab1-e654-c05894915c31	2	0
 
 
 --
--- TOC entry 4304 (class 0 OID 82264)
+-- TOC entry 4320 (class 0 OID 82264)
 -- Dependencies: 221
 -- Data for Name: message; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -779,6 +882,7 @@ d4dc34f2-0b03-6e3f-5b49-5d4971afed58	qsdfqsfqs	\N	2025-05-05 11:53:03.814009	84f
 aab642a6-88c7-b764-5019-0baac0c43786	qsdqsd	\N	2025-05-05 11:53:09.979307	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 11:53:09.979307	\N	\N
 15a3ee0a-1113-e4cd-9c38-65c6cb8ebbe2	{"type":"file","fileUrl":"messages/files/e9623f5b-d663-474a-945b-b579d7deea5f.png","fileName":"baniere_default.png","fileSize":17960,"fileType":"image/png","isImage":true}	\N	2025-05-05 11:53:16.055167	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 11:53:16.055167	\N	\N
 7f236187-d8d5-e14b-0d8b-776cc32cc1e2	qsdqsdqs	\N	2025-05-05 11:53:27.322801	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 11:53:27.322801	\N	c924cbc4-2e5e-ec12-e13a-d28980db9d1b
+3152d6ce-b630-f6c7-3a7a-09115005f714	fsdfsd	\N	2025-05-05 12:41:29.937017	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 12:41:29.937017	\N	\N
 2c2248b6-5c77-979c-8dde-76455864a195	dsfsdf	\N	2025-04-28 17:49:04.761598	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-04-28 17:49:04.761598	\N	\N
 cf875d8b-2c8e-417a-a650-82cbfdef96ce	rzerzerzer	\N	2025-04-28 17:52:53.001842	84f03094-c2df-24d7-6257-8bf9e1993b58	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-04-28 17:52:53.001842	\N	\N
 7864211b-a168-9d8a-d18b-b5362d48949b	sdfsdf	\N	2025-04-29 12:27:20.66607	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-04-29 12:27:20.66607	\N	\N
@@ -872,6 +976,7 @@ f258c105-d610-fb12-f4ab-abc94df6049f	couille	\N	2025-05-04 15:21:47.802756	84f03
 c924cbc4-2e5e-ec12-e13a-d28980db9d1b	couille	\N	2025-05-04 15:21:52.315521	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	2025-05-04 15:21:52.315521	\N	\N
 c2d63855-32ee-22f2-c7e8-9419c0887508	Sondage créé : [aefa](https://strawpoll.com/jVyG2DPE1Z7) [strawpoll:jVyG2DPE1Z7]	\N	2025-05-04 15:32:39.717303	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-05-04 15:32:39.717303	\N	\N
 24ac6a51-6842-a153-d623-2f712cd21aa4	pppp	\N	2025-05-05 07:25:09.74577	84f03094-c2df-24d7-6257-8bf9e1993b58	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	2025-05-05 07:25:09.74577	\N	\N
+909fd896-5fe6-17d1-aca9-f83ab7182802	sfqs	\N	2025-05-05 12:29:56.048523	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 12:29:56.048523	\N	\N
 7d6ca917-ee4c-c31f-e8fe-8300fad72eb2	lkhdbvf	\N	2025-04-28 17:50:55.962267	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-04-28 17:50:55.962267	\N	\N
 248889ab-8f91-e8b9-fa68-2afd598582a8	test	\N	2025-04-29 11:31:43.07498	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-04-29 11:31:43.07498	\N	\N
 7e0b0c58-e55c-9ddc-66ce-ca606252e506	qefsdf	\N	2025-04-29 12:30:29.78299	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-04-29 12:30:29.78299	\N	\N
@@ -914,11 +1019,13 @@ db45b595-a7cd-2a6c-2183-ec5e09e2f847	afazef	\N	2025-05-04 14:54:38.620234	07d183
 47247180-4aa1-b2fb-c07f-7116e0864f89	zetoihefzgsohitqez piuoezfgdpoij qvfd pçè! até"' zPOJÙezmflds	\N	2025-05-04 15:21:51.693427	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-05-04 15:21:51.693427	\N	\N
 d3986fb3-632c-8c4a-2b09-e1a4e1dc483f	test	\N	2025-05-04 15:51:38.026082	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-05-04 15:51:38.026082	\N	c7e92a63-a89b-1c22-9f24-d78d6a41f238
 e5e6406d-90f7-3a3a-393c-70285a2a23dc	lkjhgfvcxvghjk	\N	2025-05-05 07:25:30.485537	07d1837c-59fe-d357-906a-acd22d3e162a	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	2025-05-05 07:25:30.485537	\N	\N
+843c4844-b01b-3ec5-5415-1872cbd40a01	sdfsdf	\N	2025-05-05 12:30:05.191292	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-05-05 12:30:05.191292	\N	\N
+25f38f97-c0b1-99d7-162e-924ae7d95038	Paul 2 a démarré un appel vidéo	\N	2025-05-05 13:02:58.655295	07d1837c-59fe-d357-906a-acd22d3e162a	00000000-0000-0000-0000-000000000003	2025-05-05 13:02:58.655295	\N	\N
 \.
 
 
 --
--- TOC entry 4311 (class 0 OID 82345)
+-- TOC entry 4327 (class 0 OID 82345)
 -- Dependencies: 228
 -- Data for Name: message_fichier; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -928,7 +1035,7 @@ COPY public.message_fichier (fk_message, fk_fichier) FROM stdin;
 
 
 --
--- TOC entry 4312 (class 0 OID 82360)
+-- TOC entry 4328 (class 0 OID 82360)
 -- Dependencies: 229
 -- Data for Name: message_hashtag; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -938,7 +1045,7 @@ COPY public.message_hashtag (fk_message, fk_hashtag) FROM stdin;
 
 
 --
--- TOC entry 4313 (class 0 OID 82375)
+-- TOC entry 4329 (class 0 OID 82375)
 -- Dependencies: 230
 -- Data for Name: message_mention; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -948,7 +1055,7 @@ COPY public.message_mention (fk_message, fk_utilisateur) FROM stdin;
 
 
 --
--- TOC entry 4320 (class 0 OID 229490)
+-- TOC entry 4336 (class 0 OID 229490)
 -- Dependencies: 237
 -- Data for Name: message_prive; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -964,6 +1071,7 @@ cbed91cb-7fe4-b8ad-84b6-d55499636137	mmmmmmmmm	2025-04-30 13:41:37.754001	2025-0
 8cc4c82d-58cf-9b21-8f04-e58a1b55a9dd	rtyuiop	2025-05-04 14:58:23.917359	2025-05-04 15:00:37.540166	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-04 14:58:23.917359	\N	f	\N
 c9aecf3e-d97c-6e5a-6f2f-717f386f118d	mmmm	2025-04-29 12:48:58.729671	2025-04-29 12:58:37.630627	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 12:48:58.729671	\N	f	\N
 d7b6ce00-ab93-db6e-d545-2fb68bc7f905	kk	2025-04-29 12:52:20.804243	2025-04-29 12:58:37.630683	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 12:52:20.804243	\N	f	\N
+89412d78-aae2-5f60-f03b-52a623ccaa94	szgzsefs	2025-05-05 12:32:07.066811	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-05 12:32:07.066811	\N	f	31e6be05-e6a0-a406-2e2d-108c6433ea62
 62b57b9a-ceee-e47f-cf09-0d6a674af885	nzpevùosbnvùs<v`p<sjp$oDIV odflvj zd!àfo uùzizDK;	2025-05-04 15:46:53.1236	2025-05-04 15:52:56.810593	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-04 15:46:53.1236	\N	f	\N
 9b233f49-6c86-9718-184c-ccacb44e17e0	jkjkjjkjk	2025-04-29 12:40:25.070744	2025-04-29 12:58:46.689839	bb6a4d43-70d3-5e36-d943-dfdfc747491f	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	[]	2025-04-29 12:40:25.070744	\N	f	\N
 d5933c0e-da5c-6e4e-c9e9-3d303164d782	mmmm	2025-04-30 14:14:21.17032	2025-04-30 14:16:14.746744	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-30 14:14:21.17032	\N	f	\N
@@ -1036,7 +1144,7 @@ c6c72219-4d13-1bba-714b-6af59fe0c251	mm	2025-04-29 12:38:26.988174	2025-04-29 12
 
 
 --
--- TOC entry 4315 (class 0 OID 122921)
+-- TOC entry 4331 (class 0 OID 122921)
 -- Dependencies: 232
 -- Data for Name: message_prive_fichier; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1046,7 +1154,7 @@ COPY public.message_prive_fichier (fk_message_prive, fk_fichier) FROM stdin;
 
 
 --
--- TOC entry 4324 (class 0 OID 253972)
+-- TOC entry 4340 (class 0 OID 253972)
 -- Dependencies: 242
 -- Data for Name: message_read; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1062,7 +1170,7 @@ COPY public.message_read (id, fk_user, fk_canal, last_read_at) FROM stdin;
 
 
 --
--- TOC entry 4325 (class 0 OID 262207)
+-- TOC entry 4341 (class 0 OID 262207)
 -- Dependencies: 243
 -- Data for Name: notification; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1072,7 +1180,7 @@ COPY public.notification (id_notification, fk_utilisateur, type, contenu, lien, 
 
 
 --
--- TOC entry 4307 (class 0 OID 82295)
+-- TOC entry 4323 (class 0 OID 82295)
 -- Dependencies: 224
 -- Data for Name: permission; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1082,7 +1190,7 @@ COPY public.permission (id_permission, type_permission) FROM stdin;
 
 
 --
--- TOC entry 4327 (class 0 OID 278627)
+-- TOC entry 4343 (class 0 OID 278627)
 -- Dependencies: 245
 -- Data for Name: private_message_reaction; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1090,11 +1198,12 @@ COPY public.permission (id_permission, type_permission) FROM stdin;
 COPY public.private_message_reaction (id_reaction, fk_message_prive, fk_utilisateur, reaction_type, created_at) FROM stdin;
 1	d1edadd8-b4fb-fef0-a47a-36746cb8fc09	bb6a4d43-70d3-5e36-d943-dfdfc747491f	👍	2025-05-04 17:10:20.966235
 2	d1edadd8-b4fb-fef0-a47a-36746cb8fc09	5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	❤️	2025-05-04 17:11:56.164727
+3	31e6be05-e6a0-a406-2e2d-108c6433ea62	c8eb671d-f3b4-41f6-7364-0f292619dfdc	❤️	2025-05-05 12:32:02.261539
 \.
 
 
 --
--- TOC entry 4319 (class 0 OID 229471)
+-- TOC entry 4335 (class 0 OID 229471)
 -- Dependencies: 236
 -- Data for Name: push_subscriptions; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1104,7 +1213,7 @@ COPY public.push_subscriptions (id, user_id, endpoint, auth, p256dh, created_at,
 
 
 --
--- TOC entry 4322 (class 0 OID 245825)
+-- TOC entry 4338 (class 0 OID 245825)
 -- Dependencies: 239
 -- Data for Name: reaction; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1128,7 +1237,7 @@ COPY public.reaction (id_reaction, fk_message, fk_utilisateur, reaction_type, cr
 
 
 --
--- TOC entry 4306 (class 0 OID 82290)
+-- TOC entry 4322 (class 0 OID 82290)
 -- Dependencies: 223
 -- Data for Name: role; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1141,7 +1250,7 @@ COPY public.role (id_role, nom_role) FROM stdin;
 
 
 --
--- TOC entry 4314 (class 0 OID 82390)
+-- TOC entry 4330 (class 0 OID 82390)
 -- Dependencies: 231
 -- Data for Name: role_permission; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1151,7 +1260,7 @@ COPY public.role_permission (fk_role, fk_permission) FROM stdin;
 
 
 --
--- TOC entry 4300 (class 0 OID 82219)
+-- TOC entry 4316 (class 0 OID 82219)
 -- Dependencies: 217
 -- Data for Name: statut; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1166,7 +1275,7 @@ COPY public.statut (id_statut, label) FROM stdin;
 
 
 --
--- TOC entry 4301 (class 0 OID 82224)
+-- TOC entry 4317 (class 0 OID 82224)
 -- Dependencies: 218
 -- Data for Name: utilisateur; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1175,15 +1284,16 @@ COPY public.utilisateur (id_utilisateur, nom, email, mot_de_passe, photo_de_prof
 00000000-0000-0000-0000-000000000001	Mistral AI	bot@mistral.ai	dummy_password	https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp	2025-04-08 13:32:15.598295	1	\N	t	\N	\N	\N	\N	\N
 bb6a4d43-70d3-5e36-d943-dfdfc747491f	Math'BigDick	mathis.malzac@supinfo.com	$2a$10$ZQlN0LDqaRGKYlHVXj.F4eQf/CeBUuMRZDkUQZ3UYNJRyaWbCK72G	\N	2025-02-27 13:47:22.59845	1	\N	t	\N	\N	\N	2010-02-16	
 5ee82d1c-df2a-fe2f-ea4a-3e441b0846af	Math TEST	test@test.com	$2a$10$EsFqhD2hegX0k7jxpJkonO0woveEBvH2D0UglMuDCUniTX9YXnDQ2	\N	2025-04-18 07:37:40.668084	1	\N	t	\N	\N	\N	2010-04-15	\N
-d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	Rudy	gault.rudy@gmail.com	$2a$10$KwpeHvkEQHur5hFUPhngEezuvRDMAB5EPMotu1xb/SE20ZL5YK0ki	\N	2025-02-27 13:11:18.704602	0	\N	t	\N	\N	\N	2010-02-27	j'aime la crotte
 c8eb671d-f3b4-41f6-7364-0f292619dfdc	Paul 2	paul.mazzon@icloud.com	$2a$10$husIr5kZtQDeVE44nNAz1eCZMM5w/74Cgu3RDzVQ8VAT4XNfnyLqi	\N	2025-04-01 12:32:20.707977	1	\N	t	\N	\N	\N	2004-01-06	
+d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	Rudy	gault.rudy@gmail.com	$2a$10$KwpeHvkEQHur5hFUPhngEezuvRDMAB5EPMotu1xb/SE20ZL5YK0ki	\N	2025-02-27 13:11:18.704602	0	\N	t	\N	\N	\N	2010-02-27	j'aime la crotte
+00000000-0000-0000-0000-000000000003	System	system	dummy_password_ocr		2025-04-18 11:46:23.860732	1	\N	t	\N	\N	\N	\N	System
 00000000-0000-0000-0000-000000000002	MistralOCR	bot-ocr@mistral.ai	dummy_password_ocr	https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp	2025-04-18 11:46:23.860732	1	\N	t	\N	\N	\N	\N	Je suis l'assistant OCR de Mistral AI.
 a5c1b268-937f-af11-4ca2-2c96634fbe2e	Paul MAZZON	paul.mazzon@gmail.com	$2a$10$x0A7Vw3xf6GYahB1KJphV.QRqvWdBdUQJq0lHbMgx1oqfJqATe3MO	https://avatars.githubusercontent.com/u/63354977?v=4	2025-02-26 13:35:29.993728	1	\N	t	\N	\N	\N	2004-01-06	Salut !
 \.
 
 
 --
--- TOC entry 4302 (class 0 OID 82243)
+-- TOC entry 4318 (class 0 OID 82243)
 -- Dependencies: 219
 -- Data for Name: workspace; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1194,7 +1304,7 @@ d4f1cff0-3ef5-7ab1-e654-c05894915c31	Supchat	f	2025-04-26 16:55:29.216308	worksp
 
 
 --
--- TOC entry 4317 (class 0 OID 229396)
+-- TOC entry 4333 (class 0 OID 229396)
 -- Dependencies: 234
 -- Data for Name: workspace_favoris; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1205,7 +1315,7 @@ COPY public.workspace_favoris (id_workspace_favoris, fk_utilisateur, fk_workspac
 
 
 --
--- TOC entry 4310 (class 0 OID 82327)
+-- TOC entry 4326 (class 0 OID 82327)
 -- Dependencies: 227
 -- Data for Name: workspace_invitations; Type: TABLE DATA; Schema: public; Owner: rootmath
 --
@@ -1215,7 +1325,16 @@ COPY public.workspace_invitations (id_invitation, fk_workspace, email_invite, to
 
 
 --
--- TOC entry 4375 (class 0 OID 0)
+-- TOC entry 4401 (class 0 OID 0)
+-- Dependencies: 246
+-- Name: canal_lecture_id_canal_lecture_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
+--
+
+SELECT pg_catalog.setval('public.canal_lecture_id_canal_lecture_seq', 1, false);
+
+
+--
+-- TOC entry 4402 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: message_read_id_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
@@ -1224,16 +1343,16 @@ SELECT pg_catalog.setval('public.message_read_id_seq', 87, true);
 
 
 --
--- TOC entry 4376 (class 0 OID 0)
+-- TOC entry 4403 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: private_message_reaction_id_reaction_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
 
-SELECT pg_catalog.setval('public.private_message_reaction_id_reaction_seq', 2, true);
+SELECT pg_catalog.setval('public.private_message_reaction_id_reaction_seq', 3, true);
 
 
 --
--- TOC entry 4377 (class 0 OID 0)
+-- TOC entry 4404 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: push_subscriptions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
@@ -1242,7 +1361,7 @@ SELECT pg_catalog.setval('public.push_subscriptions_id_seq', 1, false);
 
 
 --
--- TOC entry 4378 (class 0 OID 0)
+-- TOC entry 4405 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: reaction_id_reaction_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
@@ -1251,7 +1370,7 @@ SELECT pg_catalog.setval('public.reaction_id_reaction_seq', 30, true);
 
 
 --
--- TOC entry 4379 (class 0 OID 0)
+-- TOC entry 4406 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: workspace_favoris_id_workspace_favoris_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
@@ -1260,7 +1379,25 @@ SELECT pg_catalog.setval('public.workspace_favoris_id_workspace_favoris_seq', 15
 
 
 --
--- TOC entry 4063 (class 2606 OID 82258)
+-- TOC entry 4134 (class 2606 OID 286788)
+-- Name: canal_lecture canal_lecture_fk_utilisateur_fk_canal_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
+--
+
+ALTER TABLE ONLY public.canal_lecture
+    ADD CONSTRAINT canal_lecture_fk_utilisateur_fk_canal_key UNIQUE (fk_utilisateur, fk_canal);
+
+
+--
+-- TOC entry 4136 (class 2606 OID 286786)
+-- Name: canal_lecture canal_lecture_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
+--
+
+ALTER TABLE ONLY public.canal_lecture
+    ADD CONSTRAINT canal_lecture_pkey PRIMARY KEY (id_canal_lecture);
+
+
+--
+-- TOC entry 4070 (class 2606 OID 82258)
 -- Name: canal canal_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1269,7 +1406,7 @@ ALTER TABLE ONLY public.canal
 
 
 --
--- TOC entry 4067 (class 2606 OID 82289)
+-- TOC entry 4074 (class 2606 OID 82289)
 -- Name: fichier fichier_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1278,7 +1415,7 @@ ALTER TABLE ONLY public.fichier
 
 
 --
--- TOC entry 4073 (class 2606 OID 82306)
+-- TOC entry 4080 (class 2606 OID 82306)
 -- Name: hashtag hashtag_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1287,7 +1424,7 @@ ALTER TABLE ONLY public.hashtag
 
 
 --
--- TOC entry 4075 (class 2606 OID 82311)
+-- TOC entry 4082 (class 2606 OID 82311)
 -- Name: membre_workspace membre_workspace_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1296,7 +1433,7 @@ ALTER TABLE ONLY public.membre_workspace
 
 
 --
--- TOC entry 4085 (class 2606 OID 82349)
+-- TOC entry 4092 (class 2606 OID 82349)
 -- Name: message_fichier message_fichier_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1305,7 +1442,7 @@ ALTER TABLE ONLY public.message_fichier
 
 
 --
--- TOC entry 4087 (class 2606 OID 82364)
+-- TOC entry 4094 (class 2606 OID 82364)
 -- Name: message_hashtag message_hashtag_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1314,7 +1451,7 @@ ALTER TABLE ONLY public.message_hashtag
 
 
 --
--- TOC entry 4089 (class 2606 OID 82379)
+-- TOC entry 4096 (class 2606 OID 82379)
 -- Name: message_mention message_mention_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1323,7 +1460,7 @@ ALTER TABLE ONLY public.message_mention
 
 
 --
--- TOC entry 4065 (class 2606 OID 82270)
+-- TOC entry 4072 (class 2606 OID 82270)
 -- Name: message message_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1332,7 +1469,7 @@ ALTER TABLE ONLY public.message
 
 
 --
--- TOC entry 4093 (class 2606 OID 122925)
+-- TOC entry 4100 (class 2606 OID 122925)
 -- Name: message_prive_fichier message_prive_fichier_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1341,7 +1478,7 @@ ALTER TABLE ONLY public.message_prive_fichier
 
 
 --
--- TOC entry 4109 (class 2606 OID 229501)
+-- TOC entry 4116 (class 2606 OID 229501)
 -- Name: message_prive message_prive_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1350,7 +1487,7 @@ ALTER TABLE ONLY public.message_prive
 
 
 --
--- TOC entry 4115 (class 2606 OID 253980)
+-- TOC entry 4122 (class 2606 OID 253980)
 -- Name: message_read message_read_fk_user_fk_canal_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1359,7 +1496,7 @@ ALTER TABLE ONLY public.message_read
 
 
 --
--- TOC entry 4117 (class 2606 OID 253978)
+-- TOC entry 4124 (class 2606 OID 253978)
 -- Name: message_read message_read_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1368,7 +1505,7 @@ ALTER TABLE ONLY public.message_read
 
 
 --
--- TOC entry 4120 (class 2606 OID 262216)
+-- TOC entry 4127 (class 2606 OID 262216)
 -- Name: notification notification_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1377,7 +1514,7 @@ ALTER TABLE ONLY public.notification
 
 
 --
--- TOC entry 4071 (class 2606 OID 82300)
+-- TOC entry 4078 (class 2606 OID 82300)
 -- Name: permission permission_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1386,7 +1523,7 @@ ALTER TABLE ONLY public.permission
 
 
 --
--- TOC entry 4123 (class 2606 OID 278635)
+-- TOC entry 4130 (class 2606 OID 278635)
 -- Name: private_message_reaction private_message_reaction_fk_message_prive_fk_utilisateur_re_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1395,7 +1532,7 @@ ALTER TABLE ONLY public.private_message_reaction
 
 
 --
--- TOC entry 4125 (class 2606 OID 278633)
+-- TOC entry 4132 (class 2606 OID 278633)
 -- Name: private_message_reaction private_message_reaction_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1404,7 +1541,7 @@ ALTER TABLE ONLY public.private_message_reaction
 
 
 --
--- TOC entry 4101 (class 2606 OID 229482)
+-- TOC entry 4108 (class 2606 OID 229482)
 -- Name: push_subscriptions push_subscriptions_endpoint_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1413,7 +1550,7 @@ ALTER TABLE ONLY public.push_subscriptions
 
 
 --
--- TOC entry 4103 (class 2606 OID 229480)
+-- TOC entry 4110 (class 2606 OID 229480)
 -- Name: push_subscriptions push_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1422,7 +1559,7 @@ ALTER TABLE ONLY public.push_subscriptions
 
 
 --
--- TOC entry 4111 (class 2606 OID 245833)
+-- TOC entry 4118 (class 2606 OID 245833)
 -- Name: reaction reaction_fk_message_fk_utilisateur_reaction_type_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1431,7 +1568,7 @@ ALTER TABLE ONLY public.reaction
 
 
 --
--- TOC entry 4113 (class 2606 OID 245831)
+-- TOC entry 4120 (class 2606 OID 245831)
 -- Name: reaction reaction_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1440,7 +1577,7 @@ ALTER TABLE ONLY public.reaction
 
 
 --
--- TOC entry 4091 (class 2606 OID 82394)
+-- TOC entry 4098 (class 2606 OID 82394)
 -- Name: role_permission role_permission_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1449,7 +1586,7 @@ ALTER TABLE ONLY public.role_permission
 
 
 --
--- TOC entry 4069 (class 2606 OID 82294)
+-- TOC entry 4076 (class 2606 OID 82294)
 -- Name: role role_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1458,7 +1595,7 @@ ALTER TABLE ONLY public.role
 
 
 --
--- TOC entry 4053 (class 2606 OID 82223)
+-- TOC entry 4060 (class 2606 OID 82223)
 -- Name: statut statut_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1467,7 +1604,7 @@ ALTER TABLE ONLY public.statut
 
 
 --
--- TOC entry 4055 (class 2606 OID 82235)
+-- TOC entry 4062 (class 2606 OID 82235)
 -- Name: utilisateur utilisateur_email_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1476,7 +1613,7 @@ ALTER TABLE ONLY public.utilisateur
 
 
 --
--- TOC entry 4057 (class 2606 OID 82237)
+-- TOC entry 4064 (class 2606 OID 82237)
 -- Name: utilisateur utilisateur_google_id_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1485,7 +1622,7 @@ ALTER TABLE ONLY public.utilisateur
 
 
 --
--- TOC entry 4059 (class 2606 OID 82233)
+-- TOC entry 4066 (class 2606 OID 82233)
 -- Name: utilisateur utilisateur_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1494,7 +1631,7 @@ ALTER TABLE ONLY public.utilisateur
 
 
 --
--- TOC entry 4095 (class 2606 OID 229404)
+-- TOC entry 4102 (class 2606 OID 229404)
 -- Name: workspace_favoris workspace_favoris_fk_utilisateur_fk_workspace_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1503,7 +1640,7 @@ ALTER TABLE ONLY public.workspace_favoris
 
 
 --
--- TOC entry 4097 (class 2606 OID 229402)
+-- TOC entry 4104 (class 2606 OID 229402)
 -- Name: workspace_favoris workspace_favoris_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1512,7 +1649,7 @@ ALTER TABLE ONLY public.workspace_favoris
 
 
 --
--- TOC entry 4079 (class 2606 OID 82339)
+-- TOC entry 4086 (class 2606 OID 82339)
 -- Name: workspace_invitations workspace_invitations_fk_workspace_email_invite_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1521,7 +1658,7 @@ ALTER TABLE ONLY public.workspace_invitations
 
 
 --
--- TOC entry 4081 (class 2606 OID 82335)
+-- TOC entry 4088 (class 2606 OID 82335)
 -- Name: workspace_invitations workspace_invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1530,7 +1667,7 @@ ALTER TABLE ONLY public.workspace_invitations
 
 
 --
--- TOC entry 4083 (class 2606 OID 82337)
+-- TOC entry 4090 (class 2606 OID 82337)
 -- Name: workspace_invitations workspace_invitations_token_invitation_key; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1539,7 +1676,7 @@ ALTER TABLE ONLY public.workspace_invitations
 
 
 --
--- TOC entry 4061 (class 2606 OID 82250)
+-- TOC entry 4068 (class 2606 OID 82250)
 -- Name: workspace workspace_pkey; Type: CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1548,7 +1685,31 @@ ALTER TABLE ONLY public.workspace
 
 
 --
--- TOC entry 4076 (class 1259 OID 82427)
+-- TOC entry 4137 (class 1259 OID 286800)
+-- Name: idx_canal_lecture_canal; Type: INDEX; Schema: public; Owner: rootmath
+--
+
+CREATE INDEX idx_canal_lecture_canal ON public.canal_lecture USING btree (fk_canal);
+
+
+--
+-- TOC entry 4138 (class 1259 OID 286801)
+-- Name: idx_canal_lecture_derniere_lecture; Type: INDEX; Schema: public; Owner: rootmath
+--
+
+CREATE INDEX idx_canal_lecture_derniere_lecture ON public.canal_lecture USING btree (derniere_lecture);
+
+
+--
+-- TOC entry 4139 (class 1259 OID 286799)
+-- Name: idx_canal_lecture_utilisateur; Type: INDEX; Schema: public; Owner: rootmath
+--
+
+CREATE INDEX idx_canal_lecture_utilisateur ON public.canal_lecture USING btree (fk_utilisateur);
+
+
+--
+-- TOC entry 4083 (class 1259 OID 82427)
 -- Name: idx_invitation_email; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1556,7 +1717,7 @@ CREATE INDEX idx_invitation_email ON public.workspace_invitations USING btree (e
 
 
 --
--- TOC entry 4077 (class 1259 OID 82426)
+-- TOC entry 4084 (class 1259 OID 82426)
 -- Name: idx_invitation_workspace; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1564,7 +1725,7 @@ CREATE INDEX idx_invitation_workspace ON public.workspace_invitations USING btre
 
 
 --
--- TOC entry 4104 (class 1259 OID 229515)
+-- TOC entry 4111 (class 1259 OID 229515)
 -- Name: idx_message_prive_conversation; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1572,7 +1733,7 @@ CREATE INDEX idx_message_prive_conversation ON public.message_prive USING btree 
 
 
 --
--- TOC entry 4105 (class 1259 OID 229514)
+-- TOC entry 4112 (class 1259 OID 229514)
 -- Name: idx_message_prive_date_envoi; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1580,7 +1741,7 @@ CREATE INDEX idx_message_prive_date_envoi ON public.message_prive USING btree (d
 
 
 --
--- TOC entry 4106 (class 1259 OID 229513)
+-- TOC entry 4113 (class 1259 OID 229513)
 -- Name: idx_message_prive_destinataire; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1588,7 +1749,7 @@ CREATE INDEX idx_message_prive_destinataire ON public.message_prive USING btree 
 
 
 --
--- TOC entry 4107 (class 1259 OID 229512)
+-- TOC entry 4114 (class 1259 OID 229512)
 -- Name: idx_message_prive_expediteur; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1596,7 +1757,7 @@ CREATE INDEX idx_message_prive_expediteur ON public.message_prive USING btree (f
 
 
 --
--- TOC entry 4118 (class 1259 OID 262222)
+-- TOC entry 4125 (class 1259 OID 262222)
 -- Name: idx_notification_utilisateur_read; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1604,7 +1765,7 @@ CREATE INDEX idx_notification_utilisateur_read ON public.notification USING btre
 
 
 --
--- TOC entry 4121 (class 1259 OID 278646)
+-- TOC entry 4128 (class 1259 OID 278646)
 -- Name: idx_private_message_reaction_message; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1612,7 +1773,7 @@ CREATE INDEX idx_private_message_reaction_message ON public.private_message_reac
 
 
 --
--- TOC entry 4098 (class 1259 OID 229489)
+-- TOC entry 4105 (class 1259 OID 229489)
 -- Name: idx_push_subscriptions_endpoint; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1620,7 +1781,7 @@ CREATE INDEX idx_push_subscriptions_endpoint ON public.push_subscriptions USING 
 
 
 --
--- TOC entry 4099 (class 1259 OID 229488)
+-- TOC entry 4106 (class 1259 OID 229488)
 -- Name: idx_push_subscriptions_user; Type: INDEX; Schema: public; Owner: rootmath
 --
 
@@ -1628,7 +1789,25 @@ CREATE INDEX idx_push_subscriptions_user ON public.push_subscriptions USING btre
 
 
 --
--- TOC entry 4127 (class 2606 OID 82259)
+-- TOC entry 4170 (class 2606 OID 286794)
+-- Name: canal_lecture canal_lecture_fk_canal_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
+--
+
+ALTER TABLE ONLY public.canal_lecture
+    ADD CONSTRAINT canal_lecture_fk_canal_fkey FOREIGN KEY (fk_canal) REFERENCES public.canal(id_canal) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4171 (class 2606 OID 286789)
+-- Name: canal_lecture canal_lecture_fk_utilisateur_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
+--
+
+ALTER TABLE ONLY public.canal_lecture
+    ADD CONSTRAINT canal_lecture_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4141 (class 2606 OID 82259)
 -- Name: canal fk_canal_workspace; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1637,7 +1816,7 @@ ALTER TABLE ONLY public.canal
 
 
 --
--- TOC entry 4131 (class 2606 OID 245852)
+-- TOC entry 4145 (class 2606 OID 245852)
 -- Name: fichier fk_fichier_utilisateur; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1646,7 +1825,7 @@ ALTER TABLE ONLY public.fichier
 
 
 --
--- TOC entry 4135 (class 2606 OID 82340)
+-- TOC entry 4149 (class 2606 OID 82340)
 -- Name: workspace_invitations fk_invitation_workspace; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1655,7 +1834,7 @@ ALTER TABLE ONLY public.workspace_invitations
 
 
 --
--- TOC entry 4132 (class 2606 OID 82322)
+-- TOC entry 4146 (class 2606 OID 82322)
 -- Name: membre_workspace fk_membre_role; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1664,7 +1843,7 @@ ALTER TABLE ONLY public.membre_workspace
 
 
 --
--- TOC entry 4133 (class 2606 OID 82312)
+-- TOC entry 4147 (class 2606 OID 82312)
 -- Name: membre_workspace fk_membre_utilisateur; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1673,7 +1852,7 @@ ALTER TABLE ONLY public.membre_workspace
 
 
 --
--- TOC entry 4134 (class 2606 OID 82317)
+-- TOC entry 4148 (class 2606 OID 82317)
 -- Name: membre_workspace fk_membre_workspace; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1682,7 +1861,7 @@ ALTER TABLE ONLY public.membre_workspace
 
 
 --
--- TOC entry 4128 (class 2606 OID 82271)
+-- TOC entry 4142 (class 2606 OID 82271)
 -- Name: message fk_message_canal; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1691,7 +1870,7 @@ ALTER TABLE ONLY public.message
 
 
 --
--- TOC entry 4148 (class 2606 OID 229507)
+-- TOC entry 4162 (class 2606 OID 229507)
 -- Name: message_prive fk_message_prive_destinataire; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1700,7 +1879,7 @@ ALTER TABLE ONLY public.message_prive
 
 
 --
--- TOC entry 4149 (class 2606 OID 229502)
+-- TOC entry 4163 (class 2606 OID 229502)
 -- Name: message_prive fk_message_prive_expediteur; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1709,7 +1888,7 @@ ALTER TABLE ONLY public.message_prive
 
 
 --
--- TOC entry 4129 (class 2606 OID 82276)
+-- TOC entry 4143 (class 2606 OID 82276)
 -- Name: message fk_message_utilisateur; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1718,7 +1897,7 @@ ALTER TABLE ONLY public.message
 
 
 --
--- TOC entry 4136 (class 2606 OID 82355)
+-- TOC entry 4150 (class 2606 OID 82355)
 -- Name: message_fichier fk_messagefichier_fichier; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1727,7 +1906,7 @@ ALTER TABLE ONLY public.message_fichier
 
 
 --
--- TOC entry 4137 (class 2606 OID 82350)
+-- TOC entry 4151 (class 2606 OID 82350)
 -- Name: message_fichier fk_messagefichier_message; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1736,7 +1915,7 @@ ALTER TABLE ONLY public.message_fichier
 
 
 --
--- TOC entry 4138 (class 2606 OID 82370)
+-- TOC entry 4152 (class 2606 OID 82370)
 -- Name: message_hashtag fk_messagehashtag_hashtag; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1745,7 +1924,7 @@ ALTER TABLE ONLY public.message_hashtag
 
 
 --
--- TOC entry 4139 (class 2606 OID 82365)
+-- TOC entry 4153 (class 2606 OID 82365)
 -- Name: message_hashtag fk_messagehashtag_message; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1754,7 +1933,7 @@ ALTER TABLE ONLY public.message_hashtag
 
 
 --
--- TOC entry 4140 (class 2606 OID 82380)
+-- TOC entry 4154 (class 2606 OID 82380)
 -- Name: message_mention fk_messagemention_message; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1763,7 +1942,7 @@ ALTER TABLE ONLY public.message_mention
 
 
 --
--- TOC entry 4141 (class 2606 OID 82385)
+-- TOC entry 4155 (class 2606 OID 82385)
 -- Name: message_mention fk_messagemention_utilisateur; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1772,7 +1951,7 @@ ALTER TABLE ONLY public.message_mention
 
 
 --
--- TOC entry 4144 (class 2606 OID 122931)
+-- TOC entry 4158 (class 2606 OID 122931)
 -- Name: message_prive_fichier fk_messageprivefichier_fichier; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1781,7 +1960,7 @@ ALTER TABLE ONLY public.message_prive_fichier
 
 
 --
--- TOC entry 4142 (class 2606 OID 82400)
+-- TOC entry 4156 (class 2606 OID 82400)
 -- Name: role_permission fk_rolepermission_permission; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1790,7 +1969,7 @@ ALTER TABLE ONLY public.role_permission
 
 
 --
--- TOC entry 4143 (class 2606 OID 82395)
+-- TOC entry 4157 (class 2606 OID 82395)
 -- Name: role_permission fk_rolepermission_role; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1799,7 +1978,7 @@ ALTER TABLE ONLY public.role_permission
 
 
 --
--- TOC entry 4126 (class 2606 OID 82238)
+-- TOC entry 4140 (class 2606 OID 82238)
 -- Name: utilisateur fk_utilisateur_statut; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1808,7 +1987,7 @@ ALTER TABLE ONLY public.utilisateur
 
 
 --
--- TOC entry 4130 (class 2606 OID 188437)
+-- TOC entry 4144 (class 2606 OID 188437)
 -- Name: message message_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1817,7 +1996,7 @@ ALTER TABLE ONLY public.message
 
 
 --
--- TOC entry 4150 (class 2606 OID 245859)
+-- TOC entry 4164 (class 2606 OID 245859)
 -- Name: message_prive message_prive_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1826,7 +2005,7 @@ ALTER TABLE ONLY public.message_prive
 
 
 --
--- TOC entry 4153 (class 2606 OID 262217)
+-- TOC entry 4167 (class 2606 OID 262217)
 -- Name: notification notification_fk_utilisateur_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1835,7 +2014,7 @@ ALTER TABLE ONLY public.notification
 
 
 --
--- TOC entry 4154 (class 2606 OID 278636)
+-- TOC entry 4168 (class 2606 OID 278636)
 -- Name: private_message_reaction private_message_reaction_fk_message_prive_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1844,7 +2023,7 @@ ALTER TABLE ONLY public.private_message_reaction
 
 
 --
--- TOC entry 4155 (class 2606 OID 278641)
+-- TOC entry 4169 (class 2606 OID 278641)
 -- Name: private_message_reaction private_message_reaction_fk_utilisateur_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1853,7 +2032,7 @@ ALTER TABLE ONLY public.private_message_reaction
 
 
 --
--- TOC entry 4147 (class 2606 OID 229483)
+-- TOC entry 4161 (class 2606 OID 229483)
 -- Name: push_subscriptions push_subscriptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1862,7 +2041,7 @@ ALTER TABLE ONLY public.push_subscriptions
 
 
 --
--- TOC entry 4151 (class 2606 OID 245834)
+-- TOC entry 4165 (class 2606 OID 245834)
 -- Name: reaction reaction_fk_message_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1871,7 +2050,7 @@ ALTER TABLE ONLY public.reaction
 
 
 --
--- TOC entry 4152 (class 2606 OID 245839)
+-- TOC entry 4166 (class 2606 OID 245839)
 -- Name: reaction reaction_fk_utilisateur_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1880,7 +2059,7 @@ ALTER TABLE ONLY public.reaction
 
 
 --
--- TOC entry 4145 (class 2606 OID 229405)
+-- TOC entry 4159 (class 2606 OID 229405)
 -- Name: workspace_favoris workspace_favoris_fk_utilisateur_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1889,7 +2068,7 @@ ALTER TABLE ONLY public.workspace_favoris
 
 
 --
--- TOC entry 4146 (class 2606 OID 229410)
+-- TOC entry 4160 (class 2606 OID 229410)
 -- Name: workspace_favoris workspace_favoris_fk_workspace_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rootmath
 --
 
@@ -1898,8 +2077,8 @@ ALTER TABLE ONLY public.workspace_favoris
 
 
 --
--- TOC entry 4335 (class 0 OID 0)
--- Dependencies: 4333
+-- TOC entry 4353 (class 0 OID 0)
+-- Dependencies: 4351
 -- Name: DATABASE postgres; Type: ACL; Schema: -; Owner: azure_pg_admin
 --
 
@@ -1910,7 +2089,7 @@ GRANT ALL ON DATABASE postgres TO "mathis.malzac.user@supinfo.com";
 
 
 --
--- TOC entry 4337 (class 0 OID 0)
+-- TOC entry 4355 (class 0 OID 0)
 -- Dependencies: 7
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: azure_pg_admin
 --
@@ -1921,7 +2100,7 @@ GRANT ALL ON SCHEMA public TO "mathis.malzac.user@supinfo.com";
 
 
 --
--- TOC entry 4338 (class 0 OID 0)
+-- TOC entry 4356 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: TABLE canal; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1932,7 +2111,29 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.ca
 
 
 --
--- TOC entry 4339 (class 0 OID 0)
+-- TOC entry 4362 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: TABLE canal_lecture; Type: ACL; Schema: public; Owner: rootmath
+--
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.canal_lecture TO "paul.mazzon@supinfo.com";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.canal_lecture TO "rudy.gault@supinfo.com";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.canal_lecture TO "mathis.malzac.user@supinfo.com";
+
+
+--
+-- TOC entry 4364 (class 0 OID 0)
+-- Dependencies: 246
+-- Name: SEQUENCE canal_lecture_id_canal_lecture_seq; Type: ACL; Schema: public; Owner: rootmath
+--
+
+GRANT ALL ON SEQUENCE public.canal_lecture_id_canal_lecture_seq TO "paul.mazzon@supinfo.com";
+GRANT ALL ON SEQUENCE public.canal_lecture_id_canal_lecture_seq TO "rudy.gault@supinfo.com";
+GRANT ALL ON SEQUENCE public.canal_lecture_id_canal_lecture_seq TO "mathis.malzac.user@supinfo.com";
+
+
+--
+-- TOC entry 4365 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: TABLE fichier; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1943,7 +2144,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.fi
 
 
 --
--- TOC entry 4340 (class 0 OID 0)
+-- TOC entry 4366 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: TABLE hashtag; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1954,7 +2155,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.ha
 
 
 --
--- TOC entry 4341 (class 0 OID 0)
+-- TOC entry 4367 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: TABLE membre_workspace; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1965,7 +2166,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4342 (class 0 OID 0)
+-- TOC entry 4368 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: TABLE message; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1976,7 +2177,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4343 (class 0 OID 0)
+-- TOC entry 4369 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: TABLE message_fichier; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1987,7 +2188,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4344 (class 0 OID 0)
+-- TOC entry 4370 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: TABLE message_hashtag; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -1998,7 +2199,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4345 (class 0 OID 0)
+-- TOC entry 4371 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: TABLE message_mention; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2009,7 +2210,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4347 (class 0 OID 0)
+-- TOC entry 4373 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: TABLE message_prive; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2020,7 +2221,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4348 (class 0 OID 0)
+-- TOC entry 4374 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: TABLE message_prive_fichier; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2031,7 +2232,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4349 (class 0 OID 0)
+-- TOC entry 4375 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: TABLE message_read; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2042,7 +2243,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4351 (class 0 OID 0)
+-- TOC entry 4377 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: SEQUENCE message_read_id_seq; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2053,7 +2254,7 @@ GRANT ALL ON SEQUENCE public.message_read_id_seq TO "mathis.malzac.user@supinfo.
 
 
 --
--- TOC entry 4352 (class 0 OID 0)
+-- TOC entry 4378 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: TABLE message_with_alias; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2064,7 +2265,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.me
 
 
 --
--- TOC entry 4353 (class 0 OID 0)
+-- TOC entry 4379 (class 0 OID 0)
 -- Dependencies: 243
 -- Name: TABLE notification; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2075,7 +2276,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.no
 
 
 --
--- TOC entry 4354 (class 0 OID 0)
+-- TOC entry 4380 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: TABLE permission; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2086,7 +2287,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.pe
 
 
 --
--- TOC entry 4355 (class 0 OID 0)
+-- TOC entry 4381 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: TABLE private_message_reaction; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2097,7 +2298,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.pr
 
 
 --
--- TOC entry 4357 (class 0 OID 0)
+-- TOC entry 4383 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: SEQUENCE private_message_reaction_id_reaction_seq; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2108,7 +2309,7 @@ GRANT ALL ON SEQUENCE public.private_message_reaction_id_reaction_seq TO "mathis
 
 
 --
--- TOC entry 4358 (class 0 OID 0)
+-- TOC entry 4384 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: TABLE push_subscriptions; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2119,7 +2320,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.pu
 
 
 --
--- TOC entry 4360 (class 0 OID 0)
+-- TOC entry 4386 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: SEQUENCE push_subscriptions_id_seq; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2130,7 +2331,7 @@ GRANT ALL ON SEQUENCE public.push_subscriptions_id_seq TO "mathis.malzac.user@su
 
 
 --
--- TOC entry 4361 (class 0 OID 0)
+-- TOC entry 4387 (class 0 OID 0)
 -- Dependencies: 239
 -- Name: TABLE reaction; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2141,7 +2342,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.re
 
 
 --
--- TOC entry 4363 (class 0 OID 0)
+-- TOC entry 4389 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: SEQUENCE reaction_id_reaction_seq; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2152,7 +2353,7 @@ GRANT ALL ON SEQUENCE public.reaction_id_reaction_seq TO "mathis.malzac.user@sup
 
 
 --
--- TOC entry 4364 (class 0 OID 0)
+-- TOC entry 4390 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: TABLE role; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2163,7 +2364,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.ro
 
 
 --
--- TOC entry 4365 (class 0 OID 0)
+-- TOC entry 4391 (class 0 OID 0)
 -- Dependencies: 231
 -- Name: TABLE role_permission; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2174,7 +2375,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.ro
 
 
 --
--- TOC entry 4366 (class 0 OID 0)
+-- TOC entry 4392 (class 0 OID 0)
 -- Dependencies: 217
 -- Name: TABLE statut; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2185,7 +2386,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.st
 
 
 --
--- TOC entry 4367 (class 0 OID 0)
+-- TOC entry 4393 (class 0 OID 0)
 -- Dependencies: 218
 -- Name: TABLE utilisateur; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2196,7 +2397,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.ut
 
 
 --
--- TOC entry 4368 (class 0 OID 0)
+-- TOC entry 4394 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: TABLE workspace; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2207,7 +2408,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.wo
 
 
 --
--- TOC entry 4369 (class 0 OID 0)
+-- TOC entry 4395 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: TABLE workspace_favoris; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2218,7 +2419,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.wo
 
 
 --
--- TOC entry 4371 (class 0 OID 0)
+-- TOC entry 4397 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: SEQUENCE workspace_favoris_id_workspace_favoris_seq; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2229,7 +2430,7 @@ GRANT ALL ON SEQUENCE public.workspace_favoris_id_workspace_favoris_seq TO "math
 
 
 --
--- TOC entry 4374 (class 0 OID 0)
+-- TOC entry 4400 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: TABLE workspace_invitations; Type: ACL; Schema: public; Owner: rootmath
 --
@@ -2240,7 +2441,7 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.wo
 
 
 --
--- TOC entry 2154 (class 826 OID 65747)
+-- TOC entry 2159 (class 826 OID 65747)
 -- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: rootmath
 --
 
@@ -2250,7 +2451,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE rootmath IN SCHEMA public GRANT ALL ON SEQUENC
 
 
 --
--- TOC entry 2153 (class 826 OID 65746)
+-- TOC entry 2158 (class 826 OID 65746)
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: rootmath
 --
 
@@ -2259,7 +2460,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE rootmath IN SCHEMA public GRANT SELECT,INSERT,
 ALTER DEFAULT PRIVILEGES FOR ROLE rootmath IN SCHEMA public GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLES TO "mathis.malzac.user@supinfo.com";
 
 
--- Completed on 2025-05-05 13:55:18
+-- Completed on 2025-05-05 15:03:30
 
 --
 -- PostgreSQL database dump complete

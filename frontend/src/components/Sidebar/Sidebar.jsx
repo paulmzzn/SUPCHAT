@@ -12,7 +12,10 @@ function Sidebar({ unreadMessageCount }) {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(0);
-  const { globalNotifications } = useSocket() || { globalNotifications: { private: 0, workspace: 0 } };
+  const { globalNotifications, refreshUnreadDM } = useSocket() || { 
+    globalNotifications: { private: 0, workspace: 0 },
+    refreshUnreadDM: () => {}
+  };
 
   // Check if the current path matches the given path
   const isActive = (path) => {
@@ -29,23 +32,36 @@ function Sidebar({ unreadMessageCount }) {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
+  // Effet pour gérer les mises à jour des messages non lus
   useEffect(() => {
     // Fonction pour gérer la mise à jour du compteur de messages non lus
     const handleUnreadMessagesUpdate = (event) => {
+      // Suppression du console.log pour éviter le flood
       setLocalUnreadCount(event.detail.count);
     };
     
     // Récupérer le compteur initial depuis localStorage
     const storedCount = parseInt(localStorage.getItem('unreadPrivateMessages') || '0', 10);
+    // Suppression du console.log pour éviter le flood
     setLocalUnreadCount(storedCount);
     
     // Écouter les événements de mise à jour
     window.addEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
     
+    // Rafraîchir les compteurs au montage du composant
+    refreshUnreadDM();
+    
+    // Rafraîchir périodiquement les compteurs (toutes les 60 secondes)
+    const intervalId = setInterval(() => {
+      // Suppression du console.log pour éviter le flood
+      refreshUnreadDM();
+    }, 60000);
+    
     return () => {
       window.removeEventListener('unreadMessagesUpdated', handleUnreadMessagesUpdate);
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [refreshUnreadDM]);
 
   // Fonction pour déterminer la classe CSS basée sur le statut actif
   const getIconClasses = (path) => {
@@ -53,15 +69,14 @@ function Sidebar({ unreadMessageCount }) {
   };
 
   // Logique de priorité pour déterminer le compteur à afficher
-  // 1. Utiliser unreadMessageCount si fourni (pour la page DirectMessages)
-  // 2. Sinon utiliser globalNotifications.private du contexte Socket
+  // 1. Utiliser unreadMessageCount si fourni et sur la page DirectMessages
+  // 2. Utiliser globalNotifications.private du contexte Socket
   // 3. En dernier recours, utiliser localUnreadCount depuis localStorage
-  const displayCount =
-    unreadMessageCount !== undefined
-      ? unreadMessageCount
-      : globalNotifications?.private !== undefined
-        ? globalNotifications.private
-        : localUnreadCount;
+  const displayCount = isActive('/direct-messages') && unreadMessageCount !== undefined
+    ? unreadMessageCount
+    : globalNotifications?.private !== undefined && globalNotifications.private > 0
+      ? globalNotifications.private
+      : localUnreadCount;
 
   return (
     <div className="sidebar">
@@ -78,7 +93,7 @@ function Sidebar({ unreadMessageCount }) {
           </Link>
           <Link to="/workspaces" className={`nav-item ${isActive('/workspaces') ? 'active' : ''}`}>
             <MdWorkspacesFilled className={getIconClasses('/workspaces')} />
-            {/* Badge pour les notifications workspace */}
+            {/* Ensure we're using a consistent class for the workspace badge */}
             {globalNotifications?.workspace > 0 && (
               <span className="nav-badge">{globalNotifications.workspace}</span>
             )}
