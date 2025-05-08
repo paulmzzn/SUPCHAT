@@ -19,7 +19,7 @@ services:
     image: postgres
 
 
-    hostname: REDACTED
+    hostname: 192.168.1.63
 
 ports:
       - "5432:5432"
@@ -63,7 +63,7 @@ docker-compose up -d
 
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://REDACTED:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.63:5050
 
 
 
@@ -73,7 +73,7 @@ docker-compose up -d
 
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://REDACTED:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.63:5050
 
 
 
