@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react"; // Ajout de useState
+import React, { useRef, useState, useEffect } from "react"; // Added useEffect
 import { useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceSidebar from "./WorkspaceSidebar";
@@ -15,6 +15,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
+import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
 import { useNavigate } from "react-router-dom"; // Ajout import
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
 import {
@@ -32,6 +33,7 @@ import { FaEdit, FaTrashAlt, FaReply, FaRegSmile, FaPoll } from "react-icons/fa"
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
   const navigate = useNavigate(); // Ajout hook navigation
+  const { markChannelAsRead } = useNotifications(); // Récupérer markChannelAsRead depuis le contexte
 
   const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
 
@@ -203,6 +205,23 @@ function WorkspaceDetails() {
     handleDeleteMessage,
     handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
   } = useWorkspaceDetails(workspaceId);
+
+  // Effect to mark channel as read when viewing it
+  useEffect(() => {
+    // Only mark channel as read when we have a valid channel ID that's different from the last one
+    if (activeChannel && activeChannel.id) {
+      const lastChannelId = sessionStorage.getItem('lastActiveChannel');
+      
+      // Only mark as read if this is a different channel from the last one
+      if (lastChannelId !== activeChannel.id) {
+        // Store the current channel ID
+        sessionStorage.setItem('lastActiveChannel', activeChannel.id);
+        
+        // Mark the channel as read when it's selected (with less frequent updates)
+        markChannelAsRead(activeChannel.id);
+      }
+    }
+  }, [activeChannel?.id, markChannelAsRead]); // Use activeChannel.id instead of the whole object
 
   // Correction: préfixer les URLs S3 si besoin
   const workspace = rawWorkspace

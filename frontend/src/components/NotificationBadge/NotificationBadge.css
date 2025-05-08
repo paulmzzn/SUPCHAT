@@ -1,0 +1,70 @@
+/* Styles communs pour tous les badges de notification */
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background-color: #f44336; /* Rouge pour attirer l'attention */
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+  z-index: 1;
+}
+
+/* Position pour les badges de canal */
+.channel-badge {
+  margin-left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Position pour les badges de workspace */
+.workspace-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(25%, -25%);
+}
+
+/* Position pour les badges de messages */
+.message-badge {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Animation de pulsation pour attirer l'attention */
+@keyframes pulse {
+  0% {
+    transform: scale(1) translateY(-50%);
+  }
+  50% {
+    transform: scale(1.1) translateY(-50%);
+  }
+  100% {
+    transform: scale(1) translateY(-50%);
+  }
+}
+
+/* Animation spécifique pour workspace-badge qui n'utilise pas translateY */
+.workspace-badge {
+  animation: pulse-workspace 2s infinite;
+}
+
+@keyframes pulse-workspace {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
