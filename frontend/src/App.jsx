@@ -14,6 +14,22 @@ import Profile from './pages/Profile/Profile';
 import DirectMessages from './pages/DirectMessages/DirectMessages';
 import { SocketProvider } from './context/SocketContext';
 
+// Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
+if (process.env.NODE_ENV === 'development') {
+  window.addEventListener('userStatusChanged', (event) => {
+    console.log('[App Debug] Événement userStatusChanged détecté:', event.detail);
+  });
+  
+  // Ajouter une fonction globale pour tester le statut
+  window.testUserStatus = (userId, status) => {
+    console.log(`[Test] Émission manuelle d'un changement de statut: ${userId} -> ${status}`);
+    const event = new CustomEvent('userStatusChanged', {
+      detail: { userId, status }
+    });
+    window.dispatchEvent(event);
+  };
+}
+
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
   
