@@ -29,7 +29,7 @@ services:
 
 
 
-      - REACT_APP_API_URL=http://192.168.1.60:8888
+      - REACT_APP_API_URL=http://192.168.1.63:8888
 
 
 #   portainer:
