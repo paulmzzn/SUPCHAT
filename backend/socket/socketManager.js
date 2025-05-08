@@ -61,6 +61,12 @@ const socketManager = (io) => {
         token.substring(0, 20) + "..."
       );
 
+      // Vérification préliminaire du format JWT (doit avoir 3 segments)
+      if (!token.includes('.') || token.split('.').length !== 3) {
+        console.error("Socket.IO: Format JWT invalide (ne contient pas 3 segments)");
+        return next(new Error("Authentication error: Invalid JWT format"));
+      }
+
       jwt.verify(token, SECRET_KEY, (err, decoded) => {
         if (err) {
           console.error("Socket.IO: Token invalide", err);
