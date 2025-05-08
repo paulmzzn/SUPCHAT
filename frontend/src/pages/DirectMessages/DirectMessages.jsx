@@ -24,8 +24,7 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
-
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.63:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -169,7 +168,7 @@ function DirectMessages() {
       }
 
       // Découper et décoder le token JWT
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length !== 3) {
         console.log("[DM] Format de token JWT invalide");
         return { valid: false, error: "Format de token invalide" };
@@ -178,7 +177,7 @@ function DirectMessages() {
       // Décoder le payload (partie centrale du token)
       const payload = JSON.parse(atob(parts[1]));
       const currentTime = Math.floor(Date.now() / 1000);
-      
+
       console.log("[DM] Informations token:", {
         userId: payload.id,
         email: payload.email,
@@ -186,13 +185,16 @@ function DirectMessages() {
         expires: new Date(payload.exp * 1000).toLocaleString(),
         currentTime: new Date(currentTime * 1000).toLocaleString(),
         isExpired: currentTime > payload.exp,
-        timeRemaining: payload.exp - currentTime > 0 ? `${Math.floor((payload.exp - currentTime) / 3600)} heures` : "Expiré"
+        timeRemaining:
+          payload.exp - currentTime > 0
+            ? `${Math.floor((payload.exp - currentTime) / 3600)} heures`
+            : "Expiré",
       });
-      
+
       return {
         valid: currentTime < payload.exp,
         error: currentTime > payload.exp ? "Token expiré" : null,
-        details: payload
+        details: payload,
       };
     } catch (error) {
       console.error("[DM] Erreur lors de la vérification du token:", error);
@@ -220,15 +222,18 @@ function DirectMessages() {
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/users/verify-token`, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     })
       .then((response) => {
         if (response.ok) {
           console.log("[DM] Backend API token verification OK");
           return response.json();
         } else {
-          console.error("[DM] Backend API token verification ERROR:", response.status);
+          console.error(
+            "[DM] Backend API token verification ERROR:",
+            response.status
+          );
           setSocketStatus((prev) => ({
             ...prev,
             connecting: false,
@@ -245,12 +250,12 @@ function DirectMessages() {
           auth: { token },
           transports: ["websocket", "polling"], // Try websocket first, then polling
           reconnection: true,
-          reconnectionAttempts: 15,  // Increased from 10
-          reconnectionDelay: 1000,   // Decreased initial delay to reconnect faster
+          reconnectionAttempts: 15, // Increased from 10
+          reconnectionDelay: 1000, // Decreased initial delay to reconnect faster
           reconnectionDelayMax: 10000,
-          timeout: 30000,            // Increased from 20000
+          timeout: 30000, // Increased from 20000
           autoConnect: true,
-          forceNew: false            // Changed to false to reuse existing connection when possible
+          forceNew: false, // Changed to false to reuse existing connection when possible
         };
 
         console.log("[DM] Creating socket with options:", socketOptions);
@@ -368,7 +373,9 @@ function DirectMessages() {
 
       // Protection: skip if currentUserId is not yet defined
       if (!currentUserId) {
-        console.log("[DM] Skipping message processing, currentUserId not defined yet");
+        console.log(
+          "[DM] Skipping message processing, currentUserId not defined yet"
+        );
         return;
       }
 
@@ -539,7 +546,9 @@ function DirectMessages() {
         setMessages((prev) =>
           prev.map((m) => {
             if (m.id_message_prive === data.messageId) {
-              console.log(`[DM] Updating reactions for message ${m.id_message_prive}`);
+              console.log(
+                `[DM] Updating reactions for message ${m.id_message_prive}`
+              );
               return { ...m, reactions: data.reactions };
             }
             return m;
@@ -770,7 +779,8 @@ function DirectMessages() {
 
   // Improve the markMessagesAsRead function to be more robust
   const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId) return;
+    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId)
+      return;
 
     const unreadMessages = msgs.filter(
       (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
@@ -785,10 +795,12 @@ function DirectMessages() {
           recipientId: currentUserId,
         });
       });
-      
+
       // Appel à refreshUnreadDM pour mettre à jour le compteur global sur toutes les pages
       if (refreshUnreadDM) {
-        console.log("[DM] Rafraîchissement du compteur global de messages non lus");
+        console.log(
+          "[DM] Rafraîchissement du compteur global de messages non lus"
+        );
         refreshUnreadDM();
       }
     }
@@ -1302,13 +1314,17 @@ function DirectMessages() {
     // Vérifier si le token est valide
     const tokenStatus = checkTokenValidity();
     console.log("[DM] Statut du token:", tokenStatus);
-    
+
     if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
       // Définir l'ID utilisateur à partir du token JWT
       setCurrentUserId(tokenStatus.details.id);
       console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
     } else {
-      setError(`Erreur d'authentification: ${tokenStatus.error || "Token invalide"}. Veuillez vous reconnecter.`);
+      setError(
+        `Erreur d'authentification: ${
+          tokenStatus.error || "Token invalide"
+        }. Veuillez vous reconnecter.`
+      );
     }
   }, []);
 
@@ -1359,7 +1375,9 @@ function DirectMessages() {
                 return (
                   <li
                     key={userId}
-                    className={`dm-conv-item ${selectedUser === userId ? "active" : ""}`}
+                    className={`dm-conv-item ${
+                      selectedUser === userId ? "active" : ""
+                    }`}
                     onClick={() => fetchMessages(userId)}
                   >
                     {user.avatar ? (
@@ -1532,13 +1550,26 @@ function DirectMessages() {
                           <div
                             className="message-reply-to"
                             onClick={() => {
-                              const parentId = msg.parent_id || msg.parent_message?.id_message_prive;
+                              const parentId =
+                                msg.parent_id ||
+                                msg.parent_message?.id_message_prive;
                               if (parentId) {
-                                const element = document.getElementById(`msg-${parentId}`);
+                                const element = document.getElementById(
+                                  `msg-${parentId}`
+                                );
                                 if (element) {
-                                  element.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  element.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "center",
+                                  });
                                   element.classList.add("highlight-message");
-                                  setTimeout(() => element.classList.remove("highlight-message"), 2000);
+                                  setTimeout(
+                                    () =>
+                                      element.classList.remove(
+                                        "highlight-message"
+                                      ),
+                                    2000
+                                  );
                                 }
                               }
                             }}
@@ -1549,17 +1580,27 @@ function DirectMessages() {
                             <div className="reply-content">
                               <span className="reply-author">
                                 {msg.parent_message
-                                  ? usersInfo[msg.parent_message.fk_expediteur]?.name || "Utilisateur"
+                                  ? usersInfo[msg.parent_message.fk_expediteur]
+                                      ?.name || "Utilisateur"
                                   : msg.parent_id
-                                    ? usersInfo[messages.find(m => m.id_message_prive === msg.parent_id)?.fk_expediteur]?.name || "Utilisateur"
-                                    : "Utilisateur"}
+                                  ? usersInfo[
+                                      messages.find(
+                                        (m) =>
+                                          m.id_message_prive === msg.parent_id
+                                      )?.fk_expediteur
+                                    ]?.name || "Utilisateur"
+                                  : "Utilisateur"}
                               </span>
                               <span className="reply-text">
                                 {msg.parent_message
                                   ? msg.parent_message.contenu
                                   : msg.parent_id
-                                    ? messages.find(m => m.id_message_prive === msg.parent_id)?.contenu || "Message original non disponible"
-                                    : "Message original non disponible"}
+                                  ? messages.find(
+                                      (m) =>
+                                        m.id_message_prive === msg.parent_id
+                                    )?.contenu ||
+                                    "Message original non disponible"
+                                  : "Message original non disponible"}
                               </span>
                             </div>
                           </div>
@@ -1591,21 +1632,28 @@ function DirectMessages() {
                           {msg.reactions && msg.reactions.length > 0 && (
                             <div className="dm-msg-reactions">
                               {msg.reactions.map((reaction, index) => (
-                                <div 
-                                  key={`${reaction.reaction_type}-${index}`} 
+                                <div
+                                  key={`${reaction.reaction_type}-${index}`}
                                   className="dm-msg-reaction"
                                   onClick={() => {
                                     // Si l'utilisateur a déjà réagi avec cet emoji, supprimer sa réaction
                                     if (reaction.has_reacted) {
-                                      socket.emit("removePrivateMessageReaction", {
-                                        id: msg.id_message_prive,
-                                        reaction: reaction.reaction_type
-                                      });
+                                      socket.emit(
+                                        "removePrivateMessageReaction",
+                                        {
+                                          id: msg.id_message_prive,
+                                          reaction: reaction.reaction_type,
+                                        }
+                                      );
                                     }
                                   }}
                                 >
-                                  <span className="dm-reaction-emoji">{reaction.reaction_type}</span>
-                                  <span className="dm-reaction-count">{reaction.count}</span>
+                                  <span className="dm-reaction-emoji">
+                                    {reaction.reaction_type}
+                                  </span>
+                                  <span className="dm-reaction-count">
+                                    {reaction.count}
+                                  </span>
                                 </div>
                               ))}
                             </div>

@@ -23,20 +23,21 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
 import fs from "fs"; // Import fs
-import strawpollRoutes from './routes/strawpollRoutes.js'; // Import ES module
+import strawpollRoutes from "./routes/strawpollRoutes.js"; // Import ES module
 
 // Système de logging simple
 // Niveaux: error, warn, info, debug
 const LOG_LEVELS = {
   ERROR: 0,
-  WARN: 1, 
+  WARN: 1,
   INFO: 2,
-  DEBUG: 3
+  DEBUG: 3,
 };
 
 // Définir le niveau de log actuel (changez cette valeur pour filtrer les logs)
 // Par défaut: INFO en production, DEBUG en développement
-const currentLogLevel = process.env.NODE_ENV === 'production' ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
+const currentLogLevel =
+  process.env.NODE_ENV === "production" ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
 
 // Remplacer les méthodes console standard
 const originalConsoleLog = console.log;
@@ -64,7 +65,7 @@ global.logger = {
     if (currentLogLevel >= LOG_LEVELS.DEBUG) {
       originalConsoleLog(`[DEBUG] ${message}`, ...args);
     }
-  }
+  },
 };
 
 // Remplacer console.log pour rediriger automatiquement vers le niveau info
@@ -138,7 +139,7 @@ app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
 app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
-app.use('/api/strawpoll', strawpollRoutes); // Ajout des routes pour strawpoll
+app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 
 // Servir les fichiers statiques pour les messages privés et autres
@@ -189,8 +190,8 @@ try {
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
-  logger.info(`Serveur démarré sur http://192.168.1.63:${PORT}`);
-  logger.info(`WebSocket URL: ws://192.168.1.63:${PORT}`);
+  logger.info(`Serveur démarré sur http://192.168.1.29:${PORT}`);
+  logger.info(`WebSocket URL: ws://192.168.1.29:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
