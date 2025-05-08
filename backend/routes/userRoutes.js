@@ -73,14 +73,16 @@ router.get("/validate", validateUser);
 router.post("/request-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+router.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+router.get(
+  "/auth/google/callback",
 
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/auth/google/callback', 
-
-
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.63:3001/login' }), 
-
-
+  passport.authenticate("google", {
+    failureRedirect: "http://192.168.1.29:3001/login",
+  }),
 
   async (req, res) => {
     const user = req.user;
@@ -92,10 +94,7 @@ router.get('/auth/google/callback',
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
-
-
+      `http://192.168.1.29:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -105,12 +104,12 @@ router.get(
   passport.authenticate("github", { scope: ["user:email"] })
 );
 
+router.get(
+  "/auth/github/callback",
 
-router.get('/auth/github/callback',
-
-
-  passport.authenticate('github', { failureRedirect: 'http://192.168.1.63:3001/login' }),
-
+  passport.authenticate("github", {
+    failureRedirect: "http://192.168.1.29:3001/login",
+  }),
 
   async (req, res) => {
     const user = req.user;
@@ -120,12 +119,7 @@ router.get('/auth/github/callback',
       { expiresIn: "7d" }
     );
     res.redirect(
-
-
-
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
-
-
+      `http://192.168.1.29:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -174,12 +168,10 @@ router.get("/me", verifyToken, async (req, res) => {
     const user = await getUserById({ params: { id: req.user.id } }, res);
     // getUserById gère déjà la réponse
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Erreur lors de la récupération de l'utilisateur",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Erreur lors de la récupération de l'utilisateur",
+      error: error.message,
+    });
   }
 });
 
