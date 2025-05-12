@@ -15,7 +15,6 @@ import {
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
 import SearchResults from "../../components/SearchResults";
-import MessagePreview from "../../components/MessagePreview/MessagePreview";
 
 function WorkspaceSidebar({
   workspace,
@@ -42,12 +41,11 @@ function WorkspaceSidebar({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
   const [isInviting, setIsInviting] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // État pour la prévisualisation des messages
-  const [previewMessage, setPreviewMessage] = useState(null);
-  const [previewPosition, setPreviewPosition] = useState({ top: 0, left: 0 });
-  const [showPreview, setShowPreview] = useState(false);
+  // Nouvel état pour gérer les onglets actifs
+  const [activeTab, setActiveTab] = useState("channels");
+  // État pour suivre si des résultats de recherche sont disponibles
+  const [hasSearchResults, setHasSearchResults] = useState(false);
 
   const searchResultsRef = useRef(null);
 
@@ -62,27 +60,37 @@ function WorkspaceSidebar({
     };
   }, [searchResults]);
 
-  // Fermer le dropdown quand on clique en dehors
+  // Mise à jour du useEffect pour la gestion des résultats de recherche
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        searchResultsRef.current &&
-        !searchResultsRef.current.contains(event.target)
-      ) {
-        setShowSearchResults(false);
+    // Vérifier s'il y a des résultats de recherche
+    const hasResults =
+      searchResults &&
+      ((searchResults.users && searchResults.users.length > 0) ||
+        (searchResults.messages && searchResults.messages.length > 0) ||
+        (searchResults.channels && searchResults.channels.length > 0));
+
+    setHasSearchResults(hasResults);
+
+    // Si nous avons des résultats et que l'utilisateur est en train de rechercher
+    if (hasResults && isSearching && searchQuery.trim() !== "") {
+      // Activer automatiquement l'onglet des utilisateurs s'il y a des utilisateurs trouvés
+      if (searchResults.users && searchResults.users.length > 0) {
+        setActiveTab("users");
+      }
+      // Sinon, activer l'onglet des messages s'il y a des messages trouvés
+      else if (searchResults.messages && searchResults.messages.length > 0) {
+        setActiveTab("messages");
+      }
+      // Ou bien activer l'onglet des canaux s'il y a des canaux trouvés
+      else if (searchResults.channels && searchResults.channels.length > 0) {
+        setActiveTab("channels");
       }
     }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Ouvrir les résultats si on a une recherche
-  useEffect(() => {
-    if (searchQuery && searchQuery.length >= 2) {
-      setShowSearchResults(true);
+    // Si l'utilisateur efface la recherche, revenir à l'onglet des canaux
+    else if (!searchQuery.trim()) {
+      setActiveTab("channels");
     }
-  }, [searchQuery, searchResults]);
+  }, [searchResults, searchQuery, isSearching]);
 
   // Fonction pour tronquer le texte
   const truncateText = (text, maxLength = 30) => {
@@ -156,54 +164,9 @@ function WorkspaceSidebar({
     });
   };
 
-  // Gestion de la prévisualisation des messages
-  const handleMessagePreview = (event, message) => {
-    // Empêcher la navigation immédiate
-    event.stopPropagation();
-
-    // Calculer la position de la prévisualisation
-    const rect = event.currentTarget.getBoundingClientRect();
-    const position = {
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
-    };
-
-    // Si l'élément est proche du bord droit, ajuster la position
-    const windowWidth = window.innerWidth;
-    if (rect.right > windowWidth - 300) {
-      position.left = windowWidth - 550;
-    }
-
-    // Mettre à jour les états
-    setPreviewMessage(message);
-    setPreviewPosition(position);
-    setShowPreview(true);
-  };
-
-  // Fermer la prévisualisation
-  const handleClosePreview = () => {
-    setShowPreview(false);
-    setPreviewMessage(null);
-  };
-
-  // Navigation vers le message (après prévisualisation)
-  const handleNavigateToMessage = (message) => {
-    handleClosePreview();
-    handleAdaptedSelectResult("message", message);
-  };
-
-  // Répondre à un message
-  const handleReplyToMessage = (message) => {
-    handleClosePreview();
-    // Ici vous pouvez ajouter le code pour répondre au message
-    // Par exemple, vous pourriez naviguer vers le canal et pré-remplir la zone de texte
-    handleSelectSearchResult("message", message, true); // Ajouter un paramètre pour indiquer une réponse
-  };
-
-  // Fonction pour adapter la sélection de résultat
+  // Fonction modifiée pour gérer la sélection directe des messages
+  // sans passer par la prévisualisation
   const handleAdaptedSelectResult = (type, item) => {
-    // Fermer le dropdown
-    setShowSearchResults(false);
     // Appeler la fonction parent
     handleSelectSearchResult(type, item);
   };
@@ -326,17 +289,6 @@ function WorkspaceSidebar({
                 }}
               ></div>
               <h2 className="workspace-name">{workspace.name}</h2>
-              {/*
-              {(currentUserRole === "owner" || currentUserRole === "admin") && (
-                <button 
-                  className="invite-button" 
-                  onClick={handleOpenInviteModal}
-                  title="Inviter un utilisateur"
-                >
-                  <FaUserPlus />
-                </button>
-              )}
-              */}
             </>
           )}
         </div>
@@ -349,284 +301,282 @@ function WorkspaceSidebar({
               value={searchQuery}
               onChange={handleSearchChange}
               className="search-input"
-              onFocus={() => searchQuery && setShowSearchResults(true)}
             />
             {isSearching && <div className="search-spinner"></div>}
           </div>
+        </div>
+      </div>
 
-          {/* Dropdown des résultats de recherche */}
-          {showSearchResults && searchQuery && (
-            <div className="search-results-dropdown" ref={searchResultsRef}>
-              <div className="search-results">
-                {workspace && (
-                  <div className="search-workspace-header">
-                    <h3>Recherche dans {workspace.name}</h3>
-                    <div className="search-query-info">
-                      Résultats pour : <span>"{searchQuery}"</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="search-results-content">
-                  {/* Section canaux */}
-                  {adaptedResults.canaux &&
-                    adaptedResults.canaux.length > 0 && (
-                      <div className="search-results-section">
-                        <div className="search-results-header">
-                          <FaHashtag /> Canaux ({adaptedResults.canaux.length})
-                        </div>
-                        <ul className="search-results-list">
-                          {adaptedResults.canaux.map((canal) => (
-                            <li
-                              key={`canal-${canal.id || canal.id_canal}`}
-                              className="search-result-item"
-                              onClick={() =>
-                                handleAdaptedSelectResult("channel", canal)
-                              }
-                            >
-                              {canal.is_private ? (
-                                <FaLock className="result-icon" />
-                              ) : (
-                                <FaHashtag className="result-icon" />
-                              )}
-                              <span>{canal.nom}</span>
-                              {canal.description && (
-                                <div className="channel-description">
-                                  {truncateText(canal.description, 40)}
-                                </div>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                  {/* Section utilisateurs */}
-                  {adaptedResults.utilisateurs &&
-                    adaptedResults.utilisateurs.length > 0 && (
-                      <div className="search-results-section">
-                        <div className="search-results-header">
-                          <FaUser /> Utilisateurs (
-                          {adaptedResults.utilisateurs.length})
-                        </div>
-                        <ul className="search-results-list">
-                          {adaptedResults.utilisateurs.map((user) => (
-                            <li
-                              key={`user-${user.id || user.id_utilisateur}`}
-                              className="search-result-item"
-                              onClick={() =>
-                                handleAdaptedSelectResult("user", user)
-                              }
-                            >
-                              <div className="user-result-content">
-                                {user.photo_de_profil ? (
-                                  <img
-                                    src={user.photo_de_profil}
-                                    alt={user.nom}
-                                    className="user-profile-pic"
-                                  />
-                                ) : (
-                                  <FaUser className="result-icon" />
-                                )}
-                                <span className="user-name">{user.nom}</span>
-                                {user.email && (
-                                  <span className="user-email">
-                                    {user.email}
-                                  </span>
-                                )}
-                                {user.status && (
-                                  <div
-                                    className={`status-indicator ${user.status.toLowerCase()}`}
-                                    title={user.status}
-                                  ></div>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                  {/* Section messages avec prévisualisation au clic */}
-                  {adaptedResults.messages &&
-                    adaptedResults.messages.length > 0 && (
-                      <div className="search-results-section">
-                        <div className="search-results-header">
-                          <FaComment /> Messages (
-                          {adaptedResults.messages.length})
-                        </div>
-                        <ul className="search-results-list messages-list">
-                          {adaptedResults.messages.map((message) => (
-                            <li
-                              key={`message-${
-                                message.id || message.id_message
-                              }`}
-                              className="search-result-item message-result"
-                              onClick={(e) => handleMessagePreview(e, message)}
-                            >
-                              <div className="message-result-content">
-                                <div className="message-header">
-                                  <div className="message-user-info">
-                                    {message.photo_de_profil ? (
-                                      <img
-                                        src={message.photo_de_profil}
-                                        alt={message.nom_utilisateur}
-                                        className="message-user-avatar"
-                                      />
-                                    ) : (
-                                      <FaUser className="message-user-icon" />
-                                    )}
-                                    <strong>{message.nom_utilisateur}</strong>
-                                  </div>
-                                  <span className="message-date">
-                                    <FaCalendar className="date-icon" />
-                                    {formatDate(
-                                      message.date_creation ||
-                                        message.created_at
-                                    )}
-                                  </span>
-                                </div>
-                                <p
-                                  className="message-preview"
-                                  dangerouslySetInnerHTML={{
-                                    __html: highlightSearchTerm(
-                                      truncateText(
-                                        getMessageText(message.contenu),
-                                        80
-                                      ),
-                                      searchQuery
-                                    ),
-                                  }}
-                                ></p>
-                              </div>
-                              <div className="message-channel">
-                                <FaHashtag className="result-icon" />
-                                <span className="channel-name">
-                                  {message.nom_canal}
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                  {/* Message si aucun résultat ou erreur */}
-                  {(!adaptedResults.canaux ||
-                    adaptedResults.canaux.length === 0) &&
-                    (!adaptedResults.utilisateurs ||
-                      adaptedResults.utilisateurs.length === 0) &&
-                    (!adaptedResults.messages ||
-                      adaptedResults.messages.length === 0) && (
-                      <div className="no-results">
-                        {!searchQuery || searchQuery.length < 2 ? (
-                          <div className="info-message">
-                            <FaInfoCircle /> Entrez au moins 2 caractères pour
-                            lancer la recherche
-                          </div>
-                        ) : isSearching ? (
-                          <div className="info-message">
-                            Recherche en cours...
-                          </div>
-                        ) : searchResults?.error ? (
-                          <div className="error-message">
-                            <FaInfoCircle /> {searchResults.error}
-                          </div>
-                        ) : (
-                          <div className="info-message">
-                            <FaInfoCircle /> Aucun résultat trouvé pour "
-                            {searchQuery}"
-                          </div>
-                        )}
-                      </div>
-                    )}
-                </div>
+      {/* Nouvelle section de navigation par onglets */}
+      {searchQuery && searchQuery.length >= 2 && hasSearchResults && (
+        <div className="sidebar-tabs">
+          <div
+            className={`sidebar-tab ${
+              activeTab === "channels" ? "active" : ""
+            }`}
+            onClick={() => setActiveTab("channels")}
+          >
+            <FaHashtag /> Canaux{" "}
+            {adaptedResults.canaux.length > 0 &&
+              `(${adaptedResults.canaux.length})`}
+          </div>
+          {adaptedResults.utilisateurs &&
+            adaptedResults.utilisateurs.length > 0 && (
+              <div
+                className={`sidebar-tab ${
+                  activeTab === "users" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("users")}
+              >
+                <FaUser /> Utilisateurs ({adaptedResults.utilisateurs.length})
               </div>
+            )}
+          {adaptedResults.messages && adaptedResults.messages.length > 0 && (
+            <div
+              className={`sidebar-tab ${
+                activeTab === "messages" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("messages")}
+            >
+              <FaComment /> Messages ({adaptedResults.messages.length})
             </div>
           )}
         </div>
-      </div>
+      )}
+
       <div className="workspace-sidebar-content">
-        <div className="channels-section">
-          <div className="section-header" onClick={toggleChannelsVisibility}>
-            {showChannels ? (
-              <FaChevronDown className="toggle-icon" />
-            ) : (
-              <FaChevronRight className="toggle-icon" />
-            )}
-            <h3>Canaux</h3>
-            {(currentUserRole === "owner" || currentUserRole === "admin") && (
-              <div className="channel-actions">
+        {/* Afficher les sections en fonction de l'onglet actif */}
+        {activeTab === "channels" && (
+          <div className="channels-section">
+            <div className="section-header" onClick={toggleChannelsVisibility}>
+              {showChannels ? (
+                <FaChevronDown className="toggle-icon" />
+              ) : (
+                <FaChevronRight className="toggle-icon" />
+              )}
+              <h3>Canaux</h3>
+              {(currentUserRole === "owner" ||
+                currentUserRole === "admin" ||
+                currentUserRole === "moderator") && (
                 <button
-                  className="add-channel-btn"
+                  className="add-channel-button"
                   onClick={handleCreateChannel}
+                  title="Ajouter un canal"
                 >
                   <FaPlus />
                 </button>
-                {/*
-                <button className="invite-channel-btn" onClick={handleOpenInviteModal}>
-                  <FaUserPlus />
-                </button>
-                */}
+              )}
+            </div>
+            {showChannels && (
+              <div className="channels-list-wrapper">
+                {/* Si on a une recherche active et des canaux dans les résultats */}
+                {searchQuery &&
+                searchQuery.length >= 2 &&
+                adaptedResults.canaux.length > 0 ? (
+                  <ul className="channel-list">
+                    {adaptedResults.canaux.map((canal) => (
+                      <li
+                        key={`canal-${canal.id || canal.id_canal}`}
+                        className="channel-item search-result"
+                        onClick={() =>
+                          handleAdaptedSelectResult("channel", canal)
+                        }
+                      >
+                        {canal.is_private ? (
+                          <FaLock className="channel-icon" />
+                        ) : (
+                          <FaHashtag className="channel-icon" />
+                        )}
+                        <div className="channel-info">
+                          <span className="channel-name">{canal.nom}</span>
+                          {canal.description && (
+                            <div className="channel-description">
+                              {truncateText(canal.description, 40)}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  /* Sinon, on affiche la liste normale des canaux */
+                  <ChannelList
+                    channels={channels}
+                    loading={canalsLoading}
+                    error={canalsError}
+                    activeChannel={activeChannel}
+                    handleSelectChannel={handleSelectChannel}
+                    handleContextMenu={handleChannelContextMenu}
+                    currentUserRole={currentUserRole}
+                    searchQuery={searchQuery} // On passe la requête pour filtrer les canaux si nécessaire
+                  />
+                )}
+
+                {/* Message pas de résultats pour les canaux */}
+                {searchQuery &&
+                  searchQuery.length >= 2 &&
+                  adaptedResults.canaux.length === 0 &&
+                  activeTab === "channels" && (
+                    <div className="no-results">
+                      <div className="info-message">
+                        <FaInfoCircle /> Aucun canal trouvé pour "{searchQuery}"
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
           </div>
-          {showChannels && (
-            <ChannelList
-              channels={channels}
-              canalsLoading={canalsLoading}
-              canalsError={canalsError}
-              activeChannel={activeChannel}
-              handleSelectChannel={handleSelectChannel}
-              handleChannelContextMenu={handleChannelContextMenu}
-              currentUserRole={currentUserRole}
-            />
+        )}
+
+        {/* Section utilisateurs (visible uniquement si l'onglet users est actif) */}
+        {activeTab === "users" &&
+          adaptedResults.utilisateurs &&
+          adaptedResults.utilisateurs.length > 0 && (
+            <div className="users-section">
+              <div className="section-header">
+                <FaUser className="toggle-icon" />
+                <h3>Utilisateurs</h3>
+              </div>
+              <ul className="channel-list">
+                {adaptedResults.utilisateurs.map((user) => (
+                  <li
+                    key={`user-${user.id || user.id_utilisateur}`}
+                    className="channel-item user-item"
+                    onClick={() => handleAdaptedSelectResult("user", user)}
+                  >
+                    {user.photo_de_profil ? (
+                      <img
+                        src={user.photo_de_profil}
+                        alt={user.nom}
+                        className="user-avatar"
+                      />
+                    ) : (
+                      <FaUser className="channel-icon user-icon" />
+                    )}
+                    <div className="channel-info">
+                      <span className="channel-name">{user.nom}</span>
+                      {user.email && (
+                        <span className="user-email">{user.email}</span>
+                      )}
+                    </div>
+                    {user.status && (
+                      <div
+                        className={`status-indicator ${user.status.toLowerCase()}`}
+                        title={user.status}
+                      ></div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-        </div>
+
+        {/* Section messages (visible uniquement si l'onglet messages est actif) */}
+        {activeTab === "messages" &&
+          adaptedResults.messages &&
+          adaptedResults.messages.length > 0 && (
+            <div className="messages-section">
+              <div className="section-header">
+                <FaComment className="toggle-icon" />
+                <h3>Messages</h3>
+              </div>
+              <ul className="channel-list">
+                {adaptedResults.messages.map((message) => (
+                  <li
+                    key={`message-${message.id || message.id_message}`}
+                    className="channel-item message-item"
+                    onClick={() =>
+                      handleAdaptedSelectResult("message", message)
+                    }
+                  >
+                    <div className="message-container">
+                      {/* En-tête du message avec l'utilisateur et l'icône de canal */}
+                      <div className="message-header">
+                        <div className="user-info">
+                          {message.photo_de_profil ? (
+                            <img
+                              src={message.photo_de_profil}
+                              alt={message.nom_utilisateur}
+                              className="user-avatar"
+                            />
+                          ) : (
+                            <FaUser className="channel-icon user-icon" />
+                          )}
+                          <span className="user-name">
+                            {message.nom_utilisateur}
+                          </span>
+                        </div>
+                        <div className="channel-tag">
+                          <FaHashtag className="channel-icon-sm" />
+                          <span>{message.nom_canal}</span>
+                        </div>
+                      </div>
+
+                      {/* Contenu du message */}
+                      <div className="message-content">
+                        <p
+                          className="message-text"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightSearchTerm(
+                              truncateText(getMessageText(message.contenu), 80),
+                              searchQuery
+                            ),
+                          }}
+                        ></p>
+                        <span className="message-date">
+                          {formatDate(
+                            message.date_creation || message.created_at
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
       </div>
 
-      {/* Modal d'invitation */}
+      {/* Fenêtre modale d'invitation (inchangée) */}
       {showInviteModal && (
-        <div className="modal-overlay" onClick={handleCloseInviteModal}>
-          <div
-            className="modal-content modern"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>Inviter à {workspace.name}</h2>
-            <p>Envoyer une invitation par email pour rejoindre ce workspace</p>
-
+        <div className="modal-overlay">
+          <div className="invite-modal">
+            <div className="modal-header">
+              <h3>Inviter au workspace</h3>
+              <button className="close-button" onClick={handleCloseInviteModal}>
+                ×
+              </button>
+            </div>
             <form onSubmit={handleSendInvitation}>
-              <div className="form-group">
-                <label htmlFor="inviteEmail">Email</label>
-                <input
-                  type="email"
-                  id="inviteEmail"
-                  value={inviteEmail}
-                  onChange={handleInviteEmailChange}
-                  placeholder="nom@exemple.com"
-                  disabled={isInviting}
-                  required
-                />
-              </div>
-
-              {inviteStatus.message && (
-                <div className={`invitation-status ${inviteStatus.status}`}>
-                  {inviteStatus.message}
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="inviteEmail">Adresse email</label>
+                  <input
+                    type="email"
+                    id="inviteEmail"
+                    value={inviteEmail}
+                    onChange={handleInviteEmailChange}
+                    placeholder="exemple@email.com"
+                    className="form-control"
+                  />
                 </div>
-              )}
-
-              <div className="modal-actions">
+                {inviteStatus.status && (
+                  <div className={`invite-status ${inviteStatus.status}`}>
+                    {inviteStatus.message}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
                 <button
                   type="button"
+                  className="btn btn-secondary"
                   onClick={handleCloseInviteModal}
-                  className="cancel-btn"
-                  disabled={isInviting}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="send-invite-btn"
+                  className="btn btn-primary"
                   disabled={isInviting}
                 >
                   {isInviting ? "Envoi en cours..." : "Envoyer l'invitation"}
@@ -635,18 +585,6 @@ function WorkspaceSidebar({
             </form>
           </div>
         </div>
-      )}
-
-      {/* Prévisualisation du message */}
-      {showPreview && previewMessage && (
-        <MessagePreview
-          message={previewMessage}
-          onClose={handleClosePreview}
-          onNavigate={handleNavigateToMessage}
-          onReply={handleReplyToMessage}
-          position={previewPosition}
-          visible={showPreview}
-        />
       )}
     </div>
   );

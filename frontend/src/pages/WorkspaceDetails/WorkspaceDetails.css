@@ -2597,13 +2597,12 @@ body
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .message-user-info {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
 .message-user-avatar,
@@ -2739,4 +2738,166 @@ body
     border: 2px solid rgba(255, 255, 255, 0.1);
     border-left-color: #0d6efd;
   }
+}
+
+/* Styles pour les tabs de la sidebar pour la recherche */
+.sidebar-tabs {
+  display: flex;
+  border-bottom: var(--workspace-details-sidebar-border);
+  background: var(--workspace-details-sidebar-bg);
+  padding: 0 16px;
+}
+
+.sidebar-tab {
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--workspace-details-channel-name);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.sidebar-tab:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-tab.active {
+  border-bottom: 2px solid var(--dm-message-own-bg);
+  color: white;
+  font-weight: 600;
+}
+
+.sidebar-tab svg {
+  font-size: 0.8rem;
+}
+
+/* Styles pour les résultats de recherche */
+.user-item,
+.message-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background 0.2s ease;
+  position: relative;
+}
+
+.user-item:hover,
+.message-item:hover {
+  background: var(--workspace-details-channel-hover);
+}
+
+.user-item.active,
+.message-item.active {
+  background: var(--dm-message-own-bg);
+  font-weight: 600;
+}
+
+.user-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+}
+
+.user-icon {
+  font-size: 0.85rem;
+  margin-right: 8px;
+  color: var(--workspace-details-channel-icon);
+}
+
+.user-email,
+.channel-description {
+  font-size: 0.8rem;
+  color: var(--workspace-details-channel-icon);
+  opacity: 0.8;
+  display: block;
+  margin-top: 2px;
+}
+
+.message-container {
+  width: 100%;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.channel-tag {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.channel-icon-sm {
+  font-size: 0.7rem;
+  margin-right: 3px;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-text {
+  font-size: 0.85rem;
+  color: var(--workspace-details-channel-name);
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.message-date {
+  font-size: 0.75rem;
+  color: var(--workspace-details-channel-icon);
+  margin-top: 3px;
+}
+
+/* Style pour les termes recherchés en surbrillance */
+.message-text mark {
+  background-color: rgba(255, 255, 0, 0.3);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.no-results {
+  padding: 20px;
+}
+
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--workspace-details-channel-icon);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Styles pour la section des utilisateurs et des messages */
+.users-section,
+.messages-section {
+  padding: 0 16px;
 }
