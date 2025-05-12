@@ -20,9 +20,8 @@ const sendInvitation = async (
   senderName = "Un membre de SUPCHAT"
 ) => {
 
-  // URL de base dynamique basée sur l'environnement
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3001";
-  const inviteLink = `${baseUrl}/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
+
+  const inviteLink = `http://192.168.1.60:3000/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
 
 
     toEmail

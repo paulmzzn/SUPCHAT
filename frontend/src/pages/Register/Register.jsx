@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import googleIcon from "../../assets/icons/google-icon.svg";
 import facebookIcon from "../../assets/icons/facebook-icon.svg";
@@ -20,67 +20,10 @@ function Register() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingInvitation, setPendingInvitation] = useState(null);
   const navigate = useNavigate();
 
   // Enregistrer la locale française
   registerLocale("fr", fr);
-
-  // Vérifier si une invitation est en attente pour cet email
-  useEffect(() => {
-    const checkPendingInvitation = async () => {
-      if (!formData.email) return;
-
-      try {
-        const response = await fetch(
-          `${API_URL}/api/invitations/pending?email=${encodeURIComponent(
-            formData.email
-          )}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setPendingInvitation(data.hasPendingInvitation);
-        } else {
-          throw new Error(data.message || "Erreur lors de la vérification de l'invitation");
-        }
-      } catch (err) {
-        setError(err.message);
-      }
-    };
-
-    const debounceTimeout = setTimeout(() => {
-      checkPendingInvitation();
-    }, 300);
-
-    return () => clearTimeout(debounceTimeout);
-  }, [formData.email]);
-
-  // Check for pending invitations in sessionStorage
-  useEffect(() => {
-    const pendingInviteData = sessionStorage.getItem("pendingInvitation");
-    
-    if (pendingInviteData) {
-      try {
-        const inviteInfo = JSON.parse(pendingInviteData);
-        setPendingInvitation(inviteInfo);
-        
-        // Pre-fill email if it's provided in the invitation
-        if (inviteInfo?.email) {
-          setFormData(prev => ({ ...prev, email: inviteInfo.email }));
-        }
-      } catch (e) {
-        console.error("Error parsing pending invitation data:", e);
-      }
-    }
-  }, []);
 
   // Génération des options pour les selects
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -110,26 +53,13 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    // Validation du formulaire
-    if (!formData.name || !formData.email || !formData.password || !birthDate) {
-      setError("Tous les champs sont requis");
-      return;
-    }
-
-    // Validation de l'âge minimal (16 ans)
-    const today = new Date();
-    const ageDiff = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    const isMinimumAge =
-      ageDiff > 16 || (ageDiff === 16 && monthDiff >= 0 && today.getDate() >= birthDate.getDate());
-
-    if (!isMinimumAge) {
-      setError("Vous devez avoir au moins 16 ans pour vous inscrire");
-      return;
-    }
-
     setLoading(true);
+
+    if (!formData.name || !formData.email || !formData.password || !birthDate) {
+      setError("Veuillez remplir tous les champs");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/users/register`, {
@@ -149,19 +79,11 @@ function Register() {
 
       if (!response.ok) {
         throw new Error(data.message || "Erreur lors de l'inscription");
-      }      // Store the pending invitation info if present
-      if (pendingInvitation) {
-        // Keep it in sessionStorage for consistency
-        sessionStorage.setItem("pendingInvitation", JSON.stringify(pendingInvitation));
       }
 
       // Redirection vers la page de validation avec l'email
       navigate("/validate", {
-        state: { 
-          email: formData.email,
-          // Pass the pending invitation info if available
-          pendingInvitation: pendingInvitation || null
-        },
+        state: { email: formData.email },
       });
     } catch (err) {
       setError(err.message);

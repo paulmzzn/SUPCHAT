@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { FaChevronDown, FaChevronRight, FaUserCircle, FaArrowUp, FaArrowDown, FaDownload, FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCircle, FaClock, FaTimesCircle, FaRegMoon, FaUserPlus } from "react-icons/fa";
+import React, { useEffect } from "react";
+import { FaChevronDown, FaChevronRight, FaUserCircle, FaArrowUp, FaArrowDown, FaDownload, FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCircle, FaClock, FaTimesCircle, FaRegMoon } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
-import { API_URL } from "../../config/config";
 
 // Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
 const DEBUG_LOGGING = false;
@@ -38,118 +37,9 @@ function WorkspaceDetailsSidebar({
   formatMessageDate,
   handleDownloadFile,
   S3_BASE_URL,
-  handleOpenFileViewer,
-  workspace
+  handleOpenFileViewer
 }) {
   const { userStatuses, setUserStatus } = useSocket();
-  
-  // States for invitation functionality
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
-  const [isInviting, setIsInviting] = useState(false);
-
-  // Handlers for invitation
-  const handleOpenInviteModal = () => {
-    setShowInviteModal(true);
-    setInviteEmail("");
-    setInviteStatus({ status: "", message: "" });
-  };
-
-  const handleCloseInviteModal = () => {
-    setShowInviteModal(false);
-  };
-
-  const handleInviteEmailChange = (e) => {
-    setInviteEmail(e.target.value);
-  };
-
-  const handleSendInvitation = async (e) => {
-    e.preventDefault();
-    
-    if (!inviteEmail.trim()) {
-      setInviteStatus({
-        status: "error",
-        message: "Veuillez saisir une adresse email"
-      });
-      return;
-    }
-
-    // Validation basique de l'email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail)) {
-      setInviteStatus({
-        status: "error",
-        message: "Veuillez saisir une adresse email valide"
-      });
-      return;
-    }
-
-    setIsInviting(true);
-    
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Vous devez être connecté pour envoyer une invitation");
-      }
-
-      // Extraire l'ID utilisateur du token JWT
-      let userId = null;
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]));
-          userId = payload.id;
-        }
-      } catch (e) {
-        console.error("Erreur lors du décodage du token:", e);
-        throw new Error("Impossible de récupérer l'utilisateur");
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/workspaces/${workspace.id}/invite`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            email: inviteEmail,
-            userId: userId
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setInviteStatus({
-          status: "success",
-          message: "Invitation envoyée avec succès"
-        });
-        // Réinitialiser le formulaire après 2 secondes
-        setTimeout(() => {
-          setInviteEmail("");
-          setInviteStatus({ status: "", message: "" });
-          setShowInviteModal(false);
-        }, 2000);
-      } else {
-        setInviteStatus({
-          status: "error",
-          message: data.message || "Erreur lors de l'envoi de l'invitation"
-        });
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'envoi de l'invitation:", error);
-      setInviteStatus({
-        status: "error",
-        message: error.message || "Une erreur est survenue"
-      });
-    } finally {
-      setIsInviting(false);
-    }
-  };
 
   // Log pour le débogage - s'exécute à chaque rendu mais uniquement si DEBUG_LOGGING est activé
   useEffect(() => {
@@ -297,17 +187,6 @@ function WorkspaceDetailsSidebar({
 
   return (
     <div className="details-sidebar">
-      {/* Add invite button in the top-right corner */}
-      {(currentUserRole === "owner" || currentUserRole === "admin") && (
-        <button 
-          className="invite-button-sidebar"
-          onClick={handleOpenInviteModal}
-          title="Inviter un utilisateur"
-        >
-          <FaUserPlus />
-        </button>
-      )}
-
       <div className="details-section">
         <div className="section-header" onClick={toggleMembers}>
           {showMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
@@ -467,54 +346,6 @@ function WorkspaceDetailsSidebar({
               ))}
             </div>
           )}
-        </div>
-      )}
-      {/* Invitation Modal */}
-      {showInviteModal && (
-        <div className="modal-overlay" onClick={handleCloseInviteModal}>
-          <div className="modal-content modern" onClick={e => e.stopPropagation()}>
-            <h2>Inviter à {workspace?.name}</h2>
-            <p>Envoyer une invitation par email pour rejoindre ce workspace</p>
-            
-            <form onSubmit={handleSendInvitation}>
-              <div className="form-group">
-                <label htmlFor="inviteEmail">Email</label>
-                <input
-                  type="email"
-                  id="inviteEmail"
-                  value={inviteEmail}
-                  onChange={handleInviteEmailChange}
-                  placeholder="nom@exemple.com"
-                  disabled={isInviting}
-                  required
-                />
-              </div>
-              
-              {inviteStatus.message && (
-                <div className={`invitation-status ${inviteStatus.status}`}>
-                  {inviteStatus.message}
-                </div>
-              )}
-              
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={handleCloseInviteModal} 
-                  className="cancel-btn"
-                  disabled={isInviting}
-                >
-                  Annuler
-                </button>
-                <button 
-                  type="submit" 
-                  className="send-invite-btn"
-                  disabled={isInviting}
-                >
-                  {isInviting ? "Envoi en cours..." : "Envoyer l'invitation"}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
