@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
+import { View, TouchableOpacity, Text, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
+import { getStyles } from './TabBar.styles'; // Import getStyles
 
 const TabBar = ({ state, descriptors, navigation }) => {
+  const { colors: themeColors } = useTheme(); // Use theme context
+  const styles = getStyles(themeColors); // Get styles based on current theme
   const insets = useSafeAreaInsets();
   
   // Animation pour l'indicateur actif
@@ -12,7 +16,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
   React.useEffect(() => {
     Animated.spring(activeTabAnimation, {
       toValue: state.index,
-      useNativeDriver: true,
+      useNativeDriver: false, // Changed to false for layout properties like left/width if used for indicator
       speed: 12,
       bounciness: 5,
     }).start();
@@ -26,17 +30,18 @@ const TabBar = ({ state, descriptors, navigation }) => {
         
         // Détermine l'icône en fonction de la route
         const getIcon = () => {
+          const iconColor = isFocused ? themeColors.textPrimary : themeColors.textSecondary;
           switch (route.name) {
             case 'Messages':
-              return <Ionicons name={isFocused ? "chatbubble" : "chatbubble-outline"} size={24} color={isFocused ? "#fff" : "rgba(255, 255, 255, 0.7)"} />;
+              return <Ionicons name={isFocused ? "chatbubble" : "chatbubble-outline"} size={24} color={iconColor} />;
             case 'Workspaces':
-              return <MaterialIcons name="workspaces" size={24} color={isFocused ? "#fff" : "rgba(255, 255, 255, 0.7)"} />;
+              return <MaterialIcons name="workspaces" size={24} color={iconColor} />;
             case 'Discover':
-              return <FontAwesome name="compass" size={24} color={isFocused ? "#fff" : "rgba(255, 255, 255, 0.7)"} />;
+              return <FontAwesome name="compass" size={24} color={iconColor} />;
             case 'Settings':
-              return <Ionicons name={isFocused ? "settings" : "settings-outline"} size={24} color={isFocused ? "#fff" : "rgba(255, 255, 255, 0.7)"} />;
+              return <Ionicons name={isFocused ? "settings" : "settings-outline"} size={24} color={iconColor} />;
             default:
-              return <Ionicons name="help-circle" size={24} color={isFocused ? "#fff" : "rgba(255, 255, 255, 0.7)"} />;
+              return <Ionicons name="help-circle" size={24} color={iconColor} />;
           }
         };
 
@@ -91,90 +96,8 @@ const TabBar = ({ state, descriptors, navigation }) => {
           </TouchableOpacity>
         );
       })}
-      
-      {/* Animation de l'indicateur actif */}
-      <Animated.View 
-        style={[
-          styles.activeTabIndicator,
-          {
-            transform: [{ 
-              translateX: activeTabAnimation.interpolate({
-                inputRange: [0, state.routes.length - 1],
-                outputRange: [0, (state.routes.length - 1) * (100 / state.routes.length)],
-              })
-            }],
-            width: `${100 / state.routes.length}%`
-          }
-        ]} 
-      />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(30, 30, 40, 0.97)',
-    backdropFilter: 'blur(10px)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -5,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-    position: 'relative',
-    paddingTop: 8,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    position: 'relative',
-    height: 50,
-  },
-  iconContainer: {
-    position: 'relative',
-  },
-  activeTabIndicator: {
-    position: 'absolute',
-    height: 0,
-    backgroundColor: '#9348B7',
-    bottom: 0,
-    borderRadius: 3,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    bottom: 5,
-    width: 20,
-    height: 3,
-    backgroundColor: '#9348B7',
-    borderRadius: 3,
-  },
-  badge: {
-    position: 'absolute',
-    right: -8,
-    top: -8,
-    backgroundColor: '#e74c3c',
-    borderRadius: 12,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(30, 30, 40, 1)',
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    paddingHorizontal: 4,
-  },
-});
 
 export default TabBar;
