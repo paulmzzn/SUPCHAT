@@ -44,7 +44,6 @@ const Settings = () => {
   // Privacy settings
   const [privacy, setPrivacy] = useState({
     onlineStatus: "all",
-    readReceipts: true,
     messageRequests: "all",
   });
 
@@ -731,7 +730,6 @@ const Settings = () => {
             {activeTab === "privacy" && (
               <div className="settings-section">
                 <h2>Paramètres de confidentialité</h2>
-
                 <div className="settings-group">
                   <div className="settings-item">
                     <div className="setting-info">
@@ -752,49 +750,8 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Accusés de lecture</h3>
-                      <p>
-                        Permettre aux autres de savoir quand vous avez lu leurs
-                        messages
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={privacy.readReceipts}
-                          onChange={() =>
-                            handlePrivacyChange(
-                              "readReceipts",
-                              !privacy.readReceipts
-                            )
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Qui peut m'envoyer des demandes de messages</h3>
-                    </div>
-                    <div className="setting-control">
-                      <select
-                        className="form-select"
-                        value={privacy.messageRequests}
-                        onChange={(e) =>
-                          handlePrivacyChange("messageRequests", e.target.value)
-                        }
-                      >
-                        <option value="all">Tout le monde</option>
-                        <option value="friends">Seulement mes amis</option>
-                        <option value="none">Personne</option>
-                      </select>
-                    </div>
-                  </div>
+                  {/* Suppression du paramètre 'Accusés de lecture' ici */}
+                  {/* Suppression du paramètre 'Qui peut m'envoyer des demandes de messages' déjà effectuée */}
                 </div>
 
                 {/* Suppression du bouton d'enregistrement statique */}
