@@ -48,6 +48,15 @@ const Settings = () => {
     messageRequests: "all",
   });
 
+  // État pour le modal de changement de mot de passe
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
@@ -315,6 +324,51 @@ const Settings = () => {
         console.error("Error deleting account:", error);
         alert("Une erreur est survenue lors de la suppression de votre compte. Veuillez réessayer.");
       });
+    }
+  };
+
+  // Handler pour le changement de mot de passe
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Tous les champs sont requis.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/users/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPasswordError(data.message || "Erreur lors du changement de mot de passe.");
+      } else {
+        setPasswordSuccess("Mot de passe changé avec succès.");
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setShowPasswordModal(false), 1500);
+      }
+    } catch (err) {
+      setPasswordError("Erreur de connexion au serveur.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -803,18 +857,9 @@ const Settings = () => {
                       Mettez à jour votre mot de passe pour sécuriser votre
                       compte
                     </p>
-                    <button className="btn-secondary">
+                    <button className="btn-secondary" onClick={() => setShowPasswordModal(true)}>
                       Changer de mot de passe
                     </button>
-                  </div>
-
-                  <div className="security-option">
-                    <h3>Authentification à deux facteurs</h3>
-                    <p>
-                      Ajoutez une couche de protection supplémentaire à votre
-                      compte
-                    </p>
-                    <button className="btn-secondary">Configurer l'A2F</button>
                   </div>
 
                   <div className="security-option danger-zone">
@@ -867,6 +912,55 @@ const Settings = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Modal de changement de mot de passe */}
+                {showPasswordModal && (
+                  <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                      <h2>Changer de mot de passe</h2>
+                      <form onSubmit={handleChangePassword}>
+                        <div className="form-group">
+                          <label>Ancien mot de passe</label>
+                          <input
+                            type="password"
+                            value={oldPassword}
+                            onChange={e => setOldPassword(e.target.value)}
+                            autoFocus
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Nouveau mot de passe</label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Confirmer le nouveau mot de passe</label>
+                          <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        {passwordError && <div className="error-message">{passwordError}</div>}
+                        {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
+                        <div className="modal-actions">
+                          <button type="button" className="cancel-btn" onClick={() => setShowPasswordModal(false)}>
+                            Annuler
+                          </button>
+                          <button type="submit" className="create-btn" disabled={isChangingPassword}>
+                            {isChangingPassword ? "Changement..." : "Changer le mot de passe"}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -15,6 +15,7 @@ import {
   updateUserProfile,
   getUserById,
   exportRgpdData,
+  changePassword,
 } from "../controllers/userController.js";
 import passport from "passport";
 import jwt from "jsonwebtoken";
@@ -229,5 +230,8 @@ router.delete('/:id', verifyToken, async (req, res) => {
   
   await deleteUser(req, res);
 });
+
+// Route pour changer le mot de passe (utilisateur connecté)
+router.post("/change-password", verifyToken, changePassword);
 
 export default router;

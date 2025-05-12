@@ -358,6 +358,35 @@ const resendValidationCode = async (req, res) => {
   }
 };
 
+// Changement de mot de passe pour un utilisateur connecté
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: 'Ancien et nouveau mot de passe requis.' });
+    }
+    // Récupérer l'utilisateur
+    const user = await UserModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    // Vérifier l'ancien mot de passe
+    const isMatch = await bcrypt.compare(oldPassword, user.mot_de_passe);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Ancien mot de passe incorrect.' });
+    }
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Mettre à jour le mot de passe
+    await UserModel.updateUser({ mot_de_passe: hashedPassword }, userId);
+    res.status(200).json({ message: 'Mot de passe changé avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
+    res.status(500).json({ message: 'Erreur lors du changement de mot de passe.' });
+  }
+};
+
 // Fonction de conversion des statuts numériques vers les chaînes attendues par le frontend
 const convertStatus = (statusId) => {
   const statusMap = {
@@ -674,5 +703,6 @@ export {
   resendValidationCode,  // Ajout du nouveau contrôleur
   getUserProfile,
   getUserById,
-  updateUserProfile
+  updateUserProfile,
+  changePassword,
 };
