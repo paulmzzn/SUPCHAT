@@ -82,9 +82,9 @@ router.get(
 router.get(
   "/auth/google/callback",
 
-  passport.authenticate('google', { failureRedirect: 'http://192.168.1.127:3001/login' }), 
-
-
+  passport.authenticate("google", {
+    failureRedirect: "http://192.168.1.119:3001/login",
+  }),
 
   async (req, res) => {
     const user = req.user;
@@ -96,10 +96,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-
-      `http://192.168.1.127:3001/auth/callback?token=${token}&email=${user.email}`
-
-
+      `http://192.168.1.119:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -112,8 +109,9 @@ router.get(
 router.get(
   "/auth/github/callback",
 
-  passport.authenticate('github', { failureRedirect: 'http://192.168.1.127:3001/login' }),
-
+  passport.authenticate("github", {
+    failureRedirect: "http://192.168.1.119:3001/login",
+  }),
 
   async (req, res) => {
     const user = req.user;
@@ -123,12 +121,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-
-
-
-      `http://192.168.1.127:3001/auth/callback?token=${token}&email=${user.email}`
-
-
+      `http://192.168.1.119:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -220,14 +213,14 @@ router.get("/:id/workspaces", async (req, res) => {
 });
 
 // Route pour supprimer un utilisateur (avec gestion en cascade)
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   // Vérifier si l'utilisateur tente de supprimer son propre compte
   if (req.user.id !== req.params.id) {
-    return res.status(403).json({ 
-      message: 'Vous ne pouvez supprimer que votre propre compte' 
+    return res.status(403).json({
+      message: "Vous ne pouvez supprimer que votre propre compte",
     });
   }
-  
+
   await deleteUser(req, res);
 });
 

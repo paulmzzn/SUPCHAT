@@ -25,8 +25,8 @@ export function SocketProvider({ children }) {
   const [userStatuses, setUserStatuses] = useState({});
 
   const socketRef = useRef(null);
-  
-  const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.127:3000';
+
+  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.119:3000";
 
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = async () => {

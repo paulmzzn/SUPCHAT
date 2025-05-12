@@ -25,7 +25,7 @@ import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.127:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.119:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -1655,7 +1655,7 @@ function DirectMessages() {
                                   });
                                   element.classList.add("highlight-message");
                                   setTimeout(
-                                    () => 
+                                    () =>
                                       element.classList.remove(
                                         "highlight-message"
                                       ),
@@ -1993,12 +1993,15 @@ function DirectMessages() {
                       Chargement des utilisateurs...
                     </div>
                   ) : filteredUsers.length === 0 ? (
-                    <div className="dm-no-users">Aucun utilisateur trouvé</div>                  ) : (
+                    <div className="dm-no-users">Aucun utilisateur trouvé</div>
+                  ) : (
                     filteredUsers.map((user) => (
                       <div
                         key={user.id_utilisateur}
                         className="dm-user-item"
-                        onClick={() => startConversationWith(user.id_utilisateur)}
+                        onClick={() =>
+                          startConversationWith(user.id_utilisateur)
+                        }
                       >
                         {user.photo_de_profil ? (
                           <img
@@ -2012,9 +2015,14 @@ function DirectMessages() {
                           </div>
                         )}
                         <span className="dm-username">
-                          {user.nom || `Utilisateur ${user.id_utilisateur.substring(0, 6)}`}
+                          {user.nom ||
+                            `Utilisateur ${user.id_utilisateur.substring(
+                              0,
+                              6
+                            )}`}
                         </span>
-                      </div>                    ))
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

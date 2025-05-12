@@ -19,6 +19,7 @@ import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachment routes
 import fichierRoutes from "./routes/fichierRoutes.js"; // Import fichier routes
 import fileRoutes from "./routes/fileRoutes.js"; // Import des routes
+import searchRoutes from "./routes/searchRoutes.js"; // Import des routes de recherche
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
@@ -138,16 +139,20 @@ app.use("/api", reactionRoutes);
 app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
-app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
+app.use("/api/files", fileRoutes); // Routes pour les fichiers (incluant notre route content/:path)
 app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
+app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
 
 // Servir les fichiers statiques pour les messages privés et autres
-// Configurer avant les routes API pour éviter les conflits d'authentification
+// Ces routes sont maintenant placées APRÈS la définition de fileRoutes pour éviter qu'elles n'interceptent notre route personnalisée
 app.use(
   "/api/files/private-messages/files",
   express.static(path.join(__dirname, "uploads/private-messages/files"))
 );
+
+// Cette route était problématique car elle interceptait toutes les requêtes /api/files/* y compris notre /api/files/content/*
+// Nous la plaçons en dernier comme fallback pour les autres chemins de fichiers
 app.use("/api/files", express.static(path.join(__dirname, "uploads")));
 
 // Middleware pour logguer les requêtes de fichiers (niveau debug seulement)
@@ -190,8 +195,8 @@ try {
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
-  logger.info(`Serveur démarré sur http://192.168.1.127:${PORT}`);
-  logger.info(`WebSocket URL: ws://192.168.1.127:${PORT}`);
+  logger.info(`Serveur démarré sur http://192.168.1.119:${PORT}`);
+  logger.info(`WebSocket URL: ws://192.168.1.119:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
