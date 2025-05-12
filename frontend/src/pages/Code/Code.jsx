@@ -6,7 +6,6 @@ import './Code.css';
 const Code = ({ email }) => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
-  const [pendingInvitation, setPendingInvitation] = useState(null);
   const navigate = useNavigate();
   const inputs = Array(6).fill(0);
 
@@ -21,15 +20,6 @@ const Code = ({ email }) => {
     
     console.log("Code.jsx - Email utilisé:", storedEmail || email || "Non défini");
     console.log("Code.jsx - Token présent:", localStorage.getItem('token') ? "oui" : "non");
-      // Vérifier les invitations en attente
-    const pendingInviteData = sessionStorage.getItem("pendingInvitation");
-    if (pendingInviteData) {
-      try {
-        setPendingInvitation(JSON.parse(pendingInviteData));
-      } catch (e) {
-        console.error("Erreur lors de l'analyse des données d'invitation en attente:", e);
-      }
-    }
   }, [email]);
 
   const handleSubmit = async (e) => {
@@ -43,7 +33,7 @@ const Code = ({ email }) => {
     }
     
     const validationCode = code.join("");
-    console.log("Envoi de la requête de validation:", { email: emailToUse, code: validationCode });
+    console.log("Sending validation request:", { email: emailToUse, code: validationCode });
 
     try {
       const response = await fetch(`${API_URL}/api/users/validate-code`, {
@@ -58,7 +48,7 @@ const Code = ({ email }) => {
       });
 
       const data = await response.json();
-      console.log("Réponse du serveur:", data);
+      console.log("Server response:", data);
 
       if (response.ok) {
         // IMPORTANT: Stocker le token correctement et s'assurer qu'il est bien enregistré
@@ -74,23 +64,12 @@ const Code = ({ email }) => {
           // Vérifier que le token a bien été stocké
           const storedToken = localStorage.getItem("token");
           console.log("Token vérifié après stockage:", storedToken ? "Présent" : "Absent");
-            // Handle pending workspace invitation if present
-          if (pendingInvitation && pendingInvitation.workspaceId) {
-            // Remove the pending invitation from sessionStorage
-            sessionStorage.removeItem("pendingInvitation");
-            
-            // Redirect to the join-workspace page after a slight delay to ensure token is stored
-            setTimeout(() => {
-              console.log("Redirection vers l'invitation de workspace avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
-              navigate(`/join-workspace?id=${pendingInvitation.workspaceId}&email=${pendingInvitation.email || emailToUse}`);
-            }, 300);
-          } else {
-            // Regular flow - redirect to dashboard
-            setTimeout(() => {
-              console.log("Redirection vers dashboard avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
-              navigate("/dashboard");
-            }, 300);
-          }
+          
+          // Ajouter un délai pour s'assurer que le localStorage est mis à jour
+          setTimeout(() => {
+            console.log("Redirection vers dashboard avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
+            navigate("/dashboard");
+          }, 300);
         } else {
           setError("Token manquant dans la réponse du serveur");
         }
