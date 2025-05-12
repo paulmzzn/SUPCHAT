@@ -61,7 +61,16 @@ export const getStyles = (theme) => StyleSheet.create({
   profileEmail: {
     fontSize: 14,
     color: theme.textMuted,
+    marginBottom: 10,
+  },
+  profileBio: {
+    fontSize: 14,
+    color: theme.textPrimary,
+    fontStyle: 'italic',
+    textAlign: 'center',
     marginBottom: 16,
+    maxWidth: '80%',
+    lineHeight: 20,
   },
   editProfileButton: {
     backgroundColor: theme.accentBackground,

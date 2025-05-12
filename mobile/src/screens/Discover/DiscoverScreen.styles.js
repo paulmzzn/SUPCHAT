@@ -6,6 +6,9 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.primaryBackground,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -17,6 +20,30 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.textPrimary,
+  },
+  searchIconButton: {
+    padding: 8,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.inputBackground,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 15,
+    height: 50,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+  },
+  searchInput: {
+    flex: 1,
+    color: theme.textPrimary,
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  clearSearchButton: {
+    padding: 8,
   },
   scrollContainer: {
     flex: 1,
@@ -81,13 +108,14 @@ export const getStyles = (theme) => StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    backgroundColor: theme.accentSecondary, // Lighter purple
+    backgroundColor: theme.accentSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
   },
   suggestionInitial: {
-    color: theme.textOnAccent, // Updated
+    color: theme.textOnAccent,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -116,9 +144,34 @@ export const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 15,
   },
   joinButtonText: {
-    color: theme.textOnAccent, // Updated
+    color: theme.textOnAccent,
     fontSize: 13,
     fontWeight: '600',
+  },
+  joinedButton: {
+    backgroundColor: theme.disabledInputBackground || '#444444',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    opacity: 0.7,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+  },
+  joinedButtonText: {
+    color: theme.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+  },
+  noResultsText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: theme.textMuted,
+    textAlign: 'center',
   },
   searchSection: {
     alignItems: 'center',
@@ -162,8 +215,19 @@ export const getStyles = (theme) => StyleSheet.create({
     elevation: 5,
   },
   searchButtonText: {
-    color: theme.textOnAccent, // Updated
+    color: theme.textOnAccent,
     fontSize: 16,
     fontWeight: 'bold',
-  }
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.primaryBackground,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: theme.textPrimary,
+  },
 });

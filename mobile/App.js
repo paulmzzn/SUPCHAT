@@ -15,17 +15,21 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
+import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen'; // Ajout de l'import WorkspaceScreen
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
+import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
 
 // Custom TabBar
 import TabBar from './src/components/TabBar/TabBar'; 
 
 const RootStack = createNativeStackNavigator();
+const AuthStack = createNativeStackNavigator();
+const AppStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Tab Navigator for the authenticated part of the app
+// Tab Navigator for the main sections of the app
 function AppTabs() {
   return (
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
@@ -37,7 +41,30 @@ function AppTabs() {
   );
 }
 
-// Main navigation component
+// Auth stack for unauthenticated users
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="PasswordReset" component={PasswordResetScreen} />
+      <AuthStack.Screen name="CodeVerification" component={CodeVerificationScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+// Main app stack for authenticated users
+function MainAppNavigator() {
+  return (
+    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+      <AppStack.Screen name="HomeTabs" component={AppTabs} />
+      <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+      <AppStack.Screen name="Workspace" component={WorkspaceScreen} />
+    </AppStack.Navigator>
+  );
+}
+
+// Main navigation component with authentication state handling
 function AppNavigator() {
   const { userToken, isLoading } = useAuth();
 
@@ -51,20 +78,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {userToken == null ? (
-          // Auth flow screens
-          <>
-            <RootStack.Screen name="Login" component={LoginScreen} />
-            <RootStack.Screen name="Register" component={RegisterScreen} />
-            <RootStack.Screen name="PasswordReset" component={PasswordResetScreen} />
-            <RootStack.Screen name="CodeVerification" component={CodeVerificationScreen} />
-          </>
-        ) : (
-          // App flow - now navigates to the Tab Navigator
-          <RootStack.Screen name="AppTabs" component={AppTabs} />
-        )}
-      </RootStack.Navigator>
+      {userToken == null ? <AuthNavigator /> : <MainAppNavigator />}
     </NavigationContainer>
   );
 }
