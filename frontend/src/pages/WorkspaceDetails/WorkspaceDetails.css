@@ -141,6 +141,51 @@
   color: var(--workspace-details-toggle-icon);
 }
 
+/* Style amélioré pour le bouton d'ajout de canal */
+.add-channel-button {
+  background: transparent;
+  border: none;
+  color: var(--workspace-details-add-channel);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.add-channel-button:hover {
+  background: rgba(147, 72, 183, 0.1);
+  color: var(--workspace-details-add-channel-hover);
+  transform: translateY(-1px);
+}
+
+.add-channel-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.channel-icon-bg {
+  font-size: 1.1rem;
+  color: var(--workspace-details-channel-icon);
+}
+
+.plus-icon {
+  position: absolute;
+  font-size: 0.7rem;
+  color: var(--workspace-details-add-channel-hover);
+  right: -3px;
+  bottom: -3px;
+  background: var(--workspace-details-sidebar-bg);
+  border-radius: 50%;
+  padding: 2px;
+  border: 1px solid var(--workspace-details-sidebar-bg);
+}
+
 .add-channel-btn {
   background: transparent;
   border: none;
@@ -1567,10 +1612,6 @@
   font-size: 1rem;
 }
 
-.toolbox-item-text {
-  flex-grow: 1;
-}
-
 /* Support du thème clair */
 .theme-light .chat-input-wrapper {
   background: #e0e0e0;
@@ -2740,23 +2781,24 @@ body
   }
 }
 
-/* Styles pour les tabs de la sidebar pour la recherche */
+/* Styles pour les tabs de la sidebar pour la recherche - Affichage vertical */
 .sidebar-tabs {
   display: flex;
+  flex-direction: column;
   border-bottom: var(--workspace-details-sidebar-border);
   background: var(--workspace-details-sidebar-bg);
-  padding: 0 16px;
+  padding: 8px 0;
 }
 
 .sidebar-tab {
-  padding: 10px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   color: var(--workspace-details-channel-name);
   font-size: 0.9rem;
   display: flex;
   align-items: center;
   gap: 6px;
-  border-bottom: 2px solid transparent;
+  border-left: 3px solid transparent;
   transition: all 0.2s ease;
 }
 
@@ -2766,13 +2808,10 @@ body
 }
 
 .sidebar-tab.active {
-  border-bottom: 2px solid var(--dm-message-own-bg);
+  border-left: 3px solid var(--dm-message-own-bg);
   color: white;
   font-weight: 600;
-}
-
-.sidebar-tab svg {
-  font-size: 0.8rem;
+  background-color: rgba(255, 255, 255, 0.07);
 }
 
 /* Styles pour les résultats de recherche */
@@ -2841,6 +2880,9 @@ body
 .user-name {
   font-size: 0.9rem;
   font-weight: 500;
+  color: white;
+  display: block;
+  margin-bottom: 2px;
 }
 
 .channel-tag {
@@ -2894,10 +2936,4 @@ body
   color: var(--workspace-details-channel-icon);
   font-style: italic;
   font-size: 0.9rem;
-}
-
-/* Styles pour la section des utilisateurs et des messages */
-.users-section,
-.messages-section {
-  padding: 0 16px;
 }

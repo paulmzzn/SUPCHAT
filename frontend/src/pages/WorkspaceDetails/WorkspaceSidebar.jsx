@@ -11,6 +11,7 @@ import {
   FaComment,
   FaInfoCircle,
   FaCalendar,
+  FaCommentDots,
 } from "react-icons/fa";
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
@@ -363,7 +364,10 @@ function WorkspaceSidebar({
                   onClick={handleCreateChannel}
                   title="Ajouter un canal"
                 >
-                  <FaPlus />
+                  <div className="add-channel-icon">
+                    <FaCommentDots className="channel-icon-bg" />
+                    <FaPlus className="plus-icon" />
+                  </div>
                 </button>
               )}
             </div>
@@ -447,14 +451,22 @@ function WorkspaceSidebar({
                     {user.photo_de_profil ? (
                       <img
                         src={user.photo_de_profil}
-                        alt={user.nom}
+                        alt={user.nom || user.username || "Utilisateur"}
                         className="user-avatar"
                       />
                     ) : (
                       <FaUser className="channel-icon user-icon" />
                     )}
                     <div className="channel-info">
-                      <span className="channel-name">{user.nom}</span>
+                      <span className="channel-name">
+                        {user.nom ||
+                          user.username ||
+                          user.name ||
+                          user.prenom ||
+                          user.email?.split("@")[0] ||
+                          user.id_utilisateur ||
+                          "Utilisateur"}
+                      </span>
                       {user.email && (
                         <span className="user-email">{user.email}</span>
                       )}
