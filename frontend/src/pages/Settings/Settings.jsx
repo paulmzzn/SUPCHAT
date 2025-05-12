@@ -830,6 +830,42 @@ const Settings = () => {
                       Supprimer mon compte
                     </button>
                   </div>
+
+                  <div className="security-option rgpd-export">
+                    <h3>Exporter mes données RGPD</h3>
+                    <p>
+                      Téléchargez toutes vos données personnelles au format JSON conformément au RGPD.
+                    </p>
+                    <button
+                      className="btn-secondary"
+                      onClick={async () => {
+                        const token = localStorage.getItem("token");
+                        if (!token) {
+                          alert("Vous devez être connecté pour exporter vos données.");
+                          return;
+                        }
+                        try {
+                          const response = await fetch(`${API_URL}/api/users/rgpd-export`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          if (!response.ok) throw new Error("Erreur lors de l'export RGPD");
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = "mes_donnees_rgpd.json";
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          alert("Erreur lors de l'export RGPD : " + err.message);
+                        }
+                      }}
+                    >
+                      Exporter mes données RGPD
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
