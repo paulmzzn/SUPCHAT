@@ -13,7 +13,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.paulmzn.siptv",
+      "icon": {
+        "light":   "./assets/icon-light.png",
+        "dark":    "./assets/icon-dark.png",
+        "tinted":  "./assets/icon-tinted.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
