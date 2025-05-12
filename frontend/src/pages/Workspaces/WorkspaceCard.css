@@ -96,7 +96,7 @@
 .workspace-title {
   font-size: 1.25rem;
   color: var(--workspace-title-color);
-  margin: 8px 8px 0 0; /* Ajout d'une marge supérieure de 8px pour descendre le titre */
+  margin: 0 8px 0 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
