@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from '../../config/env';
-import { useAuth } from '../../../App';
+import { useAuth } from '../../context/AuthContext'; // Updated import path
 import { useTheme } from '../../theme/ThemeContext';
 import { getStyles } from './CodeVerificationScreen.styles';
 
