@@ -2497,45 +2497,62 @@ body
   padding-left: 36px !important;
 }
 
-/* Style amélioré pour le dropdown des résultats de recherche */
+/* Styles améliorés pour les résultats de recherche */
 .search-results-dropdown {
   position: absolute;
-  top: calc(100% + 5px);
+  top: 45px;
   left: 0;
-  width: 350px; /* Largeur fixe plus grande */
-  max-height: 500px;
+  right: 0;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 80vh;
   overflow-y: auto;
-  background: var(--workspace-details-sidebar-bg, rgba(30, 30, 35, 0.95));
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  z-index: 1000;
-  animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.search-results {
+  padding: 8px 0;
 }
 
-/* Adaptation mobile */
-@media (max-width: 768px) {
-  .webview-modal {
-    width: 95%;
-    height: 80vh;
-  }
+.search-workspace-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
 }
 
-/* Styles pour la webview externe - remplacement de l'iframe par un bouton */
-.webview-external-content {
+.search-workspace-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-query-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.search-query-info span {
+  font-weight: 500;
+  color: #333;
+}
+
+.search-results-content {
+  padding: 0 8px;
+}
+
+.search-results-section {
+  margin-bottom: 16px;
+}
+
+.search-results-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
 }
 
 .search-results-list {
@@ -2544,48 +2561,53 @@ body
   margin: 0;
 }
 
-/* Style amélioré pour les éléments de résultats */
-.search-result-item {
-  padding: 10px 16px;
+/* Amélioration pour les résultats de type message */
+.search-result-item.message-result {
   cursor: pointer;
-  transition: background 0.2s;
-  border-radius: 0;
+  position: relative;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
 }
 
-.search-result-item:hover {
-  background: rgba(147, 72, 183, 0.1);
+.search-result-item.message-result:hover {
+  background-color: #f6f8fa;
 }
 
-.search-result-item .result-icon {
-  color: rgba(255, 255, 255, 0.6);
-  margin-right: 10px;
-}
-
-/* Style spécifique pour les résultats de messages amélioré */
-.message-result {
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 12px 16px;
+.search-result-item.message-result:hover::after {
+  content: "Cliquez pour prévisualiser";
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background-color: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 .message-result-content {
-  width: 100%;
+  margin-bottom: 6px;
 }
 
 .message-header {
   display: flex;
   justify-content: space-between;
-  width: 100%;
+  align-items: center;
   margin-bottom: 6px;
 }
 
 .message-user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.message-user-avatar {
+.message-user-avatar,
+.message-user-icon {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -2593,16 +2615,19 @@ body
 }
 
 .message-user-icon {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  color: #6c757d;
 }
 
 .message-date {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 12px;
+  color: #6c757d;
 }
 
 .date-icon {
@@ -2610,175 +2635,108 @@ body
 }
 
 .message-preview {
+  font-size: 14px;
+  color: #333;
   margin: 4px 0;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
-  word-break: break-word;
-  line-height: 1.4;
 }
 
-/* Surlignage du terme recherché */
 .message-preview mark {
-  background-color: rgba(147, 72, 183, 0.35);
+  background-color: rgba(255, 240, 0, 0.4);
+  padding: 1px 0;
   border-radius: 2px;
-  padding: 0 2px;
-  color: white;
 }
 
 .message-channel {
   display: flex;
   align-items: center;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 6px;
   gap: 4px;
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 6px;
 }
 
 .channel-name {
-  color: #9348b7;
-}
-
-/* Style pour les utilisateurs */
-.user-result-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 10px;
-}
-
-.user-profile-pic {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.user-name {
   font-weight: 500;
 }
 
-.user-email {
-  margin-left: 6px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* Style pour les descriptions de canaux */
-.channel-description {
-  margin-left: 28px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 2px;
-}
-
-/* Style pour les messages d'info et d'erreur */
-.no-results {
-  padding: 20px;
-  text-align: center;
-}
-
-.info-message,
-.error-message {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 0.9rem;
-}
-
-.winner-percent {
-  margin-left: 6px;
-  opacity: 0.8;
-}
-
-.tie {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-}
-
-.tie-text {
-  color: white;
-  font-size: 1.1rem;
-}
-
-.tie-votes {
-  color: #b05fdf;
-  font-size: 0.9rem;
-}
-
-.tie-options {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
-  width: 100%;
-}
-
-.tie-option {
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  color: white;
-  text-align: center;
-}
-
-.no-votes {
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
-  padding: 20px;
-}
-
-.invite-button-sidebar {
+/* Indique visuellement qu'un clic est possible sur le message */
+.search-result-item.message-result::before {
+  content: "";
   position: absolute;
-  top: 5px;
-  right: 5px;
-  border: none;
-  background-color: rgba(147, 72, 183, 0.1);
-  color: var(--primary-color);
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent #ddd transparent transparent;
 }
 
-.invite-button-sidebar:hover {
-  background-color: rgba(147, 72, 183, 0.2);
-  transform: translateY(-2px);
+.search-result-item.message-result:hover::before {
+  border-color: transparent #0d6efd transparent transparent;
 }
 
-.invite-button-sidebar svg {
-  width: 18px;
-  height: 18px;
+/* Style pour le spinner de chargement */
+.search-spinner {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-/* Position the details-sidebar relative for the button */
-.details-sidebar {
-  position: relative;
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
 }
 
-/* Format the invitation status message */
-.invitation-status {
-  margin: 10px 0;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 14px;
-}
+/* Adapations pour le mode sombre */
+@media (prefers-color-scheme: dark) {
+  .search-results-dropdown {
+    background-color: #2d3033;
+    border: 1px solid #444;
+  }
 
-.invitation-status.success {
-  background-color: rgba(76, 175, 80, 0.2);
-  color: #4caf50;
-}
+  .search-workspace-header {
+    border-color: #444;
+  }
 
-.invitation-status.error {
-  background-color: rgba(244, 67, 54, 0.2);
-  color: #f44336;
+  .search-query-info {
+    color: #aaa;
+  }
+
+  .search-query-info span {
+    color: #ddd;
+  }
+
+  .search-results-header {
+    color: #ddd;
+  }
+
+  .search-result-item.message-result:hover {
+    background-color: #353a40;
+  }
+
+  .message-preview {
+    color: #ddd;
+  }
+
+  .search-result-item.message-result::before {
+    border-color: transparent #555 transparent transparent;
+  }
+
+  .search-result-item.message-result:hover::before {
+    border-color: transparent #0d6efd transparent transparent;
+  }
+
+  .search-spinner {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-left-color: #0d6efd;
+  }
 }
