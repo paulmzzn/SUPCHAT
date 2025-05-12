@@ -111,7 +111,7 @@ const DiscoverScreen = () => {
   }, [searchQuery, workspaces]);
 
   // Fonction pour rejoindre un workspace
-  const joinWorkspace = async (workspaceId) => {
+  const joinWorkspace = async (workspaceId, isPrivate = false) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -119,7 +119,11 @@ const DiscoverScreen = () => {
         return;
       }
 
-      const response = await fetch(`${env.API_URL}/api/workspaces/${workspaceId}/join`, {
+      let endpoint = isPrivate 
+        ? `${env.API_URL}/api/workspaces/${workspaceId}/request-join` 
+        : `${env.API_URL}/api/workspaces/${workspaceId}/join`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,13 +132,21 @@ const DiscoverScreen = () => {
       });
 
       if (response.ok) {
-        Alert.alert(
-          "Succès", 
-          "Vous avez rejoint ce workspace !",
-          [{ text: "OK" }]
-        );
-        // Mettre à jour la liste des workspaces de l'utilisateur
-        setUserWorkspaces(prev => [...prev, workspaceId]);
+        if (isPrivate) {
+          Alert.alert(
+            "Demande envoyée", 
+            "Votre demande pour rejoindre ce workspace privé a été envoyée. Vous serez notifié lorsqu'elle sera traitée.",
+            [{ text: "OK" }]
+          );
+        } else {
+          Alert.alert(
+            "Succès", 
+            "Vous avez rejoint ce workspace !",
+            [{ text: "OK" }]
+          );
+          // Mettre à jour la liste des workspaces de l'utilisateur
+          setUserWorkspaces(prev => [...prev, workspaceId]);
+        }
       } else {
         const errorData = await response.json();
         Alert.alert("Erreur", errorData.message || "Impossible de rejoindre ce workspace");
@@ -223,16 +235,34 @@ const DiscoverScreen = () => {
                 </View>
                 <View style={styles.suggestionInfo}>
                   <Text style={styles.suggestionName}>{workspace.name}</Text>
+                  {workspace.isPrivate && (
+                    <View style={styles.privateIndicatorContainer}>
+                      <FontAwesome 
+                        name="lock" 
+                        size={12} 
+                        color={themeColors.textMuted} 
+                        style={styles.privateIndicatorIcon} 
+                      />
+                      <Text style={styles.privateText}>Workspace privé</Text>
+                    </View>
+                  )}
                   <Text style={styles.suggestionMembers}>{workspace.totalMembers} membres</Text>
                 </View>
                 {workspace.hasJoined ? (
                   <TouchableOpacity style={styles.joinedButton}>
                     <Text style={styles.joinedButtonText}>Rejoint</Text>
                   </TouchableOpacity>
+                ) : workspace.isPrivate ? (
+                  <TouchableOpacity 
+                    style={styles.requestJoinButton}
+                    onPress={() => joinWorkspace(workspace.id, true)}
+                  >
+                    <Text style={styles.requestJoinButtonText}>Demander</Text>
+                  </TouchableOpacity>
                 ) : (
                   <TouchableOpacity 
                     style={styles.joinButton}
-                    onPress={() => joinWorkspace(workspace.id)}
+                    onPress={() => joinWorkspace(workspace.id, false)}
                   >
                     <Text style={styles.joinButtonText}>Rejoindre</Text>
                   </TouchableOpacity>

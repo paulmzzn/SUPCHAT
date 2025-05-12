@@ -230,4 +230,33 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     color: theme.textPrimary,
   },
+  privateIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  privateIndicatorIcon: {
+    marginRight: 4,
+  },
+  privateText: {
+    color: theme.textMuted,
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  requestJoinButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.accentPrimary,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  requestJoinButtonText: {
+    color: theme.accentPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
