@@ -14,6 +14,7 @@ import {
   getUserProfile,
   updateUserProfile,
   getUserById,
+  exportRgpdData,
 } from "../controllers/userController.js";
 import passport from "passport";
 import jwt from "jsonwebtoken";
@@ -165,6 +166,9 @@ router.get("/verify-token", (req, res) => {
 // Routes pour le profil utilisateur
 router.get("/profile", verifyToken, getUserProfile);
 router.put("/profile", verifyToken, upload.single("avatar"), updateUserProfile);
+
+// Route d'export RGPD (données personnelles)
+router.get('/rgpd-export', verifyToken, exportRgpdData);
 
 // Route pour récupérer un utilisateur par ID (gère aussi l'alias "me")
 router.get("/:id", verifyToken, getUserById);
