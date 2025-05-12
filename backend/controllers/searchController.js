@@ -46,10 +46,33 @@ export const searchInWorkspace = async (req, res) => {
     // Effectuer la recherche unifiée
     const results = await Search.searchInWorkspace(workspaceId, query, userId);
 
+    // Afficher un résumé des résultats
     console.log(`[SearchController] Résultats de recherche:
       - ${results.canaux?.length || 0} canaux
       - ${results.utilisateurs?.length || 0} utilisateurs
       - ${results.messages?.length || 0} messages`);
+
+    // Afficher plus de détails pour les messages trouvés
+    if (results.messages && results.messages.length > 0) {
+      console.log("[SearchController] Détails des messages trouvés:");
+      results.messages.forEach((message, index) => {
+        console.log(`  Message ${index + 1}:`);
+        console.log(
+          `    - Contenu: "${message.contenu.substring(0, 30)}${
+            message.contenu.length > 30 ? "..." : ""
+          }"`
+        );
+        console.log(
+          `    - Canal: ${message.nom_canal} (ID: ${message.id_canal})`
+        );
+        console.log(
+          `    - Auteur: ${message.nom_utilisateur} (ID: ${message.id_utilisateur})`
+        );
+        console.log(
+          `    - Date: ${new Date(message.date_creation).toLocaleString()}`
+        );
+      });
+    }
 
     // Renvoyer les résultats
     return res.status(200).json(results);

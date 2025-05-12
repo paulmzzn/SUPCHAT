@@ -5,6 +5,11 @@ import {
   FaHashtag,
   FaChevronDown,
   FaChevronRight,
+  FaUser,
+  FaComment,
+  FaCalendar,
+  FaInfoCircle,
+  FaLock,
 } from "react-icons/fa";
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
@@ -61,42 +66,97 @@ function WorkspaceSidebar({
     };
   }, []);
 
-  // Adapter le format des résultats de l'API au format attendu par le composant SearchResults
+  // Debug: vérifier les résultats de recherche reçus
+  useEffect(() => {
+    if (searchResults) {
+      console.log("Résultats de recherche reçus:", searchResults);
+    }
+  }, [searchResults]);
+
+  // Fonctions utilitaires pour l'affichage des résultats
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date inconnue";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const truncateText = (text, maxLength = 30) => {
+    if (!text) return "";
+    if (typeof text === "object") {
+      try {
+        text = JSON.stringify(text);
+      } catch (e) {
+        text = "Contenu non textuel";
+      }
+    }
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
+  };
+
+  const getMessageText = (content) => {
+    if (!content) return "";
+    if (
+      typeof content === "string" &&
+      !content.startsWith("{") &&
+      !content.startsWith("[")
+    ) {
+      return content;
+    }
+
+    try {
+      const parsed =
+        typeof content === "string" ? JSON.parse(content) : content;
+      if (parsed.type === "text") {
+        return parsed.text || "";
+      } else if (parsed.type === "file") {
+        return `[Fichier: ${parsed.fileName || "Sans nom"}]`;
+      } else {
+        return (
+          parsed.text ||
+          parsed.content ||
+          parsed.message ||
+          JSON.stringify(parsed)
+        );
+      }
+    } catch (e) {
+      return content;
+    }
+  };
+
+  const highlightSearchTerm = (text, term) => {
+    if (!text || !term) return text;
+    try {
+      const regex = new RegExp(`(${term})`, "gi");
+      return text.replace(regex, "<mark>$1</mark>");
+    } catch (e) {
+      return text;
+    }
+  };
+
+  // Adapter le format des résultats de l'API au format attendu par l'affichage
   const adaptedResults = searchResults
     ? {
-        channels:
-          searchResults.canaux?.map((canal) => ({
-            ...canal,
-            id: canal.id_canal,
-            nom: canal.nom, // Correction: conserver le nom original de la propriété
-          })) || [],
-        users:
-          searchResults.utilisateurs?.map((user) => ({
-            ...user,
-            id: user.id_utilisateur,
-            nom: user.nom, // Correction: conserver le nom original de la propriété
-          })) || [],
-        messages:
-          searchResults.messages?.map((message) => ({
-            ...message,
-            id: message.id_message,
-            nom_utilisateur: message.nom_utilisateur || "Utilisateur inconnu", // Correction: utiliser le nom réel
-            nom_canal: message.nom_canal || "Canal inconnu", // Correction: utiliser le nom réel du canal
-            date_creation: message.date_creation || message.created_at, // Correction: utiliser la date correcte
-          })) || [],
+        canaux: searchResults.canaux || [],
+        utilisateurs: searchResults.utilisateurs || [],
+        messages: searchResults.messages || [],
       }
-    : { channels: [], users: [], messages: [] };
+    : { canaux: [], utilisateurs: [], messages: [] };
 
-  // Gère la sélection d'un résultat de recherche avec adaptation des clés
+  // Gère la sélection d'un résultat de recherche
   const handleAdaptedSelectResult = (type, item) => {
-    const adaptedItem = { ...item };
-
     // Fermer les résultats de recherche
     setShowSearchResults(false);
 
     // Appeler le handler parent
     if (handleSelectSearchResult) {
-      handleSelectSearchResult(type, adaptedItem);
+      handleSelectSearchResult(type, item);
     }
   };
 
@@ -128,16 +188,196 @@ function WorkspaceSidebar({
             {isSearching && <div className="search-spinner"></div>}
           </div>
 
-          {/* Dropdown des résultats de recherche avec le nouveau composant */}
-          {showSearchResults && (
+          {/* Dropdown des résultats de recherche */}
+          {showSearchResults && searchQuery && (
             <div className="search-results-dropdown" ref={searchResultsRef}>
-              <SearchResults
-                searchQuery={searchQuery}
-                searchResults={adaptedResults}
-                workspace={workspace}
-                isSearching={isSearching}
-                handleSelectSearchResult={handleAdaptedSelectResult}
-              />
+              <div className="search-results">
+                {workspace && (
+                  <div className="search-workspace-header">
+                    <h3>Recherche dans {workspace.name}</h3>
+                    <div className="search-query-info">
+                      Résultats pour : <span>"{searchQuery}"</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="search-results-content">
+                  {/* Section canaux */}
+                  {adaptedResults.canaux &&
+                    adaptedResults.canaux.length > 0 && (
+                      <div className="search-results-section">
+                        <div className="search-results-header">
+                          <FaHashtag /> Canaux ({adaptedResults.canaux.length})
+                        </div>
+                        <ul className="search-results-list">
+                          {adaptedResults.canaux.map((canal) => (
+                            <li
+                              key={`canal-${canal.id || canal.id_canal}`}
+                              className="search-result-item"
+                              onClick={() =>
+                                handleAdaptedSelectResult("channel", canal)
+                              }
+                            >
+                              {canal.is_private ? (
+                                <FaLock className="result-icon" />
+                              ) : (
+                                <FaHashtag className="result-icon" />
+                              )}
+                              <span>{canal.nom}</span>
+                              {canal.description && (
+                                <div className="channel-description">
+                                  {truncateText(canal.description, 40)}
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {/* Section utilisateurs */}
+                  {adaptedResults.utilisateurs &&
+                    adaptedResults.utilisateurs.length > 0 && (
+                      <div className="search-results-section">
+                        <div className="search-results-header">
+                          <FaUser /> Utilisateurs (
+                          {adaptedResults.utilisateurs.length})
+                        </div>
+                        <ul className="search-results-list">
+                          {adaptedResults.utilisateurs.map((user) => (
+                            <li
+                              key={`user-${user.id || user.id_utilisateur}`}
+                              className="search-result-item"
+                              onClick={() =>
+                                handleAdaptedSelectResult("user", user)
+                              }
+                            >
+                              <div className="user-result-content">
+                                {user.photo_de_profil ? (
+                                  <img
+                                    src={user.photo_de_profil}
+                                    alt={user.nom}
+                                    className="user-profile-pic"
+                                  />
+                                ) : (
+                                  <FaUser className="result-icon" />
+                                )}
+                                <span className="user-name">{user.nom}</span>
+                                {user.email && (
+                                  <span className="user-email">
+                                    {user.email}
+                                  </span>
+                                )}
+                                {user.status && (
+                                  <div
+                                    className={`status-indicator ${user.status.toLowerCase()}`}
+                                    title={user.status}
+                                  ></div>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {/* Section messages */}
+                  {adaptedResults.messages &&
+                    adaptedResults.messages.length > 0 && (
+                      <div className="search-results-section">
+                        <div className="search-results-header">
+                          <FaComment /> Messages (
+                          {adaptedResults.messages.length})
+                        </div>
+                        <ul className="search-results-list messages-list">
+                          {adaptedResults.messages.map((message) => (
+                            <li
+                              key={`message-${
+                                message.id || message.id_message
+                              }`}
+                              className="search-result-item message-result"
+                              onClick={() =>
+                                handleAdaptedSelectResult("message", message)
+                              }
+                            >
+                              <div className="message-result-content">
+                                <div className="message-header">
+                                  <div className="message-user-info">
+                                    {message.photo_de_profil ? (
+                                      <img
+                                        src={message.photo_de_profil}
+                                        alt={message.nom_utilisateur}
+                                        className="message-user-avatar"
+                                      />
+                                    ) : (
+                                      <FaUser className="message-user-icon" />
+                                    )}
+                                    <strong>{message.nom_utilisateur}</strong>
+                                  </div>
+                                  <span className="message-date">
+                                    <FaCalendar className="date-icon" />
+                                    {formatDate(
+                                      message.date_creation ||
+                                        message.created_at
+                                    )}
+                                  </span>
+                                </div>
+                                <p
+                                  className="message-preview"
+                                  dangerouslySetInnerHTML={{
+                                    __html: highlightSearchTerm(
+                                      truncateText(
+                                        getMessageText(message.contenu),
+                                        80
+                                      ),
+                                      searchQuery
+                                    ),
+                                  }}
+                                ></p>
+                              </div>
+                              <div className="message-channel">
+                                <FaHashtag className="result-icon" />
+                                <span className="channel-name">
+                                  {message.nom_canal}
+                                </span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {/* Message si aucun résultat ou erreur */}
+                  {(!adaptedResults.canaux ||
+                    adaptedResults.canaux.length === 0) &&
+                    (!adaptedResults.utilisateurs ||
+                      adaptedResults.utilisateurs.length === 0) &&
+                    (!adaptedResults.messages ||
+                      adaptedResults.messages.length === 0) && (
+                      <div className="no-results">
+                        {!searchQuery || searchQuery.length < 2 ? (
+                          <div className="info-message">
+                            <FaInfoCircle /> Entrez au moins 2 caractères pour
+                            lancer la recherche
+                          </div>
+                        ) : isSearching ? (
+                          <div className="info-message">
+                            Recherche en cours...
+                          </div>
+                        ) : searchResults?.error ? (
+                          <div className="error-message">
+                            <FaInfoCircle /> {searchResults.error}
+                          </div>
+                        ) : (
+                          <div className="info-message">
+                            <FaInfoCircle /> Aucun résultat trouvé pour "
+                            {searchQuery}"
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </div>
             </div>
           )}
         </div>

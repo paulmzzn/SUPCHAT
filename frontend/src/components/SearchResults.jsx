@@ -5,6 +5,8 @@ import {
   FaUser,
   FaComment,
   FaInfoCircle,
+  FaCalendar,
+  FaFile,
 } from "react-icons/fa";
 import "../pages/WorkspaceDetails/WorkspaceDetails.css";
 
@@ -85,6 +87,18 @@ const SearchResults = ({
     }
   };
 
+  // Fonction pour mettre en surbrillance les termes recherchés
+  const highlightSearchTerm = (text, term) => {
+    if (!text || !term) return text;
+
+    try {
+      const regex = new RegExp(`(${term})`, "gi");
+      return text.replace(regex, "<mark>$1</mark>");
+    } catch (e) {
+      return text;
+    }
+  };
+
   return (
     <div className="search-results">
       {workspace && (
@@ -118,6 +132,11 @@ const SearchResults = ({
                     <FaHashtag className="result-icon" />
                   )}
                   <span>{channel.nom}</span>
+                  {channel.description && (
+                    <div className="channel-description">
+                      {truncateText(channel.description, 40)}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -147,7 +166,16 @@ const SearchResults = ({
                     ) : (
                       <FaUser className="result-icon" />
                     )}
-                    <span>{user.nom}</span>
+                    <span className="user-name">{user.nom}</span>
+                    {user.email && (
+                      <span className="user-email">{user.email}</span>
+                    )}
+                    {user.status && (
+                      <div
+                        className={`status-indicator ${user.status.toLowerCase()}`}
+                        title={user.status}
+                      ></div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -170,19 +198,38 @@ const SearchResults = ({
                 >
                   <div className="message-result-content">
                     <div className="message-header">
-                      <strong>{message.nom_utilisateur}</strong>
+                      <div className="message-user-info">
+                        {message.photo_de_profil ? (
+                          <img
+                            src={message.photo_de_profil}
+                            alt={message.nom_utilisateur}
+                            className="message-user-avatar"
+                          />
+                        ) : (
+                          <FaUser className="message-user-icon" />
+                        )}
+                        <strong>{message.nom_utilisateur}</strong>
+                      </div>
                       <span className="message-date">
+                        <FaCalendar className="date-icon" />
                         {formatDate(
                           message.date_creation || message.created_at
                         )}
                       </span>
                     </div>
-                    <p className="message-preview">
-                      {truncateText(getMessageText(message.contenu), 50)}
-                    </p>
+                    <p
+                      className="message-preview"
+                      dangerouslySetInnerHTML={{
+                        __html: highlightSearchTerm(
+                          truncateText(getMessageText(message.contenu), 80),
+                          searchQuery
+                        ),
+                      }}
+                    ></p>
                   </div>
                   <div className="message-channel">
-                    <FaHashtag className="result-icon" /> {message.nom_canal}
+                    <FaHashtag className="result-icon" />
+                    <span className="channel-name">{message.nom_canal}</span>
                   </div>
                 </li>
               ))}
