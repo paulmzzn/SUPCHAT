@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaChevronDown, FaChevronRight, FaUserCircle, FaArrowUp, FaArrowDown, FaDownload, FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCircle, FaClock, FaTimesCircle, FaRegMoon, FaUserPlus } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
+import "./WorkspaceDetailsSidebar.css";
 
 // Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
 const DEBUG_LOGGING = false;
@@ -298,9 +299,24 @@ function WorkspaceDetailsSidebar({
   return (
     <div className="details-sidebar">
       {/* Add invite button in the top-right corner */}
-      {(currentUserRole === "owner" || currentUserRole === "admin") && (
-        <button 
+      {(currentUserRole === "owner" || currentUserRole === "admin") && (        <button 
           className="invite-button-sidebar"
+          style={{ 
+            position: 'absolute', 
+            top: 10, 
+            right: 10, 
+            background: 'var(--primary-color)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+            zIndex: 10
+          }}
           onClick={handleOpenInviteModal}
           title="Inviter un utilisateur"
         >
