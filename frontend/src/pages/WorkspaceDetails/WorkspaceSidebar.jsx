@@ -131,7 +131,7 @@ function WorkspaceSidebar({
             <>
               <div
                 className="workspace-avatar"
-                style={{ backgroundImage: `url(${workspace.icon})` }}
+                style={{ backgroundImage: `url(${workspace.icon || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"})` }}
               ></div>
               <h2 className="workspace-name">{workspace.name}</h2>
               {/*
