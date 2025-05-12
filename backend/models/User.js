@@ -1,6 +1,10 @@
 import pool from '../config/dbConnection.js';
 import bcrypt from 'bcryptjs';
 
+// ID d'un utilisateur système pour représenter les utilisateurs supprimés
+// Assurez-vous que cet ID existe dans votre base de données ou créez-le
+const DELETED_USER_ID = '00000000-0000-0000-0000-000000000003'; // UUID valide pour un utilisateur système
+
 class UserModel {
   // Créer un nouvel utilisateur
   static async createUser({ nom, email, mot_de_passe, photo_de_profil, is_activated, fk_statut }) {
@@ -88,6 +92,83 @@ class UserModel {
       return result.rows[0];
     } catch (error) {
       throw error;
+    }
+  }
+
+  // Supprimer un utilisateur avec gestion des relations
+  static async deleteUserWithCascade(id_utilisateur) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // 1. Anonymiser les messages du canal et assigner au compte utilisateur supprimé
+      await client.query(
+        `UPDATE message 
+         SET contenu = '[Message d''un utilisateur supprimé]',
+             fk_utilisateur = $2
+         WHERE fk_utilisateur = $1`,
+        [id_utilisateur, DELETED_USER_ID]
+      );
+      
+      // 2. Retirer l'utilisateur des workspaces (membre_workspace)
+      await client.query(
+        'DELETE FROM membre_workspace WHERE fk_utilisateur = $1',
+        [id_utilisateur]
+      );
+      
+      // 3. Anonymiser les fichiers téléchargés et retirer la référence à l'utilisateur
+      await client.query(
+        `UPDATE fichier 
+         SET nom_fichier = 'fichier_supprime.bin',
+             fk_utilisateur = NULL
+         WHERE fk_utilisateur = $1`,
+        [id_utilisateur]
+      );
+      
+      // 4. Gérer les éventuelles réactions de l'utilisateur
+      await client.query(
+        'DELETE FROM reaction WHERE fk_utilisateur = $1',
+        [id_utilisateur]
+      );
+      
+      // 5. Gérer les éventuelles réactions aux messages privés
+      await client.query(
+        'DELETE FROM private_message_reaction WHERE fk_utilisateur = $1',
+        [id_utilisateur]
+      );
+      
+      // 6. Gérer les messages privés
+      await client.query(
+        `UPDATE message_prive
+         SET contenu = '[Message d''un utilisateur supprimé]',
+             fk_expediteur = $2
+         WHERE fk_expediteur = $1`,
+        [id_utilisateur, DELETED_USER_ID]
+      );
+      
+      await client.query(
+        `UPDATE message_prive
+         SET contenu = '[Message d''un utilisateur supprimé]',
+             fk_destinataire = $2
+         WHERE fk_destinataire = $1`,
+        [id_utilisateur, DELETED_USER_ID]
+      );
+      
+      // 7. Supprimer l'utilisateur lui-même
+      const result = await client.query(
+        'DELETE FROM utilisateur WHERE id_utilisateur = $1 RETURNING *',
+        [id_utilisateur]
+      );
+      
+      await client.query('COMMIT');
+      return result.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error("Erreur lors de la suppression en cascade de l'utilisateur:", error);
+      throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -233,6 +314,36 @@ class UserModel {
       );
       return result.rows[0];
     } catch (error) {
+      throw error;
+    }
+  }
+
+  // S'assurer que le compte utilisateur "supprimé" existe dans la base de données
+  static async ensureDeletedUserExists() {
+    try {
+      // Vérifier si l'utilisateur supprimé existe déjà
+      const existingUser = await pool.query(
+        'SELECT * FROM utilisateur WHERE id_utilisateur = $1',
+        [DELETED_USER_ID]
+      );
+
+      if (existingUser.rows.length > 0) {
+        return existingUser.rows[0]; // L'utilisateur existe déjà
+      }
+
+      // Créer l'utilisateur supprimé s'il n'existe pas
+      const result = await pool.query(
+        `INSERT INTO utilisateur (id_utilisateur, nom, email, mot_de_passe, photo_de_profil, is_activated, fk_statut)
+         VALUES ($1, 'Utilisateur Supprimé', 'deleted@system.local', 'nopassword', 'default.png', false, 1)
+         ON CONFLICT (id_utilisateur) DO UPDATE
+         SET nom = 'Utilisateur Supprimé'
+         RETURNING *`,
+        [DELETED_USER_ID]
+      );
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error("Erreur lors de la vérification/création de l'utilisateur supprimé:", error);
       throw error;
     }
   }

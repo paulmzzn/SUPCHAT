@@ -139,17 +139,20 @@ app.use("/api", reactionRoutes);
 app.use("/api/private-messages", privateMessageRoutes);
 app.use("/api", attachmentRoutes); // Ajout des routes pour les pièces jointes
 app.use("/api", fichierRoutes); // Ajout des routes pour les fichiers
-app.use("/api/files", fileRoutes); // Ajout des routes pour les fichiers
+app.use("/api/files", fileRoutes); // Routes pour les fichiers (incluant notre route content/:path)
 app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
 
 // Servir les fichiers statiques pour les messages privés et autres
-// Configurer avant les routes API pour éviter les conflits d'authentification
+// Ces routes sont maintenant placées APRÈS la définition de fileRoutes pour éviter qu'elles n'interceptent notre route personnalisée
 app.use(
   "/api/files/private-messages/files",
   express.static(path.join(__dirname, "uploads/private-messages/files"))
 );
+
+// Cette route était problématique car elle interceptait toutes les requêtes /api/files/* y compris notre /api/files/content/*
+// Nous la plaçons en dernier comme fallback pour les autres chemins de fichiers
 app.use("/api/files", express.static(path.join(__dirname, "uploads")));
 
 // Middleware pour logguer les requêtes de fichiers (niveau debug seulement)

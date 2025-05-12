@@ -38,7 +38,8 @@
 .workspace-profile {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  padding: 10px;
+  position: relative;
 }
 
 .workspace-avatar {
@@ -47,18 +48,19 @@
   border-radius: 8px;
   background-size: cover;
   background-position: center;
-  margin-right: 12px;
-  border: var(--workspace-details-profile-avatar-border);
+  margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .workspace-name {
-  font-size: 1.2rem;
   font-weight: 600;
-  color: var(--workspace-details-name);
+  font-size: 1rem;
+  color: #fff;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-grow: 1;
 }
 
 /* Ajustements pour la barre de recherche de la sidebar */
@@ -2427,14 +2429,18 @@ body
   align-items: center;
   gap: 8px;
   margin-left: 10px;
-  min-width: 38px;
 }
 
-/* Styles pour la recherche unifiée */
-.search-workspace-header {
-  padding: 12px 15px;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.file-view-button,
+.file-download-button {
+  background: none;
+  border: none;
+  color: #b05fdf;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
 }
 
 .search-workspace-header h3 {
@@ -2517,28 +2523,16 @@ body
   }
 }
 
-.search-results {
-  width: 100%;
+/* Adaptation mobile */
+@media (max-width: 768px) {
+  .webview-modal {
+    width: 95%;
+    height: 80vh;
+  }
 }
 
-.search-results-content {
-  padding: 0;
-}
-
-.search-results-section {
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.search-results-section:last-child {
-  border-bottom: none;
-}
-
-.search-results-header {
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+/* Styles pour la webview externe - remplacement de l'iframe par un bouton */
+.webview-external-content {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2690,23 +2684,101 @@ body
   justify-content: center;
   gap: 8px;
   font-size: 0.9rem;
-  padding: 12px;
 }
 
-.info-message {
-  color: rgba(255, 255, 255, 0.7);
+.winner-percent {
+  margin-left: 6px;
+  opacity: 0.8;
 }
 
-.error-message {
-  color: #ff6b6b;
+.tie {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
 }
 
-/* Ajustements responsive pour les résultats de recherche */
-@media (max-width: 576px) {
-  .search-results-dropdown {
-    width: 95vw;
-    left: 0;
-    right: 0;
-    margin: 0 auto;
-  }
+.tie-text {
+  color: white;
+  font-size: 1.1rem;
+}
+
+.tie-votes {
+  color: #b05fdf;
+  font-size: 0.9rem;
+}
+
+.tie-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.tie-option {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  color: white;
+  text-align: center;
+}
+
+.no-votes {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  padding: 20px;
+}
+
+.invite-button-sidebar {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  border: none;
+  background-color: rgba(147, 72, 183, 0.1);
+  color: var(--primary-color);
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.invite-button-sidebar:hover {
+  background-color: rgba(147, 72, 183, 0.2);
+  transform: translateY(-2px);
+}
+
+.invite-button-sidebar svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Position the details-sidebar relative for the button */
+.details-sidebar {
+  position: relative;
+}
+
+/* Format the invitation status message */
+.invitation-status {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.invitation-status.success {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.invitation-status.error {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
 }

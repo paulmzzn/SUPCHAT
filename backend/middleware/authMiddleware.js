@@ -29,13 +29,21 @@ export const verifyToken = (req, res, next) => {
     
     // Vérifier que le format est correct (Bearer + token)
     if (bearer.length !== 2 || bearer[0] !== "Bearer") {
+      console.log("Format de token invalide:", bearerHeader);
       return res.status(401).json({ message: "Format de token invalide. Format attendu: 'Bearer TOKEN'" });
     }
     
     const token = bearer[1];
 
     if (!token || token.trim() === "") {
+      console.log("Token vide reçu");
       return res.status(401).json({ message: "Token vide ou invalide." });
+    }
+
+    // Vérification préliminaire du format JWT (doit avoir 2 points)
+    if (!token.includes('.') || token.split('.').length !== 3) {
+      console.log("Format JWT invalide (ne contient pas 3 segments):", token.substring(0, 20));
+      return res.status(401).json({ message: "Format JWT invalide. Le token doit contenir 3 segments." });
     }
 
     // Vérification du token avec la clé constante
@@ -64,12 +72,21 @@ export const optionalAuth = (req, res, next) => {
 
   try {
     const bearer = bearerHeader.split(" ");
+    
+    // Vérifier le format mais sans bloquer l'accès
+    if (bearer.length !== 2 || bearer[0] !== "Bearer") {
+      console.log("Format de token invalide dans optionalAuth:", bearerHeader);
+      req.user = null;
+      return next();
+    }
+    
     const token = bearer[1];
 
-    if (token) {
+    if (token && token.trim() !== "" && token.split('.').length === 3) {
       const decoded = jwt.verify(token, SECRET_KEY);
       req.user = decoded;
     } else {
+      console.log("Token vide ou malformé dans optionalAuth");
       req.user = null;
     }
   } catch (error) {
