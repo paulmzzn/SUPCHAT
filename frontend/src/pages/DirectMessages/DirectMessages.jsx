@@ -19,11 +19,11 @@ import {
   FaFileAudio,
   FaDownload,
 } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
-
 
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.127:3000";
 
@@ -112,6 +112,8 @@ const getCompleteFileUrl = (fileUrl) => {
 };
 
 function DirectMessages() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { refreshUnreadDM } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1400,6 +1402,16 @@ function DirectMessages() {
     }
   };
 
+  // Démarrage auto d'une conversation si userId passé en query
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userIdFromQuery = params.get("userId");
+    if (userIdFromQuery) {
+      setSelectedUser(userIdFromQuery);
+      fetchMessages(userIdFromQuery);
+    }
+  }, [location.search]);
+
   return (
     <div className="app-layout">
       <Sidebar unreadMessageCount={totalUnreadCount} />
@@ -1643,7 +1655,7 @@ function DirectMessages() {
                                   });
                                   element.classList.add("highlight-message");
                                   setTimeout(
-                                    () =>
+                                    () => 
                                       element.classList.remove(
                                         "highlight-message"
                                       ),
@@ -1981,15 +1993,12 @@ function DirectMessages() {
                       Chargement des utilisateurs...
                     </div>
                   ) : filteredUsers.length === 0 ? (
-                    <div className="dm-no-users">Aucun utilisateur trouvé</div>
-                  ) : (
+                    <div className="dm-no-users">Aucun utilisateur trouvé</div>                  ) : (
                     filteredUsers.map((user) => (
                       <div
                         key={user.id_utilisateur}
                         className="dm-user-item"
-                        onClick={() =>
-                          startConversationWith(user.id_utilisateur)
-                        }
+                        onClick={() => startConversationWith(user.id_utilisateur)}
                       >
                         {user.photo_de_profil ? (
                           <img
@@ -2003,14 +2012,9 @@ function DirectMessages() {
                           </div>
                         )}
                         <span className="dm-username">
-                          {user.nom ||
-                            `Utilisateur ${user.id_utilisateur.substring(
-                              0,
-                              6
-                            )}`}
+                          {user.nom || `Utilisateur ${user.id_utilisateur.substring(0, 6)}`}
                         </span>
-                      </div>
-                    ))
+                      </div>                    ))
                   )}
                 </div>
               </div>
