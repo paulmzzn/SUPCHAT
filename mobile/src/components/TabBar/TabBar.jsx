@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   activeTabIndicator: {
     position: 'absolute',
-    height: 3,
+    height: 0,
     backgroundColor: '#9348B7',
     bottom: 0,
     borderRadius: 3,
