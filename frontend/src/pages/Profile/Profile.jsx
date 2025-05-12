@@ -257,7 +257,10 @@ function Profile() {
 
                 {currentUserId !== userId && (
                   <div className="profile-actions">
-                    <button className="action-button message">
+                    <button
+                      className="action-button message"
+                      onClick={() => navigate(`/direct-messages?userId=${userId}`)}
+                    >
                       <FaComment /> Message
                     </button>
                     <button className="action-button add-friend">
