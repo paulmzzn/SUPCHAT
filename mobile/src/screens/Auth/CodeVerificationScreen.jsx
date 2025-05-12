@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -17,18 +16,24 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from '../../config/env';
+import { useAuth } from '../../../App';
+import { useTheme } from '../../theme/ThemeContext';
+import { getStyles } from './CodeVerificationScreen.styles';
 
 const { width } = Dimensions.get('window');
 
 const CodeVerificationScreen = ({ navigation }) => {
+  const { colors: themeColors, themeMode } = useTheme();
+  const styles = getStyles(themeColors);
+
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   
+  const { signIn } = useAuth();
   const inputRefs = Array(6).fill(0).map(() => useRef(null));
 
-  // Get email from AsyncStorage on component mount
   useEffect(() => {
     const getEmail = async () => {
       try {
@@ -36,7 +41,6 @@ const CodeVerificationScreen = ({ navigation }) => {
         if (storedEmail) {
           setEmail(storedEmail);
         } else {
-          // Redirect to login if no email found
           Alert.alert(
             'Erreur',
             'Aucune adresse email trouvée. Veuillez vous reconnecter.',
@@ -79,14 +83,7 @@ const CodeVerificationScreen = ({ navigation }) => {
 
       if (response.ok) {
         if (data.token) {
-          // Clear any previous token
-          await AsyncStorage.removeItem('token');
-          
-          // Store the new token
-          await AsyncStorage.setItem('token', data.token);
-          
-          // Navigate to main screen
-          navigation.replace('Main');
+          await signIn(data.token);
         } else {
           setError('Token manquant dans la réponse du serveur');
         }
@@ -135,19 +132,16 @@ const CodeVerificationScreen = ({ navigation }) => {
   };
 
   const handleCodeChange = (index, value) => {
-    // Handle paste
     if (value.length > 1) {
       const pastedValue = value.replace(/\D/g, '').slice(0, 6);
       const codeArray = pastedValue.split('').slice(0, 6);
       
-      // Fill with empty strings if needed
       while (codeArray.length < 6) {
         codeArray.push('');
       }
       
       setCode(codeArray);
       
-      // Focus the last input if code is complete
       if (pastedValue.length === 6) {
         inputRefs[5].current?.focus();
       }
@@ -155,19 +149,16 @@ const CodeVerificationScreen = ({ navigation }) => {
       return;
     }
 
-    // Handle single digit
     const newCode = [...code];
     newCode[index] = value.replace(/\D/g, '');
     setCode(newCode);
 
-    // Auto-move to next input
     if (value && index < 5) {
       inputRefs[index + 1].current?.focus();
     }
   };
 
   const handleKeyDown = (e, index) => {
-    // Handle backspace to move to previous input
     if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
       inputRefs[index - 1].current?.focus();
     }
@@ -175,7 +166,7 @@ const CodeVerificationScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="light" />
+      <StatusBar style={themeMode === 'dark' ? "light" : "dark"} />
       
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -229,7 +220,7 @@ const CodeVerificationScreen = ({ navigation }) => {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={themeColors.textPrimary} size="small" />
               ) : (
                 <Text style={styles.buttonText}>Vérifier</Text>
               )}
@@ -254,143 +245,5 @@ const CodeVerificationScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#1E1E28',
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  dot: {
-    color: '#9348B7',
-  },
-  card: {
-    backgroundColor: 'rgba(19, 19, 22, 0.6)',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-  },
-  title: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  subtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  codeInputContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-  },
-  codeInput: {
-    width: width < 380 ? (width - 80) / 6 - 5 : 45,
-    height: width < 380 ? 50 : 56,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    fontSize: 22,
-    color: 'white',
-    textAlign: 'center',
-  },
-  codeInputFilled: {
-    borderColor: '#9348B7',
-    backgroundColor: 'rgba(147, 72, 183, 0.08)',
-  },
-  verifyButton: {
-    backgroundColor: '#9348B7',
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#9348B7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: 'rgba(147, 72, 183, 0.5)',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  resendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-    flexWrap: 'wrap',
-  },
-  resendText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 15,
-    marginRight: 5,
-  },
-  resendButton: {
-    color: '#9348B7',
-    fontSize: 15,
-    fontWeight: '600',
-    padding: 4,
-  },
-  errorContainer: {
-    backgroundColor: 'rgba(255, 87, 87, 0.15)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    borderLeftWidth: 3,
-    borderLeftColor: '#FF5757',
-  },
-  errorText: {
-    color: '#FF9494',
-    fontSize: 14,
-  },
-  glowCircleTop: {
-    position: 'absolute',
-    width: 420,
-    height: 400,
-    borderRadius: 225,
-    backgroundColor: '#9348B7',
-    top: -100,
-    right: -50,
-    opacity: 0.05,
-    zIndex: -1,
-  },
-  glowCircleBottom: {
-    position: 'absolute',
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    backgroundColor: '#9348B7',
-    bottom: -200,
-    left: -100,
-    opacity: 0.05,
-    zIndex: -1,
-  },
-});
 
 export default CodeVerificationScreen;
