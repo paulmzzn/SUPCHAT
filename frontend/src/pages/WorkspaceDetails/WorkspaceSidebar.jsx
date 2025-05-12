@@ -15,6 +15,7 @@ import {
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
 import SearchResults from "../../components/SearchResults";
+import MessagePreview from "../../components/MessagePreview/MessagePreview";
 
 function WorkspaceSidebar({
   workspace,
@@ -42,6 +43,11 @@ function WorkspaceSidebar({
   const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
   const [isInviting, setIsInviting] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // État pour la prévisualisation des messages
+  const [previewMessage, setPreviewMessage] = useState(null);
+  const [previewPosition, setPreviewPosition] = useState({ top: 0, left: 0 });
+  const [showPreview, setShowPreview] = useState(false);
 
   const searchResultsRef = useRef(null);
 
@@ -148,6 +154,50 @@ function WorkspaceSidebar({
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Gestion de la prévisualisation des messages
+  const handleMessagePreview = (event, message) => {
+    // Empêcher la navigation immédiate
+    event.stopPropagation();
+
+    // Calculer la position de la prévisualisation
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position = {
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX,
+    };
+
+    // Si l'élément est proche du bord droit, ajuster la position
+    const windowWidth = window.innerWidth;
+    if (rect.right > windowWidth - 300) {
+      position.left = windowWidth - 550;
+    }
+
+    // Mettre à jour les états
+    setPreviewMessage(message);
+    setPreviewPosition(position);
+    setShowPreview(true);
+  };
+
+  // Fermer la prévisualisation
+  const handleClosePreview = () => {
+    setShowPreview(false);
+    setPreviewMessage(null);
+  };
+
+  // Navigation vers le message (après prévisualisation)
+  const handleNavigateToMessage = (message) => {
+    handleClosePreview();
+    handleAdaptedSelectResult("message", message);
+  };
+
+  // Répondre à un message
+  const handleReplyToMessage = (message) => {
+    handleClosePreview();
+    // Ici vous pouvez ajouter le code pour répondre au message
+    // Par exemple, vous pourriez naviguer vers le canal et pré-remplir la zone de texte
+    handleSelectSearchResult("message", message, true); // Ajouter un paramètre pour indiquer une réponse
   };
 
   // Fonction pour adapter la sélection de résultat
@@ -397,7 +447,7 @@ function WorkspaceSidebar({
                       </div>
                     )}
 
-                  {/* Section messages */}
+                  {/* Section messages avec prévisualisation au clic */}
                   {adaptedResults.messages &&
                     adaptedResults.messages.length > 0 && (
                       <div className="search-results-section">
@@ -412,9 +462,7 @@ function WorkspaceSidebar({
                                 message.id || message.id_message
                               }`}
                               className="search-result-item message-result"
-                              onClick={() =>
-                                handleAdaptedSelectResult("message", message)
-                              }
+                              onClick={(e) => handleMessagePreview(e, message)}
                             >
                               <div className="message-result-content">
                                 <div className="message-header">
@@ -587,6 +635,18 @@ function WorkspaceSidebar({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Prévisualisation du message */}
+      {showPreview && previewMessage && (
+        <MessagePreview
+          message={previewMessage}
+          onClose={handleClosePreview}
+          onNavigate={handleNavigateToMessage}
+          onReply={handleReplyToMessage}
+          position={previewPosition}
+          visible={showPreview}
+        />
       )}
     </div>
   );
