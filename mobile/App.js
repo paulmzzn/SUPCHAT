@@ -1,11 +1,11 @@
-import React, { useState, useEffect, createContext, useContext, useMemo } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, View, Text } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider } from './src/theme/ThemeContext'; // Adjust path as necessary
+import { AuthProvider, useAuth } from './src/context/AuthContext'; // Import from new file
 
 // Auth screens
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -16,24 +16,18 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
-import DiscoverScreen from './src/screens/Discover/DiscoverScreen'; // Import actual DiscoverScreen
-import SettingsScreen from './src/screens/Settings/SettingsScreen'; // Import actual SettingsScreen
+import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
+import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 // Custom TabBar
 import TabBar from './src/components/TabBar/TabBar'; 
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const AuthContext = createContext();
-
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
 
 // Tab Navigator for the authenticated part of the app
 function AppTabs() {
   return (
-    // Use your custom TabBar component
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
       <Tab.Screen name="Workspaces" component={WorkspacesScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
@@ -43,47 +37,9 @@ function AppTabs() {
   );
 }
 
-export default function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userToken, setUserToken] = useState(null);
-
-  useEffect(() => {
-    const bootstrapAsync = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        setUserToken(token);
-      } catch (e) {
-        console.error('Failed to get token during bootstrap', e);
-      }
-      setIsLoading(false);
-    };
-
-    bootstrapAsync();
-  }, []);
-
-  const authContextValue = useMemo(
-    () => ({
-      signIn: async (token) => {
-        try {
-          await AsyncStorage.setItem('token', token);
-          setUserToken(token);
-        } catch (e) {
-          console.error('Failed to save token during signIn', e);
-        }
-      },
-      signOut: async () => {
-        try {
-          await AsyncStorage.removeItem('token');
-          await AsyncStorage.removeItem('email');
-          setUserToken(null);
-        } catch (e) {
-          console.error('Failed to remove token during signOut', e);
-        }
-      },
-      userToken,
-    }),
-    [userToken]
-  );
+// Main navigation component
+function AppNavigator() {
+  const { userToken, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -94,27 +50,34 @@ export default function App() {
   }
 
   return (
-    <AuthContext.Provider value={authContextValue}>
+    <NavigationContainer>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {userToken == null ? (
+          // Auth flow screens
+          <>
+            <RootStack.Screen name="Login" component={LoginScreen} />
+            <RootStack.Screen name="Register" component={RegisterScreen} />
+            <RootStack.Screen name="PasswordReset" component={PasswordResetScreen} />
+            <RootStack.Screen name="CodeVerification" component={CodeVerificationScreen} />
+          </>
+        ) : (
+          // App flow - now navigates to the Tab Navigator
+          <RootStack.Screen name="AppTabs" component={AppTabs} />
+        )}
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+// Root App component
+export default function App() {
+  return (
+    <AuthProvider>
       <ThemeProvider>
         <SafeAreaProvider>
-          <NavigationContainer>
-            <RootStack.Navigator screenOptions={{ headerShown: false }}>
-              {userToken == null ? (
-                // Auth flow screens
-                <>
-                  <RootStack.Screen name="Login" component={LoginScreen} />
-                  <RootStack.Screen name="Register" component={RegisterScreen} />
-                  <RootStack.Screen name="PasswordReset" component={PasswordResetScreen} />
-                  <RootStack.Screen name="CodeVerification" component={CodeVerificationScreen} />
-                </>
-              ) : (
-                // App flow - now navigates to the Tab Navigator
-                <RootStack.Screen name="AppTabs" component={AppTabs} />
-              )}
-            </RootStack.Navigator>
-          </NavigationContainer>
+          <AppNavigator />
         </SafeAreaProvider>
       </ThemeProvider>
-    </AuthContext.Provider>
+    </AuthProvider>
   );
 }

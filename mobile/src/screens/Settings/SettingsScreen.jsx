@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../../App'; 
+import { useAuth } from '../../context/AuthContext'; // Updated import path
 import env from '../../config/env'; 
 import { getStyles } from './SettingsScreen.styles'; // Import getStyles
 import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
