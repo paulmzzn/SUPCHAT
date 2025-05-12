@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import googleIcon from "../../assets/icons/google-icon.svg";
 import "./Login.css";
@@ -17,7 +17,19 @@ function Login() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetMessage, setResetMessage] = useState("");
+  const [pendingInvitation, setPendingInvitation] = useState(null);
   const navigate = useNavigate();
+    useEffect(() => {
+    // Check for pending invitation
+    const pendingInviteData = sessionStorage.getItem("pendingInvitation");
+    if (pendingInviteData) {
+      try {
+        setPendingInvitation(JSON.parse(pendingInviteData));
+      } catch (e) {
+        console.error("Error parsing pending invitation data:", e);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,10 +54,19 @@ function Login() {
         
         console.log('Email et token sauvegardés dans localStorage');
         console.log('Token présent:', localStorage.getItem('token') ? "oui" : "non");
-        console.log('Connexion réussie, redirection vers /code');
-        
-        // Redirigez l'utilisateur vers la page Code
-        navigate('/code');
+          // Handle pending workspace invitation if present
+        if (pendingInvitation && pendingInvitation.workspaceId) {
+          // Clean up sessionStorage
+          sessionStorage.removeItem("pendingInvitation");
+          
+          console.log('Invitation en attente détectée, redirection vers /code');
+          // Go through 2FA but keep the invitation information
+          navigate('/code', { state: { pendingInvitation } });
+        } else {
+          console.log('Connexion réussie, redirection vers /code');
+          // Regular flow - go to 2FA
+          navigate('/code');
+        }
       } else {
         setError(data.message || 'Erreur de connexion');
       }
