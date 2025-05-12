@@ -6,10 +6,12 @@ import { useAuth } from '../../../App';
 import env from '../../config/env'; 
 import { getStyles } from './SettingsScreen.styles'; // Import getStyles
 import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 const SettingsScreen = () => {
   const { themeMode, toggleTheme, colors: themeColors } = useTheme(); // Use theme context
   const styles = getStyles(themeColors); // Get styles based on current theme
+  const navigation = useNavigation(); // Get navigation object
 
   const [notifications, setNotifications] = React.useState(true);
   const [soundEffects, setSoundEffects] = React.useState(true);
@@ -113,7 +115,12 @@ const SettingsScreen = () => {
           </View>
           <Text style={styles.profileName}>{userName}</Text>
           <Text style={styles.profileEmail}>{userEmail}</Text>
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity 
+            style={styles.editProfileButton}
+            onPress={() => navigation.navigate('Settings', { 
+              screen: 'EditProfile' 
+            })}
+          >
             <Text style={styles.editProfileButtonText}>Modifier le profil</Text>
           </TouchableOpacity>
         </View>
