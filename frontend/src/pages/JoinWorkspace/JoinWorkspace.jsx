@@ -160,12 +160,17 @@ function JoinWorkspace() {
     <div className="join-workspace-page">
       <div className="join-workspace-container">
         <div className="workspace-image">
-          {workspace?.icon_url && (
+          {workspace?.icon_url ? (
             <img 
               src={workspace.icon_url.startsWith('http') 
                 ? workspace.icon_url 
                 : `https://s3-supchat.s3.fr-par.scw.cloud/${workspace.icon_url}`} 
               alt={workspace?.nom} 
+            />
+          ) : (
+            <img 
+              src="https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"
+              alt="Workspace par défaut"
             />
           )}
         </div>
