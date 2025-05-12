@@ -80,7 +80,7 @@ router.get(
 router.get(
   "/auth/google/callback",
 
-  passport.authenticate('google', { failureRedirect: 'http://REDACTED:3001/login' }), 
+  passport.authenticate('google', { failureRedirect: 'http://192.168.1.127:3001/login' }), 
 
 
 
@@ -95,7 +95,7 @@ router.get(
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
 
-      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.127:3001/auth/callback?token=${token}&email=${user.email}`
 
 
     );
@@ -110,7 +110,7 @@ router.get(
 router.get(
   "/auth/github/callback",
 
-  passport.authenticate('github', { failureRedirect: 'http://REDACTED:3001/login' }),
+  passport.authenticate('github', { failureRedirect: 'http://192.168.1.127:3001/login' }),
 
 
   async (req, res) => {
@@ -124,7 +124,7 @@ router.get(
 
 
 
-      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.127:3001/auth/callback?token=${token}&email=${user.email}`
 
 
     );

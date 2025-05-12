@@ -737,6 +737,7 @@ function WorkspaceDetails() {
           files={files}
           images={images}
           currentUserRole={currentUserRole}
+          currentUserId={currentUserId}
           handleOpenProfile={handleOpenProfile}
           handleMemberContextMenu={handleMemberContextMenu}
           memberContextMenu={memberContextMenu}
@@ -751,6 +752,7 @@ function WorkspaceDetails() {
           handleDownloadFile={handleDownloadFile}
           S3_BASE_URL={S3_BASE_URL}
           handleOpenFileViewer={handleOpenFileViewer}
+          workspace={workspace}
         />
 
         {/* Modal de création de canal - Structure améliorée */}
