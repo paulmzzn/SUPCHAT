@@ -17,8 +17,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem; /* Réduit de 2rem à 1.5rem */
-  flex-wrap: wrap;  /* Add flex-wrap to handle narrow screens */
-  gap: 1rem;  /* Add gap between elements when they wrap */
+  flex-wrap: wrap; /* Add flex-wrap to handle narrow screens */
+  gap: 1rem; /* Add gap between elements when they wrap */
 }
 
 .workspaces-title {
@@ -26,19 +26,19 @@
   font-weight: 700;
   color: var(--workspaces-title-color);
   margin: 0;
-  flex: 1;  /* Allow title to take available space but keep search fixed width */
-  min-width: 200px;  /* Ensure title doesn't get too small */
+  flex: 1; /* Allow title to take available space but keep search fixed width */
+  min-width: 200px; /* Ensure title doesn't get too small */
 }
 
 .search-bar {
   position: relative;
   width: 300px;
-  max-width: 100%;  /* Ensure search bar doesn't exceed container width */
+  max-width: 100%; /* Ensure search bar doesn't exceed container width */
 }
 
 .search-bar input {
   width: 100%;
-  box-sizing: border-box;  /* Include padding in width calculation */
+  box-sizing: border-box; /* Include padding in width calculation */
   padding: 10px 15px 10px 40px;
   background-color: rgba(255, 255, 255, 0.1);
   border: none;
@@ -203,7 +203,8 @@
 }
 
 /* Ambient glow effects */
-.glow-circle-right, .glow-circle-left {
+.glow-circle-right,
+.glow-circle-left {
   position: fixed;
   border-radius: 50%;
   filter: blur(120px);
@@ -235,14 +236,14 @@
     padding: 1.5rem;
     padding-bottom: 90px;
   }
-  
+
   .workspaces-header {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .search-bar {
-    width: 100%;  /* Full width on mobile */
+    width: 100%; /* Full width on mobile */
   }
 }
 
@@ -251,9 +252,9 @@
   .workspaces-container {
     padding: 1.5rem;
   }
-  
+
   .search-bar {
-    width: 250px;  /* Slightly narrower on medium screens */
+    width: 250px; /* Slightly narrower on medium screens */
   }
 }
 
@@ -609,7 +610,7 @@
   right: 0;
   bottom: 0;
   background-color: var(--workspaces-slider-bg);
-  transition: .4s;
+  transition: 0.4s;
 }
 
 .slider:before {
@@ -620,7 +621,7 @@
   left: 4px;
   bottom: 4px;
   background-color: var(--workspaces-slider-knob-bg);
-  transition: .4s;
+  transition: 0.4s;
 }
 
 input:checked + .slider {
@@ -737,11 +738,236 @@ input:checked + .slider:before {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes spin-reverse {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(-360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Styles pour les résultats de recherche améliorés */
+.search-results-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 350px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: var(--workspace-details-sidebar-bg, rgba(30, 30, 35, 0.95));
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+/* Animation pour l'apparition des résultats */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-workspace-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-workspace-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.search-query-info {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-query-info span {
+  color: #9348b7;
+  font-weight: 500;
+}
+
+/* Section des résultats */
+.search-results-section {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.search-results-section:last-child {
+  border-bottom: none;
+}
+
+.search-results-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  gap: 6px;
+}
+
+.search-results-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Style des éléments de résultat */
+.search-result-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  border-radius: 0;
+}
+
+.search-result-item:hover {
+  background: rgba(147, 72, 183, 0.1);
+}
+
+.search-result-item .result-icon {
+  margin-right: 10px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Style spécifique pour les utilisateurs */
+.user-result-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.user-profile-pic {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+.user-email {
+  margin-left: 6px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Style spécifique pour les messages */
+.message-result {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 16px;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.message-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-user-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.message-user-icon {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.message-date {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-icon {
+  font-size: 0.7rem;
+}
+
+.message-preview {
+  margin: 3px 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-word;
+}
+
+.message-preview mark {
+  background-color: rgba(147, 72, 183, 0.35);
+  padding: 0 2px;
+  border-radius: 2px;
+  color: white;
+}
+
+.message-channel {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.channel-name {
+  color: #9348b7;
+}
+
+/* Style pour la description des canaux */
+.channel-description {
+  margin-left: 28px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+/* Messages informatifs et d'erreur */
+.info-message,
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.info-message {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.error-message {
+  color: #ff6b6b;
 }
