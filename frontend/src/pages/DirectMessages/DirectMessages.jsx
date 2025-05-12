@@ -19,6 +19,7 @@ import {
   FaFileAudio,
   FaDownload,
 } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
@@ -111,6 +112,8 @@ const getCompleteFileUrl = (fileUrl) => {
 };
 
 function DirectMessages() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { refreshUnreadDM } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1398,6 +1401,16 @@ function DirectMessages() {
       alert("Vous devez être connecté pour télécharger des fichiers.");
     }
   };
+
+  // Démarrage auto d'une conversation si userId passé en query
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userIdFromQuery = params.get("userId");
+    if (userIdFromQuery) {
+      setSelectedUser(userIdFromQuery);
+      fetchMessages(userIdFromQuery);
+    }
+  }, [location.search]);
 
   return (
     <div className="app-layout">

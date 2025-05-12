@@ -5,6 +5,11 @@ import sendInvitationEmail from '../config/emailService.js';
 import sendValidationEmail from '../config/validationEmailService.js'; // Import the validation email service
 import sendResetPasswordEmail from '../config/resetPasswordEmailService.js';
 import dotenv from 'dotenv';
+import pool from '../config/dbConnection.js';
+import Fichier from '../models/Fichier.js';
+import Message from '../models/Message.js';
+import MessagePrive from '../models/MessagePrive.js';
+import WorkspaceFavoris from '../models/WorkspaceFavoris.js';
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -353,6 +358,35 @@ const resendValidationCode = async (req, res) => {
   }
 };
 
+// Changement de mot de passe pour un utilisateur connecté
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: 'Ancien et nouveau mot de passe requis.' });
+    }
+    // Récupérer l'utilisateur
+    const user = await UserModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    // Vérifier l'ancien mot de passe
+    const isMatch = await bcrypt.compare(oldPassword, user.mot_de_passe);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Ancien mot de passe incorrect.' });
+    }
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Mettre à jour le mot de passe
+    await UserModel.updateUser({ mot_de_passe: hashedPassword }, userId);
+    res.status(200).json({ message: 'Mot de passe changé avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
+    res.status(500).json({ message: 'Erreur lors du changement de mot de passe.' });
+  }
+};
+
 // Fonction de conversion des statuts numériques vers les chaînes attendues par le frontend
 const convertStatus = (statusId) => {
   const statusMap = {
@@ -543,6 +577,118 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+// Export RGPD - données personnelles de l'utilisateur
+export const exportRgpdData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // 1. Profil utilisateur (filtrer les champs RGPD)
+    const userResult = await pool.query('SELECT * FROM utilisateur WHERE id_utilisateur = $1', [userId]);
+    const user = userResult.rows[0];
+    const utilisateur = user ? {
+      id_utilisateur: user.id_utilisateur,
+      nom: user.nom,
+      email: user.email,
+      photo_de_profil: user.photo_de_profil,
+      date_creation: user.date_creation,
+      google_id: user.google_id,
+      is_activated: user.is_activated,
+      date_naissance: user.date_naissance,
+      bio: user.bio,
+      status_text: user.status_text
+    } : null;
+
+    // 2. Fichiers uploadés (filtrer les champs RGPD)
+    const fichiersRaw = await Fichier.getByUserId(userId);
+    const fichiers = fichiersRaw.map(f => ({
+      id_fichier: f.id_fichier,
+      nom_fichier: f.nom_fichier,
+      url: f.url,
+      type: f.type,
+      date_upload: f.date_upload,
+      taille_fichier: f.taille_fichier,
+      extension: f.extension,
+      mime_type: f.mime_type
+    }));
+
+    // 3. Messages envoyés (canaux)
+    const messagesResult = await pool.query('SELECT id_message, contenu, date_envoi, fk_canal, parent_id FROM message WHERE fk_utilisateur = $1', [userId]);
+    const messages = messagesResult.rows;
+
+    // 4. Messages privés envoyés ou reçus
+    const messagesPrivesResult = await pool.query('SELECT id_message_prive, contenu, date_envoi, fk_expediteur, fk_destinataire, is_deleted, parent_id FROM message_prive WHERE fk_expediteur = $1 OR fk_destinataire = $1', [userId]);
+    const messages_prives = messagesPrivesResult.rows;
+
+    // 5. Appartenance à des workspaces/canaux
+    const membresResult = await pool.query('SELECT fk_workspace, fk_role, ordre FROM membre_workspace WHERE fk_utilisateur = $1', [userId]);
+    const membres = membresResult.rows;
+
+    // 6. Favoris workspaces
+    const favorisRaw = await WorkspaceFavoris.getForUser(userId);
+    const favoris = favorisRaw.map(f => ({
+      fk_workspace: f.id_workspace,
+      nom: f.nom,
+      date_ajout: f.date_ajout_favoris
+    }));
+
+    // 7. Lectures de canaux
+    const lecturesResult = await pool.query('SELECT fk_canal, derniere_lecture FROM canal_lecture WHERE fk_utilisateur = $1', [userId]);
+    const lectures = lecturesResult.rows;
+
+    // 8. Lectures de messages (message_read)
+    const messageReadResult = await pool.query('SELECT fk_canal, last_read_at FROM message_read WHERE fk_user = $1', [userId]);
+    const messages_read = messageReadResult.rows;
+
+    // 9. Notifications
+    const notificationsResult = await pool.query('SELECT type, contenu, lien, is_read, date_creation FROM notification WHERE fk_utilisateur = $1', [userId]);
+    const notifications = notificationsResult.rows;
+
+    // 10. Réactions (messages publics)
+    const reactionsResult = await pool.query('SELECT fk_message, reaction_type, created_at FROM reaction WHERE fk_utilisateur = $1', [userId]);
+    const reactions = reactionsResult.rows;
+
+    // 11. Réactions (messages privés)
+    const reactionsPriveResult = await pool.query('SELECT fk_message_prive, reaction_type, created_at FROM private_message_reaction WHERE fk_utilisateur = $1', [userId]);
+    const reactions_prive = reactionsPriveResult.rows;
+
+    // 12. Invitations workspaces
+    const invitationsResult = await pool.query('SELECT email_invite, token_invitation, date_expiration, date_creation FROM workspace_invitations WHERE email_invite = $1', [user.email]);
+    const invitations = invitationsResult.rows;
+
+    // 13. Demandes d’accès workspaces
+    const demandesResult = await pool.query('SELECT fk_workspace, is_accepted, is_invitation, date_creation, date_reponse FROM workspace_requests WHERE fk_utilisateur = $1', [userId]);
+    const demandes = demandesResult.rows;
+
+    // 14. Push subscriptions
+    const pushResult = await pool.query('SELECT endpoint, auth, p256dh, created_at, updated_at FROM push_subscriptions WHERE user_id = $1', [userId]);
+    const push_subscriptions = pushResult.rows;
+
+    // Format final
+    const exportData = {
+      utilisateur,
+      fichiers,
+      messages,
+      messages_prives,
+      membres,
+      favoris,
+      lectures,
+      messages_read,
+      notifications,
+      reactions,
+      reactions_prive,
+      invitations,
+      demandes,
+      push_subscriptions
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="mes_donnees_rgpd.json"');
+    res.status(200).send(JSON.stringify(exportData, null, 2));
+  } catch (error) {
+    console.error('Erreur export RGPD:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'export RGPD', error: error.message });
+  }
+};
+
 export { 
   registerUser, 
   getAllUsers, 
@@ -557,5 +703,6 @@ export {
   resendValidationCode,  // Ajout du nouveau contrôleur
   getUserProfile,
   getUserById,
-  updateUserProfile
+  updateUserProfile,
+  changePassword,
 };
