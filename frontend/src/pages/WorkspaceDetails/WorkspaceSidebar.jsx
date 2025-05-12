@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   FaSearch,
   FaPlus,
   FaHashtag,
+  FaLock,
   FaChevronDown,
   FaChevronRight,
+  FaUserPlus,
   FaUser,
   FaComment,
-  FaCalendar,
   FaInfoCircle,
-  FaLock,
+  FaCalendar,
 } from "react-icons/fa";
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
@@ -29,63 +30,55 @@ function WorkspaceSidebar({
   handleChannelContextMenu,
   currentUserRole,
   handleCreateChannel,
-  // Nouveaux props pour la recherche unifiée
+  // Nouvelles props pour la recherche
+  members,
+  messages,
   searchResults,
   handleSelectSearchResult,
   isSearching,
 }) {
-  // État pour gérer l'affichage des résultats de recherche
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
+  const [isInviting, setIsInviting] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  // Référence pour le dropdown des résultats
+
   const searchResultsRef = useRef(null);
 
-  // Effet pour montrer/cacher les résultats de recherche
-  useEffect(() => {
-    if (searchQuery) {
-      setShowSearchResults(true);
-    } else {
-      setShowSearchResults(false);
-    }
-  }, [searchQuery]);
+  // Fonction pour adapter les résultats et harmoniser les noms de propriétés
+  const adaptedResults = React.useMemo(() => {
+    if (!searchResults) return { canaux: [], utilisateurs: [], messages: [] };
 
-  // Effet pour fermer les résultats au clic ailleurs
+    return {
+      canaux: searchResults.channels || [],
+      utilisateurs: searchResults.users || [],
+      messages: searchResults.messages || [],
+    };
+  }, [searchResults]);
+
+  // Fermer le dropdown quand on clique en dehors
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    function handleClickOutside(event) {
       if (
         searchResultsRef.current &&
-        !searchResultsRef.current.contains(event.target) &&
-        !event.target.classList.contains("search-input")
+        !searchResultsRef.current.contains(event.target)
       ) {
         setShowSearchResults(false);
       }
-    };
+    }
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Debug: vérifier les résultats de recherche reçus
+  // Ouvrir les résultats si on a une recherche
   useEffect(() => {
-    if (searchResults) {
-      console.log("Résultats de recherche reçus:", searchResults);
+    if (searchQuery && searchQuery.length >= 2) {
+      setShowSearchResults(true);
     }
-  }, [searchResults]);
+  }, [searchQuery, searchResults]);
 
-  // Fonctions utilitaires pour l'affichage des résultats
-  const formatDate = (dateString) => {
-    if (!dateString) return "Date inconnue";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
+  // Fonction pour tronquer le texte
   const truncateText = (text, maxLength = 30) => {
     if (!text) return "";
     if (typeof text === "object") {
@@ -100,8 +93,10 @@ function WorkspaceSidebar({
       : text;
   };
 
+  // Fonction pour extraire le texte du contenu d'un message
   const getMessageText = (content) => {
     if (!content) return "";
+
     if (
       typeof content === "string" &&
       !content.startsWith("{") &&
@@ -113,6 +108,7 @@ function WorkspaceSidebar({
     try {
       const parsed =
         typeof content === "string" ? JSON.parse(content) : content;
+
       if (parsed.type === "text") {
         return parsed.text || "";
       } else if (parsed.type === "file") {
@@ -130,6 +126,7 @@ function WorkspaceSidebar({
     }
   };
 
+  // Fonction pour mettre en surbrillance les termes recherchés
   const highlightSearchTerm = (text, term) => {
     if (!text || !term) return text;
     try {
@@ -140,23 +137,126 @@ function WorkspaceSidebar({
     }
   };
 
-  // Adapter le format des résultats de l'API au format attendu par l'affichage
-  const adaptedResults = searchResults
-    ? {
-        canaux: searchResults.canaux || [],
-        utilisateurs: searchResults.utilisateurs || [],
-        messages: searchResults.messages || [],
-      }
-    : { canaux: [], utilisateurs: [], messages: [] };
+  // Fonction pour formater la date
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date inconnue";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-  // Gère la sélection d'un résultat de recherche
+  // Fonction pour adapter la sélection de résultat
   const handleAdaptedSelectResult = (type, item) => {
-    // Fermer les résultats de recherche
+    // Fermer le dropdown
     setShowSearchResults(false);
+    // Appeler la fonction parent
+    handleSelectSearchResult(type, item);
+  };
 
-    // Appeler le handler parent
-    if (handleSelectSearchResult) {
-      handleSelectSearchResult(type, item);
+  const handleOpenInviteModal = () => {
+    setShowInviteModal(true);
+    setInviteEmail("");
+    setInviteStatus({ status: "", message: "" });
+  };
+
+  const handleCloseInviteModal = () => {
+    setShowInviteModal(false);
+  };
+
+  const handleInviteEmailChange = (e) => {
+    setInviteEmail(e.target.value);
+  };
+
+  const handleSendInvitation = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) {
+      setInviteStatus({
+        status: "error",
+        message: "Veuillez saisir une adresse email",
+      });
+      return;
+    }
+
+    // Validation basique de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      setInviteStatus({
+        status: "error",
+        message: "Veuillez saisir une adresse email valide",
+      });
+      return;
+    }
+
+    setIsInviting(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Vous devez être connecté pour envoyer une invitation");
+      }
+
+      // Extraire l'ID utilisateur du token JWT
+      let userId = null;
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          userId = payload.id;
+        }
+      } catch (e) {
+        console.error("Erreur lors du décodage du token:", e);
+        throw new Error("Impossible de récupérer l'utilisateur");
+      }
+
+      const response = await fetch(
+        `${
+          process.env.REACT_APP_API_URL || "http://localhost:3001"
+        }/api/workspaces/${workspace.id}/invite`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email: inviteEmail,
+            userId: userId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setInviteStatus({
+          status: "success",
+          message: "Invitation envoyée avec succès",
+        });
+        // Réinitialiser le formulaire après 2 secondes
+        setTimeout(() => {
+          setInviteEmail("");
+          setInviteStatus({ status: "", message: "" });
+          setShowInviteModal(false);
+        }, 2000);
+      } else {
+        setInviteStatus({
+          status: "error",
+          message: data.message || "Erreur lors de l'envoi de l'invitation",
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'invitation:", error);
+      setInviteStatus({
+        status: "error",
+        message: error.message || "Une erreur est survenue",
+      });
+    } finally {
+      setIsInviting(false);
     }
   };
 
@@ -168,9 +268,25 @@ function WorkspaceSidebar({
             <>
               <div
                 className="workspace-avatar"
-                style={{ backgroundImage: `url(${workspace.icon})` }}
+                style={{
+                  backgroundImage: `url(${
+                    workspace.icon ||
+                    "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"
+                  })`,
+                }}
               ></div>
               <h2 className="workspace-name">{workspace.name}</h2>
+              {/*
+              {(currentUserRole === "owner" || currentUserRole === "admin") && (
+                <button 
+                  className="invite-button" 
+                  onClick={handleOpenInviteModal}
+                  title="Inviter un utilisateur"
+                >
+                  <FaUserPlus />
+                </button>
+              )}
+              */}
             </>
           )}
         </div>
@@ -392,9 +508,19 @@ function WorkspaceSidebar({
             )}
             <h3>Canaux</h3>
             {(currentUserRole === "owner" || currentUserRole === "admin") && (
-              <button className="add-channel-btn" onClick={handleCreateChannel}>
-                <FaPlus />
-              </button>
+              <div className="channel-actions">
+                <button
+                  className="add-channel-btn"
+                  onClick={handleCreateChannel}
+                >
+                  <FaPlus />
+                </button>
+                {/*
+                <button className="invite-channel-btn" onClick={handleOpenInviteModal}>
+                  <FaUserPlus />
+                </button>
+                */}
+              </div>
             )}
           </div>
           {showChannels && (
@@ -410,6 +536,58 @@ function WorkspaceSidebar({
           )}
         </div>
       </div>
+
+      {/* Modal d'invitation */}
+      {showInviteModal && (
+        <div className="modal-overlay" onClick={handleCloseInviteModal}>
+          <div
+            className="modal-content modern"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Inviter à {workspace.name}</h2>
+            <p>Envoyer une invitation par email pour rejoindre ce workspace</p>
+
+            <form onSubmit={handleSendInvitation}>
+              <div className="form-group">
+                <label htmlFor="inviteEmail">Email</label>
+                <input
+                  type="email"
+                  id="inviteEmail"
+                  value={inviteEmail}
+                  onChange={handleInviteEmailChange}
+                  placeholder="nom@exemple.com"
+                  disabled={isInviting}
+                  required
+                />
+              </div>
+
+              {inviteStatus.message && (
+                <div className={`invitation-status ${inviteStatus.status}`}>
+                  {inviteStatus.message}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={handleCloseInviteModal}
+                  className="cancel-btn"
+                  disabled={isInviting}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="send-invite-btn"
+                  disabled={isInviting}
+                >
+                  {isInviting ? "Envoi en cours..." : "Envoyer l'invitation"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

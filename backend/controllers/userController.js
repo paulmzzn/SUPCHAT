@@ -228,10 +228,18 @@ const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
-    await UserModel.deleteUser(id);
-    res.status(200).json({ message: 'Utilisateur supprimé avec succès.' });
-  }
-  catch (error) {
+
+    // S'assurer que le compte utilisateur supprimé existe avant de procéder
+    await UserModel.ensureDeletedUserExists();
+
+    // Utiliser la nouvelle méthode de suppression en cascade
+    await UserModel.deleteUserWithCascade(id);
+
+    res.status(200).json({
+      message: 'Utilisateur supprimé avec succès. Toutes les données associées ont été traitées.'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     res.status(500).json({
       message: 'Erreur lors de la suppression de l\'utilisateur.',
       error: error.message,

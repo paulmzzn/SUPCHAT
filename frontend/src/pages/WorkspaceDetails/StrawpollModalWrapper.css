@@ -1,0 +1,238 @@
+/* Styles pour le modal de création de sondage Strawpoll */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background-color: var(--modal-bg, #1e1e2e);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: scaleIn 0.3s ease-out;
+}
+
+/* Styles spécifiques pour le contenu du modal de sondage */
+.strawpoll-modal {
+  padding: 24px;
+  color: var(--text-color, #fff);
+}
+
+.strawpoll-modal h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--heading-color, #fff);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strawpoll-modal h2 svg {
+  color: var(--primary-color, #8a56ac);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--label-color, rgba(255, 255, 255, 0.9));
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--input-text, #fff);
+  transition: all 0.2s;
+}
+
+.form-group input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-color, #8a56ac);
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(138, 86, 172, 0.25);
+}
+
+.form-group button {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--button-text, rgba(255, 255, 255, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.form-group button:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.form-group button[type="button"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  color: var(--text-color, rgba(255, 255, 255, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.create-btn {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color, #8a56ac),
+    var(--primary-dark, #6a3f85)
+  );
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(138, 86, 172, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-btn:hover {
+  background: linear-gradient(135deg, #9760bb, #774792);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(138, 86, 172, 0.35);
+}
+
+.create-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(138, 86, 172, 0.25);
+}
+
+.error-message {
+  color: var(--error-color, #ff6b6b);
+  background-color: rgba(255, 107, 107, 0.1);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* Animation pour les options */
+.option-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.option-item input {
+  flex: 1;
+}
+
+.option-item button {
+  margin-left: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  padding: 0;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.option-item button:hover {
+  background-color: rgba(255, 107, 107, 0.2);
+  color: var(--error-color, #ff6b6b);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .modal-content {
+    width: 95%;
+  }
+
+  .strawpoll-modal {
+    padding: 20px 16px;
+  }
+
+  .strawpoll-modal h2 {
+    font-size: 1.2rem;
+  }
+}

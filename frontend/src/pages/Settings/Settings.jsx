@@ -280,11 +280,41 @@ const Settings = () => {
     );
 
     if (confirmed) {
-      // Implement account deletion logic here
-      console.log("Account deletion requested");
-      alert("Votre compte va être supprimé. Vous allez être déconnecté.");
-      // Then log out
-      handleLogout();
+      // Get user ID from token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found, cannot delete account');
+        return;
+      }
+
+      // Extract user ID from token payload
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const userId = tokenPayload.id;
+
+      // Call API to delete account
+      fetch(`${API_URL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to delete account');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("Account deleted successfully:", data);
+        alert("Votre compte a été supprimé avec succès. Vous allez être déconnecté.");
+        // Log out after successful deletion
+        handleLogout();
+      })
+      .catch(error => {
+        console.error("Error deleting account:", error);
+        alert("Une erreur est survenue lors de la suppression de votre compte. Veuillez réessayer.");
+      });
     }
   };
 

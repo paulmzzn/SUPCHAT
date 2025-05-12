@@ -207,4 +207,16 @@ router.get("/:id/workspaces", async (req, res) => {
   }
 });
 
+// Route pour supprimer un utilisateur (avec gestion en cascade)
+router.delete("/:id", verifyToken, async (req, res) => {
+  // Vérifier si l'utilisateur tente de supprimer son propre compte
+  if (req.user.id !== req.params.id) {
+    return res.status(403).json({
+      message: "Vous ne pouvez supprimer que votre propre compte",
+    });
+  }
+
+  await deleteUser(req, res);
+});
+
 export default router;
