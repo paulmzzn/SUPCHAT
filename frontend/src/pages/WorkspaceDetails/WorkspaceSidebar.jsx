@@ -134,6 +134,7 @@ function WorkspaceSidebar({
                 style={{ backgroundImage: `url(${workspace.icon})` }}
               ></div>
               <h2 className="workspace-name">{workspace.name}</h2>
+              {/*
               {(currentUserRole === "owner" || currentUserRole === "admin") && (
                 <button 
                   className="invite-button" 
@@ -143,6 +144,7 @@ function WorkspaceSidebar({
                   <FaUserPlus />
                 </button>
               )}
+              */}
             </>
           )}
         </div>
@@ -173,9 +175,11 @@ function WorkspaceSidebar({
                 <button className="add-channel-btn" onClick={handleCreateChannel}>
                   <FaPlus />
                 </button>
+                {/*
                 <button className="invite-channel-btn" onClick={handleOpenInviteModal}>
                   <FaUserPlus />
                 </button>
+                */}
               </div>
             )}
           </div>
