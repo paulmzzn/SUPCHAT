@@ -50,7 +50,7 @@ export const getStyles = (theme) => StyleSheet.create({
     borderColor: theme.badgeBorder,
   },
   badgeText: {
-    color: theme.textPrimary,
+    color: theme.textOnAccent, // Updated
     fontSize: 10,
     fontWeight: 'bold',
     textAlign: 'center',

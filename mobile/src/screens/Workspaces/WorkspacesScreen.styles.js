@@ -88,7 +88,7 @@ export const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 6,
   },
   workspaceBadgeText: {
-    color: theme.textPrimary,
+    color: theme.textOnAccent,
     fontSize: 12,
     fontWeight: 'bold',
   },
