@@ -22,6 +22,7 @@
   margin-left: 8px;
   top: 50%;
   transform: translateY(-50%);
+  animation: none; /* Désactive l'animation pour les badges de canal */
 }
 
 /* Position pour les badges de workspace */
