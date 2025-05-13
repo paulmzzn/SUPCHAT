@@ -247,8 +247,18 @@ export const getUserConversations = async (req, res) => {
   try {
     const userId = req.user.id;
     const conversations = await MessagePrive.getUserConversations(userId);
+
+    // Log pour debug - voir l'ordre des conversations
+    console.log(
+      "Conversations triées par date du dernier message:",
+      conversations.length > 0
+        ? "Premier ID: " + conversations[0]
+        : "Aucune conversation"
+    );
+
     res.json(conversations);
   } catch (error) {
+    console.error("Erreur lors de la récupération des conversations:", error);
     res.status(500).json({ message: error.message });
   }
 };
