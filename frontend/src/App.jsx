@@ -13,6 +13,7 @@ import Settings from './pages/Settings/Settings';
 import Profile from './pages/Profile/Profile';
 import DirectMessages from './pages/DirectMessages/DirectMessages';
 import JoinWorkspace from './pages/JoinWorkspace/JoinWorkspace';
+import CGUPage from './pages/CGUPage';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
@@ -105,6 +106,7 @@ function App() {
               <Route path="/register" element={<><Register /><script>{console.log('[App.jsx] Route /register rendue')}</script></>} />
               <Route path="/code" element={<><Code email={localStorage.getItem('email')} /><script>{console.log('[App.jsx] Route /code rendue')}</script></>} />
               <Route path="/auth/callback" element={<><AuthCallback /><script>{console.log('[App.jsx] Route /auth/callback rendue')}</script></>} />
+              <Route path="/cgu" element={<CGUPage />} />
               
               {/* Routes protégées */}
               <Route path="/dashboard" element={
@@ -156,6 +158,8 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/join-workspace" element={<><JoinWorkspace /><script>{console.log('[App.jsx] Route /join-workspace rendue')}</script></>} />
+              
+              {/* Route CGU accessible sans authentification */}
               
               {/* Route par défaut */}
               <Route path="/" element={
