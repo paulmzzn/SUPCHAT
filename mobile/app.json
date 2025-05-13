@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Supchat",
+    "slug": "supchat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.paulmzn.siptv",
+      "jsEngine": "hermes",
       "icon": {
         "light": "./assets/icon-light.png",
         "dark": "./assets/icon-dark.png",
@@ -26,6 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "jsEngine": "hermes",
       "edgeToEdgeEnabled": true
     },
     "web": {

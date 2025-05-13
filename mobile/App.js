@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider } from './src/theme/ThemeContext'; // Adjust path as necessary
 import { AuthProvider, useAuth } from './src/context/AuthContext'; // Import from new file
-import { SocketProvider } from './src/context/SocketContext'; // Ajout de cet import
+import { SocketProvider, useSocket } from './src/context/SocketContext'; // Ajout de cet import
 
 // Auth screens
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -46,10 +46,27 @@ function MessagesNavigator() {
 
 // Tab Navigator for the main sections of the app
 function AppTabs() {
+  const { refreshUnreadCounts } = useSocket();
+  
+  // Forcer le chargement des notifications au démarrage
+  React.useEffect(() => {
+    console.log("AppTabs: Chargement initial des notifications");
+    // Utiliser un délai court pour s'assurer que le contexte est complètement initialisé
+    const timer = setTimeout(() => {
+      refreshUnreadCounts();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [refreshUnreadCounts]);
+  
   return (
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
       <Tab.Screen name="Workspaces" component={WorkspacesScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Messages" component={MessagesNavigator} options={{ headerShown: false }} />
+      <Tab.Screen 
+        name="Messages" 
+        component={MessagesNavigator} 
+        options={{ headerShown: false }}
+      />
       <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
     </Tab.Navigator>

@@ -3,10 +3,12 @@ import { View, TouchableOpacity, Text, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
+import { useSocket } from '../../context/SocketContext'; // Import useSocket pour accéder directement aux notifications
 import { getStyles } from './TabBar.styles'; // Import getStyles
 
 const TabBar = ({ state, descriptors, navigation }) => {
   const { colors: themeColors } = useTheme(); // Use theme context
+  const { totalUnreadCount } = useSocket(); // Accès direct au compteur de notifications
   const styles = getStyles(themeColors); // Get styles based on current theme
   const insets = useSafeAreaInsets();
   
@@ -64,8 +66,8 @@ const TabBar = ({ state, descriptors, navigation }) => {
           });
         };
 
-        // Badge pour les notifications (pour illustrer le concept)
-        const showBadge = route.name === 'Messages' && route.params?.unreadCount > 0;
+        // Badge pour les notifications - maintenant en utilisant totalUnreadCount directement pour l'onglet Messages
+        const showBadge = route.name === 'Messages' && totalUnreadCount > 0;
 
         return (
           <TouchableOpacity
@@ -84,7 +86,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
               {/* Badge de notification */}
               {showBadge && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{route.params.unreadCount}</Text>
+                  <Text style={styles.badgeText}>{totalUnreadCount}</Text>
                 </View>
               )}
             </View>

@@ -390,6 +390,80 @@ class MessagePrive {
       throw error;
     }
   }
+
+  /**
+   * Récupérer toutes les conversations d'un utilisateur avec les infos utilisateur et derniers messages
+   * Cette méthode optimisée récupère tout en une seule requête pour améliorer les performances
+   * 
+   * @param {string} userId - L'ID de l'utilisateur connecté
+   * @returns {Promise<Array>} - Un tableau d'objets contenant les infos de conversation complètes
+   */
+  static async getUserConversationsExtended(userId) {
+    try {
+      // Étape 1: Récupérer tous les utilisateurs avec qui l'utilisateur a conversé
+      const conversationUsers = await this.getUserConversations(userId);
+      if (!conversationUsers || conversationUsers.length === 0) {
+        return [];
+      }
+
+      // Étape 2: Créer un tableau de promesses pour récupérer en parallèle
+      // les informations de chaque utilisateur et le dernier message
+      const conversationPromises = conversationUsers.map(async (otherUserId) => {
+        // Récupérer les informations de l'utilisateur
+        const userInfoResult = await pool.query(
+          `SELECT id_utilisateur, nom, email, photo_de_profil 
+           FROM utilisateur 
+           WHERE id_utilisateur = $1`,
+          [otherUserId]
+        );
+        const userInfo = userInfoResult.rows[0] || null;
+
+        // Récupérer le dernier message échangé
+        const lastMessageResult = await pool.query(
+          `SELECT * FROM message_prive
+           WHERE ((fk_expediteur = $1 AND fk_destinataire = $2) OR
+                 (fk_expediteur = $2 AND fk_destinataire = $1))
+           AND is_deleted = false
+           ORDER BY date_creation DESC
+           LIMIT 1`,
+          [userId, otherUserId]
+        );
+        const lastMessage = lastMessageResult.rows[0] || null;
+
+        // Récupérer le nombre de messages non lus de cet utilisateur
+        const unreadCountResult = await pool.query(
+          `SELECT COUNT(*) as unread_count
+           FROM message_prive
+           WHERE fk_expediteur = $1 
+           AND fk_destinataire = $2
+           AND date_lecture IS NULL
+           AND is_deleted = false`,
+          [otherUserId, userId]
+        );
+        const unreadCount = parseInt(unreadCountResult.rows[0].unread_count || 0, 10);
+
+        // Déterminer le timestamp de la dernière activité pour le tri
+        let lastActivity = 0;
+        if (lastMessage) {
+          lastActivity = new Date(lastMessage.date_creation).getTime();
+        }
+
+        return {
+          userId: otherUserId,
+          userInfo,
+          lastMessage,
+          unreadCount,
+          lastActivity
+        };
+      });
+
+      // Attendre toutes les promesses et renvoyer les résultats
+      return await Promise.all(conversationPromises);
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.getUserConversationsExtended:', error);
+      throw error;
+    }
+  }
 }
 
 export default MessagePrive;

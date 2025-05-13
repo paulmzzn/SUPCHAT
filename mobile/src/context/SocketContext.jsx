@@ -19,6 +19,7 @@ export const SocketProvider = ({ children }) => {
   // Référence pour stocker les abonnements aux notifications
   const notificationListeners = useRef([]);
   const debounceTimer = useRef(null);
+  const initialFetchDone = useRef(false);
 
   // Fonction d'aide pour notifier tous les listeners de façon sécurisée
   const notifyListeners = useCallback((notification) => {
@@ -34,6 +35,40 @@ export const SocketProvider = ({ children }) => {
         console.error('Error notifying listener:', e);
       }
     });
+  }, []);
+
+  // Fonction pour charger les compteurs de messages non lus
+  const fetchUnreadCounts = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+      
+      console.log('Socket: Fetching unread message counts');
+      
+      const response = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const counts = await response.json();
+        console.log('Socket: Unread counts received:', Object.keys(counts).length);
+        
+        // Mettre à jour uniquement si les données sont différentes
+        setUnreadMessages(prevCounts => {
+          const prevTotal = Object.values(prevCounts).reduce((sum, val) => sum + val, 0);
+          const newTotal = Object.values(counts).reduce((sum, val) => sum + val, 0);
+          
+          if (prevTotal !== newTotal || JSON.stringify(prevCounts) !== JSON.stringify(counts)) {
+            console.log('Socket: Setting total unread count to', newTotal);
+            setTotalUnreadCount(newTotal);
+            return counts;
+          }
+          return prevCounts;
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+    }
   }, []);
 
   // Connexion au socket
@@ -56,6 +91,9 @@ export const SocketProvider = ({ children }) => {
           console.log('Socket: Connected with ID', newSocket.id);
           setConnected(true);
           newSocket.emit('joinPrivate');
+          
+          // Charger les messages non lus immédiatement après la connexion
+          fetchUnreadCounts();
         });
         
         newSocket.on('connect_error', (err) => {
@@ -95,8 +133,17 @@ export const SocketProvider = ({ children }) => {
     };
     
     connectSocket();
-  }, []);
+  }, [fetchUnreadCounts]);
   
+  // Assurer le chargement des compteurs même si connecté avant le rendu du composant
+  useEffect(() => {
+    if (connected && !initialFetchDone.current) {
+      console.log('Socket: Initial fetch of unread counts');
+      fetchUnreadCounts();
+      initialFetchDone.current = true;
+    }
+  }, [connected, fetchUnreadCounts]);
+
   // Fonction pour mettre à jour les timestamps des conversations
   const updateConversationTimestamp = useCallback(async (userId) => {
     try {
@@ -236,36 +283,6 @@ export const SocketProvider = ({ children }) => {
     
     loadTimestamps();
   }, []);
-
-  // Fonction pour charger les compteurs de messages non lus
-  const fetchUnreadCounts = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
-      
-      const response = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const counts = await response.json();
-        
-        // Mettre à jour uniquement si les données sont différentes
-        setUnreadMessages(prevCounts => {
-          const prevTotal = Object.values(prevCounts).reduce((sum, val) => sum + val, 0);
-          const newTotal = Object.values(counts).reduce((sum, val) => sum + val, 0);
-          
-          if (prevTotal !== newTotal || JSON.stringify(prevCounts) !== JSON.stringify(counts)) {
-            setTotalUnreadCount(newTotal);
-            return counts;
-          }
-          return prevCounts;
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching unread counts:', error);
-    }
-  };
 
   const value = {
     socket,

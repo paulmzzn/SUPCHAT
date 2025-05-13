@@ -198,18 +198,103 @@ const ConversationsListScreen = ({ navigation }) => {
         setLoading(true);
       }
       
+      // Récupérer les timestamps depuis le stockage local une seule fois
       let timestamps = {};
       try {
         const timestampsString = await AsyncStorage.getItem('conversationTimestamps');
         if (timestampsString) {
           timestamps = JSON.parse(timestampsString);
-          console.log('Timestamps chargés:', timestamps);
         }
       } catch (e) {
         console.error('Error loading conversation timestamps:', e);
       }
       
+      // Récupérer le token une seule fois
       const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      // Utiliser une requête API optimisée qui retourne les conversations avec les derniers messages et infos utilisateur
+      const res = await fetch(`${API_URL}/api/private-messages/conversations-extended`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        // Si l'API optimisée n'existe pas, retomber sur la méthode originale
+        return await fetchConversationsLegacy(token, timestamps, skipLoadingState);
+      }
+      
+      // Récupérer les données étendues qui incluent les IDs des utilisateurs, leurs infos et derniers messages
+      const extendedData = await res.json();
+      console.log('Extended conversations data received:', extendedData.length);
+      
+      // Mettre à jour les timestamps pour chaque conversation
+      extendedData.forEach(convo => {
+        if (!timestamps[convo.userId]) {
+          timestamps[convo.userId] = convo.lastActivity || 0;
+        }
+      });
+      
+      // Trier les conversations par timestamp
+      const sortedData = [...extendedData].sort((a, b) => {
+        return (timestamps[b.userId] || 0) - (timestamps[a.userId] || 0);
+      });
+      
+      // Extraire les IDs des utilisateurs pour maintenir la compatibilité
+      const userIds = sortedData.map(convo => convo.userId);
+      
+      // Mettre à jour l'état avec toutes les données en une seule fois
+      setConversations(userIds);
+      
+      // Mettre à jour les infos utilisateur et derniers messages en une seule opération
+      const newUsersInfo = {};
+      const newLastMessages = {};
+      
+      sortedData.forEach(convo => {
+        // Mettre à jour les infos utilisateur
+        if (convo.userInfo) {
+          newUsersInfo[convo.userId] = {
+            id: convo.userId,
+            name: convo.userInfo.nom || convo.userInfo.name || 'User',
+            avatar: convo.userInfo.photo_de_profil || convo.userInfo.avatar || null,
+            ...convo.userInfo
+          };
+        }
+        
+        // Mettre à jour les derniers messages
+        if (convo.lastMessage) {
+          newLastMessages[convo.userId] = {
+            contenu: convo.lastMessage.contenu || '',
+            date_envoi: convo.lastMessage.date_envoi || convo.lastMessage.date_creation || new Date().toISOString()
+          };
+        }
+      });
+      
+      // Mettre à jour les états avec les nouvelles données
+      if (Object.keys(newUsersInfo).length > 0) {
+        setUsersInfo(prev => ({ ...prev, ...newUsersInfo }));
+      }
+      
+      if (Object.keys(newLastMessages).length > 0) {
+        setLastMessages(prev => ({ ...prev, ...newLastMessages }));
+      }
+      
+      // Sauvegarder les timestamps mis à jour
+      setConversationTimestamps(timestamps);
+      await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(timestamps));
+      
+    } catch (e) {
+      console.error('Error fetching conversations:', e);
+      setError('Failed to load conversations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Méthode legacy pour la compatibilité, à utiliser si l'API optimisée n'est pas disponible
+  const fetchConversationsLegacy = async (token, timestamps, skipLoadingState) => {
+    try {
       const res = await fetch(`${API_URL}/api/private-messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -219,8 +304,8 @@ const ConversationsListScreen = ({ navigation }) => {
       }
       
       const data = await res.json();
-      console.log('Conversations (non triées):', data);
       
+      // Mettre à jour les timestamps manquants
       data.forEach(userId => {
         if (!timestamps[userId]) {
           timestamps[userId] = 0;
@@ -231,14 +316,12 @@ const ConversationsListScreen = ({ navigation }) => {
         return (timestamps[b] || 0) - (timestamps[a] || 0);
       });
       
-      console.log('Conversations triées par timestamp:', sortedData);
-      
+      // Mettre à jour les conversations
       if (conversations.length > 0 && !skipLoadingState) {
         const existingIds = new Set(conversations);
         const newIds = data.filter(id => !existingIds.has(id));
         
         if (newIds.length > 0) {
-          console.log('Adding new conversations:', newIds);
           setConversations(prev => [...prev, ...newIds]);
         }
       } else {
@@ -246,51 +329,118 @@ const ConversationsListScreen = ({ navigation }) => {
       }
       
       setConversationTimestamps(timestamps);
+      await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(timestamps));
       
-      try {
-        await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(timestamps));
-      } catch (e) {
-        console.error('Error saving conversation timestamps:', e);
-      }
+      // Charger les derniers messages et infos utilisateur en parallèle pour les 10 premières conversations
+      const conversationsToProcess = sortedData.slice(0, 10);
       
-      const lastMessagesMap = {};
-      const conversationsToProcess = sortedData.slice(0, 5);
-      
-      await Promise.all(
-        conversationsToProcess.map(async (userId) => {
-          if (!lastMessages[userId]) {
-            try {
-              let lastMessage = await fetchLastMessageForConversation(userId);
-              if (lastMessage) {
-                lastMessagesMap[userId] = {
-                  contenu: lastMessage.contenu,
-                  date_envoi: lastMessage.date_envoi || lastMessage.date_creation,
-                };
+      const [lastMessagesResult, usersInfoResult] = await Promise.all([
+        // Récupérer les derniers messages en parallèle
+        Promise.all(
+          conversationsToProcess.map(async (userId) => {
+            if (!lastMessages[userId]) {
+              try {
+                const lastMessage = await fetchLastMessageForConversation(userId);
+                return { userId, lastMessage };
+              } catch (err) {
+                return { userId, lastMessage: null };
               }
-            } catch (err) {
-              console.error(`Error fetching last message for ${userId}:`, err);
             }
-          }
-        })
-      );
+            return { userId, lastMessage: null };
+          })
+        ),
+        
+        // Récupérer les infos utilisateur en parallèle
+        Promise.all(
+          conversationsToProcess.map(async (userId) => {
+            if (!usersInfo[userId]) {
+              try {
+                const userInfo = await fetchUserInfoOnce(userId, token);
+                return { userId, userInfo };
+              } catch (err) {
+                return { userId, userInfo: null };
+              }
+            }
+            return { userId, userInfo: null };
+          })
+        )
+      ]);
       
-      if (Object.keys(lastMessagesMap).length > 0) {
+      // Traiter les résultats des derniers messages
+      const newLastMessages = {};
+      lastMessagesResult.forEach(item => {
+        if (item.lastMessage) {
+          newLastMessages[item.userId] = {
+            contenu: item.lastMessage.contenu,
+            date_envoi: item.lastMessage.date_envoi || item.lastMessage.date_creation,
+          };
+        }
+      });
+      
+      if (Object.keys(newLastMessages).length > 0) {
         setLastMessages(prev => ({
           ...prev,
-          ...lastMessagesMap
+          ...newLastMessages
         }));
       }
       
-      for (const userId of sortedData) {
-        if (!usersInfo[userId]) {
-          fetchUserInfo(userId);
+      // Traiter les résultats des infos utilisateur
+      const newUsersInfo = {};
+      usersInfoResult.forEach(item => {
+        if (item.userInfo) {
+          newUsersInfo[item.userId] = item.userInfo;
         }
+      });
+      
+      if (Object.keys(newUsersInfo).length > 0) {
+        setUsersInfo(prev => ({
+          ...prev,
+          ...newUsersInfo
+        }));
       }
+      
+      // Charger les infos des autres utilisateurs en arrière-plan
+      if (sortedData.length > 10) {
+        setTimeout(() => {
+          sortedData.slice(10).forEach(userId => {
+            if (!usersInfo[userId]) {
+              fetchUserInfo(userId).catch(console.error);
+            }
+          });
+        }, 1000);
+      }
+      
     } catch (e) {
-      console.error('Error fetching conversations:', e);
-      setError('Failed to load conversations');
-    } finally {
-      setLoading(false);
+      console.error('Error in legacy fetch conversations:', e);
+      throw e;
+    }
+  };
+  
+  // Version optimisée qui évite les setState répétés
+  const fetchUserInfoOnce = async (userId, token) => {
+    try {
+      const res = await fetch(`${API_URL}/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Error: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      return {
+        id: userId,
+        name: data.nom || data.name || 'User',
+        avatar: data.photo_de_profil || data.avatar || null,
+        ...data
+      };
+    } catch (e) {
+      console.error(`Error fetching user info for ${userId}:`, e);
+      return { 
+        id: userId, 
+        name: 'User', 
+        avatar: null 
+      };
     }
   };
 
