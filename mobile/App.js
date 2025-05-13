@@ -15,8 +15,9 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
-import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen'; // Ajout de l'import WorkspaceScreen
+import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
+import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
@@ -28,13 +29,24 @@ const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const MessagesStack = createNativeStackNavigator(); // Create a stack for messages
+
+// Messages Stack Navigator
+function MessagesNavigator() {
+  return (
+    <MessagesStack.Navigator screenOptions={{ headerShown: false }}>
+      <MessagesStack.Screen name="ConversationsList" component={ConversationsListScreen} />
+      <MessagesStack.Screen name="Conversation" component={MessagesScreen} />
+    </MessagesStack.Navigator>
+  );
+}
 
 // Tab Navigator for the main sections of the app
 function AppTabs() {
   return (
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
       <Tab.Screen name="Workspaces" component={WorkspacesScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Messages" component={MessagesNavigator} options={{ headerShown: false }} />
       <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
     </Tab.Navigator>
