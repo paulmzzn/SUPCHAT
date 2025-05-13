@@ -3,16 +3,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
+  min-width: 18px; /* Réduit pour la sidebar */
+  height: 18px; /* Réduit pour la sidebar */
   padding: 0 4px;
-  border-radius: 9px;
-  background-color: #f44336; /* Rouge pour attirer l'attention */
+  border-radius: 9px; /* Ajusté proportionnellement */
+  background-color: #9348B7; /* Nouvelle couleur violet */
   color: white;
-  font-size: 11px;
+  font-size: 10px; /* Réduit pour la sidebar */
   font-weight: bold;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(147, 72, 183, 0.4);
   animation: pulse 2s infinite;
   z-index: 1;
 }
