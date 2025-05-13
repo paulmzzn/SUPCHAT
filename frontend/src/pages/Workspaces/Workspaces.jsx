@@ -21,8 +21,10 @@ function Workspaces() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newWorkspace, setNewWorkspace] = useState({
+  const [showModal, setShowModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
+  const [workspaceForm, setWorkspaceForm] = useState({
     name: "",
     description: "",
     isPrivate: false,
@@ -213,14 +215,42 @@ function Workspaces() {
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
-
   const handleAddWorkspace = () => {
-    setShowCreateModal(true);
+    setIsEditMode(false);
+    setCurrentWorkspaceId(null);
+    setWorkspaceForm({
+      name: "",
+      description: "",
+      isPrivate: false,
+      bannerFile: null,
+      bannerPreview: null,
+      iconFile: null,
+      iconPreview: null,
+    });
+    setShowModal(true);
+  };
+
+  const handleEditWorkspace = (workspace) => {
+    // Pré-remplir le formulaire avec les données du workspace à modifier
+    setIsEditMode(true);
+    setCurrentWorkspaceId(workspace.id);
+    setWorkspaceForm({
+      name: workspace.name,
+      description: workspace.description || "",
+      isPrivate: workspace.isPrivate || false,
+      bannerFile: null,
+      bannerPreview: workspace.banner,
+      iconFile: null,
+      iconPreview: workspace.icon,
+    });
+    setShowModal(true);
   };
 
   const handleCloseModal = () => {
-    setShowCreateModal(false);
-    setNewWorkspace({
+    setShowModal(false);
+    setIsEditMode(false);
+    setCurrentWorkspaceId(null);
+    setWorkspaceForm({
       name: "",
       description: "",
       isPrivate: false,
@@ -233,12 +263,11 @@ function Workspaces() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setNewWorkspace({
-      ...newWorkspace,
+    setWorkspaceForm({
+      ...workspaceForm,
       [name]: type === "checkbox" ? checked : value,
     });
   };
-
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -256,13 +285,13 @@ function Workspaces() {
     const reader = new FileReader();
     reader.onload = () => {
       if (type === "banner") {
-        setNewWorkspace((prev) => ({
+        setWorkspaceForm((prev) => ({
           ...prev,
           bannerFile: file,
           bannerPreview: reader.result,
         }));
       } else if (type === "icon") {
-        setNewWorkspace((prev) => ({
+        setWorkspaceForm((prev) => ({
           ...prev,
           iconFile: file,
           iconPreview: reader.result,
@@ -274,13 +303,13 @@ function Workspaces() {
 
   const removeImage = (type) => {
     if (type === "banner") {
-      setNewWorkspace((prev) => ({
+      setWorkspaceForm((prev) => ({
         ...prev,
         bannerFile: null,
         bannerPreview: null,
       }));
     } else if (type === "icon") {
-      setNewWorkspace((prev) => ({
+      setWorkspaceForm((prev) => ({
         ...prev,
         iconFile: null,
         iconPreview: null,
@@ -295,24 +324,30 @@ function Workspaces() {
       iconInputRef.current.click();
     }
   };
-
-  const createWorkspace = async (e) => {
+  const saveWorkspace = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
 
       if (!token) {
-        throw new Error("Vous devez être connecté pour créer un workspace");
+        throw new Error("Vous devez être connecté pour gérer un workspace");
       }
 
       const workspaceData = {
-        nom: newWorkspace.name,
-        description: newWorkspace.description || "",
-        is_private: newWorkspace.isPrivate,
+        nom: workspaceForm.name,
+        description: workspaceForm.description || "",
+        is_private: workspaceForm.isPrivate,
       };
 
-      const response = await fetch(`${API_URL}/api/workspaces`, {
-        method: "POST",
+      // Différentes URLs et méthodes selon le mode (création ou édition)
+      const url = isEditMode
+        ? `${API_URL}/api/workspaces/${currentWorkspaceId}`
+        : `${API_URL}/api/workspaces`;
+
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -321,21 +356,28 @@ function Workspaces() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create workspace");
+        throw new Error(
+          isEditMode
+            ? "Échec de la mise à jour du workspace"
+            : "Échec de la création du workspace"
+        );
       }
 
-      const createdWorkspace = await response.json();
-      const workspaceId = createdWorkspace.id_workspace;
+      const responseWorkspace = await response.json();
+      const workspaceId = isEditMode
+        ? currentWorkspaceId
+        : responseWorkspace.id_workspace;
 
-      if (newWorkspace.bannerFile || newWorkspace.iconFile) {
+      // Gérer les images si elles ont été modifiées
+      if (workspaceForm.bannerFile || workspaceForm.iconFile) {
         const formData = new FormData();
 
-        if (newWorkspace.bannerFile) {
-          formData.append("banner", newWorkspace.bannerFile);
+        if (workspaceForm.bannerFile) {
+          formData.append("banner", workspaceForm.bannerFile);
         }
 
-        if (newWorkspace.iconFile) {
-          formData.append("icon", newWorkspace.iconFile);
+        if (workspaceForm.iconFile) {
+          formData.append("icon", workspaceForm.iconFile);
         }
 
         const imageResponse = await fetch(
@@ -343,7 +385,7 @@ function Workspaces() {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${token}`, // Ajout du token d'autorisation
+              Authorization: `Bearer ${token}`,
             },
             body: formData,
           }
@@ -351,18 +393,33 @@ function Workspaces() {
 
         if (!imageResponse.ok) {
           console.warn(
-            "Workspace created successfully, but images couldn't be saved"
+            "Workspace saved successfully, but images couldn't be updated"
           );
         }
       }
 
+      // Rafraîchir la liste des workspaces
+      fetchWorkspaces();
+
       // Fermer le modal et nettoyer le formulaire
       handleCloseModal();
 
-      // Rediriger l'utilisateur vers le workspace nouvellement créé
-      navigate(`/workspace/${workspaceId}`);
+      // Afficher un message de confirmation
+      alert(
+        isEditMode
+          ? "Workspace mis à jour avec succès !"
+          : "Workspace créé avec succès !"
+      );
+
+      // Si c'est une création, rediriger vers le workspace
+      if (!isEditMode) {
+        navigate(`/workspace/${workspaceId}`);
+      }
     } catch (err) {
-      console.error("Error creating workspace:", err);
+      console.error(
+        isEditMode ? "Error updating workspace:" : "Error creating workspace:",
+        err
+      );
       setError(err.message);
     }
   };
@@ -450,7 +507,6 @@ function Workspaces() {
                 )}
               </div>
             </div>
-
             <div className="workspaces-section">
               <h2 className="section-title">All Workspaces</h2>
               <div className="workspaces-grid">
@@ -465,27 +521,31 @@ function Workspaces() {
                     <p>Create Workspace</p>
                     <span>Start collaborating with your team</span>
                   </div>
-                </div>
+                </div>{" "}
                 {filteredWorkspaces.map((workspace) => (
                   <WorkspaceCard
                     key={workspace.id}
                     workspace={workspace}
                     onWorkspaceLeave={handleLeaveWorkspace}
                     onFavoriteToggle={handleFavoriteToggle}
+                    onEditWorkspace={handleEditWorkspace}
                   />
                 ))}
               </div>
-            </div>
-
-            {showCreateModal && (
+            </div>{" "}
+            {showModal && (
               <div className="modal-overlay" onClick={handleCloseModal}>
                 <div
                   className="modal-content modern"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h2>Create New Workspace</h2>
+                  <h2>
+                    {isEditMode
+                      ? "Modifier le Workspace"
+                      : "Créer un Workspace"}
+                  </h2>
 
-                  <form onSubmit={createWorkspace}>
+                  <form onSubmit={saveWorkspace}>
                     <div className="image-upload-container banner-upload">
                       <input
                         type="file"
@@ -493,12 +553,11 @@ function Workspaces() {
                         onChange={(e) => handleImageUpload(e, "banner")}
                         accept="image/*"
                         className="hidden-file-input"
-                      />
-
-                      {newWorkspace.bannerPreview ? (
+                      />{" "}
+                      {workspaceForm.bannerPreview ? (
                         <div className="image-preview banner-preview">
                           <img
-                            src={newWorkspace.bannerPreview}
+                            src={workspaceForm.bannerPreview}
                             alt="Banner preview"
                           />
                           <button
@@ -528,12 +587,11 @@ function Workspaces() {
                           onChange={(e) => handleImageUpload(e, "icon")}
                           accept="image/*"
                           className="hidden-file-input"
-                        />
-
-                        {newWorkspace.iconPreview ? (
+                        />{" "}
+                        {workspaceForm.iconPreview ? (
                           <div className="icon-preview">
                             <img
-                              src={newWorkspace.iconPreview}
+                              src={workspaceForm.iconPreview}
                               alt="Icon preview"
                             />
                             <button
@@ -561,7 +619,7 @@ function Workspaces() {
                             type="text"
                             id="name"
                             name="name"
-                            value={newWorkspace.name}
+                            value={workspaceForm.name}
                             onChange={handleInputChange}
                             required
                             placeholder="My Awesome Workspace"
@@ -575,7 +633,7 @@ function Workspaces() {
                       <textarea
                         id="description"
                         name="description"
-                        value={newWorkspace.description}
+                        value={workspaceForm.description}
                         onChange={handleInputChange}
                         placeholder="What's this workspace about?"
                       ></textarea>
@@ -585,7 +643,8 @@ function Workspaces() {
                       <label htmlFor="isPrivate" className="toggle-label">
                         <span className="privacy-label">Privacy</span>
                         <span className="privacy-description">
-                          {newWorkspace.isPrivate
+                          {" "}
+                          {workspaceForm.isPrivate
                             ? "Private - Only invited members can join"
                             : "Public - Anyone with the link can join"}
                         </span>
@@ -596,7 +655,7 @@ function Workspaces() {
                           type="checkbox"
                           id="isPrivate"
                           name="isPrivate"
-                          checked={newWorkspace.isPrivate}
+                          checked={workspaceForm.isPrivate}
                           onChange={handleInputChange}
                         />
                         <span className="slider round"></span>
@@ -610,9 +669,11 @@ function Workspaces() {
                         className="cancel-btn"
                       >
                         Cancel
-                      </button>
+                      </button>{" "}
                       <button type="submit" className="create-btn">
-                        Create Workspace
+                        {isEditMode
+                          ? "Enregistrer les modifications"
+                          : "Créer le Workspace"}
                       </button>
                     </div>
                   </form>
