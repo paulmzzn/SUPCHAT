@@ -259,7 +259,9 @@ function Profile() {
                   <div className="profile-actions">
                     <button
                       className="action-button message"
-                      onClick={() => navigate(`/direct-messages?userId=${userId}`)}
+                      onClick={() =>
+                        navigate(`/direct-messages?userId=${userId}`)
+                      }
                     >
                       <FaComment /> Message
                     </button>

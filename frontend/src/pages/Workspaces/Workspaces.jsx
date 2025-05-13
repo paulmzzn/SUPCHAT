@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FaSearch, FaHeart, FaCamera, FaImage, FaTimes } from "react-icons/fa";
+import {
+  FaSearch,
+  FaHeart,
+  FaCamera,
+  FaImage,
+  FaTimes,
+  FaPlus,
+  FaPlusCircle,
+} from "react-icons/fa";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import WorkspaceCard from "./WorkspaceCard";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +29,7 @@ function Workspaces() {
     bannerFile: null,
     bannerPreview: null,
     iconFile: null,
-    iconPreview: null
+    iconPreview: null,
   });
 
   const bannerInputRef = useRef(null);
@@ -29,7 +37,7 @@ function Workspaces() {
   const navigate = useNavigate();
 
   const checkTokenValidity = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
       console.log("Pas de token trouvé");
       return false;
@@ -39,13 +47,13 @@ function Workspaces() {
       console.log("Vérification du token:", token.substring(0, 15) + "...");
       const response = await fetch(`${API_URL}/api/users/verify-token`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
-        console.error('Token invalide ou expiré');
-        localStorage.removeItem('token');
+        console.error("Token invalide ou expiré");
+        localStorage.removeItem("token");
         return false;
       }
 
@@ -53,7 +61,7 @@ function Workspaces() {
       console.log("Token valide, expiration dans:", data.expires_in);
       return true;
     } catch (error) {
-      console.error('Erreur lors de la vérification du token:', error);
+      console.error("Erreur lors de la vérification du token:", error);
       return false;
     }
   }, []);
@@ -62,7 +70,7 @@ function Workspaces() {
     const verifyAndRedirectIfNeeded = async () => {
       const isValid = await checkTokenValidity();
       if (!isValid) {
-        navigate('/login');
+        navigate("/login");
       }
     };
 
@@ -71,7 +79,7 @@ function Workspaces() {
 
   const fetchFavorites = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       if (!token) {
         throw new Error("Vous devez être connecté pour voir vos favoris");
@@ -79,12 +87,15 @@ function Workspaces() {
 
       const response = await fetch(`${API_URL}/api/workspaces/favorites`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
-        console.error("Erreur lors de la récupération des favoris:", response.status);
+        console.error(
+          "Erreur lors de la récupération des favoris:",
+          response.status
+        );
         return [];
       }
 
@@ -97,18 +108,22 @@ function Workspaces() {
         id: workspace.id_workspace,
         name: workspace.nom,
         description: workspace.description || "No description available",
-        banner: workspace.banner_url && !workspace.banner_url.startsWith('http')
-          ? S3_BASE_URL + workspace.banner_url
-          : (workspace.banner_url || "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"),
-        icon: workspace.icon_url && !workspace.icon_url.startsWith('http')
-          ? S3_BASE_URL + workspace.icon_url
-          : (workspace.icon_url || "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"),
+        banner:
+          workspace.banner_url && !workspace.banner_url.startsWith("http")
+            ? S3_BASE_URL + workspace.banner_url
+            : workspace.banner_url ||
+              "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        icon:
+          workspace.icon_url && !workspace.icon_url.startsWith("http")
+            ? S3_BASE_URL + workspace.icon_url
+            : workspace.icon_url ||
+              "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
         onlineUsers: workspace.online_users || 0,
         totalMembers: workspace.total_members || 0,
         isFavorite: true,
         isPrivate: workspace.is_private || false,
         userRole: workspace.user_role || "member",
-        date_ajout_favoris: workspace.date_ajout_favoris
+        date_ajout_favoris: workspace.date_ajout_favoris,
       }));
     } catch (err) {
       console.error("Error fetching favorite workspaces:", err);
@@ -120,17 +135,20 @@ function Workspaces() {
     try {
       setIsLoading(true);
 
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       if (!token) {
         throw new Error("Vous devez être connecté pour voir vos workspaces");
       }
 
-      const response = await fetch(`${API_URL}/api/workspaces/user/workspaces`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetch(
+        `${API_URL}/api/workspaces/user/workspaces`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch workspaces: ${response.status}`);
@@ -144,8 +162,12 @@ function Workspaces() {
         id: workspace.id_workspace,
         name: workspace.nom,
         description: workspace.description || "No description available",
-        banner: workspace.banner_url ? S3_BASE_URL + workspace.banner_url : "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
-        icon: workspace.icon_url ? S3_BASE_URL + workspace.icon_url : "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        banner: workspace.banner_url
+          ? S3_BASE_URL + workspace.banner_url
+          : "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+        icon: workspace.icon_url
+          ? S3_BASE_URL + workspace.icon_url
+          : "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
         onlineUsers: workspace.online_users || 0,
         totalMembers: workspace.total_members || 0,
         isFavorite: false,
@@ -155,14 +177,13 @@ function Workspaces() {
 
       const favorites = await fetchFavorites();
 
-      const workspacesWithFavorites = transformedWorkspaces.map(workspace => {
-        const isFavorite = favorites.some(f => f.id === workspace.id);
+      const workspacesWithFavorites = transformedWorkspaces.map((workspace) => {
+        const isFavorite = favorites.some((f) => f.id === workspace.id);
         return { ...workspace, isFavorite };
       });
 
       setRecentWorkspaces(workspacesWithFavorites);
       setFavoriteWorkspaces(favorites);
-
     } catch (err) {
       console.error("Error fetching workspaces:", err);
       setError(err.message);
@@ -199,7 +220,15 @@ function Workspaces() {
 
   const handleCloseModal = () => {
     setShowCreateModal(false);
-    setNewWorkspace({ name: "", description: "", isPrivate: false, bannerFile: null, bannerPreview: null, iconFile: null, iconPreview: null });
+    setNewWorkspace({
+      name: "",
+      description: "",
+      isPrivate: false,
+      bannerFile: null,
+      bannerPreview: null,
+      iconFile: null,
+      iconPreview: null,
+    });
   };
 
   const handleInputChange = (e) => {
@@ -214,29 +243,29 @@ function Workspaces() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!file.type.match('image.*')) {
-      alert('Please select an image file');
+    if (!file.type.match("image.*")) {
+      alert("Please select an image file");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      alert("Image must be less than 5MB");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => {
-      if (type === 'banner') {
-        setNewWorkspace(prev => ({
+      if (type === "banner") {
+        setNewWorkspace((prev) => ({
           ...prev,
           bannerFile: file,
-          bannerPreview: reader.result
+          bannerPreview: reader.result,
         }));
-      } else if (type === 'icon') {
-        setNewWorkspace(prev => ({
+      } else if (type === "icon") {
+        setNewWorkspace((prev) => ({
           ...prev,
           iconFile: file,
-          iconPreview: reader.result
+          iconPreview: reader.result,
         }));
       }
     };
@@ -244,25 +273,25 @@ function Workspaces() {
   };
 
   const removeImage = (type) => {
-    if (type === 'banner') {
-      setNewWorkspace(prev => ({
+    if (type === "banner") {
+      setNewWorkspace((prev) => ({
         ...prev,
         bannerFile: null,
-        bannerPreview: null
+        bannerPreview: null,
       }));
-    } else if (type === 'icon') {
-      setNewWorkspace(prev => ({
+    } else if (type === "icon") {
+      setNewWorkspace((prev) => ({
         ...prev,
         iconFile: null,
-        iconPreview: null
+        iconPreview: null,
       }));
     }
   };
 
   const triggerFileInput = (type) => {
-    if (type === 'banner' && bannerInputRef.current) {
+    if (type === "banner" && bannerInputRef.current) {
       bannerInputRef.current.click();
-    } else if (type === 'icon' && iconInputRef.current) {
+    } else if (type === "icon" && iconInputRef.current) {
       iconInputRef.current.click();
     }
   };
@@ -270,7 +299,7 @@ function Workspaces() {
   const createWorkspace = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       if (!token) {
         throw new Error("Vous devez être connecté pour créer un workspace");
@@ -279,16 +308,16 @@ function Workspaces() {
       const workspaceData = {
         nom: newWorkspace.name,
         description: newWorkspace.description || "",
-        is_private: newWorkspace.isPrivate
+        is_private: newWorkspace.isPrivate,
       };
 
       const response = await fetch(`${API_URL}/api/workspaces`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(workspaceData)
+        body: JSON.stringify(workspaceData),
       });
 
       if (!response.ok) {
@@ -302,29 +331,34 @@ function Workspaces() {
         const formData = new FormData();
 
         if (newWorkspace.bannerFile) {
-          formData.append('banner', newWorkspace.bannerFile);
+          formData.append("banner", newWorkspace.bannerFile);
         }
 
         if (newWorkspace.iconFile) {
-          formData.append('icon', newWorkspace.iconFile);
+          formData.append("icon", newWorkspace.iconFile);
         }
 
-        const imageResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/images`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`  // Ajout du token d'autorisation
-          },
-          body: formData
-        });
+        const imageResponse = await fetch(
+          `${API_URL}/api/workspaces/${workspaceId}/images`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`, // Ajout du token d'autorisation
+            },
+            body: formData,
+          }
+        );
 
         if (!imageResponse.ok) {
-          console.warn("Workspace created successfully, but images couldn't be saved");
+          console.warn(
+            "Workspace created successfully, but images couldn't be saved"
+          );
         }
       }
 
       // Fermer le modal et nettoyer le formulaire
       handleCloseModal();
-      
+
       // Rediriger l'utilisateur vers le workspace nouvellement créé
       navigate(`/workspace/${workspaceId}`);
     } catch (err) {
@@ -334,24 +368,26 @@ function Workspaces() {
   };
 
   const handleLeaveWorkspace = (workspaceId) => {
-    console.log(`Workspace ${workspaceId} quitté, rafraîchissement de la liste...`);
+    console.log(
+      `Workspace ${workspaceId} quitté, rafraîchissement de la liste...`
+    );
     fetchWorkspaces();
   };
 
   const handleFavoriteToggle = useCallback((updatedWorkspace) => {
-    setRecentWorkspaces(prev =>
-      prev.map(workspace =>
-        workspace.id === updatedWorkspace.id ?
-          { ...workspace, isFavorite: updatedWorkspace.isFavorite } :
-          workspace
+    setRecentWorkspaces((prev) =>
+      prev.map((workspace) =>
+        workspace.id === updatedWorkspace.id
+          ? { ...workspace, isFavorite: updatedWorkspace.isFavorite }
+          : workspace
       )
     );
 
     if (updatedWorkspace.isFavorite) {
-      setFavoriteWorkspaces(prev => [...prev, updatedWorkspace]);
+      setFavoriteWorkspaces((prev) => [...prev, updatedWorkspace]);
     } else {
-      setFavoriteWorkspaces(prev =>
-        prev.filter(workspace => workspace.id !== updatedWorkspace.id)
+      setFavoriteWorkspaces((prev) =>
+        prev.filter((workspace) => workspace.id !== updatedWorkspace.id)
       );
     }
   }, []);
@@ -418,13 +454,18 @@ function Workspaces() {
             <div className="workspaces-section">
               <h2 className="section-title">All Workspaces</h2>
               <div className="workspaces-grid">
-                <div className="workspace-card add-workspace" onClick={handleAddWorkspace}>
+                {" "}
+                <div
+                  className="workspace-card add-workspace"
+                  onClick={handleAddWorkspace}
+                >
+                  {" "}
                   <div className="add-workspace-content">
-                    <div className="plus-icon">+</div>
-                    <p>Create New Workspace</p>
+                    <FaPlusCircle className="plus-icon" aria-hidden="true" />
+                    <p>Create Workspace</p>
+                    <span>Start collaborating with your team</span>
                   </div>
                 </div>
-
                 {filteredWorkspaces.map((workspace) => (
                   <WorkspaceCard
                     key={workspace.id}
@@ -438,7 +479,10 @@ function Workspaces() {
 
             {showCreateModal && (
               <div className="modal-overlay" onClick={handleCloseModal}>
-                <div className="modal-content modern" onClick={e => e.stopPropagation()}>
+                <div
+                  className="modal-content modern"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <h2>Create New Workspace</h2>
 
                   <form onSubmit={createWorkspace}>
@@ -446,24 +490,30 @@ function Workspaces() {
                       <input
                         type="file"
                         ref={bannerInputRef}
-                        onChange={(e) => handleImageUpload(e, 'banner')}
+                        onChange={(e) => handleImageUpload(e, "banner")}
                         accept="image/*"
                         className="hidden-file-input"
                       />
 
                       {newWorkspace.bannerPreview ? (
                         <div className="image-preview banner-preview">
-                          <img src={newWorkspace.bannerPreview} alt="Banner preview" />
+                          <img
+                            src={newWorkspace.bannerPreview}
+                            alt="Banner preview"
+                          />
                           <button
                             type="button"
                             className="remove-image-btn"
-                            onClick={() => removeImage('banner')}
+                            onClick={() => removeImage("banner")}
                           >
                             <FaTimes />
                           </button>
                         </div>
                       ) : (
-                        <div className="upload-placeholder banner-placeholder" onClick={() => triggerFileInput('banner')}>
+                        <div
+                          className="upload-placeholder banner-placeholder"
+                          onClick={() => triggerFileInput("banner")}
+                        >
                           <FaImage className="upload-icon" />
                           <span>Add Banner Image</span>
                         </div>
@@ -475,24 +525,30 @@ function Workspaces() {
                         <input
                           type="file"
                           ref={iconInputRef}
-                          onChange={(e) => handleImageUpload(e, 'icon')}
+                          onChange={(e) => handleImageUpload(e, "icon")}
                           accept="image/*"
                           className="hidden-file-input"
                         />
 
                         {newWorkspace.iconPreview ? (
                           <div className="icon-preview">
-                            <img src={newWorkspace.iconPreview} alt="Icon preview" />
+                            <img
+                              src={newWorkspace.iconPreview}
+                              alt="Icon preview"
+                            />
                             <button
                               type="button"
                               className="remove-icon-btn"
-                              onClick={() => removeImage('icon')}
+                              onClick={() => removeImage("icon")}
                             >
                               <FaTimes />
                             </button>
                           </div>
                         ) : (
-                          <div className="icon-placeholder" onClick={() => triggerFileInput('icon')}>
+                          <div
+                            className="icon-placeholder"
+                            onClick={() => triggerFileInput("icon")}
+                          >
                             <FaCamera />
                           </div>
                         )}
@@ -529,9 +585,9 @@ function Workspaces() {
                       <label htmlFor="isPrivate" className="toggle-label">
                         <span className="privacy-label">Privacy</span>
                         <span className="privacy-description">
-                          {newWorkspace.isPrivate ?
-                            "Private - Only invited members can join" :
-                            "Public - Anyone with the link can join"}
+                          {newWorkspace.isPrivate
+                            ? "Private - Only invited members can join"
+                            : "Public - Anyone with the link can join"}
                         </span>
                       </label>
 
@@ -548,7 +604,11 @@ function Workspaces() {
                     </div>
 
                     <div className="modal-actions">
-                      <button type="button" onClick={handleCloseModal} className="cancel-btn">
+                      <button
+                        type="button"
+                        onClick={handleCloseModal}
+                        className="cancel-btn"
+                      >
                         Cancel
                       </button>
                       <button type="submit" className="create-btn">
