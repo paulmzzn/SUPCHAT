@@ -7,6 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider } from './src/theme/ThemeContext'; // Adjust path as necessary
 import { AuthProvider, useAuth } from './src/context/AuthContext'; // Import from new file
 import { SocketProvider, useSocket } from './src/context/SocketContext'; // Ajout de cet import
+import { UserPreferencesProvider } from './src/context/UserPreferencesContext'; // Import du contexte de préférences
 import NotificationHandler from './src/components/NotificationHandler'; // Import du gestionnaire de notifications
 
 // Auth screens
@@ -126,11 +127,13 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <SocketProvider>
-          <SafeAreaProvider>
-            <AppNavigator />
-          </SafeAreaProvider>
-        </SocketProvider>
+        <UserPreferencesProvider> {/* Ajout du provider des préférences utilisateur */}
+          <SocketProvider>
+            <SafeAreaProvider>
+              <AppNavigator />
+            </SafeAreaProvider>
+          </SocketProvider>
+        </UserPreferencesProvider>
       </ThemeProvider>
     </AuthProvider>
   );
