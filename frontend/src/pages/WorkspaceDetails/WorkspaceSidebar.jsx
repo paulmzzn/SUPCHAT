@@ -403,14 +403,13 @@ function WorkspaceSidebar({
                     ))}
                   </ul>
                 ) : (
-                  /* Sinon, on affiche la liste normale des canaux */
-                  <ChannelList
+                  /* Sinon, on affiche la liste normale des canaux */                  <ChannelList
                     channels={channels}
-                    loading={canalsLoading}
-                    error={canalsError}
+                    canalsLoading={canalsLoading}
+                    canalsError={canalsError}
                     activeChannel={activeChannel}
                     handleSelectChannel={handleSelectChannel}
-                    handleContextMenu={handleChannelContextMenu}
+                    handleChannelContextMenu={handleChannelContextMenu}
                     currentUserRole={currentUserRole}
                     searchQuery={searchQuery} // On passe la requête pour filtrer les canaux si nécessaire
                   />
