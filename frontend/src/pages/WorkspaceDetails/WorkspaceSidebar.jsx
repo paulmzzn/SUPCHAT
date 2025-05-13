@@ -448,9 +448,10 @@ function WorkspaceSidebar({
                     className="channel-item user-item"
                     onClick={() => handleAdaptedSelectResult("user", user)}
                   >
-                    {user.photo_de_profil ? (
+                    {" "}
+                    {user.avatar || user.photo_de_profil ? (
                       <img
-                        src={user.photo_de_profil}
+                        src={user.avatar || user.photo_de_profil}
                         alt={user.nom || user.username || "Utilisateur"}
                         className="user-avatar"
                       />
@@ -470,13 +471,8 @@ function WorkspaceSidebar({
                       {user.email && (
                         <span className="user-email">{user.email}</span>
                       )}
-                    </div>
-                    {user.status && (
-                      <div
-                        className={`status-indicator ${user.status.toLowerCase()}`}
-                        title={user.status}
-                      ></div>
-                    )}
+                    </div>{" "}
+                    {/* Indicateur de statut supprimé */}
                   </li>
                 ))}
               </ul>
@@ -505,9 +501,10 @@ function WorkspaceSidebar({
                       {/* En-tête du message avec l'utilisateur et l'icône de canal */}
                       <div className="message-header">
                         <div className="user-info">
-                          {message.photo_de_profil ? (
+                          {" "}
+                          {message.avatar || message.photo_de_profil ? (
                             <img
-                              src={message.photo_de_profil}
+                              src={message.avatar || message.photo_de_profil}
                               alt={message.nom_utilisateur}
                               className="user-avatar"
                             />
