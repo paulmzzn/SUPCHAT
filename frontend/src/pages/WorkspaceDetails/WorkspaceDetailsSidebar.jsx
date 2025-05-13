@@ -1,12 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { FaChevronDown, FaChevronRight, FaUserCircle, FaArrowUp, FaArrowDown, FaDownload, FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCircle, FaClock, FaTimesCircle, FaRegMoon, FaUserPlus } from "react-icons/fa";
+import {
+  FaChevronDown,
+  FaChevronRight,
+  FaUserCircle,
+  FaArrowUp,
+  FaArrowDown,
+  FaDownload,
+  FaFilePdf,
+  FaFileWord,
+  FaFileExcel,
+  FaFileAlt,
+  FaCircle,
+  FaClock,
+  FaTimesCircle,
+  FaRegMoon,
+  FaUserPlus,
+} from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
 import "./WorkspaceDetailsSidebar.css";
 
 // Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
 const DEBUG_LOGGING = false;
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
 // Fonction utilitaire pour logger uniquement en développement ou si DEBUG_LOGGING est activé
 const debugLog = (message, ...args) => {
@@ -40,10 +56,10 @@ function WorkspaceDetailsSidebar({
   handleDownloadFile,
   S3_BASE_URL,
   handleOpenFileViewer,
-  workspace
+  workspace,
 }) {
   const { userStatuses, setUserStatus } = useSocket();
-  
+
   // States for invitation functionality
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -67,11 +83,11 @@ function WorkspaceDetailsSidebar({
 
   const handleSendInvitation = async (e) => {
     e.preventDefault();
-    
+
     if (!inviteEmail.trim()) {
       setInviteStatus({
         status: "error",
-        message: "Veuillez saisir une adresse email"
+        message: "Veuillez saisir une adresse email",
       });
       return;
     }
@@ -81,13 +97,13 @@ function WorkspaceDetailsSidebar({
     if (!emailRegex.test(inviteEmail)) {
       setInviteStatus({
         status: "error",
-        message: "Veuillez saisir une adresse email valide"
+        message: "Veuillez saisir une adresse email valide",
       });
       return;
     }
 
     setIsInviting(true);
-    
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -97,7 +113,7 @@ function WorkspaceDetailsSidebar({
       // Extraire l'ID utilisateur du token JWT
       let userId = null;
       try {
-        const parts = token.split('.');
+        const parts = token.split(".");
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
           userId = payload.id;
@@ -113,12 +129,12 @@ function WorkspaceDetailsSidebar({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             email: inviteEmail,
-            userId: userId
-          })
+            userId: userId,
+          }),
         }
       );
 
@@ -127,7 +143,7 @@ function WorkspaceDetailsSidebar({
       if (response.ok) {
         setInviteStatus({
           status: "success",
-          message: "Invitation envoyée avec succès"
+          message: "Invitation envoyée avec succès",
         });
         // Réinitialiser le formulaire après 2 secondes
         setTimeout(() => {
@@ -138,14 +154,14 @@ function WorkspaceDetailsSidebar({
       } else {
         setInviteStatus({
           status: "error",
-          message: data.message || "Erreur lors de l'envoi de l'invitation"
+          message: data.message || "Erreur lors de l'envoi de l'invitation",
         });
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi de l'invitation:", error);
       setInviteStatus({
         status: "error",
-        message: error.message || "Une erreur est survenue"
+        message: error.message || "Une erreur est survenue",
       });
     } finally {
       setIsInviting(false);
@@ -169,34 +185,34 @@ function WorkspaceDetailsSidebar({
 
     // Utiliser une couleur différente pour les indicateurs de statut selon la source
     const baseClasses = {
-      'online': "status-indicator online",
-      'away': "status-indicator away",
-      'dnd': "status-indicator dnd",
-      'invisible': "status-indicator offline",
-      'offline': "status-indicator offline"
+      online: "status-indicator online",
+      away: "status-indicator away",
+      dnd: "status-indicator dnd",
+      invisible: "status-indicator offline",
+      offline: "status-indicator offline",
     };
 
     const iconComponent = {
-      'online': <FaCircle />,
-      'away': <FaClock />,
-      'dnd': <FaTimesCircle />,
-      'invisible': <FaRegMoon />,
-      'offline': <FaRegMoon />
+      online: <FaCircle />,
+      away: <FaClock />,
+      dnd: <FaTimesCircle />,
+      invisible: <FaRegMoon />,
+      offline: <FaRegMoon />,
     };
 
     const titles = {
-      'online': "En ligne",
-      'away': "Absent",
-      'dnd': "Ne pas déranger",
-      'invisible': "Invisible",
-      'offline': "Hors ligne"
+      online: "En ligne",
+      away: "Absent",
+      dnd: "Ne pas déranger",
+      invisible: "Invisible",
+      offline: "Hors ligne",
     };
 
-    const statusKey = status in baseClasses ? status : 'offline';
+    const statusKey = status in baseClasses ? status : "offline";
 
     return (
-      <span 
-        className={baseClasses[statusKey]} 
+      <span
+        className={baseClasses[statusKey]}
         title={titles[statusKey]}
         data-source={realTimeStatus ? "websocket" : "default"}
       >
@@ -213,56 +229,70 @@ function WorkspaceDetailsSidebar({
 
     e.preventDefault();
 
-    const statusMenu = document.createElement('div');
-    statusMenu.className = 'status-context-menu';
-    statusMenu.style.position = 'absolute';
+    const statusMenu = document.createElement("div");
+    statusMenu.className = "status-context-menu";
+    statusMenu.style.position = "absolute";
     statusMenu.style.top = `${e.pageY}px`;
     statusMenu.style.left = `${e.pageX}px`;
-    statusMenu.style.zIndex = '2000';
-    statusMenu.style.background = 'rgba(40, 40, 45, 0.98)';
-    statusMenu.style.borderRadius = '8px';
-    statusMenu.style.padding = '8px 0';
-    statusMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-    statusMenu.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    statusMenu.style.zIndex = "2000";
+    statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
+    statusMenu.style.borderRadius = "8px";
+    statusMenu.style.padding = "8px 0";
+    statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+    statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
 
     const statuses = [
-      { id: 'online', label: 'En ligne', icon: FaCircle, color: '#44b700' },
-      { id: 'away', label: 'Absent', icon: FaClock, color: '#ffc107' },
-      { id: 'dnd', label: 'Ne pas déranger', icon: FaTimesCircle, color: '#f44336' },
-      { id: 'invisible', label: 'Invisible', icon: FaRegMoon, color: '#9e9e9e' }
+      { id: "online", label: "En ligne", icon: FaCircle, color: "#44b700" },
+      { id: "away", label: "Absent", icon: FaClock, color: "#ffc107" },
+      {
+        id: "dnd",
+        label: "Ne pas déranger",
+        icon: FaTimesCircle,
+        color: "#f44336",
+      },
+      {
+        id: "invisible",
+        label: "Invisible",
+        icon: FaRegMoon,
+        color: "#9e9e9e",
+      },
     ];
 
-    statuses.forEach(status => {
-      const option = document.createElement('div');
-      option.style.padding = '8px 16px';
-      option.style.display = 'flex';
-      option.style.alignItems = 'center';
-      option.style.gap = '10px';
-      option.style.cursor = 'pointer';
-      option.style.color = 'white';
+    statuses.forEach((status) => {
+      const option = document.createElement("div");
+      option.style.padding = "8px 16px";
+      option.style.display = "flex";
+      option.style.alignItems = "center";
+      option.style.gap = "10px";
+      option.style.cursor = "pointer";
+      option.style.color = "white";
 
-      const icon = document.createElement('span');
+      const icon = document.createElement("span");
       icon.style.color = status.color;
-      icon.innerHTML = `<svg viewBox="0 0 512 512" width="16" height="16" fill="currentColor"><path d="${getIconPath(status.id)}"></path></svg>`;
+      icon.innerHTML = `<svg viewBox="0 0 512 512" width="16" height="16" fill="currentColor"><path d="${getIconPath(
+        status.id
+      )}"></path></svg>`;
 
-      const text = document.createElement('span');
+      const text = document.createElement("span");
       text.textContent = status.label;
 
       option.appendChild(icon);
       option.appendChild(text);
 
-      option.addEventListener('click', () => {
+      option.addEventListener("click", () => {
         const success = setUserStatus(status.id);
-        debugLog(`[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`);
+        debugLog(
+          `[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`
+        );
         document.body.removeChild(statusMenu);
       });
 
-      option.addEventListener('mouseover', () => {
-        option.style.backgroundColor = 'rgba(147, 72, 183, 0.15)';
+      option.addEventListener("mouseover", () => {
+        option.style.backgroundColor = "rgba(147, 72, 183, 0.15)";
       });
 
-      option.addEventListener('mouseout', () => {
-        option.style.backgroundColor = 'transparent';
+      option.addEventListener("mouseout", () => {
+        option.style.backgroundColor = "transparent";
       });
 
       statusMenu.appendChild(option);
@@ -274,23 +304,23 @@ function WorkspaceDetailsSidebar({
       if (document.body.contains(statusMenu)) {
         document.body.removeChild(statusMenu);
       }
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
 
     setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     }, 0);
   };
 
   const getIconPath = (status) => {
     switch (status) {
-      case 'online':
+      case "online":
         return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z";
-      case 'away':
+      case "away":
         return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z";
-      case 'dnd':
+      case "dnd":
         return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm101.8-262.2L295.6 256l62.2 62.2c4.7 4.7 4.7 12.3 0 17l-22.6 22.6c-4.7 4.7-12.3 4.7-17 0L256 295.6l-62.2 62.2c-4.7 4.7-12.3 4.7-17 0l-22.6-22.6c-4.7-4.7-4.7-12.3 0-17l62.2-62.2-62.2-62.2c-4.7-4.7-4.7-12.3 0-17l22.6-22.6c4.7-4.7 12.3-4.7 17 0l62.2 62.2 62.2-62.2c4.7-4.7 12.3-4.7 17 0l22.6 22.6c4.7 4.7 4.7 12.3 0 17z";
-      case 'invisible':
+      case "invisible":
       default:
         return "M248 12.8c-137 0-248 111-248 248s111 248 248 248 248-111 248-248-111-248-248-248zm0 48c110.5 0 200 89.5 200 200s-89.5 200-200 200-200-89.5-200-200 89.5-200 200-200zm0 304c-57.9 0-105.9-43.1-113.8-99.2 9.1 1.2 18.4 1.9 27.8 1.9 105.8 0 192-86.2 192-192 0-9.4-.7-18.7-1.9-27.8 56.2 7.9 99.2 55.9 99.2 113.8 0 62.8-51.2 114-114.3 114z";
     }
@@ -299,23 +329,24 @@ function WorkspaceDetailsSidebar({
   return (
     <div className="details-sidebar">
       {/* Add invite button in the top-right corner */}
-      {(currentUserRole === "owner" || currentUserRole === "admin") && (        <button 
+      {(currentUserRole === "owner" || currentUserRole === "admin") && (
+        <button
           className="invite-button-sidebar"
-          style={{ 
-            position: 'absolute', 
-            top: 10, 
-            right: 10, 
-            background: 'var(--primary-color)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-            zIndex: 10
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            background: "var(--primary-color)",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            padding: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+            zIndex: 10,
           }}
           onClick={handleOpenInviteModal}
           title="Inviter un utilisateur"
@@ -326,14 +357,22 @@ function WorkspaceDetailsSidebar({
 
       <div className="details-section">
         <div className="section-header" onClick={toggleMembers}>
-          {showMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
+          {showMembers ? (
+            <FaChevronDown className="toggle-icon" />
+          ) : (
+            <FaChevronRight className="toggle-icon" />
+          )}
           <h3>Membres ({members.online.length + members.offline.length})</h3>
         </div>
         {showMembers && (
           <div className="members-container">
             <div className="members-subsection">
               <div className="subsection-header" onClick={toggleOnlineMembers}>
-                {showOnlineMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
+                {showOnlineMembers ? (
+                  <FaChevronDown className="toggle-icon" />
+                ) : (
+                  <FaChevronRight className="toggle-icon" />
+                )}
                 <h4>En ligne ({members.online.length})</h4>
               </div>
               {showOnlineMembers && (
@@ -343,18 +382,31 @@ function WorkspaceDetailsSidebar({
                     return (
                       <li
                         key={member.id}
-                        className={`member-item online ${isCurrentUser ? 'current-user' : ''}`}
+                        className={`member-item online ${
+                          isCurrentUser ? "current-user" : ""
+                        }`}
                         onClick={() => handleOpenProfile(member)}
-                        onContextMenu={(e) => handleCurrentUserContextMenu(e, member, isCurrentUser)}
+                        onContextMenu={(e) =>
+                          handleCurrentUserContextMenu(e, member, isCurrentUser)
+                        }
                         style={{
-                          cursor: isCurrentUser ? 'context-menu' :
-                            (currentUserRole === "owner" && member.role !== "owner") ?
-                              "context-menu" : "pointer",
-                          backgroundColor: isCurrentUser ? 'rgba(147, 72, 183, 0.1)' : 'transparent'
+                          cursor: isCurrentUser
+                            ? "context-menu"
+                            : currentUserRole === "owner" &&
+                              member.role !== "owner"
+                            ? "context-menu"
+                            : "pointer",
+                          backgroundColor: isCurrentUser
+                            ? "rgba(147, 72, 183, 0.1)"
+                            : "transparent",
                         }}
                       >
-                        {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} className="member-avatar" />
+                        {member.avatar || member.photo_de_profil ? (
+                          <img
+                            src={member.avatar || member.photo_de_profil}
+                            alt={member.name}
+                            className="member-avatar"
+                          />
                         ) : (
                           <FaUserCircle className="member-avatar-placeholder" />
                         )}
@@ -374,7 +426,11 @@ function WorkspaceDetailsSidebar({
             </div>
             <div className="members-subsection">
               <div className="subsection-header" onClick={toggleOfflineMembers}>
-                {showOfflineMembers ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
+                {showOfflineMembers ? (
+                  <FaChevronDown className="toggle-icon" />
+                ) : (
+                  <FaChevronRight className="toggle-icon" />
+                )}
                 <h4>Hors ligne ({members.offline.length})</h4>
               </div>
               {showOfflineMembers && (
@@ -384,18 +440,31 @@ function WorkspaceDetailsSidebar({
                     return (
                       <li
                         key={member.id}
-                        className={`member-item offline ${isCurrentUser ? 'current-user' : ''}`}
+                        className={`member-item offline ${
+                          isCurrentUser ? "current-user" : ""
+                        }`}
                         onClick={() => handleOpenProfile(member)}
-                        onContextMenu={(e) => handleCurrentUserContextMenu(e, member, isCurrentUser)}
+                        onContextMenu={(e) =>
+                          handleCurrentUserContextMenu(e, member, isCurrentUser)
+                        }
                         style={{
-                          cursor: isCurrentUser ? 'context-menu' :
-                            (currentUserRole === "owner" && member.role !== "owner") ?
-                              "context-menu" : "pointer",
-                          backgroundColor: isCurrentUser ? 'rgba(147, 72, 183, 0.1)' : 'transparent'
+                          cursor: isCurrentUser
+                            ? "context-menu"
+                            : currentUserRole === "owner" &&
+                              member.role !== "owner"
+                            ? "context-menu"
+                            : "pointer",
+                          backgroundColor: isCurrentUser
+                            ? "rgba(147, 72, 183, 0.1)"
+                            : "transparent",
                         }}
                       >
-                        {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} className="member-avatar" />
+                        {member.avatar || member.photo_de_profil ? (
+                          <img
+                            src={member.avatar || member.photo_de_profil}
+                            alt={member.name}
+                            className="member-avatar"
+                          />
                         ) : (
                           <FaUserCircle className="member-avatar-placeholder" />
                         )}
@@ -419,42 +488,88 @@ function WorkspaceDetailsSidebar({
       {memberContextMenu.visible && memberContextMenu.member && (
         <div
           className="channel-context-menu"
-          style={{ top: memberContextMenu.y, left: memberContextMenu.x, zIndex: 2000 }}
+          style={{
+            top: memberContextMenu.y,
+            left: memberContextMenu.x,
+            zIndex: 2000,
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {((currentUserRole === "owner" && memberContextMenu.member.role === "member") ||
-            (currentUserRole === "admin" && memberContextMenu.member.role === "member")) && (
-            <div className="context-menu-item" onClick={() => handleChangeMemberRole("admin")}> <FaArrowUp className="context-menu-icon" />Promouvoir en admin</div>
+          {((currentUserRole === "owner" &&
+            memberContextMenu.member.role === "member") ||
+            (currentUserRole === "admin" &&
+              memberContextMenu.member.role === "member")) && (
+            <div
+              className="context-menu-item"
+              onClick={() => handleChangeMemberRole("admin")}
+            >
+              {" "}
+              <FaArrowUp className="context-menu-icon" />
+              Promouvoir en admin
+            </div>
           )}
-          {currentUserRole === "owner" && memberContextMenu.member.role === "admin" && (
-            <div className="context-menu-item" onClick={() => handleChangeMemberRole("member")}> <FaArrowDown className="context-menu-icon" />Rétrograder en membre</div>
-          )}
+          {currentUserRole === "owner" &&
+            memberContextMenu.member.role === "admin" && (
+              <div
+                className="context-menu-item"
+                onClick={() => handleChangeMemberRole("member")}
+              >
+                {" "}
+                <FaArrowDown className="context-menu-icon" />
+                Rétrograder en membre
+              </div>
+            )}
         </div>
       )}
       {files.length > 0 && (
         <div className="details-section">
           <div className="section-header" onClick={toggleFiles}>
-            {showFiles ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
+            {showFiles ? (
+              <FaChevronDown className="toggle-icon" />
+            ) : (
+              <FaChevronRight className="toggle-icon" />
+            )}
             <h3>Fichiers ({files.length})</h3>
           </div>
           {showFiles && (
-            <ul className="files-list" style={{ maxHeight: "220px", overflowY: files.length > 5 ? "auto" : "visible" }}>
+            <ul
+              className="files-list"
+              style={{
+                maxHeight: "220px",
+                overflowY: files.length > 5 ? "auto" : "visible",
+              }}
+            >
               {files.slice(0, 5).map((file) => (
                 <li key={file.id} className="file-item">
-                  <div className="file-icon">{(() => {
-                    switch (file.type) {
-                      case "pdf": return <FaFilePdf />;
-                      case "word": return <FaFileWord />;
-                      case "excel": return <FaFileExcel />;
-                      default: return <FaFileAlt />;
-                    }
-                  })()}</div>
+                  <div className="file-icon">
+                    {(() => {
+                      switch (file.type) {
+                        case "pdf":
+                          return <FaFilePdf />;
+                        case "word":
+                          return <FaFileWord />;
+                        case "excel":
+                          return <FaFileExcel />;
+                        default:
+                          return <FaFileAlt />;
+                      }
+                    })()}
+                  </div>
                   <div className="file-info">
                     <span className="file-name">{file.name}</span>
-                    <span className="file-meta">{file.size} • {file.uploadedAt && formatMessageDate(file.uploadedAt)}</span>
+                    <span className="file-meta">
+                      {file.size} •{" "}
+                      {file.uploadedAt && formatMessageDate(file.uploadedAt)}
+                    </span>
                   </div>
                   <div className="file-actions">
-                    <button className="file-download-button" title="Télécharger" onClick={() => handleDownloadFile(file.url, file.name)}><FaDownload /></button>
+                    <button
+                      className="file-download-button"
+                      title="Télécharger"
+                      onClick={() => handleDownloadFile(file.url, file.name)}
+                    >
+                      <FaDownload />
+                    </button>
                   </div>
                 </li>
               ))}
@@ -465,18 +580,33 @@ function WorkspaceDetailsSidebar({
       {images.length > 0 && (
         <div className="details-section">
           <div className="section-header" onClick={toggleImages}>
-            {showImages ? <FaChevronDown className="toggle-icon" /> : <FaChevronRight className="toggle-icon" />}
+            {showImages ? (
+              <FaChevronDown className="toggle-icon" />
+            ) : (
+              <FaChevronRight className="toggle-icon" />
+            )}
             <h3>Images ({images.length})</h3>
           </div>
           {showImages && (
-            <div className="images-grid" style={{ maxHeight: "220px", overflowY: images.length > 5 ? "auto" : "visible" }}>
+            <div
+              className="images-grid"
+              style={{
+                maxHeight: "220px",
+                overflowY: images.length > 5 ? "auto" : "visible",
+              }}
+            >
               {images.slice(0, 5).map((image) => (
                 <div key={image.id} className="image-item">
                   <img
                     src={S3_BASE_URL + image.url}
                     alt={image.name}
                     className="shared-image"
-                    onClick={() => handleOpenFileViewer({ ...image, fullFileUrl: S3_BASE_URL + image.url })}
+                    onClick={() =>
+                      handleOpenFileViewer({
+                        ...image,
+                        fullFileUrl: S3_BASE_URL + image.url,
+                      })
+                    }
                     style={{ cursor: "pointer" }}
                   />
                 </div>
@@ -488,10 +618,13 @@ function WorkspaceDetailsSidebar({
       {/* Invitation Modal */}
       {showInviteModal && (
         <div className="modal-overlay" onClick={handleCloseInviteModal}>
-          <div className="modal-content modern" onClick={e => e.stopPropagation()}>
+          <div
+            className="modal-content modern"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Inviter à {workspace?.name}</h2>
             <p>Envoyer une invitation par email pour rejoindre ce workspace</p>
-            
+
             <form onSubmit={handleSendInvitation}>
               <div className="form-group">
                 <label htmlFor="inviteEmail">Email</label>
@@ -505,24 +638,24 @@ function WorkspaceDetailsSidebar({
                   required
                 />
               </div>
-              
+
               {inviteStatus.message && (
                 <div className={`invitation-status ${inviteStatus.status}`}>
                   {inviteStatus.message}
                 </div>
               )}
-              
+
               <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={handleCloseInviteModal} 
+                <button
+                  type="button"
+                  onClick={handleCloseInviteModal}
                   className="cancel-btn"
                   disabled={isInviting}
                 >
                   Annuler
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="send-invite-btn"
                   disabled={isInviting}
                 >
@@ -537,9 +670,6 @@ function WorkspaceDetailsSidebar({
   );
 }
 
-export default React.memo(
-  WorkspaceDetailsSidebar,
-  (prevProps, nextProps) => {
-    return false;
-  }
-);
+export default React.memo(WorkspaceDetailsSidebar, (prevProps, nextProps) => {
+  return false;
+});

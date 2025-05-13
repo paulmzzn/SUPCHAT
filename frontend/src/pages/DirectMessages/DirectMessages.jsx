@@ -25,7 +25,7 @@ import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.119:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.85:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
