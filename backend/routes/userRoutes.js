@@ -25,17 +25,10 @@ import multer from "multer";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../config/dbConnection.js"; // Ajout de l'import de pool
+import { uploadToS3 } from "../config/s3Config.js"; // Import de la fonction d'upload S3
 
-// Configuration de multer pour le stockage des avatars
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/avatars/");
-  },
-  filename: function (req, file, cb) {
-    const uniqueFileName = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFileName);
-  },
-});
+// Configuration de multer pour le stockage en mémoire (pour S3)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -162,7 +155,7 @@ router.get("/profile", verifyToken, getUserProfile);
 router.put("/profile", verifyToken, upload.single("avatar"), updateUserProfile);
 
 // Route d'export RGPD (données personnelles)
-router.get('/rgpd-export', verifyToken, exportRgpdData);
+router.get("/rgpd-export", verifyToken, exportRgpdData);
 
 // Route pour récupérer un utilisateur par ID (gère aussi l'alias "me")
 router.get("/:id", verifyToken, getUserById);

@@ -300,7 +300,7 @@ export const useWorkspaceDetails = (workspaceId) => {
         .map((member) => ({
           id: member.id_utilisateur,
           name: member.nom,
-          avatar: member.photo_de_profil || null,
+          avatar: member.photo_url || member.photo_de_profil || null,
           status: userStatuses[member.id_utilisateur] || "online",
           role: member.role.toLowerCase(),
         }));
@@ -317,7 +317,7 @@ export const useWorkspaceDetails = (workspaceId) => {
         .map((member) => ({
           id: member.id_utilisateur,
           name: member.nom,
-          avatar: member.photo_de_profil || null,
+          avatar: member.photo_url || member.photo_de_profil || null,
           status: userStatuses[member.id_utilisateur] || "offline",
           role: member.role.toLowerCase(),
         }));
@@ -804,7 +804,7 @@ export const useWorkspaceDetails = (workspaceId) => {
             data.utilisateurs?.map((user) => ({
               id: user.id_utilisateur,
               name: user.nom,
-              avatar: user.photo_de_profil || null,
+              avatar: user.photo_url || user.photo_de_profil || null,
               status:
                 userStatuses[user.id_utilisateur] || user.status || "offline",
             })) || [],
