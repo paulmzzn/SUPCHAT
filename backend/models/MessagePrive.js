@@ -337,6 +337,59 @@ class MessagePrive {
       throw error;
     }
   }
+
+  /**
+   * Supprimer tous les messages d'une conversation entre deux utilisateurs
+   * @param {string} userA - ID du premier utilisateur
+   * @param {string} userB - ID du deuxième utilisateur
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  static async deleteConversation(userA, userB) {
+    try {
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET is_deleted = true, contenu = '[message supprimé]', date_modification = NOW()
+         WHERE (fk_expediteur = $1 AND fk_destinataire = $2)
+            OR (fk_expediteur = $2 AND fk_destinataire = $1)
+         RETURNING *`,
+        [userA, userB]
+      );
+      return {
+        success: true,
+        deletedCount: result.rowCount,
+        messages: result.rows
+      };
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.deleteConversation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marquer tous les messages d'un expéditeur comme lus par le destinataire
+   * @param {string} expediteurId - ID de l'expéditeur des messages
+   * @param {string} destinataireId - ID du destinataire qui marque comme lu
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  static async markAllAsRead(expediteurId, destinataireId) {
+    try {
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET date_lecture = NOW()
+         WHERE fk_expediteur = $1 AND fk_destinataire = $2 AND date_lecture IS NULL
+         RETURNING id_message_prive, date_lecture`,
+        [expediteurId, destinataireId]
+      );
+      return {
+        success: true,
+        markedCount: result.rowCount,
+        messages: result.rows
+      };
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.markAllAsRead:', error);
+      throw error;
+    }
+  }
 }
 
 export default MessagePrive;

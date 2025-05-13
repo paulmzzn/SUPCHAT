@@ -335,6 +335,33 @@ const socketManager = (io) => {
       }
     });
 
+    // Ajouter un gestionnaire pour marquer tous les messages comme lus
+    socket.on("readAllPrivateMessages", async ({ senderId, recipientId }) => {
+      try {
+        const userId = socket.user.id;
+
+        // Vérifier que l'utilisateur qui fait la demande est bien le destinataire
+        if (userId !== recipientId) {
+          socket.emit("error", { message: "Non autorisé" });
+          return;
+        }
+
+        const result = await MessagePrive.markAllAsRead(senderId, recipientId);
+
+        if (result.markedCount > 0) {
+          io.to(`dm:${senderId}`).emit("allMessagesRead", {
+            readBy: recipientId,
+            count: result.markedCount,
+            timestamp: new Date(),
+          });
+        }
+      } catch (error) {
+        socket.emit("error", {
+          message: "Erreur lors de l'accusé de lecture groupé",
+        });
+      }
+    });
+
     // Recevoir un message
     socket.on("message", async (data) => {
       try {

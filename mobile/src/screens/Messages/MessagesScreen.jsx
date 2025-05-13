@@ -1,16 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, Text, TouchableOpacity, TextInput, Image, 
   ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform,
-  Keyboard
+  Keyboard, Alert
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStyles } from './MessagesScreen.styles';
 import { useTheme } from '../../theme/ThemeContext';
-import io from 'socket.io-client';
+import { useSocket } from '../../context/SocketContext';
+// Import the environment configuration
+import env from '../../config/env';
+// Import the new MediaViewer component
+import MediaViewer from '../../components/MediaViewer/MediaViewer';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.119:3000';
+const S3_BASE_URL = env.S3_BASE_URL || 'https://s3-supchat.s3.fr-par.scw.cloud/';
 
 // Helper for formatting message dates
 const formatMessageDate = (dateString) => {
@@ -21,6 +26,93 @@ const formatMessageDate = (dateString) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Helper for formatting file sizes
+const formatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes)) return "Unknown size";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+};
+
+// Helper for determining file icons
+const getFileIcon = (fileType) => {
+  switch (fileType) {
+    case 'application/pdf':
+      return "document-text";
+    case 'application/msword':
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      return "document";
+    case 'application/vnd.ms-excel':
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+      return "calculator";
+    case 'application/vnd.ms-powerpoint':
+    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      return "easel";
+    case 'application/zip':
+    case 'application/x-zip-compressed':
+      return "archive";
+    case 'audio/mpeg':
+    case 'audio/mp3':
+    case 'audio/wav':
+      return "musical-notes";
+    case 'video/mp4':
+    case 'video/quicktime':
+      return "videocam";
+    default:
+      if (fileType?.startsWith('image/')) return "image";
+      if (fileType?.startsWith('audio/')) return "musical-notes";
+      if (fileType?.startsWith('video/')) return "videocam";
+      return "document";
+  }
+};
+
+// Helper for constructing file URLs - Updated to properly handle S3 paths
+const getFileURL = (url) => {
+  if (!url) return null;
+  
+  // Si l'URL est déjà complète, la retourner telle quelle
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  
+  // Si le chemin commence par 'private-messages/files/', construire une URL S3
+  if (url.startsWith('private-messages/files/') || url.startsWith('private-messages/')) {
+    console.log(`Using S3 base URL for file: ${url}`);
+    return `${S3_BASE_URL}${url}`;
+  }
+  
+  // Si l'URL est relative mais commence déjà avec /api/files, ajouter uniquement l'URL de base
+  if (url.startsWith('/api/files/')) return `${API_URL}${url}`;
+  
+  // Pour toutes les autres URLs, considérer qu'elles sont relatives à /api/files/
+  return `${API_URL}/api/files/${url}`;
+};
+
+const ImageComponent = ({ uri, style, resizeMode, fileName }) => {
+  const [hasError, setHasError] = useState(false);
+
+  return hasError ? (
+    <View style={[style, { 
+      backgroundColor: '#f0f0f0', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: '#ddd',
+      borderStyle: 'dashed'
+    }]}>
+      <Ionicons name="image-outline" size={32} color="#999" />
+      <Text style={{ color: '#999', marginTop: 8, textAlign: 'center' }}>
+        Image non disponible
+      </Text>
+    </View>
+  ) : (
+    <Image
+      source={{ uri }}
+      style={style}
+      resizeMode={resizeMode}
+      onError={() => setHasError(true)}
+    />
+  );
 };
 
 const MessagesScreen = ({ navigation, route }) => {
@@ -40,70 +132,57 @@ const MessagesScreen = ({ navigation, route }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(true);
-  const [socket, setSocket] = useState(null);
   const [error, setError] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
   const messagesScrollRef = useRef(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const lastFetchedUserId = useRef(null);
+  const [conversationTimestamps, setConversationTimestamps] = useState({});
+  const messageAnimationTimers = useRef({});
+  const [animatingMessages, setAnimatingMessages] = useState({});
 
-  // Socket connection setup
-  useEffect(() => {
-    const connectSocket = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        if (!token) {
-          setError('No authentication token found');
-          return;
-        }
-        
-        console.log('Connecting to socket at:', API_URL);
-        
-        const newSocket = io(API_URL, {
-          auth: { token },
-          transports: ['websocket'],
-          reconnection: true,
-          reconnectionAttempts: 10,
-        });
-        
-        newSocket.on('connect', () => {
-          console.log('Socket connected:', newSocket.id);
-          newSocket.emit('joinPrivate');
-        });
-        
-        newSocket.on('connect_error', (err) => {
-          console.error('Socket connection error:', err);
-          setError('Failed to connect to messaging server');
-        });
-        
-        setSocket(newSocket);
-        
-        // Check user identity from token
-        try {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1]));
-            if (payload.id) {
-              setCurrentUserId(payload.id);
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing token:', e);
-        }
-        
-        return () => {
-          if (newSocket) {
-            newSocket.disconnect();
-          }
-        };
-      } catch (error) {
-        console.error('Error connecting socket:', error);
-        setError('Failed to initialize messaging');
-      }
-    };
+  // New state variables for pagination
+  const [page, setPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const messagesPerPage = 20;
+  const isLoadingMore = useRef(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const scrollPositionRef = useRef(null);
+
+  // Refactor the attachment preview state to be simpler
+  const [mediaPreview, setMediaPreview] = useState({
+    visible: false,
+    media: null
+  });
+
+  // Use socket context
+  const { socket, currentUserId, markMessagesAsRead: markMessagesAsReadContext } = useSocket();
+
+  // Memoize internal message reading function to prevent recreating on every render
+  const markMessagesAsRead = useCallback((msgs) => {
+    if (!socket || !msgs?.length || !userId || !currentUserId) return;
     
-    connectSocket();
-  }, []);
+    const unreadMessages = msgs.filter(m => 
+      m.fk_expediteur !== currentUserId && !m.date_lecture
+    );
+    
+    if (unreadMessages.length > 0) {
+      console.log(`Marking ${unreadMessages.length} messages as read for user ${userId}`);
+      unreadMessages.forEach(msg => {
+        socket.emit('readPrivateMessage', {
+          id: msg.id_message_prive,
+          senderId: msg.fk_expediteur,
+          recipientId: currentUserId
+        });
+      });
+      
+      // Also notify context that messages have been read
+      if (markMessagesAsReadContext) {
+        markMessagesAsReadContext(userId);
+      }
+    }
+  }, [socket, userId, currentUserId, markMessagesAsReadContext]);
 
   // Track keyboard visibility
   useEffect(() => {
@@ -130,7 +209,44 @@ const MessagesScreen = ({ navigation, route }) => {
     };
   }, []);
 
-  // Handle incoming messages
+  // Function to save conversation timestamps safely
+  const saveConversationTimestamp = async (userId) => {
+    try {
+      // Update timestamp with a random delay to avoid conflicts
+      const timestamp = Date.now() + Math.floor(Math.random() * 10);
+      console.log(`Updating timestamp for ${userId} to ${timestamp}`);
+      
+      // Get current timestamps
+      const timestampsStr = await AsyncStorage.getItem('conversationTimestamps');
+      let timestamps = {};
+      
+      if (timestampsStr) {
+        try {
+          timestamps = JSON.parse(timestampsStr);
+        } catch (e) {
+          console.error('Error parsing timestamps:', e);
+        }
+      }
+      
+      // Update with new timestamp
+      const newTimestamps = {
+        ...timestamps,
+        [userId]: timestamp
+      };
+      
+      // Save back to AsyncStorage
+      await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(newTimestamps));
+      console.log('Timestamps updated in storage:', newTimestamps);
+      
+      // Update local state
+      setConversationTimestamps(newTimestamps);
+      
+    } catch (e) {
+      console.error('Error saving conversation timestamp:', e);
+    }
+  };
+
+  // Handle incoming messages with optimized animations
   useEffect(() => {
     if (!socket || !currentUserId || !userId) return;
     
@@ -139,6 +255,34 @@ const MessagesScreen = ({ navigation, route }) => {
       
       // Update messages if relevant to current conversation
       if (msg.fk_expediteur === userId || msg.fk_destinataire === userId) {
+        const isNewMessage = !messages.some(m => 
+          m.id_message_prive === msg.id_message_prive ||
+          (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) ||
+          (m.isOptimistic && m.contenu === msg.contenu && m.fk_expediteur === msg.fk_expediteur)
+        );
+        
+        if (isNewMessage) {
+          // Mark this message as animating
+          const messageId = msg.id_message_prive || `temp-${Date.now()}`;
+          setAnimatingMessages(prev => ({
+            ...prev,
+            [messageId]: true
+          }));
+          
+          // Remove animation state after a delay
+          if (messageAnimationTimers.current[messageId]) {
+            clearTimeout(messageAnimationTimers.current[messageId]);
+          }
+          
+          messageAnimationTimers.current[messageId] = setTimeout(() => {
+            setAnimatingMessages(prev => {
+              const updated = {...prev};
+              delete updated[messageId];
+              return updated;
+            });
+          }, 500); // Animation duration
+        }
+        
         setMessages(prev => {
           const messageExists = prev.some(m => 
             m.id_message_prive === msg.id_message_prive ||
@@ -158,7 +302,22 @@ const MessagesScreen = ({ navigation, route }) => {
           }
         });
         
-        scrollToBottom();
+        // Scroll to bottom with animation
+        setTimeout(() => {
+          scrollToBottom(true);
+        }, 50);
+
+        // Mark the message as read immediately
+        if (msg.fk_expediteur !== currentUserId) {
+          socket.emit('readPrivateMessage', {
+            id: msg.id_message_prive,
+            senderId: msg.fk_expediteur,
+            recipientId: currentUserId
+          });
+        }
+
+        // Update timestamp for this conversation in AsyncStorage
+        await saveConversationTimestamp(userId);
       }
     };
     
@@ -169,12 +328,36 @@ const MessagesScreen = ({ navigation, route }) => {
     };
   }, [socket, userId, currentUserId]);
 
-  // Fetch user info and messages when userId changes
+  // Modified: Fetch user info and messages when userId changes
   useEffect(() => {
-    if (userId) {
-      fetchUserInfo(userId);
-      fetchMessages(userId);
-    }
+    if (!userId || userId === lastFetchedUserId.current) return;
+    
+    // Set a ref to avoid duplicate fetches
+    lastFetchedUserId.current = userId;
+    
+    const loadUserAndMessages = async () => {
+      await fetchUserInfo(userId);
+      // Reset pagination state when changing conversations
+      setPage(1);
+      setHasMoreMessages(true);
+      setIsInitialLoad(true);
+      await fetchMessages(userId, 1);
+      
+      // Mark messages as read only after fetching them
+      if (markMessagesAsReadContext) {
+        markMessagesAsReadContext(userId);
+      }
+    };
+    
+    loadUserAndMessages();
+    
+    // Cleanup when leaving the conversation
+    return () => {
+      setMessages([]);
+      setUserInfo(null);
+      setPage(1);
+      setHasMoreMessages(true);
+    };
   }, [userId]);
 
   // Get user info
@@ -206,13 +389,79 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // Fetch messages for a conversation
-  const fetchMessages = async (userId) => {
+  // Scroll event handler to detect when user has scrolled near the top
+  const handleScroll = (event) => {
+    if (loadingMoreMessages || !hasMoreMessages || isLoadingMore.current) return;
+
+    const scrollOffset = event.nativeEvent.contentOffset.y;
+    const layoutHeight = event.nativeEvent.layoutMeasurement.height;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    
+    // Calculate the scroll position from the top
+    // We trigger loading more when the user is within 200 pixels of the top
+    if (scrollOffset < 200) {
+      // Store current position to restore after loading
+      scrollPositionRef.current = {
+        contentHeight,
+        scrollOffset
+      };
+
+      // Prevent multiple triggers
+      isLoadingMore.current = true;
+      
+      // Load more messages
+      loadMoreMessages();
+    }
+  };
+
+  // Load more messages (previous page)
+  const loadMoreMessages = async () => {
+    if (loadingMoreMessages || !hasMoreMessages) return;
+    
+    setLoadingMoreMessages(true);
+    
     try {
-      setLoadingMessages(true);
+      const nextPage = page + 1;
+      const result = await fetchMessagesBatch(userId, nextPage);
+      
+      if (result.messages.length > 0) {
+        // Update state
+        setPage(nextPage);
+        setMessages(prevMessages => [...result.messages, ...prevMessages]);
+        setHasMoreMessages(result.hasMore);
+        
+        // Restore scroll position after messages are loaded
+        if (scrollPositionRef.current && messagesScrollRef.current) {
+          setTimeout(() => {
+            const newContentHeight = messagesScrollRef.current._contentHeight;
+            const heightDifference = newContentHeight - scrollPositionRef.current.contentHeight;
+            
+            if (heightDifference > 0) {
+              messagesScrollRef.current.scrollTo({
+                y: scrollPositionRef.current.scrollOffset + heightDifference,
+                animated: false
+              });
+            }
+          }, 50);
+        }
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (error) {
+      console.error("Error loading more messages:", error);
+    } finally {
+      setLoadingMoreMessages(false);
+      isLoadingMore.current = false;
+    }
+  };
+
+  // Fetch a batch of messages by page
+  const fetchMessagesBatch = async (userId, page = 1, limit = messagesPerPage) => {
+    try {
+      const offset = (page - 1) * limit;
       
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
+      const res = await fetch(`${API_URL}/api/private-messages/${userId}?limit=${limit}&offset=${offset}&sort=desc`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -221,11 +470,39 @@ const MessagesScreen = ({ navigation, route }) => {
       }
       
       const data = await res.json();
-      console.log('Messages:', data);
-      setMessages(data);
       
-      // Mark messages as read
-      markMessagesAsRead(data);
+      // Process messages (add attachments, etc.)
+      const processedMessages = await Promise.all(
+        data.map(async (msg) => {
+          // Process attachments here if needed
+          return msg;
+        })
+      );
+      
+      return {
+        messages: processedMessages,
+        hasMore: data.length === limit
+      };
+    } catch (error) {
+      console.error('Error fetching message batch:', error);
+      throw error;
+    }
+  };
+
+  // Modified: Fetch messages for a conversation with pagination
+  const fetchMessages = async (userId, initialPage = 1) => {
+    try {
+      setLoadingMessages(true);
+      
+      const result = await fetchMessagesBatch(userId, initialPage);
+      
+      setMessages(result.messages);
+      setPage(initialPage);
+      setHasMoreMessages(result.hasMore);
+      setIsInitialLoad(false);
+      
+      // Mark messages as read, but don't depend on this function in useEffect
+      setTimeout(() => markMessagesAsRead(result.messages), 500);
       
     } catch (e) {
       console.error('Error fetching messages:', e);
@@ -236,59 +513,64 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // Mark messages as read
-  const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs?.length || !userId || !currentUserId) return;
-    
-    const unreadMessages = msgs.filter(m => 
-      m.fk_expediteur !== currentUserId && !m.date_lecture
-    );
-    
-    if (unreadMessages.length > 0) {
-      unreadMessages.forEach(msg => {
-        socket.emit('readPrivateMessage', {
-          id: msg.id_message_prive,
-          senderId: msg.fk_expediteur,
-          recipientId: currentUserId
-        });
-      });
-    }
-  };
-
-  // Send message
-  const handleSendMessage = () => {
+  // Send message with timestamp update
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !userId || !currentUserId) return;
     
     try {
       const tempId = Date.now().toString();
+      const messageText = newMessage;
+      
+      // Clear input immediately for perceived responsiveness
+      setNewMessage('');
       
       // Optimistic message
       const optimisticMessage = {
         id_message_prive: `temp-${tempId}`,
-        contenu: newMessage,
+        contenu: messageText,
         fk_expediteur: currentUserId,
         fk_destinataire: userId,
         date_envoi: new Date().toISOString(),
-        isOptimistic: true
+        isOptimistic: true,
       };
+      
+      // Mark as animating
+      setAnimatingMessages(prev => ({
+        ...prev,
+        [`temp-${tempId}`]: true
+      }));
+      
+      // Remove animation state after a delay
+      setTimeout(() => {
+        setAnimatingMessages(prev => {
+          const updated = {...prev};
+          delete updated[`temp-${tempId}`];
+          return updated;
+        });
+      }, 500);
       
       // Add to UI immediately
       setMessages(prev => [...prev, optimisticMessage]);
+      
+      // Scroll with animation
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 50);
       
       // Send via socket
       if (socket) {
         socket.emit('privateMessage', {
           destinataireId: userId,
-          contenu: newMessage,
+          contenu: messageText,
           tempId
         });
       } else {
         // Fallback to REST API
-        sendMessageViaAPI(newMessage);
+        sendMessageViaAPI(messageText);
       }
       
-      setNewMessage('');
-      scrollToBottom();
+      // Update conversation timestamp
+      await saveConversationTimestamp(userId);
       
     } catch (e) {
       console.error('Error sending message:', e);
@@ -331,6 +613,51 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
+  // Fetch conversation timestamps when component mounts
+  useEffect(() => {
+    const loadConversationTimestamps = async () => {
+      try {
+        const timestampsStr = await AsyncStorage.getItem('conversationTimestamps');
+        if (timestampsStr) {
+          const timestamps = JSON.parse(timestampsStr);
+          setConversationTimestamps(timestamps);
+        }
+      } catch (e) {
+        console.error('Error loading conversation timestamps:', e);
+      }
+    };
+    
+    loadConversationTimestamps();
+  }, []);
+
+  // Initialize timestamps when userId changes
+  useEffect(() => {
+    if (!userId) return;
+    
+    const initializeTimestamp = async () => {
+      try {
+        // Get current timestamps
+        const timestampsStr = await AsyncStorage.getItem('conversationTimestamps');
+        if (timestampsStr) {
+          const timestamps = JSON.parse(timestampsStr);
+          setConversationTimestamps(timestamps);
+          
+          // Initialize timestamp for this conversation if it doesn't exist
+          if (!timestamps[userId]) {
+            await saveConversationTimestamp(userId);
+          }
+        } else {
+          // No existing timestamps, initialize this conversation
+          await saveConversationTimestamp(userId);
+        }
+      } catch (e) {
+        console.error('Error initializing conversation timestamp:', e);
+      }
+    };
+    
+    initializeTimestamp();
+  }, [userId]);
+
   // Render avatar component
   const renderAvatar = (user) => {
     if (!user) return <View style={styles.avatar} />;
@@ -356,23 +683,62 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // Scroll to bottom of messages
-  const scrollToBottom = () => {
+  // Modified scroll to bottom to work with dynamic content
+  const scrollToBottom = (animated = false) => {
     setTimeout(() => {
       if (messagesScrollRef.current) {
-        messagesScrollRef.current.scrollToEnd({ animated: true });
+        messagesScrollRef.current.scrollToEnd({ animated });
       }
-    }, 100);
+    }, animated ? 100 : 50);
   };
 
-  // Ensure scrolling to bottom when messages change
+  // Modified: Only scroll to bottom for new messages, not when loading older ones
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!isInitialLoad && !loadingMoreMessages && messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages.length, isInitialLoad, loadingMoreMessages]);
 
   // Handle going back to conversation list
   const handleGoBack = () => {
     navigation.goBack();
+  };
+
+  // Simplify the attachment opening function
+  const handleOpenAttachment = (attachment) => {
+    try {
+      // Get the file URL
+      const fileUrl = attachment.url || attachment.presignedUrl;
+      const fullFileUrl = getFileURL(fileUrl);
+      
+      console.log('Opening attachment with URL:', fullFileUrl);
+      console.log('Attachment details:', {
+        fileUrl: fullFileUrl,
+        filename: attachment.nom_fichier,
+        type: attachment.type
+      });
+      
+      // Open the modal with the MediaViewer component
+      setMediaPreview({
+        visible: true,
+        media: {
+          fileUrl: fullFileUrl,
+          fileName: attachment.nom_fichier || 'Fichier',
+          fileType: attachment.type || 'application/octet-stream'
+        }
+      });
+    } catch (error) {
+      console.error('Error opening attachment:', error);
+      Alert.alert("Erreur", "Impossible d'ouvrir cette pièce jointe.");
+    }
+  };
+
+  // Close MediaViewer modal
+  const handleCloseMediaPreview = () => {
+    setMediaPreview({
+      visible: false,
+      media: null
+    });
   };
 
   if (!userId) {
@@ -414,7 +780,7 @@ const MessagesScreen = ({ navigation, route }) => {
           </View>
         </View>
         
-        {loadingMessages ? (
+        {loadingMessages && isInitialLoad ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={themeColors.accentPrimary} />
             <Text style={styles.loadingText}>Loading messages...</Text>
@@ -427,9 +793,26 @@ const MessagesScreen = ({ navigation, route }) => {
                 keyboardVisible && Platform.OS === "android" && { marginBottom: 5 }
               ]}
               ref={messagesScrollRef}
-              onContentSizeChange={() => scrollToBottom()}
+              onContentSizeChange={() => !loadingMoreMessages && scrollToBottom(false)}
               keyboardShouldPersistTaps="handled"
+              onScroll={handleScroll}
+              scrollEventThrottle={16} // For smooth scroll detection
             >
+              {/* Loading indicator for more messages */}
+              {loadingMoreMessages && (
+                <View style={styles.loadingMoreContainer}>
+                  <ActivityIndicator size="small" color={themeColors.accentPrimary} />
+                  <Text style={styles.loadingMoreText}>Loading older messages...</Text>
+                </View>
+              )}
+              
+              {/* No more messages indicator */}
+              {!hasMoreMessages && messages.length > 0 && (
+                <View style={styles.noMoreMessagesContainer}>
+                  <Text style={styles.noMoreMessagesText}>Beginning of conversation</Text>
+                </View>
+              )}
+              
               {messages.length === 0 ? (
                 <View style={styles.emptyMessages}>
                   <Text style={styles.emptyMessagesText}>No messages yet</Text>
@@ -438,6 +821,7 @@ const MessagesScreen = ({ navigation, route }) => {
               ) : (
                 messages.map((msg, index) => {
                   const isOwn = msg.fk_expediteur === currentUserId;
+                  const isAnimating = animatingMessages[msg.id_message_prive];
                   
                   // Determine if this message is the last message sent by the current user
                   const isLastOwnMessage = isOwn && 
@@ -448,7 +832,8 @@ const MessagesScreen = ({ navigation, route }) => {
                       key={msg.id_message_prive || `temp-${Date.now()}-${Math.random()}`}
                       style={[
                         styles.messageWrapper,
-                        isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper
+                        isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper,
+                        isAnimating && styles.animatingMessage
                       ]}
                     >
                       <View style={[
@@ -458,11 +843,88 @@ const MessagesScreen = ({ navigation, route }) => {
                         <Text style={isOwn ? styles.ownMessageText : styles.otherMessageText}>
                           {msg.contenu}
                         </Text>
+
+                        {/* Attachment handling */}
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <View style={styles.attachmentsContainer}>
+                            {msg.attachments.map((attachment, i) => {
+                              // Vérification si l'attachment existe et a bien une URL
+                              if (!attachment || (!attachment.url && !attachment.presignedUrl)) {
+                                console.warn(`Invalid attachment at index ${i}:`, attachment);
+                                return null;
+                              }
+
+                              // Logging pour déboggage
+                              console.log(`Rendering attachment ${i}:`, {
+                                type: attachment.type,
+                                url: attachment.url,
+                                presignedUrl: attachment.presignedUrl,
+                              });
+
+                              // Construire l'URL complète de l'image
+                              const fileUrl = attachment.url || attachment.presignedUrl;
+                              const fullFileUrl = getFileURL(fileUrl);
+                              console.log(`Full file URL: ${fullFileUrl}`);
+
+                              // Handle image attachments
+                              if (attachment.type?.startsWith('image/')) {
+                                return (
+                                  <TouchableOpacity 
+                                    key={`${msg.id_message_prive}-attachment-${i}`} 
+                                    style={styles.imageAttachment}
+                                    onPress={() => handleOpenAttachment(attachment)}
+                                  >
+                                    <ImageComponent 
+                                      uri={fullFileUrl} 
+                                      style={styles.attachmentImage} 
+                                      resizeMode="cover"
+                                      fileName={attachment.nom_fichier || 'Image'}
+                                    />
+                                    <Text style={styles.imageCaption} numberOfLines={1}>
+                                      {attachment.nom_fichier || 'Image'}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              } 
+                              // Handle other file types
+                              else {
+                                return (
+                                  <TouchableOpacity 
+                                    key={`${msg.id_message_prive}-attachment-${i}`} 
+                                    style={styles.fileAttachment}
+                                    onPress={() => handleOpenAttachment(attachment)}
+                                  >
+                                    <View style={styles.fileIconContainer}>
+                                      <Ionicons 
+                                        name={getFileIcon(attachment.type)} 
+                                        size={24} 
+                                        color={themeColors.textPrimary} 
+                                      />
+                                    </View>
+                                    <View style={styles.fileDetails}>
+                                      <Text style={styles.fileName} numberOfLines={1}>
+                                        {attachment.nom_fichier || 'Fichier'}
+                                      </Text>
+                                      <Text style={styles.fileSize}>
+                                        {formatFileSize(attachment.taille_fichier)}
+                                      </Text>
+                                    </View>
+                                    <Ionicons 
+                                      name="eye-outline" 
+                                      size={20} 
+                                      color={themeColors.accentPrimary} 
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              }
+                            })}
+                          </View>
+                        )}
+
                         <View style={styles.messageInfoContainer}>
                           <Text style={isOwn ? styles.ownMessageTime : styles.otherMessageTime}>
                             {formatMessageDate(msg.date_creation || msg.date_envoi)}
                           </Text>
-                          
                           {isOwn && isLastOwnMessage && (
                             <View style={styles.readStatusInBubble}>
                               {msg.date_lecture ? (
@@ -495,12 +957,12 @@ const MessagesScreen = ({ navigation, route }) => {
             </ScrollView>
           </View>
         )}
-        
+
         <View style={[
           styles.inputContainer,
           keyboardVisible && Platform.OS === "android" && { paddingBottom: 5 }
         ]}>
-          <TextInput
+          <TextInput 
             style={styles.messageInput}
             placeholder="Type a message..."
             value={newMessage}
@@ -516,13 +978,21 @@ const MessagesScreen = ({ navigation, route }) => {
               styles.sendButton,
               !newMessage.trim() && styles.sendButtonDisabled
             ]}
-            onPress={handleSendMessage}
             disabled={!newMessage.trim()}
+            onPress={handleSendMessage}
           >
             <Ionicons name="send" size={24} color={themeColors.textOnAccent} />
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Replace the old preview modal with the MediaViewer component */}
+      <MediaViewer
+        visible={mediaPreview.visible}
+        media={mediaPreview.media}
+        onClose={handleCloseMediaPreview}
+        theme={themeColors}
+      />
     </KeyboardAvoidingView>
   );
 };
