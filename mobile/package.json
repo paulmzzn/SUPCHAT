@@ -31,9 +31,12 @@
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",
+    "react-native-sound": "^0.11.2",
     "react-native-video": "^6.14.0",
     "react-native-webview": "~13.6.4",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "expo-av": "~15.1.4",
+    "expo-asset": "~11.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

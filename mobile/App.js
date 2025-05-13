@@ -7,6 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider } from './src/theme/ThemeContext'; // Adjust path as necessary
 import { AuthProvider, useAuth } from './src/context/AuthContext'; // Import from new file
 import { SocketProvider, useSocket } from './src/context/SocketContext'; // Ajout de cet import
+import NotificationHandler from './src/components/NotificationHandler'; // Import du gestionnaire de notifications
 
 // Auth screens
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -110,7 +111,12 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {userToken == null ? <AuthNavigator /> : <MainAppNavigator />}
+      {userToken == null ? <AuthNavigator /> : (
+        <>
+          <NotificationHandler />
+          <MainAppNavigator />
+        </>
+      )}
     </NavigationContainer>
   );
 }
