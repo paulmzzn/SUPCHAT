@@ -23,6 +23,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
+import { useNotificationSettings } from "../../context/NotificationSettingsContext";
+import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.85:3000";
@@ -115,6 +117,7 @@ function DirectMessages() {
   const location = useLocation();
   const navigate = useNavigate();
   const { refreshUnreadDM } = useSocket();
+  const { notificationSettings } = useNotificationSettings();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState(null);
@@ -367,7 +370,6 @@ function DirectMessages() {
         }
       }
     };
-
     window.addEventListener("storage", storageEventHandler);
 
     // Update the handlePrivateMessage function to safely handle message storage
@@ -387,6 +389,10 @@ function DirectMessages() {
         msg.fk_expediteur !== currentUserId &&
         (!selectedUser || msg.fk_expediteur !== selectedUser)
       ) {
+        // Jouer le son de notification
+        console.log("[DM] Message privé reçu, tentative de lecture du son");
+        playNotificationSound(notificationSettings);
+
         // Update the unread count for this sender
         setUnreadMessageCounts((prev) => {
           const senderId = msg.fk_expediteur;
