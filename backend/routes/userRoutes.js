@@ -81,7 +81,7 @@ router.get(
   "/auth/google/callback",
 
   passport.authenticate("google", {
-    failureRedirect: "http://172.20.10.2:3001/login",
+    failureRedirect: "http://192.168.1.119:3001/login",
   }),
 
   async (req, res) => {
@@ -94,7 +94,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://172.20.10.2:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.119:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -108,7 +108,7 @@ router.get(
   "/auth/github/callback",
 
   passport.authenticate("github", {
-    failureRedirect: "http://172.20.10.2:3001/login",
+    failureRedirect: "http://192.168.1.119:3001/login",
   }),
 
   async (req, res) => {
@@ -119,7 +119,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-      `http://172.20.10.2:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.119:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
