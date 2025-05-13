@@ -15,20 +15,24 @@
   --color-border-content: rgba(255, 255, 255, 0.1);
   --color-tab: rgba(255, 255, 255, 0.05);
   --color-tab-hover: rgba(255, 255, 255, 0.1);
-  --color-tab-active: #9348B7;
+  --color-tab-active: #9348b7;
   --color-tab-active-shadow: 0 4px 15px rgba(147, 72, 183, 0.4);
   --color-tab-danger-hover: rgba(255, 77, 77, 0.15);
   --color-header-gradient: linear-gradient(to right, #ffffff, #d7d7d7);
   --color-header-sub: rgba(255, 255, 255, 0.7);
   --color-section-title: white;
-  --color-section-title-underline: linear-gradient(to right, #9348B7, transparent);
+  --color-section-title-underline: linear-gradient(
+    to right,
+    #9348b7,
+    transparent
+  );
   --color-label: rgba(255, 255, 255, 0.9);
   --color-bg-form: rgba(255, 255, 255, 0.07);
   --color-form-focus-shadow: 0 0 0 2px rgba(147, 72, 183, 0.2);
   --color-bg-form-readonly: rgba(255, 255, 255, 0.03);
   --color-form-readonly-color: rgba(255, 255, 255, 0.5);
   --color-form-small: rgba(255, 255, 255, 0.5);
-  --color-btn-save-gradient: linear-gradient(135deg, #9348B7, #B05FDF);
+  --color-btn-save-gradient: linear-gradient(135deg, #9348b7, #b05fdf);
   --color-btn-save-hover-shadow: 0 6px 20px rgba(147, 72, 183, 0.5);
   --color-btn-save-disabled-gradient: linear-gradient(135deg, #77609a, #9c75c3);
   --color-btn-secondary-bg: rgba(255, 255, 255, 0.1);
@@ -40,13 +44,17 @@
   --color-desc-group: rgba(255, 255, 255, 0.6);
   --color-switch-bg: rgba(255, 255, 255, 0.15);
   --color-bg-preview-light: #f5f5f7;
-  --color-bg-preview-system: linear-gradient(to right, #f5f5f7 50%, #262626 50%);
+  --color-bg-preview-system: linear-gradient(
+    to right,
+    #f5f5f7 50%,
+    #262626 50%
+  );
   --color-option: rgba(255, 255, 255, 0.8);
   --color-loading: rgba(255, 255, 255, 0.8);
   --color-loading-spinner-border: 3px solid rgba(147, 72, 183, 0.3);
-  --color-status-dot-away: #FFC107;
-  --color-status-dot-dnd: #F44336;
-  --color-status-dot-invisible: #9E9E9E;
+  --color-status-dot-away: #ffc107;
+  --color-status-dot-dnd: #f44336;
+  --color-status-dot-invisible: #9e9e9e;
   --color-status-dot-shadow-online: 0 0 8px rgba(76, 175, 80, 0.5);
   --color-status-dot-shadow-away: 0 0 8px rgba(255, 193, 7, 0.5);
   --color-status-dot-shadow-dnd: 0 0 8px rgba(244, 67, 54, 0.5);
@@ -59,16 +67,16 @@
   --sidebar-shadow: 2px 0 15px rgba(0, 0, 0, 0.2);
   --sidebar-nav-bg: rgba(217, 217, 217, 0.9);
   --sidebar-nav-bg-hover: rgba(217, 217, 217, 1);
-  --sidebar-nav-bg-active: #9348B7; /* already exists as --color-tab-active */
-  --sidebar-nav-color: #3C3C3C;
-  --sidebar-nav-color-active: #EDF2F7;
+  --sidebar-nav-bg-active: #9348b7; /* already exists as --color-tab-active */
+  --sidebar-nav-color: #3c3c3c;
+  --sidebar-nav-color-active: #edf2f7;
   --sidebar-nav-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   --sidebar-nav-shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.15);
   --sidebar-nav-shadow-active: 0 4px 15px rgba(147, 72, 183, 0.5);
   --sidebar-icon-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   --sidebar-logo-shadow: 0 4px 8px rgba(147, 72, 183, 0.3);
-  --sidebar-badge-bg: linear-gradient(135deg, #FF3B5C, #FF2F90);
-  --sidebar-badge-bg-solid: #FF4B4B;
+  --sidebar-badge-bg: linear-gradient(135deg, #ff3b5c, #ff2f90);
+  --sidebar-badge-bg-solid: #ff4b4b;
   --sidebar-badge-shadow: 0 2px 4px rgba(255, 59, 92, 0.4);
   --sidebar-badge-shadow-dark: 0 2px 6px rgba(0, 0, 0, 0.3);
   --discover-bg: #262626; /* fond principal Discover */
@@ -82,35 +90,49 @@
   --discover-add-border: 2px dashed rgba(147, 72, 183, 0.3);
   --discover-add-bg-hover: rgba(147, 72, 183, 0.1);
   --discover-add-content-color: rgba(255, 255, 255, 0.7);
-  --discover-plus-icon: #9348B7;
-  --discover-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --discover-glow2: radial-gradient(circle, #9348B7, #6A2F88);
-  --workspace-card-bg: linear-gradient(145deg, rgba(35, 35, 40, 0.8), rgba(25, 25, 30, 0.95));
+  --discover-plus-icon: #9348b7;
+  --discover-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --discover-glow2: radial-gradient(circle, #9348b7, #6a2f88);
+  --workspace-card-bg: #1e1e21;
   --workspace-card-border: 1px solid rgba(255, 255, 255, 0.07);
-  --workspace-card-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 2px 5px rgba(0, 0, 0, 0.15);
-  --workspace-card-shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.35), 0 5px 12px rgba(147, 72, 183, 0.15);
+  --workspace-card-shadow: 0 8px 20px rgba(0, 0, 0, 0.25),
+    0 2px 5px rgba(0, 0, 0, 0.15);
+  --workspace-card-shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.35),
+    0 5px 12px rgba(147, 72, 183, 0.15);
   --workspace-card-border-hover: rgba(147, 72, 183, 0.3);
-  --workspace-banner-gradient: linear-gradient(to top, rgba(30, 30, 35, 0.01), transparent);
+  --workspace-banner-gradient: linear-gradient(
+    to top,
+    rgba(30, 30, 35, 0.01),
+    transparent
+  );
   --workspace-icon-border: 3px solid rgba(30, 30, 35, 0.9);
   --workspace-icon-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-  --workspace-icon-overlay: linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent);
+  --workspace-icon-overlay: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
   --workspace-title-color: #fff;
   --workspace-title-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --workspace-description-color: rgba(255, 255, 255, 0.7);
-  --workspace-description-alt: #98A2B3;
+  --workspace-description-alt: #98a2b3;
   --workspace-stats-color: rgba(255, 255, 255, 0.7);
   --workspace-stats-border: 1px solid rgba(255, 255, 255, 0.07);
   --workspace-stat-hover: rgba(255, 255, 255, 0.9);
   --workspace-private-icon: rgba(255, 255, 255, 0.8);
-  --workspace-online-icon: #4CD964;
+  --workspace-online-icon: #4cd964;
   --workspace-online-icon-shadow: 0 0 3px rgba(76, 217, 100, 0.3);
-  --workspace-options-bg: linear-gradient(145deg, rgba(40, 40, 45, 0.95), rgba(30, 30, 35, 0.95));
+  --workspace-options-bg: linear-gradient(
+    145deg,
+    rgba(40, 40, 45, 0.95),
+    rgba(30, 30, 35, 0.95)
+  );
   --workspace-options-border: 1px solid rgba(255, 255, 255, 0.1);
   --workspace-options-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
   --workspace-options-hover: rgba(147, 72, 183, 0.2);
-  --workspace-options-danger: #FF3B5C;
+  --workspace-options-danger: #ff3b5c;
   --workspace-options-danger-hover: rgba(255, 59, 92, 0.15);
-  --workspace-options-danger-hover-color: #FF5C76;
+  --workspace-options-danger-hover-color: #ff5c76;
   --workspace-options-color: rgba(255, 255, 255, 0.85);
   --workspace-options-color-hover: rgba(255, 255, 255, 1);
   --workspace-options-btn-bg: rgba(0, 0, 0, 0.5);
@@ -155,17 +177,17 @@
   --workspace-details-glow1: radial-gradient(circle, #b05fdf, #9348b7);
   --workspace-details-glow2: radial-gradient(circle, #9348b7, #6a2f88);
   --workspace-details-title: #fff;
-  --workspace-details-description: #98A2B3;
-  --workspace-details-stats: #98A2B3;
+  --workspace-details-description: #98a2b3;
+  --workspace-details-stats: #98a2b3;
   --workspace-details-online: rgba(255, 255, 255, 0.8);
-  --workspace-details-members: #98A2B3;
-  --workspace-details-online-indicator: #4CAF50;
-  --workspace-details-members-icon: #98A2B3;
+  --workspace-details-members: #98a2b3;
+  --workspace-details-online-indicator: #4caf50;
+  --workspace-details-members-icon: #98a2b3;
   --workspaces-bg: #262626;
   --workspaces-title-color: rgba(255, 255, 255, 0.9);
   --workspaces-section-title-color: rgba(255, 255, 255, 0.9);
-  --workspaces-section-icon: #9348B7;
-  --workspaces-heart-icon: #FF3B5C;
+  --workspaces-section-icon: #9348b7;
+  --workspaces-heart-icon: #ff3b5c;
   --workspaces-favorite-icon-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   --workspaces-favorite-icon-shadow-hover: 0 5px 15px rgba(147, 72, 183, 0.3);
   --workspaces-favorite-icon-empty-bg: rgba(255, 255, 255, 0.1);
@@ -174,13 +196,22 @@
   --workspaces-favorite-empty-message: rgba(255, 255, 255, 0.5);
   --workspaces-favorite-empty-bg: rgba(255, 255, 255, 0.05);
   --workspaces-favorite-empty-border: 1px dashed rgba(255, 255, 255, 0.1);
-  --workspaces-add-bg: rgba(147, 72, 183, 0.05);
-  --workspaces-add-border: 2px dashed rgba(147, 72, 183, 0.3);
-  --workspaces-add-bg-hover: rgba(147, 72, 183, 0.1);
-  --workspaces-add-content-color: rgba(255, 255, 255, 0.7);
-  --workspaces-plus-icon: #9348B7;
-  --workspaces-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --workspaces-glow2: radial-gradient(circle, #9348B7, #6A2F88);
+  --workspaces-add-bg: #272731;
+  --workspaces-add-border-color: rgba(147, 72, 183, 0.2);
+  --workspaces-add-bg-pattern: repeating-linear-gradient(
+    -45deg,
+    #9348b7,
+    #9348b7 1px,
+    transparent 1px,
+    transparent 10px
+  );
+  --workspaces-add-content-color: #ffffff;
+  --workspaces-add-subtitle-color: rgba(255, 255, 255, 0.7);
+  --workspaces-plus-icon: white;
+  --workspaces-plus-button-bg: #9348b7;
+  --workspaces-plus-button-bg-hover: #b05fdf;
+  --workspaces-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --workspaces-glow2: radial-gradient(circle, #9348b7, #6a2f88);
   --workspaces-modal-bg: rgba(30, 30, 35, 0.95);
   --workspaces-modal-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
   --workspaces-modal-border: 1px solid rgba(255, 255, 255, 0.1);
@@ -190,14 +221,14 @@
   --workspaces-form-input-border: 1px solid rgba(255, 255, 255, 0.2);
   --workspaces-form-input-color: #fff;
   --workspaces-form-input-focus-bg: rgba(255, 255, 255, 0.08);
-  --workspaces-form-input-focus-border: #9348B7;
+  --workspaces-form-input-focus-border: #9348b7;
   --workspaces-form-checkbox-label: #fff;
   --workspaces-cancel-btn-bg: transparent;
   --workspaces-cancel-btn-border: 1px solid rgba(255, 255, 255, 0.2);
   --workspaces-cancel-btn-color: rgba(255, 255, 255, 0.8);
   --workspaces-cancel-btn-hover-bg: rgba(255, 255, 255, 0.1);
-  --workspaces-create-btn-bg: #9348B7;
-  --workspaces-create-btn-hover-bg: #B05FDF;
+  --workspaces-create-btn-bg: #9348b7;
+  --workspaces-create-btn-hover-bg: #b05fdf;
   --workspaces-upload-placeholder-bg: rgba(255, 255, 255, 0.05);
   --workspaces-upload-placeholder-border: 2px dashed rgba(147, 72, 183, 0.4);
   --workspaces-upload-placeholder-hover-bg: rgba(147, 72, 183, 0.1);
@@ -208,25 +239,29 @@
   --workspaces-privacy-label: #fff;
   --workspaces-privacy-description: rgba(255, 255, 255, 0.6);
   --workspaces-switch-bg: rgba(255, 255, 255, 0.2);
-  --workspaces-switch-checked-bg: #9348B7;
-  --workspaces-switch-focus-shadow: 0 0 1px #9348B7;
+  --workspaces-switch-checked-bg: #9348b7;
+  --workspaces-switch-focus-shadow: 0 0 1px #9348b7;
   --workspaces-slider-bg: rgba(255, 255, 255, 0.2);
   --workspaces-slider-knob-bg: #fff;
-  --workspaces-slider-checked-bg: #9348B7;
-  --workspaces-slider-checked-shadow: 0 0 1px #9348B7;
+  --workspaces-slider-checked-bg: #9348b7;
+  --workspaces-slider-checked-shadow: 0 0 1px #9348b7;
   --workspaces-modal-modern-bg: rgba(25, 25, 30, 0.95);
   --workspaces-modal-modern-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   --workspaces-modal-modern-border: 1px solid rgba(255, 255, 255, 0.1);
   --workspaces-modal-modern-title: #fff;
   --workspaces-loading-spinner-border: 4px solid rgba(255, 255, 255, 0.1);
-  --workspaces-loading-spinner-top: 4px solid #9348B7;
+  --workspaces-loading-spinner-top: 4px solid #9348b7;
   --workspaces-loading-spinner-inner-border: 4px solid rgba(255, 255, 255, 0.1);
-  --workspaces-loading-spinner-inner-bottom: 4px solid #B05FDF;
-  --discover-section-title-border : rgba(255, 255, 255, 0.1);
+  --workspaces-loading-spinner-inner-bottom: 4px solid #b05fdf;
+  --discover-section-title-border: rgba(255, 255, 255, 0.1);
   --profile-bg: #262626;
-  --profile-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --profile-glow2: radial-gradient(circle, #9348B7, #6A2F88);
-  --profile-container-bg: linear-gradient(145deg, rgba(35, 35, 40, 0.8), rgba(25, 25, 30, 0.95));
+  --profile-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --profile-glow2: radial-gradient(circle, #9348b7, #6a2f88);
+  --profile-container-bg: linear-gradient(
+    145deg,
+    rgba(35, 35, 40, 0.8),
+    rgba(25, 25, 30, 0.95)
+  );
   --profile-container-border: 1px solid rgba(255, 255, 255, 0.07);
   --profile-container-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   --profile-avatar-bg: rgba(255, 255, 255, 0.1);
@@ -236,7 +271,7 @@
   --profile-name-color: #fff;
   --profile-role-bg: rgba(147, 72, 183, 0.3);
   --profile-role-color: #fff;
-  --profile-status-online: #34D399;
+  --profile-status-online: #34d399;
   --profile-status-online-shadow: 0 0 5px rgba(52, 211, 153, 0.5);
   --profile-status-offline: rgba(255, 255, 255, 0.3);
   --profile-status-text: rgba(255, 255, 255, 0.7);
@@ -257,19 +292,19 @@
   --profile-bio: rgba(255, 255, 255, 0.8);
   --profile-loading-bg: #262626;
   --profile-loading-icon-border: 3px solid rgba(255, 255, 255, 0.2);
-  --profile-loading-icon-top: 3px solid #9348B7;
-  --profile-error-icon: #EF4444;
+  --profile-loading-icon-top: 3px solid #9348b7;
+  --profile-error-icon: #ef4444;
   --profile-error-bg: rgba(255, 77, 77, 0.1);
   --profile-error-color: #ff6b6b;
   --profile-workspace-bg: rgba(147, 72, 183, 0.1);
   --profile-workspace-hover-bg: rgba(147, 72, 183, 0.2);
-  --profile-workspace-border: 3px solid #9348B7;
+  --profile-workspace-border: 3px solid #9348b7;
   --profile-workspace-role-bg: rgba(255, 255, 255, 0.1);
-  --profile-workspace-role-owner: #FFD700;
-  --profile-workspace-role-admin: #FF6B6B;
-  --profile-workspace-role-member: #9CA3AF;
+  --profile-workspace-role-owner: #ffd700;
+  --profile-workspace-role-admin: #ff6b6b;
+  --profile-workspace-role-member: #9ca3af;
   --profile-workspace-empty: rgba(255, 255, 255, 0.5);
-  --profile-stat-value: #9348B7;
+  --profile-stat-value: #9348b7;
   --profile-stat-label: rgba(255, 255, 255, 0.6);
   --profile-date-raw: rgba(255, 255, 255, 0.5);
   --dm-sidebar-bg: #222222;
@@ -364,7 +399,7 @@
   --color-bg-secondary: #e4e6eb;
   --color-text: #181a20;
   --color-text-secondary: #444950;
-  --color-accent: #9348B7;
+  --color-accent: #9348b7;
   --color-border: #d1d5db;
   --color-card: #fff;
   --color-error: #d32f2f;
@@ -374,19 +409,23 @@
   --color-border-content: #e0e0e0;
   --color-tab: rgba(0, 0, 0, 0.03);
   --color-tab-hover: rgba(0, 0, 0, 0.07);
-  --color-tab-active: #9348B7;
+  --color-tab-active: #9348b7;
   --color-tab-active-shadow: 0 4px 15px rgba(147, 72, 183, 0.15);
   --color-tab-danger-hover: rgba(211, 47, 47, 0.12);
   --color-section-title: black;
   --color-header-sub: rgba(0, 0, 0, 0.7);
   --color-header-gradient: linear-gradient(to right, #23272f, #444950);
-  --color-section-title-underline: linear-gradient(to right, #9348B7, transparent);
+  --color-section-title-underline: linear-gradient(
+    to right,
+    #9348b7,
+    transparent
+  );
   --color-label: #23272f;
   --color-form-focus-shadow: 0 0 0 2px rgba(147, 72, 183, 0.15);
   --color-bg-form-readonly: rgba(0, 0, 0, 0.01);
   --color-bg-form: rgb(63, 63, 63);
   --color-form-readonly-color: #b0b3b8;
-  --color-btn-save-gradient: linear-gradient(135deg, #9348B7, #B05FDF);
+  --color-btn-save-gradient: linear-gradient(135deg, #9348b7, #b05fdf);
   --color-btn-save-hover-shadow: 0 6px 20px rgba(147, 72, 183, 0.18);
   --color-btn-save-disabled-gradient: linear-gradient(135deg, #b0b3b8, #d1d5db);
   --color-btn-secondary-bg: rgba(0, 0, 0, 0.04);
@@ -395,7 +434,11 @@
   --color-desc-group: #444950;
   --color-switch-bg: rgba(0, 0, 0, 0.08);
   --color-bg-preview-dark: #23272f;
-  --color-bg-preview-system: linear-gradient(to right, #f5f5f7 50%, #23272f 50%);
+  --color-bg-preview-system: linear-gradient(
+    to right,
+    #f5f5f7 50%,
+    #23272f 50%
+  );
   --color-option: #181a20;
   --color-loading: #23272f;
   --color-loading-spinner-border: 3px solid rgba(147, 72, 183, 0.12);
@@ -412,7 +455,7 @@
   --sidebar-shadow: 2px 0 15px rgba(0, 0, 0, 0.08);
   --sidebar-nav-bg: rgba(217, 217, 217, 1);
   --sidebar-nav-bg-hover: rgba(217, 217, 217, 1);
-  --sidebar-nav-bg-active: #9348B7; /* already exists as --color-tab-active */
+  --sidebar-nav-bg-active: #9348b7; /* already exists as --color-tab-active */
   --sidebar-nav-color: #23272f;
   --sidebar-nav-color-active: #fff;
   --sidebar-nav-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
@@ -420,8 +463,8 @@
   --sidebar-nav-shadow-active: 0 4px 15px rgba(147, 72, 183, 0.18);
   --sidebar-icon-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   --sidebar-logo-shadow: 0 4px 8px rgba(147, 72, 183, 0.15);
-  --sidebar-badge-bg: linear-gradient(135deg, #FF3B5C, #FF2F90);
-  --sidebar-badge-bg-solid: #FF4B4B;
+  --sidebar-badge-bg: linear-gradient(135deg, #ff3b5c, #ff2f90);
+  --sidebar-badge-bg-solid: #ff4b4b;
   --sidebar-badge-shadow: 0 2px 4px rgba(255, 59, 92, 0.25);
   --sidebar-badge-shadow-dark: 0 2px 6px rgba(0, 0, 0, 0.12);
   --discover-bg: #f5f5f7;
@@ -435,37 +478,43 @@
   --discover-add-border: 2px dashed rgba(147, 72, 183, 0.18);
   --discover-add-bg-hover: rgba(147, 72, 183, 0.09);
   --discover-add-content-color: #444950;
-  --discover-plus-icon: #9348B7;
-  --discover-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --discover-glow2: radial-gradient(circle, #9348B7, #6A2F88);
-  --workspace-card-bg: linear-gradient(145deg, #fff, #f5f5f7);
+  --discover-plus-icon: #9348b7;
+  --discover-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --discover-glow2: radial-gradient(circle, #9348b7, #6a2f88);
+  --workspace-card-bg: #ffffff;
   --workspace-card-border: 1px solid #e0e0e0;
-  --workspace-card-shadow: 0 8px 20px rgba(0, 0, 0, 0.10), 0 2px 5px rgba(0, 0, 0, 0.06);
-  --workspace-card-shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.18), 0 5px 12px rgba(147, 72, 183, 0.08);
+  --workspace-card-shadow: 0 8px 20px rgba(0, 0, 0, 0.1),
+    0 2px 5px rgba(0, 0, 0, 0.06);
+  --workspace-card-shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.18),
+    0 5px 12px rgba(147, 72, 183, 0.08);
   --workspace-card-border-hover: rgba(147, 72, 183, 0.18);
   --workspace-banner-gradient: linear-gradient(to top, #f5f5f7 1%, transparent);
   --workspace-icon-border: 3px solid #e0e0e0;
-  --workspace-icon-shadow: 0 5px 15px rgba(0, 0, 0, 0.10);
-  --workspace-icon-overlay: linear-gradient(145deg, rgba(147, 72, 183, 0.05), transparent);
+  --workspace-icon-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  --workspace-icon-overlay: linear-gradient(
+    145deg,
+    rgba(147, 72, 183, 0.05),
+    transparent
+  );
   --workspace-title-color: #23272f;
   --workspace-title-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --workspace-description-color: #444950;
-  --workspace-description-alt: #98A2B3;
-  --workspace-stats-color: #444950;
+  --workspace-description-alt: #98a2b3;
+  --workspace-stats-color: #777777;
   --workspace-stats-border: 1px solid #e0e0e0;
   --workspace-stat-hover: #23272f;
   --workspace-private-icon: #b0b3b8;
-  --workspace-online-icon: #4CD964;
+  --workspace-online-icon: #4cd964;
   --workspace-online-icon-shadow: 0 0 3px rgba(76, 217, 100, 0.18);
   --workspace-options-bg: linear-gradient(145deg, #fff, #f5f5f7);
   --workspace-options-border: 1px solid #e0e0e0;
-  --workspace-options-shadow: 0 10px 25px rgba(0, 0, 0, 0.10);
+  --workspace-options-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   --workspace-options-hover: rgba(147, 72, 183, 0.08);
-  --workspace-options-danger: #FF3B5C;
-  --workspace-options-danger-hover: rgba(255, 59, 92, 0.08);
-  --workspace-options-danger-hover-color: #FF5C76;
+  --workspace-options-danger: #ff3b5c;
+  --workspace-options-danger-hover: rgba(255, 59, 92, 0.15);
+  --workspace-options-danger-hover-color: #ff5c76;
   --workspace-options-color: #23272f;
-  --workspace-options-color-hover: #9348B7;
+  --workspace-options-color-hover: #9348b7;
   --workspace-options-btn-bg: rgba(0, 0, 0, 0.04);
   --workspace-options-btn-bg-hover: rgba(147, 72, 183, 0.12);
   --workspace-options-btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -508,17 +557,17 @@
   --workspace-details-glow1: radial-gradient(circle, #b05fdf, #9348b7);
   --workspace-details-glow2: radial-gradient(circle, #9348b7, #6a2f88);
   --workspace-details-title: #23272f;
-  --workspace-details-description: #98A2B3;
-  --workspace-details-stats: #98A2B3;
+  --workspace-details-description: #98a2b3;
+  --workspace-details-stats: #98a2b3;
   --workspace-details-online: #23272f;
-  --workspace-details-members: #98A2B3;
-  --workspace-details-online-indicator: #4CAF50;
-  --workspace-details-members-icon: #98A2B3;
+  --workspace-details-members: #98a2b3;
+  --workspace-details-online-indicator: #4caf50;
+  --workspace-details-members-icon: #98a2b3;
   --workspaces-bg: #f5f5f7;
   --workspaces-title-color: #23272f;
   --workspaces-section-title-color: #23272f;
-  --workspaces-section-icon: #9348B7;
-  --workspaces-heart-icon: #FF3B5C;
+  --workspaces-section-icon: #9348b7;
+  --workspaces-heart-icon: #ff3b5c;
   --workspaces-favorite-icon-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   --workspaces-favorite-icon-shadow-hover: 0 5px 15px rgba(147, 72, 183, 0.12);
   --workspaces-favorite-icon-empty-bg: #fff;
@@ -527,15 +576,24 @@
   --workspaces-favorite-empty-message: #b0b3b8;
   --workspaces-favorite-empty-bg: #f5f5f7;
   --workspaces-favorite-empty-border: 1px dashed #e0e0e0;
-  --workspaces-add-bg: rgba(147, 72, 183, 0.04);
-  --workspaces-add-border: 2px dashed rgba(147, 72, 183, 0.18);
-  --workspaces-add-bg-hover: rgba(147, 72, 183, 0.09);
-  --workspaces-add-content-color: #444950;
-  --workspaces-plus-icon: #9348B7;
-  --workspaces-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --workspaces-glow2: radial-gradient(circle, #9348B7, #6A2F88);
+  --workspaces-add-bg: #ffffff;
+  --workspaces-add-border-color: #eaeaea;
+  --workspaces-add-bg-pattern: repeating-linear-gradient(
+    -45deg,
+    #9348b7,
+    #9348b7 1px,
+    transparent 1px,
+    transparent 10px
+  );
+  --workspaces-add-content-color: #23272f;
+  --workspaces-add-subtitle-color: #666;
+  --workspaces-plus-icon: white;
+  --workspaces-plus-button-bg: #9348b7;
+  --workspaces-plus-button-bg-hover: #b05fdf;
+  --workspaces-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --workspaces-glow2: radial-gradient(circle, #9348b7, #6a2f88);
   --workspaces-modal-bg: #fff;
-  --workspaces-modal-shadow: 0 15px 30px rgba(0, 0, 0, 0.10);
+  --workspaces-modal-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
   --workspaces-modal-border: 1px solid #e0e0e0;
   --workspaces-modal-title: #23272f;
   --workspaces-form-label: #444950;
@@ -543,53 +601,53 @@
   --workspaces-form-input-border: 1px solid #e0e0e0;
   --workspaces-form-input-color: #23272f;
   --workspaces-form-input-focus-bg: #f5f5f7;
-  --workspaces-form-input-focus-border: #9348B7;
+  --workspaces-form-input-focus-border: #9348b7;
   --workspaces-form-checkbox-label: #23272f;
   --workspaces-cancel-btn-bg: transparent;
   --workspaces-cancel-btn-border: 1px solid #e0e0e0;
   --workspaces-cancel-btn-color: #444950;
   --workspaces-cancel-btn-hover-bg: #e4e6eb;
-  --workspaces-create-btn-bg: #9348B7;
-  --workspaces-create-btn-hover-bg: #B05FDF;
+  --workspaces-create-btn-bg: #9348b7;
+  --workspaces-create-btn-hover-bg: #b05fdf;
   --workspaces-upload-placeholder-bg: #fff;
   --workspaces-upload-placeholder-border: 2px dashed #e0e0e0;
   --workspaces-upload-placeholder-hover-bg: #f5f5f7;
-  --workspaces-upload-icon: #9348B7;
+  --workspaces-upload-icon: #9348b7;
   --workspaces-remove-image-btn-bg: rgba(0, 0, 0, 0.08);
-  --workspaces-remove-image-btn-hover-bg: #FF3B5C;
+  --workspaces-remove-image-btn-hover-bg: #ff3b5c;
   --workspaces-privacy-toggle-bg: #f5f5f7;
   --workspaces-privacy-label: #23272f;
   --workspaces-privacy-description: #b0b3b8;
   --workspaces-switch-bg: #e0e0e0;
-  --workspaces-switch-checked-bg: #9348B7;
-  --workspaces-switch-focus-shadow: 0 0 1px #9348B7;
+  --workspaces-switch-checked-bg: #9348b7;
+  --workspaces-switch-focus-shadow: 0 0 1px #9348b7;
   --workspaces-slider-bg: #e0e0e0;
   --workspaces-slider-knob-bg: #fff;
-  --workspaces-slider-checked-bg: #9348B7;
-  --workspaces-slider-checked-shadow: 0 0 1px #9348B7;
+  --workspaces-slider-checked-bg: #9348b7;
+  --workspaces-slider-checked-shadow: 0 0 1px #9348b7;
   --workspaces-modal-modern-bg: #fff;
-  --workspaces-modal-modern-shadow: 0 20px 40px rgba(0, 0, 0, 0.10);
+  --workspaces-modal-modern-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   --workspaces-modal-modern-border: 1px solid #e0e0e0;
   --workspaces-modal-modern-title: #23272f;
   --workspaces-loading-spinner-border: 4px solid #e0e0e0;
-  --workspaces-loading-spinner-top: 4px solid #9348B7;
+  --workspaces-loading-spinner-top: 4px solid #9348b7;
   --workspaces-loading-spinner-inner-border: 4px solid #e0e0e0;
-  --workspaces-loading-spinner-inner-bottom: 4px solid #B05FDF;
-  --discover-section-title-border : #e0e0e0;
+  --workspaces-loading-spinner-inner-bottom: 4px solid #b05fdf;
+  --discover-section-title-border: #e0e0e0;
   --profile-bg: #f5f5f7;
-  --profile-glow1: radial-gradient(circle, #B05FDF, #9348B7);
-  --profile-glow2: radial-gradient(circle, #9348B7, #6A2F88);
+  --profile-glow1: radial-gradient(circle, #b05fdf, #9348b7);
+  --profile-glow2: radial-gradient(circle, #9348b7, #6a2f88);
   --profile-container-bg: linear-gradient(145deg, #fff, #f5f5f7);
   --profile-container-border: 1px solid #e0e0e0;
-  --profile-container-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+  --profile-container-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   --profile-avatar-bg: #fff;
   --profile-avatar-border: 3px solid #e0e0e0;
   --profile-avatar-placeholder-bg: #e0e0e0;
-  --profile-avatar-placeholder-color: #9348B7;
+  --profile-avatar-placeholder-color: #9348b7;
   --profile-name-color: #23272f;
   --profile-role-bg: rgba(147, 72, 183, 0.08);
   --profile-role-color: #23272f;
-  --profile-status-online: #34D399;
+  --profile-status-online: #34d399;
   --profile-status-online-shadow: 0 0 5px rgba(52, 211, 153, 0.18);
   --profile-status-offline: #b0b3b8;
   --profile-status-text: #444950;
@@ -602,7 +660,7 @@
   --profile-action-message-hover-bg: rgba(83, 166, 251, 0.18);
   --profile-section-bg: #fff;
   --profile-section-border: 1px solid #e0e0e0;
-  --profile-section-hover-border: #9348B7;
+  --profile-section-hover-border: #9348b7;
   --profile-section-title-color: #23272f;
   --profile-section-title-border: 1px solid #e0e0e0;
   --profile-info-label: #b0b3b8;
@@ -610,19 +668,19 @@
   --profile-bio: #444950;
   --profile-loading-bg: #f5f5f7;
   --profile-loading-icon-border: 3px solid #e0e0e0;
-  --profile-loading-icon-top: 3px solid #9348B7;
-  --profile-error-icon: #EF4444;
+  --profile-loading-icon-top: 3px solid #9348b7;
+  --profile-error-icon: #ef4444;
   --profile-error-bg: rgba(255, 77, 77, 0.08);
   --profile-error-color: #ff6b6b;
   --profile-workspace-bg: rgba(147, 72, 183, 0.04);
   --profile-workspace-hover-bg: rgba(147, 72, 183, 0.09);
-  --profile-workspace-border: 3px solid #9348B7;
+  --profile-workspace-border: 3px solid #9348b7;
   --profile-workspace-role-bg: #e0e0e0;
-  --profile-workspace-role-owner: #FFD700;
-  --profile-workspace-role-admin: #FF6B6B;
-  --profile-workspace-role-member: #9CA3AF;
+  --profile-workspace-role-owner: #ffd700;
+  --profile-workspace-role-admin: #ff6b6b;
+  --profile-workspace-role-member: #9ca3af;
   --profile-workspace-empty: #b0b3b8;
-  --profile-stat-value: #9348B7;
+  --profile-stat-value: #9348b7;
   --profile-stat-label: #b0b3b8;
   --profile-date-raw: #b0b3b8;
   --dm-sidebar-bg: #fff;

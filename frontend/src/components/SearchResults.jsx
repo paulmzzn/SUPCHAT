@@ -165,17 +165,12 @@ const SearchResults = ({
                       />
                     ) : (
                       <FaUser className="result-icon" />
-                    )}
+                    )}{" "}
                     <span className="user-name">{user.nom}</span>
                     {user.email && (
                       <span className="user-email">{user.email}</span>
                     )}
-                    {user.status && (
-                      <div
-                        className={`status-indicator ${user.status.toLowerCase()}`}
-                        title={user.status}
-                      ></div>
-                    )}
+                    {/* Indicateur de statut supprimé */}
                   </div>
                 </li>
               ))}
