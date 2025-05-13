@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndica
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext'; // Updated import path
+import { useUserPreferences } from '../../context/UserPreferencesContext'; // Import du contexte de préférences utilisateur
 import env from '../../config/env'; 
 import { getStyles } from './SettingsScreen.styles'; // Import getStyles
 import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
@@ -10,11 +11,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Imp
 
 const SettingsScreen = () => {
   const { themeMode, toggleTheme, colors: themeColors } = useTheme(); // Use theme context
+  const { preferences, toggleNotificationSound } = useUserPreferences(); // Utilisation du contexte de préférences
   const styles = getStyles(themeColors); // Get styles based on current theme
   const navigation = useNavigation(); // Initialize navigation
 
   const [notifications, setNotifications] = React.useState(true);
-  const [soundEffects, setSoundEffects] = React.useState(true);
   
   const [userName, setUserName] = useState('Utilisateur');
   const [userEmail, setUserEmail] = useState('email@example.com');
@@ -181,10 +182,10 @@ const SettingsScreen = () => {
               <Text style={styles.settingDescription}>Activer les sons de notification</Text>
             </View>
             <Switch
-              value={soundEffects}
-              onValueChange={setSoundEffects}
+              value={preferences.notificationSoundEnabled}
+              onValueChange={toggleNotificationSound}
               trackColor={{ false: themeColors.switchTrackFalse, true: themeColors.switchTrackTrue }}
-              thumbColor={soundEffects ? themeColors.switchThumbTrue : themeColors.switchThumbFalse}
+              thumbColor={preferences.notificationSoundEnabled ? themeColors.switchThumbTrue : themeColors.switchThumbFalse}
             />
           </View>
         </View>
