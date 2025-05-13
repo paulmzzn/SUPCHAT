@@ -1581,25 +1581,8 @@ function DirectMessages() {
                             isOwn ? "own" : "other"
                           } editing`}
                         >
-                          <div className="dm-msg-avatar">
-                            {senderInfo.avatar ? (
-                              <img
-                                src={senderInfo.avatar}
-                                alt={
-                                  senderInfo.nom || senderInfo.name || "User"
-                                }
-                              />
-                            ) : (
-                              <div className="dm-avatar-placeholder">
-                                {senderInfo.nom
-                                  ? senderInfo.nom[0].toUpperCase()
-                                  : senderInfo.name
-                                  ? senderInfo.name[0].toUpperCase()
-                                  : "U"}
-                              </div>
-                            )}
-                          </div>
-
+                          {" "}
+                          {/* Avatar supprimé pour simplifier l'interface des messages directs */}
                           <div className="dm-msg-content">
                             <div className="dm-edit-container">
                               <textarea
@@ -1695,18 +1678,8 @@ function DirectMessages() {
                               </span>
                             </div>
                           </div>
-                        ) : null}
-
-                        <div className="dm-msg-avatar">
-                          {avatarSrc ? (
-                            <img src={avatarSrc} alt={displayName} />
-                          ) : (
-                            <div className="dm-avatar-placeholder">
-                              {displayName[0].toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
+                        ) : null}{" "}
+                        {/* Avatar supprimé pour simplifier l'interface des messages directs */}
                         <div className="dm-msg-content">
                           <div className="dm-msg-header">
                             <span className="dm-msg-author">{displayName}</span>
