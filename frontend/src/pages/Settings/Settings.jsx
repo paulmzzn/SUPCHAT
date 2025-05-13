@@ -12,6 +12,7 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./Settings.css";
 import { API_URL } from "../../config/config";
 import { useTheme } from "../../context/ThemeContext";
+import CGU from "./CGU";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -265,6 +266,10 @@ const Settings = () => {
       case "appearance":
         handleSaveSettings("appearance");
         break;
+      // Ajout du cas pour les CGU
+      case "cgu":
+        handleSaveSettings("cgu");
+        break;
       default:
         break;
     }
@@ -449,6 +454,15 @@ const Settings = () => {
             >
               <FaSignOutAlt className="tab-icon" />
               <span>Déconnexion</span>
+            </button>
+            <button
+              className={`settings-tab ${
+                activeTab === "cgu" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("cgu")}
+            >
+              <FaLock className="tab-icon" />
+              <span>CGU</span>
             </button>
           </div>
 
@@ -750,6 +764,17 @@ const Settings = () => {
                     </div>
                   </div>
 
+                  {/* Bouton d'accès aux CGU */}
+                  <div className="settings-item">
+                    <div className="setting-info">
+                      <h3>Conditions Générales d'Utilisation</h3>
+                      <p>Consultez les CGU de SUPCHAT pour connaître vos droits et obligations.</p>
+                    </div>
+                    <div className="setting-control">
+                      <button className="btn-secondary" onClick={() => setActiveTab("cgu")}>Voir les CGU</button>
+                    </div>
+                  </div>
+
                   {/* Suppression du paramètre 'Accusés de lecture' ici */}
                   {/* Suppression du paramètre 'Qui peut m'envoyer des demandes de messages' déjà effectuée */}
                 </div>
@@ -918,6 +943,14 @@ const Settings = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* CGU Settings - Nouveau contenu pour l'onglet CGU */}
+            {activeTab === "cgu" && (
+              <div className="settings-section">
+                <h2>Conditions Générales d'Utilisation</h2>
+                <CGU />
               </div>
             )}
           </div>
