@@ -12,7 +12,6 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./Settings.css";
 import { API_URL } from "../../config/config";
 import { useTheme } from "../../context/ThemeContext";
-import CGU from "./CGU";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -250,7 +249,6 @@ const Settings = () => {
     alert(`${settingType} settings saved!`);
     resetChangesState();
   };
-
   // Fonction pour gérer l'action du bouton flottant en fonction de l'onglet actif
   const handleFloatingButtonAction = () => {
     switch (activeTab) {
@@ -265,10 +263,6 @@ const Settings = () => {
         break;
       case "appearance":
         handleSaveSettings("appearance");
-        break;
-      // Ajout du cas pour les CGU
-      case "cgu":
-        handleSaveSettings("cgu");
         break;
       default:
         break;
@@ -454,15 +448,6 @@ const Settings = () => {
             >
               <FaSignOutAlt className="tab-icon" />
               <span>Déconnexion</span>
-            </button>
-            <button
-              className={`settings-tab ${
-                activeTab === "cgu" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("cgu")}
-            >
-              <FaLock className="tab-icon" />
-              <span>CGU</span>
             </button>
           </div>
 
@@ -762,16 +747,13 @@ const Settings = () => {
                         <option value="none">Personne</option>
                       </select>
                     </div>
-                  </div>
-
-                  {/* Bouton d'accès aux CGU */}
-                  <div className="settings-item">
+                  </div>                  {/* Bouton d'accès aux CGU */}                  <div className="settings-item">
                     <div className="setting-info">
                       <h3>Conditions Générales d'Utilisation</h3>
                       <p>Consultez les CGU de SUPCHAT pour connaître vos droits et obligations.</p>
                     </div>
                     <div className="setting-control">
-                      <button className="btn-secondary" onClick={() => setActiveTab("cgu")}>Voir les CGU</button>
+                      <a href="/cgu" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'inline-block', textDecoration: 'none' }}>Voir les CGU</a>
                     </div>
                   </div>
 
@@ -943,14 +925,6 @@ const Settings = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* CGU Settings - Nouveau contenu pour l'onglet CGU */}
-            {activeTab === "cgu" && (
-              <div className="settings-section">
-                <h2>Conditions Générales d'Utilisation</h2>
-                <CGU />
               </div>
             )}
           </div>
