@@ -483,16 +483,16 @@ function DirectMessages() {
         }
       });
 
-      scrollToBottom();
-
-      // Si c'est un nouveau message, rafraîchir la liste des conversations
+      scrollToBottom(); // Si c'est un nouveau message d'un nouveau contact, rafraîchir la liste des conversations
       if (
         !conversations.includes(msg.fk_expediteur) &&
         msg.fk_expediteur !== currentUserId
       ) {
         fetchConversations();
       }
-      // Ajout : toujours rafraîchir la liste des conversations pour affichage temps réel
+
+      // Rafraîchir la liste des conversations pour mettre à jour l'ordre (du plus récent au plus ancien)
+      // Cela permet de remonter une conversation en haut de la liste quand un nouveau message est reçu
       fetchConversations();
     };
 
@@ -1057,9 +1057,7 @@ function DirectMessages() {
         throw new Error(await res.text());
       }
 
-      const data = await res.json();
-
-      // Mise à jour des messages pour remplacer le message optimiste
+      const data = await res.json(); // Mise à jour des messages pour remplacer le message optimiste
       setMessages((prev) => {
         const exists = prev.some(
           (m) => !m.isOptimistic && m.id_message_prive === data.id_message_prive
@@ -1071,6 +1069,9 @@ function DirectMessages() {
           m.isOptimistic && m.contenu === messageContent ? data : m
         );
       });
+
+      // Rafraîchir la liste des conversations pour mettre à jour l'ordre
+      fetchConversations();
     } catch (apiError) {
       console.error("API fallback failed:", apiError);
       setError(`Échec de l'envoi du message. Veuillez réessayer.`);
