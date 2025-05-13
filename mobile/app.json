@@ -16,9 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.paulmzn.siptv",
       "icon": {
-        "light":   "./assets/icon-light.png",
-        "dark":    "./assets/icon-dark.png",
-        "tinted":  "./assets/icon-tinted.png"
+        "light": "./assets/icon-light.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-tinted.png"
       }
     },
     "android": {
@@ -30,6 +30,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-web-browser",
+      "react-native-video"
+    ]
   }
 }

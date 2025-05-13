@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, Text, TouchableOpacity, FlatList, TextInput, Image, 
-  ActivityIndicator
+  ActivityIndicator, Modal, Alert, Animated, Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStyles } from './ConversationsListScreen.styles';
 import { useTheme } from '../../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSocket } from '../../context/SocketContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.119:3000';
 
@@ -15,30 +16,199 @@ const ConversationsListScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
   
+  const { 
+    unreadMessages, 
+    refreshUnreadCounts, 
+    subscribeToNotifications,
+    updateConversationTimestamp,
+    markMessagesAsRead
+  } = useSocket();
+  
   const [conversations, setConversations] = useState([]);
   const [usersInfo, setUsersInfo] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
+  const [lastMessageTimestamps, setLastMessageTimestamps] = useState({});
+  const [conversationTimestamps, setConversationTimestamps] = useState({});
+  const [lastMessages, setLastMessages] = useState({});
   
-  // Fetch conversations on component mount
+  const isInitialMount = useRef(true);
+  const lastFetchTime = useRef(0);
+  const pendingConversationUpdate = useRef(false);
+  const pendingConversationUpdates = useRef({});
+  const isProcessingNotification = useRef(false);
+  const updateTimeoutRef = useRef(null);
+
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    userId: null,
+    position: { x: 0, y: 0 }
+  });
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const windowDimensions = Dimensions.get('window');
+
+  const markAsRead = useCallback((userId) => {
+    if (markMessagesAsRead) {
+      markMessagesAsRead(userId);
+    } else {
+      console.log("markMessagesAsRead not available in context, using fallback");
+      if (unreadMessages && unreadMessages[userId]) {
+        setUnreadMessages && setUnreadMessages(prev => {
+          const newState = { ...prev };
+          delete newState[userId];
+          return newState;
+        });
+      }
+    }
+  }, [markMessagesAsRead, unreadMessages]);
+
   useEffect(() => {
-    fetchConversations();
+    const unsubscribe = subscribeToNotifications((notification) => {
+      if (notification.type === 'newPrivateMessage') {
+        console.log('New message notification received from:', notification.senderId);
+        
+        isProcessingNotification.current = true;
+        
+        const senderId = notification.senderId;
+        const messageContent = notification.message?.contenu || '';
+        
+        if (messageContent) {
+          setLastMessages(prev => ({
+            ...prev,
+            [senderId]: {
+              contenu: messageContent,
+              date_envoi: new Date().toISOString(),
+              isNew: true
+            }
+          }));
+        }
+        
+        setConversations(prev => {
+          const filteredConvs = prev.filter(id => id !== senderId);
+          return [senderId, ...filteredConvs];
+        });
+        
+        if (!usersInfo[senderId]) {
+          fetchUserInfo(senderId).catch(console.error);
+        }
+        
+        if (updateTimeoutRef.current) {
+          clearTimeout(updateTimeoutRef.current);
+        }
+        
+        updateTimeoutRef.current = setTimeout(() => {
+          isProcessingNotification.current = false;
+        }, 2000);
+      } else if (notification.type === 'timestampUpdated') {
+        const { userId } = notification;
+        
+        setConversations(prev => {
+          const filteredConvs = prev.filter(id => id !== userId);
+          return [userId, ...filteredConvs];
+        });
+      }
+    });
+    
+    return () => {
+      unsubscribe();
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, [usersInfo]);
+
+  useEffect(() => {
+    const sortConversationsByTimestamp = async () => {
+      try {
+        const timestampsString = await AsyncStorage.getItem('conversationTimestamps');
+        if (!timestampsString) return;
+        
+        const timestamps = JSON.parse(timestampsString);
+        
+        setConversations(prev => {
+          return [...prev].sort((a, b) => {
+            return (timestamps[b] || 0) - (timestamps[a] || 0);
+          });
+        });
+      } catch (e) {
+        console.error('Error sorting conversations by timestamp:', e);
+      }
+    };
+    
+    if (conversations.length > 0) {
+      sortConversationsByTimestamp();
+    }
+  }, [conversationTimestamps]);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      console.log('Initial fetch of conversations');
+      fetchConversations();
+      isInitialMount.current = false;
+    }
   }, []);
   
-  // Refresh conversations when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
-      fetchConversations();
+    useCallback(() => {
+      const now = Date.now();
+      
+      if (isProcessingNotification.current) {
+        console.log('Skipping refresh - notification processing in progress');
+        return;
+      }
+      
+      if (now - lastFetchTime.current > 5000 || pendingConversationUpdate.current) {
+        console.log('Refreshing conversations on screen focus');
+        fetchConversations();
+        refreshUnreadCounts();
+        pendingConversationUpdate.current = false;
+      } else {
+        console.log('Skipping refresh - too soon since last fetch');
+      }
+      
       return () => {};
-    }, [])
+    }, [refreshUnreadCounts])
   );
 
-  // Fetch conversations list
-  const fetchConversations = async () => {
+  useEffect(() => {
+    const loadTimestamps = async () => {
+      try {
+        const timestampsString = await AsyncStorage.getItem('conversationTimestamps');
+        if (timestampsString) {
+          const timestamps = JSON.parse(timestampsString);
+          setConversationTimestamps(timestamps);
+        }
+      } catch (e) {
+        console.error('Error loading conversation timestamps:', e);
+      }
+    };
+    
+    loadTimestamps();
+  }, []);
+
+  const fetchConversations = async (skipLoadingState = false) => {
     try {
-      setLoading(true);
+      const now = Date.now();
+      lastFetchTime.current = now;
+      
+      if (!skipLoadingState && !loading) {
+        setLoading(true);
+      }
+      
+      let timestamps = {};
+      try {
+        const timestampsString = await AsyncStorage.getItem('conversationTimestamps');
+        if (timestampsString) {
+          timestamps = JSON.parse(timestampsString);
+          console.log('Timestamps chargés:', timestamps);
+        }
+      } catch (e) {
+        console.error('Error loading conversation timestamps:', e);
+      }
+      
       const token = await AsyncStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/private-messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -49,16 +219,73 @@ const ConversationsListScreen = ({ navigation }) => {
       }
       
       const data = await res.json();
-      console.log('Conversations:', data);
-      setConversations(data);
+      console.log('Conversations (non triées):', data);
       
-      // Fetch user info for each conversation
-      for (const userId of data) {
-        fetchUserInfo(userId);
+      data.forEach(userId => {
+        if (!timestamps[userId]) {
+          timestamps[userId] = 0;
+        }
+      });
+      
+      const sortedData = [...data].sort((a, b) => {
+        return (timestamps[b] || 0) - (timestamps[a] || 0);
+      });
+      
+      console.log('Conversations triées par timestamp:', sortedData);
+      
+      if (conversations.length > 0 && !skipLoadingState) {
+        const existingIds = new Set(conversations);
+        const newIds = data.filter(id => !existingIds.has(id));
+        
+        if (newIds.length > 0) {
+          console.log('Adding new conversations:', newIds);
+          setConversations(prev => [...prev, ...newIds]);
+        }
+      } else {
+        setConversations(sortedData);
       }
       
-      // Fetch unread counts
-      fetchUnreadCounts();
+      setConversationTimestamps(timestamps);
+      
+      try {
+        await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(timestamps));
+      } catch (e) {
+        console.error('Error saving conversation timestamps:', e);
+      }
+      
+      const lastMessagesMap = {};
+      const conversationsToProcess = sortedData.slice(0, 5);
+      
+      await Promise.all(
+        conversationsToProcess.map(async (userId) => {
+          if (!lastMessages[userId]) {
+            try {
+              let lastMessage = await fetchLastMessageForConversation(userId);
+              if (lastMessage) {
+                lastMessagesMap[userId] = {
+                  contenu: lastMessage.contenu,
+                  date_envoi: lastMessage.date_envoi || lastMessage.date_creation,
+                };
+              }
+            } catch (err) {
+              console.error(`Error fetching last message for ${userId}:`, err);
+            }
+          }
+        })
+      );
+      
+      if (Object.keys(lastMessagesMap).length > 0) {
+        setLastMessages(prev => ({
+          ...prev,
+          ...lastMessagesMap
+        }));
+      }
+      
+      for (const userId of sortedData) {
+        if (!usersInfo[userId]) {
+          fetchUserInfo(userId);
+        }
+      }
     } catch (e) {
       console.error('Error fetching conversations:', e);
       setError('Failed to load conversations');
@@ -67,24 +294,93 @@ const ConversationsListScreen = ({ navigation }) => {
     }
   };
 
-  // Fetch unread message counts
-  const fetchUnreadCounts = async () => {
+  const fetchLastMessageForConversation = async (userId) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+      const url = `${API_URL}/api/private-messages/${userId}?limit=5&sort=desc`;
+      
+      console.log(`Fetching last message for conversation with ${userId}`);
+      
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        setUnreadMessageCounts(data);
+      if (!response.ok) {
+        console.warn(`Could not fetch last message for ${userId}: ${response.status}`);
+        return null;
       }
-    } catch (e) {
-      console.error('Error fetching unread counts:', e);
+      
+      const messages = await response.json();
+      
+      if (messages && messages.length > 0) {
+        const sortedMessages = [...messages].sort((a, b) => {
+          const dateA = new Date(a.date_envoi || a.date_creation);
+          const dateB = new Date(b.date_envoi || b.date_creation);
+          return dateB - dateA;
+        });
+        
+        const latestMessage = sortedMessages[0];
+        console.log(`Got last message for ${userId}:`, latestMessage.contenu);
+        
+        setLastMessages(prev => ({
+          ...prev,
+          [userId]: {
+            contenu: latestMessage.contenu,
+            date_envoi: latestMessage.date_envoi || latestMessage.date_creation,
+          }
+        }));
+        
+        return latestMessage;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error(`Error fetching last message for conversation ${userId}:`, err);
+      return null;
     }
   };
 
-  // Get user info
+  const fetchLastMessagesAlternative = async (userId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const url = `${API_URL}/api/private-messages/${userId}?limit=10`;
+      
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!response.ok) return null;
+      
+      const messages = await response.json();
+      
+      if (messages && messages.length > 0) {
+        const sortedMessages = [...messages].sort((a, b) => {
+          const dateA = new Date(a.date_envoi || a.date_creation);
+          const dateB = new Date(b.date_envoi || b.date_creation);
+          return dateB - dateA;
+        });
+        
+        const latestMessage = sortedMessages[0];
+        console.log(`Alternative method found last message for ${userId}:`, latestMessage.contenu);
+        
+        setLastMessages(prev => ({
+          ...prev,
+          [userId]: {
+            contenu: latestMessage.contenu,
+            date_envoi: latestMessage.date_envoi || latestMessage.date_creation,
+          }
+        }));
+        
+        return latestMessage;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error(`Error in alternative fetch for ${userId}:`, err);
+      return null;
+    }
+  };
+
   const fetchUserInfo = async (userId) => {
     if (usersInfo[userId]) return;
     
@@ -116,12 +412,144 @@ const ConversationsListScreen = ({ navigation }) => {
     }
   };
 
-  // Navigate to conversation screen
-  const handleSelectConversation = (userId) => {
+  const handleSelectConversation = async (userId) => {
+    try {
+      const newTimestamp = Date.now();
+      
+      const newTimestamps = {
+        ...conversationTimestamps,
+        [userId]: newTimestamp
+      };
+      
+      setConversationTimestamps(newTimestamps);
+      
+      await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(newTimestamps));
+      
+      setConversations(prev => {
+        const filteredList = prev.filter(id => id !== userId);
+        return [userId, ...filteredList];
+      });
+      
+      if (!lastMessages[userId]) {
+        await fetchLastMessageForConversation(userId);
+      }
+    } catch (e) {
+      console.error('Error updating conversation timestamp:', e);
+    }
+    
+    pendingConversationUpdate.current = true;
     navigation.navigate('Conversation', { userId });
+    
+    if (updateConversationTimestamp) {
+      updateConversationTimestamp(userId);
+    }
   };
 
-  // Render avatar component
+  const handleLongPressConversation = (userId, event) => {
+    const { pageX, pageY } = event.nativeEvent;
+    
+    let xPos = Math.min(pageX, windowDimensions.width - 220);
+    let yPos = Math.min(pageY, windowDimensions.height - 180);
+    
+    setContextMenu({
+      visible: true,
+      userId,
+      position: { x: xPos, y: yPos }
+    });
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true
+      })
+    ]).start();
+  };
+
+  const closeContextMenu = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 150,
+        useNativeDriver: true
+      })
+    ]).start(() => {
+      setContextMenu({
+        visible: false,
+        userId: null,
+        position: { x: 0, y: 0 }
+      });
+    });
+  };
+
+  const handleDeleteConversation = async (userId) => {
+    closeContextMenu();
+    
+    setTimeout(() => {
+      Alert.alert(
+        "Supprimer la conversation",
+        "Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.",
+        [
+          {
+            text: "Annuler",
+            style: "cancel"
+          },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setLoading(true);
+
+                const token = await AsyncStorage.getItem('token');
+                const res = await fetch(`${API_URL}/api/private-messages/conversations/${userId}`, {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                  const errorText = await res.text();
+                  console.error(`Error deleting conversation: ${res.status} - ${errorText}`);
+                  throw new Error(`${res.status}: ${errorText}`);
+                }
+
+                setConversations(prev => prev.filter(id => id !== userId));
+
+                const timestampsString = await AsyncStorage.getItem('conversationTimestamps');
+                if (timestampsString) {
+                  const timestamps = JSON.parse(timestampsString);
+                  if (timestamps[userId]) {
+                    delete timestamps[userId];
+                    await AsyncStorage.setItem('conversationTimestamps', JSON.stringify(timestamps));
+                    setConversationTimestamps(timestamps);
+                  }
+                }
+              } catch (e) {
+                console.error('Error deleting conversation:', e);
+                Alert.alert(
+                  "Erreur",
+                  `Impossible de supprimer la conversation: ${e.message}. Veuillez réessayer.`
+                );
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
+      );
+    }, 150);
+  };
+
   const renderAvatar = (user) => {
     if (!user) return <View style={styles.avatar} />;
     
@@ -146,7 +574,22 @@ const ConversationsListScreen = ({ navigation }) => {
     }
   };
 
-  // Filter conversations based on search query
+  const formatLastMessage = (userId) => {
+    if (!lastMessages[userId]) return "Aucun message récent";
+    
+    const message = lastMessages[userId].contenu || "";
+    
+    if (!message.trim()) {
+      return "Message vide";
+    }
+    
+    if (message.length > 30) {
+      return message.substring(0, 27) + '...';
+    }
+    
+    return message;
+  };
+
   const filteredConversations = searchQuery.trim()
     ? conversations.filter(userId => {
         const user = usersInfo[userId] || {};
@@ -157,10 +600,17 @@ const ConversationsListScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Messages</Text>
+          <TouchableOpacity 
+            style={styles.newConversationHeaderButton}
+            onPress={() => navigation.navigate('NewConversation')}
+          >
+            <Ionicons name="add" size={24} color={themeColors.textOnAccent} />
+          </TouchableOpacity>
+        </View>
       </View>
       
-      {/* Search bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={themeColors.textSecondary} style={styles.searchIcon} />
         <TextInput
@@ -189,7 +639,7 @@ const ConversationsListScreen = ({ navigation }) => {
           <ActivityIndicator size="large" color={themeColors.accentPrimary} />
           <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
-      ) : conversations.length === 0 ? (
+      ) : filteredConversations.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubble-ellipses" size={80} color={themeColors.accentPrimary} style={styles.icon} />
           <Text style={styles.title}>No conversations yet</Text>
@@ -201,20 +651,45 @@ const ConversationsListScreen = ({ navigation }) => {
         <FlatList
           data={filteredConversations}
           keyExtractor={(item) => item.toString()}
+          removeClippedSubviews={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
           renderItem={({ item: userId }) => {
-            const user = usersInfo[userId];
-            const unreadCount = unreadMessageCounts[userId] || 0;
+            const user = usersInfo[userId] || {};
+            const unreadCount = unreadMessages[userId] || 0;
+            const isPending = pendingConversationUpdates.current[userId];
+            
+            if (isPending) {
+              setTimeout(() => {
+                pendingConversationUpdates.current[userId] = false;
+              }, 300);
+            }
             
             return (
               <TouchableOpacity
-                style={styles.conversationItem}
+                style={[
+                  styles.conversationItem,
+                  isPending && styles.newConversation
+                ]}
                 onPress={() => handleSelectConversation(userId)}
+                onLongPress={(event) => handleLongPressConversation(userId, event)}
+                delayLongPress={500}
+                data-user-id={userId}
               >
                 {renderAvatar(user)}
                 <View style={styles.conversationInfo}>
                   <Text style={styles.userName}>{user?.name || 'Loading...'}</Text>
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    Tap to view conversation
+                  <Text 
+                    style={[
+                      styles.lastMessage, 
+                      unreadCount > 0 && styles.unreadLastMessage,
+                      lastMessages[userId]?.isNew && styles.newLastMessage
+                    ]} 
+                    numberOfLines={1}
+                  >
+                    {formatLastMessage(userId)}
                   </Text>
                 </View>
                 {unreadCount > 0 && (
@@ -228,13 +703,55 @@ const ConversationsListScreen = ({ navigation }) => {
         />
       )}
       
-      {/* New conversation button */}
-      <TouchableOpacity
-        style={styles.newConversationButton}
-        onPress={() => navigation.navigate('NewConversation')}
-      >
-        <Ionicons name="add" size={24} color={themeColors.textOnAccent} />
-      </TouchableOpacity>
+      {contextMenu.visible && (
+        <TouchableOpacity 
+          style={styles.contextMenuOverlay}
+          activeOpacity={1}
+          onPress={closeContextMenu}
+        >
+          <Animated.View 
+            style={[
+              styles.modernContextMenu,
+              {
+                top: contextMenu.position.y,
+                left: contextMenu.position.x,
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.contextMenuItem}
+              onPress={() => {
+                closeContextMenu();
+                handleSelectConversation(contextMenu.userId);
+              }}
+            >
+              <Ionicons name="chatbubble-outline" size={20} color={themeColors.textPrimary} />
+              <Text style={styles.contextMenuItemText}>Ouvrir</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.contextMenuItem, styles.deleteMenuItem]}
+              onPress={() => handleDeleteConversation(contextMenu.userId)}
+            >
+              <Ionicons 
+                name="trash-outline" 
+                size={20} 
+                color="red"
+              />
+              <Text 
+                style={[
+                  styles.contextMenuItemText, 
+                  { color: "red" }
+                ]}
+              >
+                Supprimer
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

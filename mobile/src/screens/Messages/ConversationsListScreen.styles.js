@@ -13,10 +13,31 @@ export const getStyles = (theme) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.borderColor,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.textPrimary,
+  },
+  newConversationHeaderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.accentPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -41,6 +62,23 @@ export const getStyles = (theme) => StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: theme.borderColor,
+    opacity: 1,
+    transform: [{translateY: 0}],
+    transition: 'transform 0.3s ease, opacity 0.3s ease',
+  },
+  activeConversation: {
+    backgroundColor: `${theme.accentPrimary}15`,
+  },
+  newConversation: {
+    opacity: 0,
+    transform: [{translateY: -20}],
+    animationName: 'fadeInDown',
+    animationDuration: '300ms',
+    animationFillMode: 'forwards',
+  },
+  conversationMoving: {
+    transition: 'transform 0.3s ease, opacity 0.3s ease',
+    zIndex: 10,
   },
   avatar: {
     width: 50,
@@ -74,6 +112,14 @@ export const getStyles = (theme) => StyleSheet.create({
   lastMessage: {
     fontSize: 14,
     color: theme.textSecondary,
+  },
+  unreadLastMessage: {
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  newLastMessage: {
+    fontStyle: 'italic',
+    color: theme.accentSecondary,
   },
   unreadBadge: {
     backgroundColor: theme.accentPrimary,
@@ -151,16 +197,40 @@ export const getStyles = (theme) => StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  newConversationButton: {
+  contextMenuOverlay: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.accentPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1000,
+  },
+  modernContextMenu: {
+    position: 'absolute',
+    width: 220,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 10,
+    borderWidth: Platform.OS === 'ios' ? 0 : 1,
+    borderColor: theme.borderColor,
+    zIndex: 1001,
+    marginRight: 20, // Augmenté pour plus d'espace à droite
+  },
+  contextMenuContainer: {
+    width: '80%',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    padding: 5,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -170,4 +240,39 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 8,
   },
+  contextMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginVertical: 2,
+    marginHorizontal: 4,
+  },
+  deleteMenuItem: {
+    marginRight: 4,
+    backgroundColor: 'rgba(255, 0, 0, 0.05)', // Léger fond rouge
+    borderRadius: 8,
+  },
+  contextMenuItemText: {
+    fontSize: 16,
+    color: theme.textPrimary,
+    marginLeft: 12,
+    fontWeight: '500',
+    flex: 1,
+    paddingRight: 12, // Plus d'espace à droite du texte
+  },
 });
+
+export const animations = `
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+`;

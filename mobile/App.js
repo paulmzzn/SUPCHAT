@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider } from './src/theme/ThemeContext'; // Adjust path as necessary
 import { AuthProvider, useAuth } from './src/context/AuthContext'; // Import from new file
+import { SocketProvider } from './src/context/SocketContext'; // Ajout de cet import
 
 // Auth screens
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -18,6 +19,7 @@ import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
 import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
+import NewConversationScreen from './src/screens/Messages/NewConversationScreen';
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
@@ -37,6 +39,7 @@ function MessagesNavigator() {
     <MessagesStack.Navigator screenOptions={{ headerShown: false }}>
       <MessagesStack.Screen name="ConversationsList" component={ConversationsListScreen} />
       <MessagesStack.Screen name="Conversation" component={MessagesScreen} />
+      <MessagesStack.Screen name="NewConversation" component={NewConversationScreen} />
     </MessagesStack.Navigator>
   );
 }
@@ -100,9 +103,11 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <SafeAreaProvider>
-          <AppNavigator />
-        </SafeAreaProvider>
+        <SocketProvider>
+          <SafeAreaProvider>
+            <AppNavigator />
+          </SafeAreaProvider>
+        </SocketProvider>
       </ThemeProvider>
     </AuthProvider>
   );
