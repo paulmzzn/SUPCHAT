@@ -121,15 +121,40 @@ export const getAllWorkspaces = async (req, res) => {
 export const updateWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id; // Récupérer l'ID de l'utilisateur à partir du token JWT
     const { nom, description, is_private } = req.body;
+
+    // Vérifier si l'utilisateur est propriétaire ou administrateur du workspace
+    const result = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_utilisateur = $1 AND fk_workspace = $2",
+      [userId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).json({
+        message: "Vous n'êtes pas membre de ce workspace",
+      });
+    }
+
+    const userRole = result.rows[0].fk_role;
+
+    // Vérifier si l'utilisateur a les permissions (1 = owner, 2 = admin)
+    if (userRole !== 1 && userRole !== 2) {
+      return res.status(403).json({
+        message: "Vous n'avez pas les droits pour modifier ce workspace",
+      });
+    }
+
     const workspace = await Workspace.update(id, {
       nom,
       description,
       is_private,
     });
+
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
+
     res.status(200).json(workspace);
   } catch (error) {
     res.status(500).json({ error: error.message });
