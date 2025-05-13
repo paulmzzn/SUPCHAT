@@ -36,7 +36,9 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "metro-minify-terser": "^0.82.3",
+    "react-refresh": "^0.17.0"
   },
   "private": true
 }

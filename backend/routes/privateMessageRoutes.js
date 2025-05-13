@@ -180,6 +180,18 @@ router.get("/conversations", verifyToken, async (req, res) => {
   }
 });
 
+// Route optimisée qui retourne les conversations avec les infos utilisateur et derniers messages
+router.get("/conversations-extended", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conversations = await MessagePrive.getUserConversationsExtended(userId);
+    res.json(conversations);
+  } catch (error) {
+    console.error("Error in conversations-extended:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Route pour récupérer le nombre de messages privés non lus (doit être AVANT /:userId !)
 router.get("/unread-counts", verifyToken, getUnreadCounts);
 
