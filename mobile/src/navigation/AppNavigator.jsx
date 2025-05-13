@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import du composant TabBar personnalisé
 import TabBar from '../components/TabBar/TabBar';
@@ -12,9 +12,19 @@ import WorkspacesScreen from '../screens/Workspaces/WorkspacesScreen';
 import DiscoverScreen from '../screens/Discover/DiscoverScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 
+// Import the new screens
+import ConversationsListScreen from '../screens/Messages/ConversationsListScreen';
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
+
+// In the MessagesStack
+const MessagesStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ConversationsList" component={ConversationsListScreen} />
+    <Stack.Screen name="Conversation" component={MessagesScreen} />
+  </Stack.Navigator>
+);
 
 // Navigateur pour les utilisateurs authentifiés
 const MainNavigator = () => {
@@ -31,7 +41,7 @@ const MainNavigator = () => {
     >
       <Tab.Screen 
         name="Messages" 
-        component={MessagesScreen}
+        component={MessagesStack}
         initialParams={{ unreadCount: 0 }} // Exemple pour démontrer les badges
       />
       <Tab.Screen 
