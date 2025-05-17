@@ -1,17 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../context/SocketContext";
+import { useNotificationSettings } from "../../context/NotificationSettingsContext";
 import "./Notifications.css";
+// Importer l'utilitaire de gestion des sons
+import { playNotificationSound } from "../../assets/sounds/soundUtils";
 
 const Notifications = () => {
   const { socket } = useSocket();
+  const { notificationSettings } = useNotificationSettings();
   const [notifications, setNotifications] = useState([]);
 
+  // Surveiller les changements dans les paramètres de notification
+  useEffect(() => {
+    console.log("Paramètres de notification mis à jour:", notificationSettings);
+    console.log(
+      "Sons de notification activés:",
+      notificationSettings?.sounds ? "OUI" : "NON"
+    );
+  }, [notificationSettings]); // Nous n'avons plus besoin d'initialiser audio au montage grâce à notre utilitaire
+  useEffect(() => {
+    console.log(
+      "Composant Notifications monté - Sons activés:",
+      notificationSettings?.sounds ? "OUI" : "NON"
+    );
+  }, []);
   // Fonction pour ajouter une nouvelle notification
   const addNotification = (notification) => {
+    const notificationId = Date.now();
+
     setNotifications((prev) => [
       ...prev,
       {
-        id: Date.now(),
+        id: notificationId,
         ...notification,
         timestamp: new Date(),
       },
@@ -19,8 +39,9 @@ const Notifications = () => {
 
     // Auto-supprimer après 5 secondes
     setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-    }, 5000);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    }, 5000); // Utiliser notre utilitaire pour jouer le son de notification
+    playNotificationSound(notificationSettings);
   };
 
   // Écouter les événements de message privé
@@ -35,7 +56,10 @@ const Notifications = () => {
         addNotification({
           type: "privateMessage",
           title: "Nouveau message",
-          message: `De ${msg.nom || 'Utilisateur'}: ${msg.contenu.substring(0, 30)}${msg.contenu.length > 30 ? '...' : ''}`,
+          message: `De ${msg.nom || "Utilisateur"}: ${msg.contenu.substring(
+            0,
+            30
+          )}${msg.contenu.length > 30 ? "..." : ""}`,
         });
       }
     };
@@ -47,9 +71,12 @@ const Notifications = () => {
       if (msg.fk_utilisateur !== userId) {
         addNotification({
           type: "channelMessage",
-          title: `Nouveau message dans ${msg.nom_canal || 'canal'}`,
-          message: `${msg.nom || 'Utilisateur'}: ${msg.contenu.substring(0, 30)}${msg.contenu.length > 30 ? '...' : ''}`,
-          channelId: msg.fk_canal
+          title: `Nouveau message dans ${msg.nom_canal || "canal"}`,
+          message: `${msg.nom || "Utilisateur"}: ${msg.contenu.substring(
+            0,
+            30
+          )}${msg.contenu.length > 30 ? "..." : ""}`,
+          channelId: msg.fk_canal,
         });
       }
     };
@@ -67,23 +94,27 @@ const Notifications = () => {
   const removeNotification = (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
-
   if (notifications.length === 0) return null;
 
   return (
     <div className="notifications-container">
       {notifications.map((notification) => (
-        <div 
-          key={notification.id} 
+        <div
+          key={notification.id}
           className={`notification ${notification.type}`}
           onClick={() => removeNotification(notification.id)}
         >
           <div className="notification-header">
             <h4>{notification.title}</h4>
-            <button className="close-btn" onClick={(e) => {
-              e.stopPropagation();
-              removeNotification(notification.id);
-            }}>×</button>
+            <button
+              className="close-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNotification(notification.id);
+              }}
+            >
+              ×
+            </button>
           </div>
           <p>{notification.message}</p>
           <small className="notification-time">

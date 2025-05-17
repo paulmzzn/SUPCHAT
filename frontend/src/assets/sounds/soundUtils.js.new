@@ -1,0 +1,96 @@
+/**
+ * Utilitaire pour gérer les sons de notification dans l'application
+ * Ce fichier fournit des fonctions pour jouer des sons en fonction des paramètres utilisateur
+ */
+
+import { notificationSound } from "./index";
+import { simpleBeep, longerBeep } from "./simple-beep";
+
+// Instance audio unique pour toute l'application
+let audioInstance = null;
+
+/**
+ * Joue un son de notification si les paramètres utilisateur le permettent
+ * @param {Object} notificationSettings - Les paramètres de notification de l'utilisateur
+ * @returns {Promise|null} - Une promesse résolue quand le son est joué, ou null si le son est désactivé
+ */
+export const playNotificationSound = (notificationSettings) => {
+  console.log("Tentative de lecture du son, paramètres:", notificationSettings);
+  
+  // Vérifier si les sons sont activés
+  if (!notificationSettings || !notificationSettings.sounds) {
+    console.log("Sons de notification désactivés dans les paramètres utilisateur");
+    return null;
+  }
+
+  try {
+    console.log("Son activé, essai avec un son simple en base64");
+
+    // Essayer une approche alternative avec le son simple en base64
+    const audio = new Audio(simpleBeep);
+    audio.volume = 1.0;
+    
+    console.log("Tentative de lecture du son simple maintenant...");
+    
+    return audio.play()
+      .then(() => {
+        console.log("✅ Son de notification simple joué avec succès");
+        return true;
+      })
+      .catch((error) => {
+        console.error("❌ Erreur lors de la lecture du son simple:", error);
+        
+        // Essayer une autre approche avec le son plus long
+        console.log("Essai avec un son alternatif plus long...");
+        const audioAlt = new Audio(longerBeep);
+        audioAlt.volume = 1.0;
+        
+        return audioAlt.play()
+          .then(() => {
+            console.log("✅ Son alternatif joué avec succès");
+            return true;
+          })
+          .catch((errorAlt) => {
+            console.error("❌ Échec également avec le son alternatif:", errorAlt);
+            return false;
+          });
+      });
+  } catch (error) {
+    console.error("Erreur lors de l'initialisation du son de notification:", error);
+    return Promise.reject(error);
+  }
+};
+
+/**
+ * Teste le son de notification en utilisant différents formats
+ * @returns {Promise} - Une promesse résolue quand le son est joué
+ */
+export const testNotificationSound = () => {
+  try {
+    // Créer un élément audio visible dans le DOM pour contourner les restrictions de navigateur
+    const audioEl = document.createElement("audio");
+    audioEl.src = simpleBeep;
+    audioEl.volume = 1.0;
+    
+    // Ajouter temporairement au DOM pour permettre l'interaction
+    document.body.appendChild(audioEl);
+    
+    console.log("Test de son avec un élément audio visible dans le DOM");
+    
+    return audioEl.play()
+      .then(() => {
+        console.log("Test de son réussi");
+        // Retirer l'élément après lecture
+        setTimeout(() => document.body.removeChild(audioEl), 1000);
+        return true;
+      })
+      .catch((error) => {
+        console.error("Erreur lors du test de son:", error);
+        document.body.removeChild(audioEl);
+        return false;
+      });
+  } catch (error) {
+    console.error("Erreur lors de la création de l'audio pour le test:", error);
+    return Promise.reject(error);
+  }
+};

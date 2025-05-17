@@ -2,9 +2,11 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import MessageModel from "../models/Message.js";
 import Reaction from "../models/Reaction.js";
-import MessagePrive from "../models/MessagePrive.js"; // Ajout de l'importation de MessagePrive
-import ReactionPrive from "../models/ReactionPrive.js"; // Ajout de l'importation de ReactionPrive
-import pool from "../config/dbConnection.js"; // Add this import
+import MessagePrive from "../models/MessagePrive.js";
+import ReactionPrive from "../models/ReactionPrive.js";
+import Fichier from "../models/Fichier.js";
+import { deleteFromS3 } from "../config/s3Config.js";
+import pool from "../config/dbConnection.js";
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
@@ -40,7 +42,10 @@ const updateUserStatus = async (userId, status) => {
     );
     console.log(`Status de l'utilisateur ${userId} mis à jour: ${status}`);
   } catch (error) {
-    console.error("Erreur lors de la mise à jour du statut utilisateur:", error);
+    console.error(
+      "Erreur lors de la mise à jour du statut utilisateur:",
+      error
+    );
   }
 };
 
@@ -62,8 +67,10 @@ const socketManager = (io) => {
       );
 
       // Vérification préliminaire du format JWT (doit avoir 3 segments)
-      if (!token.includes('.') || token.split('.').length !== 3) {
-        console.error("Socket.IO: Format JWT invalide (ne contient pas 3 segments)");
+      if (!token.includes(".") || token.split(".").length !== 3) {
+        console.error(
+          "Socket.IO: Format JWT invalide (ne contient pas 3 segments)"
+        );
         return next(new Error("Authentication error: Invalid JWT format"));
       }
 
@@ -301,12 +308,46 @@ const socketManager = (io) => {
           message: "Erreur lors de la modification du message privé",
         });
       }
-    });
-
-    // Suppression d'un message privé (seul l'expéditeur)
+    }); // Suppression d'un message privé (seul l'expéditeur)
     socket.on("deletePrivateMessage", async ({ id }) => {
       try {
         const userId = socket.user.id;
+
+        // Récupérer le message avant suppression pour vérifier l'auteur
+        const message = await MessagePrive.getById(id);
+        if (!message) {
+          socket.emit("error", { message: "Message introuvable" });
+          return;
+        }
+
+        if (message.fk_expediteur !== userId) {
+          socket.emit("error", {
+            message: "Vous ne pouvez pas supprimer ce message",
+          });
+          return;
+        }
+
+        // Récupérer les pièces jointes associées
+        const attachments = await Fichier.getByPrivateMessageId(id);
+
+        // Supprimer les associations et les fichiers si nécessaire
+        if (attachments.length > 0) {
+          for (const attachment of attachments) {
+            // Supprimer l'association
+            await pool.query(
+              `DELETE FROM message_prive_fichier WHERE fk_message_prive = $1 AND fk_fichier = $2`,
+              [id, attachment.id_fichier]
+            );
+
+            // Supprimer le fichier de S3
+            await deleteFromS3(attachment.url);
+
+            // Supprimer le fichier de la base de données
+            await Fichier.delete(attachment.id_fichier, userId);
+          }
+        }
+
+        // Marquer le message comme supprimé
         const deleted = await MessagePrive.deleteMessage(id, userId);
         if (!deleted) {
           socket.emit("error", { message: "Suppression refusée" });
@@ -317,6 +358,7 @@ const socketManager = (io) => {
           .to(`dm:${deleted.fk_destinataire}`)
           .emit("privateMessageDeleted", { id });
       } catch (error) {
+        console.error("Erreur lors de la suppression du message privé:", error);
         socket.emit("error", {
           message: "Erreur lors de la suppression du message privé",
         });
@@ -345,8 +387,13 @@ const socketManager = (io) => {
     socket.on("message", async (data) => {
       try {
         console.log("Socket.IO: Message reçu", data);
-        const { canal_id, content, workspace_id, parent_id, is_system_message } =
-          data;
+        const {
+          canal_id,
+          content,
+          workspace_id,
+          parent_id,
+          is_system_message,
+        } = data;
 
         if (!canal_id || !content) {
           console.error("Socket.IO: Données de message incomplètes");
@@ -652,49 +699,57 @@ const socketManager = (io) => {
         });
       }
     });
-    
+
     // Nouvel événement pour marquer un canal comme lu
     socket.on("markChannelAsRead", async ({ channelId }) => {
       try {
         const userId = socket.user.id;
-        
+
         if (!channelId) {
           socket.emit("error", { message: "ID du canal manquant" });
           return;
         }
-        
-        console.log(`Socket.IO: Marquage du canal ${channelId} comme lu par l'utilisateur ${userId}`);
-        
+
+        console.log(
+          `Socket.IO: Marquage du canal ${channelId} comme lu par l'utilisateur ${userId}`
+        );
+
         // Marquer le canal comme lu
         await MessageModel.markChannelAsRead(userId, channelId);
-        
+
         // Récupérer le nouveau décompte des messages non lus
         const unreadCounts = await MessageModel.getUnreadCountByChannel(userId);
-        
+
         // Calculer le total des messages non lus
         let total = 0;
         if (unreadCounts && unreadCounts.channels) {
-          Object.values(unreadCounts.channels).forEach(channel => {
+          Object.values(unreadCounts.channels).forEach((channel) => {
             total += channel.count || 0;
           });
         }
-        
+
         // Notifier l'utilisateur pour mettre à jour les badges
-        socket.emit("unreadChannelMessagesUpdated", { 
-          channels: unreadCounts.channels || {}, 
-          total: total 
+        socket.emit("unreadChannelMessagesUpdated", {
+          channels: unreadCounts.channels || {},
+          total: total,
         });
-        
+
         // Envoyer une confirmation
         socket.emit("channelMarkedAsRead", { channelId, success: true });
-        
-        console.log(`Socket.IO: Canal ${channelId} marqué comme lu avec succès, compteurs mis à jour`);
+
+        console.log(
+          `Socket.IO: Canal ${channelId} marqué comme lu avec succès, compteurs mis à jour`
+        );
       } catch (error) {
-        console.error("Socket.IO: Erreur lors du marquage du canal comme lu:", error);
-        socket.emit("error", { message: "Erreur lors du marquage du canal comme lu" });
+        console.error(
+          "Socket.IO: Erreur lors du marquage du canal comme lu:",
+          error
+        );
+        socket.emit("error", {
+          message: "Erreur lors du marquage du canal comme lu",
+        });
       }
     });
-
 
     // Nouvel événement pour gérer directement les requêtes adressées à Mistral
     socket.on("mistralRequest", async (data) => {
@@ -1028,7 +1083,10 @@ const socketManager = (io) => {
     // Nouvel événement pour gérer la suppression des réactions aux messages privés
     socket.on("removePrivateMessageReaction", async (data) => {
       try {
-        console.log("Socket.IO: Suppression de réaction de message privé", data);
+        console.log(
+          "Socket.IO: Suppression de réaction de message privé",
+          data
+        );
         const { id: messageId, reaction: reaction_type } = data;
 
         if (!messageId || !reaction_type) {
