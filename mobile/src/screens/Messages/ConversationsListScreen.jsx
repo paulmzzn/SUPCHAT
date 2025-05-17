@@ -10,7 +10,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSocket } from '../../context/SocketContext';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.119:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.63:3000';
 
 const ConversationsListScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
