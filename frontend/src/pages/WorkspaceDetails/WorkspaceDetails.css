@@ -2917,3 +2917,100 @@ span.channel-mention:hover,
     width: 100%;
   }
 }
+
+/* Styles pour le dropdown des suggestions de canaux */
+#supchat-channels-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 10px;
+  background: linear-gradient(
+    145deg,
+    rgba(40, 40, 45, 0.95),
+    rgba(30, 30, 35, 0.98)
+  );
+  border: 1px solid #9348b7;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 320px;
+  max-height: 300px;
+  box-shadow: 0 5px 15px rgba(147, 72, 183, 0.4);
+  z-index: 1500 !important;
+  margin-bottom: 10px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  animation: fadeInDropdown 0.2s ease-out;
+}
+
+@keyframes fadeInDropdown {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#supchat-channels-header {
+  padding: 10px 15px;
+  background: rgba(147, 72, 183, 0.2);
+  font-size: 14px;
+  font-weight: 600;
+  color: #dfdfdf;
+  border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#supchat-channels-list {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 5px 0;
+}
+
+.supchat-channel-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 15px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  color: #dfdfdf;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.supchat-channel-item:hover {
+  background: rgba(147, 72, 183, 0.15);
+}
+
+.supchat-channel-item.active {
+  background: rgba(147, 72, 183, 0.3);
+}
+
+.supchat-channel-name {
+  font-weight: 500;
+  color: #fff;
+  margin-right: 8px;
+}
+
+.supchat-channel-desc {
+  font-size: 0.85em;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* S'assurer que la zone de saisie est correctement positionnée */
+.chat-input-area {
+  position: relative;
+}
+
+.chat-input-container {
+  position: relative;
+}
