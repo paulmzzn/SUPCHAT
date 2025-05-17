@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNotifications } from "../../context/NotificationContext";
+import NotificationBadge from "../../components/NotificationBadge/NotificationBadge";
 import {
   FaSearch,
   FaHeart,
@@ -15,6 +17,19 @@ import "./Workspaces.css";
 import { API_URL } from "../../config/config";
 
 function Workspaces() {
+  // Notifications context
+  const { unreadCounts } = useNotifications();
+
+  // Agréger les notifications non lues par workspace
+  const getWorkspaceUnreadCount = (workspaceId) => {
+    if (!unreadCounts || !unreadCounts.channels) return 0;
+    return Object.values(unreadCounts.channels).reduce((sum, notif) => {
+      if (notif.workspaceId === workspaceId) {
+        return sum + (notif.count || 0);
+      }
+      return sum;
+    }, 0);
+  };
   const [favoriteWorkspaces, setFavoriteWorkspaces] = useState([]);
   const [recentWorkspaces, setRecentWorkspaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -487,19 +502,27 @@ function Workspaces() {
               </div>
               <div className="favorites-container">
                 {favoriteWorkspaces.length > 0 ? (
-                  favoriteWorkspaces.map((workspace) => (
-                    <div
-                      key={workspace.id}
-                      className="favorite-item"
-                      onClick={() => navigate(`/workspace/${workspace.id}`)}
-                    >
+                  favoriteWorkspaces.map((workspace) => {
+                    const unread = getWorkspaceUnreadCount(workspace.id);
+                    return (
                       <div
-                        className="favorite-icon"
-                        style={{ backgroundImage: `url(${workspace.icon})` }}
-                      ></div>
-                      <span className="favorite-name">{workspace.name}</span>
-                    </div>
-                  ))
+                        key={workspace.id}
+                        className="favorite-item"
+                        onClick={() => navigate(`/workspace/${workspace.id}`)}
+                        style={{ position: "relative" }}
+                      >
+                        <div
+                          className="favorite-icon"
+                          style={{ backgroundImage: `url(${workspace.icon})` }}
+                        >
+                          {unread > 0 && (
+                            <NotificationBadge count={unread} className="workspace-badge" />
+                          )}
+                        </div>
+                        <span className="favorite-name">{workspace.name}</span>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="favorite-empty-message">
                     Ajoutez des workspaces à vos favoris
@@ -522,15 +545,18 @@ function Workspaces() {
                     <span>Start collaborating with your team</span>
                   </div>
                 </div>{" "}
-                {filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard
-                    key={workspace.id}
-                    workspace={workspace}
-                    onWorkspaceLeave={handleLeaveWorkspace}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    onEditWorkspace={handleEditWorkspace}
-                  />
-                ))}
+                {filteredWorkspaces.map((workspace) => {
+                  const unread = getWorkspaceUnreadCount(workspace.id);
+                  return (
+                    <WorkspaceCard
+                      key={workspace.id}
+                      workspace={{ ...workspace, unreadNotifications: unread }}
+                      onWorkspaceLeave={handleLeaveWorkspace}
+                      onFavoriteToggle={handleFavoriteToggle}
+                      onEditWorkspace={handleEditWorkspace}
+                    />
+                  );
+                })}
               </div>
             </div>{" "}
             {showModal && (

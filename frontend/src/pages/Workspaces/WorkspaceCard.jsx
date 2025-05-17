@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import NotificationBadge from "../../components/NotificationBadge/NotificationBadge";
 import {
   FaLock,
   FaUsers,
@@ -284,6 +285,7 @@ function WorkspaceCard({
         </div>
       )}
 
+
       <div className="workspace-content">
         {/* Header avec icône et titre */}
         <div className="workspace-header">
@@ -292,8 +294,13 @@ function WorkspaceCard({
             style={{ backgroundImage: `url(${workspace.icon})` }}
           ></div>
           <div className="workspace-info">
-            <div className="workspace-title-container">
-              <h3 className="workspace-title">{workspace.name}</h3>
+            <div className="workspace-title-container" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <h3 className="workspace-title" style={{ position: 'relative', zIndex: 1 }}>{workspace.name}</h3>
+              {workspace.unreadNotifications > 0 && (
+                <span style={{ position: 'absolute', left: '100%', top: '45%', marginLeft: 12 }}>
+                  <NotificationBadge count={workspace.unreadNotifications} className="workspace-badge" />
+                </span>
+              )}
               {workspace.isPrivate && (
                 <FaLock className="private-icon" title="Private workspace" />
               )}
