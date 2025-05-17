@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaPoll, FaPlus, FaTimes, FaCheck } from "react-icons/fa";
 
 const StrawpollModal = ({ onClose, onSubmit }) => {
   const [title, setTitle] = useState("");
@@ -44,11 +45,16 @@ const StrawpollModal = ({ onClose, onSubmit }) => {
 
   return (
     <div className="strawpoll-modal">
-      <h2>Créer un sondage Strawpoll</h2>
+      <h2>
+        <FaPoll /> Créer un sondage Strawpoll
+      </h2>
       <form onSubmit={handleSubmit}>
+        {error && <div className="error-message">{error}</div>}
+
         <div className="form-group">
-          <label>Titre du sondage</label>
+          <label htmlFor="poll-title">Titre du sondage</label>
           <input
+            id="poll-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -56,40 +62,50 @@ const StrawpollModal = ({ onClose, onSubmit }) => {
             autoFocus
           />
         </div>
+
         <div className="form-group">
           <label>Options</label>
           {options.map((opt, idx) => (
-            <div key={idx} style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+            <div className="option-item" key={idx}>
               <input
                 type="text"
                 value={opt}
                 onChange={(e) => handleOptionChange(idx, e.target.value)}
                 placeholder={`Option ${idx + 1}`}
-                style={{ flex: 1 }}
               />
               {options.length > 2 && (
                 <button
                   type="button"
                   onClick={() => handleRemoveOption(idx)}
-                  style={{ marginLeft: 8 }}
                   aria-label="Supprimer l'option"
                 >
-                  ×
+                  <FaTimes />
                 </button>
               )}
             </div>
           ))}
-          <button type="button" onClick={handleAddOption} style={{ marginTop: 8 }}>
-            + Ajouter une option
+          <button type="button" onClick={handleAddOption}>
+            <FaPlus /> Ajouter une option
           </button>
         </div>
-        {error && <div className="error-message">{error}</div>}
+
         <div className="modal-actions">
-          <button type="button" className="cancel-btn" onClick={onClose} disabled={loading}>
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={onClose}
+            disabled={loading}
+          >
             Annuler
           </button>
           <button type="submit" className="create-btn" disabled={loading}>
-            {loading ? "Création..." : "Créer le sondage"}
+            {loading ? (
+              "Création en cours..."
+            ) : (
+              <>
+                <FaCheck /> Créer le sondage
+              </>
+            )}
           </button>
         </div>
       </form>

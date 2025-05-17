@@ -2,9 +2,9 @@ import pool from "../config/dbConnection.js";
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
 import sendInvitation from "../config/emailService.js";
-import { uploadToS3, deleteFromS3 } from '../config/s3Config.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
+import fs from "fs/promises";
+import path from "path";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -12,20 +12,20 @@ export const createWorkspace = async (req, res) => {
     const userId = req.user.id; // Récupérer l'ID de l'utilisateur à partir du token JWT
 
     // Create workspace with basic data
-    const workspace = await Workspace.create({ 
-      nom, 
-      description: description || "", 
+    const workspace = await Workspace.create({
+      nom,
+      description: description || "",
       is_private: is_private || false,
       banner_url: null,
-      icon_url: null
+      icon_url: null,
     });
-    
+
     // Ajouter automatiquement l'utilisateur comme propriétaire (rôle 1 = owner)
     await pool.query(
       "INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, $3)",
       [userId, workspace.id_workspace, 1] // 1 = rôle Owner/Propriétaire
     );
-    
+
     res.status(201).json(workspace);
   } catch (error) {
     console.error("Error creating workspace:", error);
@@ -38,13 +38,13 @@ export const uploadWorkspaceImages = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const updateFields = {};
-    
+
     // Get existing workspace to check if we need to delete old images
     const existingWorkspace = await Workspace.findById(workspaceId);
     if (!existingWorkspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
-    
+
     // Upload banner to S3 if provided
     if (req.files && req.files.banner && req.files.banner[0]) {
       // Delete old banner if it exists
@@ -55,12 +55,15 @@ export const uploadWorkspaceImages = async (req, res) => {
           console.warn("Could not delete old banner:", err);
         }
       }
-      
+
       // Upload new banner to S3
-      const bannerUrl = await uploadToS3(req.files.banner[0], 'workspaces/banners');
+      const bannerUrl = await uploadToS3(
+        req.files.banner[0],
+        "workspaces/banners"
+      );
       updateFields.banner_url = bannerUrl;
     }
-    
+
     // Upload icon to S3 if provided
     if (req.files && req.files.icon && req.files.icon[0]) {
       // Delete old icon if it exists
@@ -71,22 +74,25 @@ export const uploadWorkspaceImages = async (req, res) => {
           console.warn("Could not delete old icon:", err);
         }
       }
-      
+
       // Upload new icon to S3
-      const iconUrl = await uploadToS3(req.files.icon[0], 'workspaces/icons');
+      const iconUrl = await uploadToS3(req.files.icon[0], "workspaces/icons");
       updateFields.icon_url = iconUrl;
     }
-    
+
     // Only update if we have files
     if (Object.keys(updateFields).length > 0) {
       const workspace = await Workspace.update(workspaceId, updateFields);
       res.status(200).json(workspace);
     } else {
-      res.status(400).json({ message: 'No files were uploaded' });
+      res.status(400).json({ message: "No files were uploaded" });
     }
   } catch (error) {
-    console.error('Error uploading workspace images:', error);
-    res.status(500).json({ message: 'Error uploading workspace images', error: error.message });
+    console.error("Error uploading workspace images:", error);
+    res.status(500).json({
+      message: "Error uploading workspace images",
+      error: error.message,
+    });
   }
 };
 
@@ -115,11 +121,40 @@ export const getAllWorkspaces = async (req, res) => {
 export const updateWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id; // Récupérer l'ID de l'utilisateur à partir du token JWT
     const { nom, description, is_private } = req.body;
-    const workspace = await Workspace.update(id, { nom, description, is_private });
+
+    // Vérifier si l'utilisateur est propriétaire ou administrateur du workspace
+    const result = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_utilisateur = $1 AND fk_workspace = $2",
+      [userId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).json({
+        message: "Vous n'êtes pas membre de ce workspace",
+      });
+    }
+
+    const userRole = result.rows[0].fk_role;
+
+    // Vérifier si l'utilisateur a les permissions (1 = owner, 2 = admin)
+    if (userRole !== 1 && userRole !== 2) {
+      return res.status(403).json({
+        message: "Vous n'avez pas les droits pour modifier ce workspace",
+      });
+    }
+
+    const workspace = await Workspace.update(id, {
+      nom,
+      description,
+      is_private,
+    });
+
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
+
     res.status(200).json(workspace);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -135,6 +170,25 @@ export const deleteWorkspace = async (req, res) => {
     }
     res.status(200).json({ message: "Workspace deleted successfully" });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteWorkspaceCascade = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const workspace = await Workspace.deleteWorkspaceWithCascade(id);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+    res
+      .status(200)
+      .json({ message: "Workspace deleted with cascade successfully" });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la suppression en cascade du workspace:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -208,7 +262,7 @@ export const getWorkspaceMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const result = await pool.query(
-      `SELECT u.id_utilisateur, u.nom, u.fk_statut as status, 
+      `SELECT u.id_utilisateur, u.nom, u.fk_statut as status, u.photo_de_profil,
               r.nom_role as role
        FROM utilisateur u
        JOIN membre_workspace mw ON u.id_utilisateur = mw.fk_utilisateur
@@ -216,7 +270,35 @@ export const getWorkspaceMembers = async (req, res) => {
        WHERE mw.fk_workspace = $1`,
       [workspaceId]
     );
-    res.status(200).json(result.rows);
+
+    // Formater les URLs des photos de profil
+    const members = result.rows.map((member) => {
+      if (member.photo_de_profil) {
+        // Si la photo commence par http, on la garde telle quelle
+        if (member.photo_de_profil.startsWith("http")) {
+          member.photo_url = member.photo_de_profil;
+        }
+        // Si c'est une URL locale (ancien système), la retourner telle quelle
+        else if (member.photo_de_profil.startsWith("/uploads/")) {
+          member.photo_url = member.photo_de_profil;
+        }
+        // Si c'est une clé S3, construire l'URL complète
+        else {
+          const s3Endpoint =
+            process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
+          const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
+          // S'assurer que l'URL est correctement formatée
+          member.photo_url =
+            `${s3Endpoint}${bucketName}/${member.photo_de_profil}`.replace(
+              /([^:])\/\/+/g,
+              "$1/"
+            );
+        }
+      }
+      return member;
+    });
+
+    res.status(200).json(members);
   } catch (error) {
     console.error("Erreur getWorkspaceMembers:", error);
     res.status(500).json({ error: error.message });
@@ -236,7 +318,9 @@ export const joinWorkspace = async (req, res) => {
     );
 
     if (checkMember.rows.length > 0) {
-      return res.status(400).json({ message: "Vous êtes déjà membre de ce workspace" });
+      return res
+        .status(400)
+        .json({ message: "Vous êtes déjà membre de ce workspace" });
     }
 
     // Vérifier si le workspace existe
@@ -253,7 +337,9 @@ export const joinWorkspace = async (req, res) => {
     if (workspaceExists.rows[0].is_private) {
       // Implémenter la vérification des invitations si nécessaire
       // Pour l'instant, refuser l'accès aux workspaces privés sans invitation
-      return res.status(403).json({ message: "Ce workspace est privé. Une invitation est requise." });
+      return res.status(403).json({
+        message: "Ce workspace est privé. Une invitation est requise.",
+      });
     }
 
     // Ajouter l'utilisateur comme membre avec le rôle spécifié
@@ -262,9 +348,9 @@ export const joinWorkspace = async (req, res) => {
       [userId, workspaceId, role]
     );
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Vous avez rejoint le workspace avec succès",
-      workspace_id: workspaceId 
+      workspace_id: workspaceId,
     });
   } catch (error) {
     console.error("Erreur joinWorkspace:", error);
@@ -305,11 +391,9 @@ export const removeMember = async (req, res) => {
     );
 
     if (memberCheck.rows[0]?.fk_role === 1) {
-      return res
-        .status(403)
-        .json({
-          message: "Impossible de retirer le propriétaire du workspace",
-        });
+      return res.status(403).json({
+        message: "Impossible de retirer le propriétaire du workspace",
+      });
     }
 
     // Supprimer le membre
@@ -328,7 +412,7 @@ export const removeMember = async (req, res) => {
 export const getUserWorkspaces = async (req, res) => {
   try {
     const userId = req.user.id; // Récupère l'ID de l'utilisateur depuis le token décodé
-    
+
     // Requête pour obtenir tous les workspaces auxquels l'utilisateur appartient
     const result = await pool.query(
       `SELECT w.*, 
@@ -341,10 +425,13 @@ export const getUserWorkspaces = async (req, res) => {
        ORDER BY w.id_workspace DESC`,
       [userId]
     );
-    
+
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Erreur lors de la récupération des workspaces de l'utilisateur:", error);
+    console.error(
+      "Erreur lors de la récupération des workspaces de l'utilisateur:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -366,8 +453,11 @@ export const changeMemberRole = async (req, res) => {
     }
     const requesterRole = roleCheck.rows[0].fk_role;
     // Owner (1) : tout permis. Admin (2) : peut seulement promouvoir un membre en admin
-    if (requesterRole !== 1 && !(requesterRole === 2 && newRole === 'admin')) {
-      return res.status(403).json({ message: "Seul le propriétaire peut changer le rôle d'un membre, sauf promotion admin par un admin." });
+    if (requesterRole !== 1 && !(requesterRole === 2 && newRole === "admin")) {
+      return res.status(403).json({
+        message:
+          "Seul le propriétaire peut changer le rôle d'un membre, sauf promotion admin par un admin.",
+      });
     }
 
     // On ne peut pas changer le rôle du owner
@@ -376,16 +466,20 @@ export const changeMemberRole = async (req, res) => {
       [workspaceId, userId]
     );
     if (memberCheck.rows.length === 0) {
-      return res.status(404).json({ message: "Membre non trouvé dans ce workspace" });
+      return res
+        .status(404)
+        .json({ message: "Membre non trouvé dans ce workspace" });
     }
     if (memberCheck.rows[0].fk_role === 1) {
-      return res.status(403).json({ message: "Impossible de modifier le rôle du propriétaire" });
+      return res
+        .status(403)
+        .json({ message: "Impossible de modifier le rôle du propriétaire" });
     }
 
     // Déterminer la valeur numérique du rôle
     let roleValue = 3; // member par défaut
-    if (newRole === 'admin') roleValue = 2;
-    if (newRole === 'member') roleValue = 3;
+    if (newRole === "admin") roleValue = 2;
+    if (newRole === "member") roleValue = 3;
 
     await pool.query(
       "UPDATE membre_workspace SET fk_role = $1 WHERE fk_workspace = $2 AND fk_utilisateur = $3",
@@ -393,15 +487,27 @@ export const changeMemberRole = async (req, res) => {
     );
 
     // DEBUG LOGS: Afficher les sockets dans la room avant émission
-    if (req.app && req.app.get('io')) {
-      const sockets = await req.app.get('io').in(workspaceId).allSockets();
-      console.log('[WS DEBUG] Sockets in workspace room', workspaceId, ':', Array.from(sockets));
-      req.app.get('io').to(workspaceId).emit('memberRoleChanged', {
+    if (req.app && req.app.get("io")) {
+      const sockets = await req.app.get("io").in(workspaceId).allSockets();
+      console.log(
+        "[WS DEBUG] Sockets in workspace room",
+        workspaceId,
+        ":",
+        Array.from(sockets)
+      );
+      req.app.get("io").to(workspaceId).emit("memberRoleChanged", {
         workspaceId,
         userId,
-        newRole
+        newRole,
       });
-      console.log('[WS DEBUG] Event memberRoleChanged emitted to room', workspaceId, 'for user', userId, 'newRole:', newRole);
+      console.log(
+        "[WS DEBUG] Event memberRoleChanged emitted to room",
+        workspaceId,
+        "for user",
+        userId,
+        "newRole:",
+        newRole
+      );
     }
 
     res.status(200).json({ message: `Rôle mis à jour en ${newRole}` });
@@ -409,4 +515,4 @@ export const changeMemberRole = async (req, res) => {
     console.error("Erreur lors du changement de rôle:", error);
     res.status(500).json({ message: error.message });
   }
-}
+};

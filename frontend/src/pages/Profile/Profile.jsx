@@ -50,7 +50,8 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
+      (process.env.REACT_APP_API_URL || "http://192.168.1.60:3001") +
+
       `/api/users/${userId}`;
 
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
@@ -109,7 +110,9 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
       const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
+
+        (process.env.REACT_APP_API_URL || "http://192.168.1.60:3001") +
+
         `/api/users/${userId}/workspaces`;
 
       console.log(`Fetching workspaces from: ${apiUrl}`);
@@ -257,7 +260,12 @@ function Profile() {
 
                 {currentUserId !== userId && (
                   <div className="profile-actions">
-                    <button className="action-button message">
+                    <button
+                      className="action-button message"
+                      onClick={() =>
+                        navigate(`/direct-messages?userId=${userId}`)
+                      }
+                    >
                       <FaComment /> Message
                     </button>
                     <button className="action-button add-friend">

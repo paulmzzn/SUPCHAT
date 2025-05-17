@@ -122,9 +122,9 @@ function ChatContainer({
                   >
                     {!systemMsg && (
                       <div className="message-avatar">
-                        {message.photo_de_profil ? (
+                        {message.avatar || message.photo_de_profil ? (
                           <img
-                            src={message.photo_de_profil}
+                            src={message.avatar || message.photo_de_profil}
                             alt={message.nom}
                           />
                         ) : (

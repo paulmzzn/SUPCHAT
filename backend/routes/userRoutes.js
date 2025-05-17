@@ -14,6 +14,8 @@ import {
   getUserProfile,
   updateUserProfile,
   getUserById,
+  exportRgpdData,
+  changePassword,
 } from "../controllers/userController.js";
 import passport from "passport";
 import jwt from "jsonwebtoken";
@@ -23,17 +25,10 @@ import multer from "multer";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../config/dbConnection.js"; // Ajout de l'import de pool
+import { uploadToS3 } from "../config/s3Config.js"; // Import de la fonction d'upload S3
 
-// Configuration de multer pour le stockage des avatars
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/avatars/");
-  },
-  filename: function (req, file, cb) {
-    const uniqueFileName = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueFileName);
-  },
-});
+// Configuration de multer pour le stockage en mémoire (pour S3)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -81,7 +76,9 @@ router.get(
   "/auth/google/callback",
 
   passport.authenticate("google", {
-    failureRedirect: "http://192.168.1.63:3001/login",
+
+    failureRedirect: "http://192.168.1.60:3001/login",
+
   }),
 
   async (req, res) => {
@@ -94,7 +91,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.60:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -108,7 +105,9 @@ router.get(
   "/auth/github/callback",
 
   passport.authenticate("github", {
-    failureRedirect: "http://192.168.1.63:3001/login",
+
+    failureRedirect: "http://192.168.1.60:3001/login",
+
   }),
 
   async (req, res) => {
@@ -119,7 +118,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-      `http://192.168.1.63:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.60:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -158,6 +157,9 @@ router.get("/verify-token", (req, res) => {
 // Routes pour le profil utilisateur
 router.get("/profile", verifyToken, getUserProfile);
 router.put("/profile", verifyToken, upload.single("avatar"), updateUserProfile);
+
+// Route d'export RGPD (données personnelles)
+router.get("/rgpd-export", verifyToken, exportRgpdData);
 
 // Route pour récupérer un utilisateur par ID (gère aussi l'alias "me")
 router.get("/:id", verifyToken, getUserById);
@@ -206,5 +208,20 @@ router.get("/:id/workspaces", async (req, res) => {
     });
   }
 });
+
+// Route pour supprimer un utilisateur (avec gestion en cascade)
+router.delete("/:id", verifyToken, async (req, res) => {
+  // Vérifier si l'utilisateur tente de supprimer son propre compte
+  if (req.user.id !== req.params.id) {
+    return res.status(403).json({
+      message: "Vous ne pouvez supprimer que votre propre compte",
+    });
+  }
+
+  await deleteUser(req, res);
+});
+
+// Route pour changer le mot de passe (utilisateur connecté)
+router.post("/change-password", verifyToken, changePassword);
 
 export default router;

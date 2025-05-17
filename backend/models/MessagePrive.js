@@ -17,7 +17,9 @@ class MessagePrive {
       `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation, parent_id)
        VALUES ($1, $2, $3, $4, NOW(), $5)
        RETURNING *`,
+
       [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), messageParentId]
+
     );
     
     // Si c'est une réponse à un message, récupérer les détails du message parent
@@ -57,8 +59,8 @@ class MessagePrive {
       );
 
       // Récupérer tous les IDs de messages pour obtenir leurs réactions en une fois
-      const messageIds = result.rows.map(m => m.id_message_prive);
-      
+      const messageIds = result.rows.map((m) => m.id_message_prive);
+
       // Récupérer toutes les réactions en une seule requête pour optimiser les performances
       const reactionsMap = await ReactionPrive.getByMessages(messageIds);
 
@@ -95,7 +97,7 @@ class MessagePrive {
 
           // Ajouter les réactions au message
           message.reactions = reactionsMap[message.id_message_prive] || [];
-          
+
           return message;
         })
       );
@@ -198,20 +200,42 @@ class MessagePrive {
     );
     return result.rows[0];
   }
-
   static async getUserConversations(userId) {
-    // Retourne la liste des utilisateurs avec qui userId a échangé au moins un message
-    const result = await pool.query(
-      `SELECT DISTINCT
-          CASE
-            WHEN fk_expediteur = $1 THEN fk_destinataire
-            ELSE fk_expediteur
-          END AS other_user_id
-       FROM message_prive
-       WHERE (fk_expediteur = $1 OR fk_destinataire = $1) AND is_deleted = false`,
-      [userId]
-    );
-    return result.rows.map((row) => row.other_user_id);
+    // Retourne la liste des utilisateurs avec qui userId a échangé au moins un message,
+    // triée par date du dernier message décroissante (plus récent d'abord)
+    try {
+      console.log("Récupération des conversations pour l'utilisateur:", userId);
+
+      const result = await pool.query(
+        `SELECT 
+            CASE
+              WHEN fk_expediteur = $1 THEN fk_destinataire
+              ELSE fk_expediteur
+            END AS other_user_id,
+            MAX(date_envoi) as last_message_date
+         FROM message_prive
+         WHERE (fk_expediteur = $1 OR fk_destinataire = $1) AND is_deleted = false
+         GROUP BY other_user_id
+         ORDER BY last_message_date DESC`,
+        [userId]
+      );
+
+      // Debug - afficher les résultats avec leurs dates
+      console.log("Nombre de conversations trouvées:", result.rows.length);
+      if (result.rows.length > 0) {
+        console.log("Échantillon des conversations triées:");
+        result.rows.slice(0, 3).forEach((row) => {
+          console.log(
+            `- Utilisateur: ${row.other_user_id}, Dernier message: ${row.last_message_date}`
+          );
+        });
+      }
+
+      return result.rows.map((row) => row.other_user_id);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des conversations:", error);
+      throw error;
+    }
   }
 
   // Ajouter une méthode pour la déduplication des messages
@@ -374,7 +398,7 @@ class MessagePrive {
       }
       return counts;
     } catch (error) {
-      console.error('Erreur dans MessagePrive.getUnreadCounts:', error);
+      console.error("Erreur dans MessagePrive.getUnreadCounts:", error);
       throw error;
     }
   }
