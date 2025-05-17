@@ -225,11 +225,14 @@ function WorkspaceDetails() {
     setReplyingTo, // Ajouter setReplyingTo ici
     commonEmojis,
 
-    isMistralTyping, // Get the typing state
-    // Mention state and handlers
+    isMistralTyping, // Get the typing state    // Mention state and handlers
     showMentionSuggestions,
     mentionSuggestions,
     activeMentionIndex,
+    // Channel suggestion state
+    showChannelSuggestions,
+    channelSuggestions,
+    activeChannelSuggestionIndex,
     // Handlers
     toggleChannelsVisibility,
     handleChannelInputChange,
@@ -258,12 +261,15 @@ function WorkspaceDetails() {
     setShowEditChannelModal,
     setShowEmojiPicker,
     setNewMessage,
-    getEmojiForType,
-    // New handlers for mentions
+    getEmojiForType, // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
     handleMentionNavigation,
     handleSelectActiveItem,
+    // New handler for channel suggestions
+    handleChannelSuggestionNavigation,
+    handleSelectActiveChannelSuggestion,
+    handleSelectChannelSuggestion,
     // New handler for deleting messages
     handleDeleteMessage,
     handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
@@ -439,9 +445,7 @@ function WorkspaceDetails() {
           console.log("❌ Aucun canal actif");
           alert("Veuillez d'abord sélectionner un canal");
         } else if (!socket) {
-          console.log(
-            `❌ Problème de socket - socket n'est pas disponible`
-          );
+          console.log(`❌ Problème de socket - socket n'est pas disponible`);
           alert(
             "Problème de connexion au serveur. Veuillez rafraîchir la page."
           );
@@ -733,6 +737,15 @@ function WorkspaceDetails() {
           isUuid={isUuid}
           handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
+          // Ajout des props pour les suggestions de canaux
+          showChannelSuggestions={showChannelSuggestions}
+          channelSuggestions={channelSuggestions}
+          activeChannelSuggestionIndex={activeChannelSuggestionIndex}
+          handleChannelSuggestionNavigation={handleChannelSuggestionNavigation}
+          handleSelectActiveChannelSuggestion={
+            handleSelectActiveChannelSuggestion
+          }
+          handleSelectChannelSuggestion={handleSelectChannelSuggestion}
         />
 
         {/* Details Sidebar - Replaced with WorkspaceDetailsSidebar */}

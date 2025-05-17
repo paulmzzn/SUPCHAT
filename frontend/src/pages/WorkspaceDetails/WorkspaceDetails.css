@@ -2339,6 +2339,37 @@ span.mention-highlight.current-user-mention:hover {
   color: #222 !important;
 }
 
+/* Style pour les mentions de canaux dans les messages */
+.channel-mention,
+a.channel-mention,
+span.channel-mention,
+.message-text span.channel-mention,
+.message-paragraph span.channel-mention {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: linear-gradient(90deg, #2a7fff 0%, #57a9ff 100%) !important;
+  color: #fff !important;
+  padding: 2px 8px !important;
+  border-radius: 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.97em !important;
+  margin: 0 2px !important;
+  box-shadow: 0 2px 8px rgba(42, 127, 255, 0.15) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.channel-mention:hover,
+a.channel-mention:hover,
+span.channel-mention:hover,
+.message-text span.channel-mention:hover,
+.message-paragraph span.channel-mention:hover {
+  background: linear-gradient(90deg, #4a8eff 0%, #77b5ff 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(42, 127, 255, 0.3) !important;
+  text-decoration: none !important;
+}
+
 /* Règle de spécificité maximale - Cible maintenant les spans */
 body
   .chat-messages
@@ -2936,4 +2967,87 @@ body
   color: var(--workspace-details-channel-icon);
   font-style: italic;
   font-size: 0.9rem;
+}
+
+/* Styles pour le menu déroulant des canaux */
+#supchat-channels-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 400px;
+  max-height: 300px;
+  background-color: var(--bg-secondary, #2b2d31);
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+#supchat-channels-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-color, #dcddde);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+#supchat-channels-header span:first-child {
+  color: #57a9ff;
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+#supchat-channels-list {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 5px 0;
+}
+
+.supchat-channel-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 15px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--text-color, #dcddde);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.supchat-channel-item:hover,
+.supchat-channel-item.active {
+  background-color: rgba(79, 84, 92, 0.3);
+}
+
+.supchat-channel-name {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.supchat-channel-desc {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  margin-left: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.supchat-channel-no-results {
+  padding: 15px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Assurez-vous que le conteneur parent a position relative */
+.chat-input-area {
+  position: relative !important;
+  /* autres styles existants... */
 }
