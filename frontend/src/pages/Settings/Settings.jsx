@@ -12,6 +12,7 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./Settings.css";
 import { API_URL } from "../../config/config";
 import { useTheme } from "../../context/ThemeContext";
+import { useNotificationSettings } from "../../context/NotificationSettingsContext";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -28,15 +29,10 @@ const Settings = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   // Nouvel état pour suivre si des modifications ont été effectuées
   const [hasChanges, setHasChanges] = useState(false);
-
   // Notification settings
-  const [notifications, setNotifications] = useState({
-    messages: true,
-    mentions: true,
-    sounds: true,
-    email: false,
-    desktop: true,
-  });
+  const { notificationSettings, updateNotificationSettings } =
+    useNotificationSettings();
+  const [notifications, setNotifications] = useState(notificationSettings);
 
   // Appearance settings
   const { theme, setTheme } = useTheme(); // Utilise le contexte pour le thème
@@ -136,12 +132,13 @@ const Settings = () => {
     reader.readAsDataURL(file);
     setHasChanges(true);
   };
-
   const handleNotificationChange = (setting) => {
-    setNotifications({
+    const updatedSettings = {
       ...notifications,
       [setting]: !notifications[setting],
-    });
+    };
+    setNotifications(updatedSettings);
+    updateNotificationSettings(updatedSettings);
     setHasChanges(true);
   };
 
@@ -288,40 +285,44 @@ const Settings = () => {
 
     if (confirmed) {
       // Get user ID from token
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        console.error('No token found, cannot delete account');
+        console.error("No token found, cannot delete account");
         return;
       }
 
       // Extract user ID from token payload
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const tokenPayload = JSON.parse(atob(token.split(".")[1]));
       const userId = tokenPayload.id;
 
       // Call API to delete account
       fetch(`${API_URL}/api/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to delete account');
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log("Account deleted successfully:", data);
-        alert("Votre compte a été supprimé avec succès. Vous allez être déconnecté.");
-        // Log out after successful deletion
-        handleLogout();
-      })
-      .catch(error => {
-        console.error("Error deleting account:", error);
-        alert("Une erreur est survenue lors de la suppression de votre compte. Veuillez réessayer.");
-      });
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to delete account");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Account deleted successfully:", data);
+          alert(
+            "Votre compte a été supprimé avec succès. Vous allez être déconnecté."
+          );
+          // Log out after successful deletion
+          handleLogout();
+        })
+        .catch((error) => {
+          console.error("Error deleting account:", error);
+          alert(
+            "Une erreur est survenue lors de la suppression de votre compte. Veuillez réessayer."
+          );
+        });
     }
   };
 
@@ -335,7 +336,9 @@ const Settings = () => {
       return;
     }
     if (newPassword.length < 8) {
-      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+      setPasswordError(
+        "Le nouveau mot de passe doit contenir au moins 8 caractères."
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -355,7 +358,9 @@ const Settings = () => {
       });
       const data = await response.json();
       if (!response.ok) {
-        setPasswordError(data.message || "Erreur lors du changement de mot de passe.");
+        setPasswordError(
+          data.message || "Erreur lors du changement de mot de passe."
+        );
       } else {
         setPasswordSuccess("Mot de passe changé avec succès.");
         setOldPassword("");
@@ -646,7 +651,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications de mentions</h3>
@@ -664,12 +668,50 @@ const Settings = () => {
                         <span className="slider"></span>
                       </label>
                     </div>
-                  </div>
-
+                  </div>{" "}
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Sons de notification</h3>
                       <p>Jouer un son lorsque vous recevez une notification</p>
+                      {notifications.sounds && (
+                        <button
+                          onClick={() => {
+                            // Tester le son directement                            // Utiliser notre utilitaire pour tester le son
+                            import("../../assets/sounds/soundUtils")
+                              .then((module) => {
+                                module
+                                  .testNotificationSound()
+                                  .then((success) => {
+                                    if (success) {
+                                      console.log(
+                                        "Test de son réussi via l'utilitaire"
+                                      );
+                                    } else {
+                                      console.warn("Le test de son a échoué");
+                                    }
+                                  });
+                              })
+                              .catch((error) =>
+                                console.error(
+                                  "Erreur lors de l'import de l'utilitaire de son:",
+                                  error
+                                )
+                              );
+                          }}
+                          style={{
+                            marginTop: "5px",
+                            padding: "3px 10px",
+                            fontSize: "12px",
+                            background: "#333",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Tester le son
+                        </button>
+                      )}
                     </div>
                     <div className="setting-control">
                       <label className="switch">
@@ -682,7 +724,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications par e-mail</h3>
@@ -702,7 +743,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications sur ordinateur</h3>
@@ -821,7 +861,10 @@ const Settings = () => {
                       Mettez à jour votre mot de passe pour sécuriser votre
                       compte
                     </p>
-                    <button className="btn-secondary" onClick={() => setShowPasswordModal(true)}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setShowPasswordModal(true)}
+                    >
                       Changer de mot de passe
                     </button>
                   </div>
@@ -843,21 +886,28 @@ const Settings = () => {
                   <div className="security-option rgpd-export">
                     <h3>Exporter mes données RGPD</h3>
                     <p>
-                      Téléchargez toutes vos données personnelles au format JSON conformément au RGPD.
+                      Téléchargez toutes vos données personnelles au format JSON
+                      conformément au RGPD.
                     </p>
                     <button
                       className="btn-secondary"
                       onClick={async () => {
                         const token = localStorage.getItem("token");
                         if (!token) {
-                          alert("Vous devez être connecté pour exporter vos données.");
+                          alert(
+                            "Vous devez être connecté pour exporter vos données."
+                          );
                           return;
                         }
                         try {
-                          const response = await fetch(`${API_URL}/api/users/rgpd-export`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          if (!response.ok) throw new Error("Erreur lors de l'export RGPD");
+                          const response = await fetch(
+                            `${API_URL}/api/users/rgpd-export`,
+                            {
+                              headers: { Authorization: `Bearer ${token}` },
+                            }
+                          );
+                          if (!response.ok)
+                            throw new Error("Erreur lors de l'export RGPD");
                           const blob = await response.blob();
                           const url = window.URL.createObjectURL(blob);
                           const a = document.createElement("a");
@@ -868,7 +918,9 @@ const Settings = () => {
                           a.remove();
                           window.URL.revokeObjectURL(url);
                         } catch (err) {
-                          alert("Erreur lors de l'export RGPD : " + err.message);
+                          alert(
+                            "Erreur lors de l'export RGPD : " + err.message
+                          );
                         }
                       }}
                     >
@@ -879,8 +931,14 @@ const Settings = () => {
 
                 {/* Modal de changement de mot de passe */}
                 {showPasswordModal && (
-                  <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                  <div
+                    className="modal-overlay"
+                    onClick={() => setShowPasswordModal(false)}
+                  >
+                    <div
+                      className="modal-content"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <h2>Changer de mot de passe</h2>
                       <form onSubmit={handleChangePassword}>
                         <div className="form-group">
@@ -888,7 +946,7 @@ const Settings = () => {
                           <input
                             type="password"
                             value={oldPassword}
-                            onChange={e => setOldPassword(e.target.value)}
+                            onChange={(e) => setOldPassword(e.target.value)}
                             autoFocus
                             required
                           />
@@ -898,7 +956,7 @@ const Settings = () => {
                           <input
                             type="password"
                             value={newPassword}
-                            onChange={e => setNewPassword(e.target.value)}
+                            onChange={(e) => setNewPassword(e.target.value)}
                             required
                           />
                         </div>
@@ -907,18 +965,34 @@ const Settings = () => {
                           <input
                             type="password"
                             value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
                             required
                           />
                         </div>
-                        {passwordError && <div className="error-message">{passwordError}</div>}
-                        {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
+                        {passwordError && (
+                          <div className="error-message">{passwordError}</div>
+                        )}
+                        {passwordSuccess && (
+                          <div className="success-message">
+                            {passwordSuccess}
+                          </div>
+                        )}
                         <div className="modal-actions">
-                          <button type="button" className="cancel-btn" onClick={() => setShowPasswordModal(false)}>
+                          <button
+                            type="button"
+                            className="cancel-btn"
+                            onClick={() => setShowPasswordModal(false)}
+                          >
                             Annuler
                           </button>
-                          <button type="submit" className="create-btn" disabled={isChangingPassword}>
-                            {isChangingPassword ? "Changement..." : "Changer le mot de passe"}
+                          <button
+                            type="submit"
+                            className="create-btn"
+                            disabled={isChangingPassword}
+                          >
+                            {isChangingPassword
+                              ? "Changement..."
+                              : "Changer le mot de passe"}
                           </button>
                         </div>
                       </form>
