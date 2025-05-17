@@ -1,6 +1,6 @@
 .workspace-card {
-  background: var(--workspace-card-bg);
-  box-shadow: var(--workspace-card-shadow);
+  background: var(--workspace-card-bg) !important;
+  box-shadow: var(--workspace-card-shadow) !important;
   border: var(--workspace-card-border);
   border-radius: 16px;
   overflow: hidden;
@@ -10,13 +10,12 @@
   flex-direction: column;
   position: relative;
   min-height: 290px;
-  backdrop-filter: blur(5px);
   animation: fadeIn 0.5s ease forwards;
 }
 
 .workspace-card:hover:not(.add-workspace) {
   transform: translateY(-7px);
-  box-shadow: var(--workspace-card-shadow-hover);
+  box-shadow: var(--workspace-card-shadow);
   border-color: var(--workspace-card-border-hover);
 }
 
@@ -29,7 +28,7 @@
 }
 
 .workspace-banner::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -71,7 +70,7 @@
 }
 
 .workspace-icon::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -86,17 +85,22 @@
   flex-direction: column;
   justify-content: center;
   flex-grow: 1;
+  background: none !important;
+  margin-left: -8px; /* moved a bit more to the left */
 }
 
 .workspace-title-container {
   display: flex;
   align-items: center;
+  background: none !important;
+  position: relative;
 }
 
 .workspace-title {
   font-size: 1.25rem;
   color: var(--workspace-title-color);
   margin: 0 8px 0 0;
+  margin-top: 18px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -104,19 +108,20 @@
   letter-spacing: 0.02em;
   line-height: 1.3;
   text-shadow: var(--workspace-title-shadow);
+  background: none !important;
 }
 
 .private-icon {
   color: var(--workspace-private-icon);
   font-size: 0.8rem;
   flex-shrink: 0;
-  margin-left: 5px;
+  margin-left: 6px; /* Reduced from 5px to move left */
 }
 
 .workspace-description {
   font-size: 0.9rem;
   color: var(--workspace-description-color);
-  margin: 0 0 12px 0; /* Espace entre description et stats si la description est courte */
+  margin: 0 0 12px -2px; /* Added negative left margin to move left */
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -282,7 +287,8 @@
   color: var(--workspace-details-stats);
 }
 
-.online-users, .total-members {
+.online-users,
+.total-members {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -322,16 +328,16 @@
   .workspace-card {
     min-height: 260px;
   }
-  
+
   .workspace-icon {
     width: 54px;
     height: 54px;
   }
-  
+
   .workspace-title {
     font-size: 1.1rem;
   }
-  
+
   .workspace-description {
     -webkit-line-clamp: 2;
     margin-bottom: 10px;
@@ -344,11 +350,11 @@
     align-items: flex-start;
     top: -30px;
   }
-  
+
   .workspace-icon {
     margin-bottom: 10px;
   }
-  
+
   .workspace-info {
     width: 100%;
   }

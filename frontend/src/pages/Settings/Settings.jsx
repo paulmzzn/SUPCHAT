@@ -12,6 +12,7 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./Settings.css";
 import { API_URL } from "../../config/config";
 import { useTheme } from "../../context/ThemeContext";
+import { useNotificationSettings } from "../../context/NotificationSettingsContext";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -28,15 +29,10 @@ const Settings = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   // Nouvel état pour suivre si des modifications ont été effectuées
   const [hasChanges, setHasChanges] = useState(false);
-
   // Notification settings
-  const [notifications, setNotifications] = useState({
-    messages: true,
-    mentions: true,
-    sounds: true,
-    email: false,
-    desktop: true,
-  });
+  const { notificationSettings, updateNotificationSettings } =
+    useNotificationSettings();
+  const [notifications, setNotifications] = useState(notificationSettings);
 
   // Appearance settings
   const { theme, setTheme } = useTheme(); // Utilise le contexte pour le thème
@@ -44,9 +40,17 @@ const Settings = () => {
   // Privacy settings
   const [privacy, setPrivacy] = useState({
     onlineStatus: "all",
-    readReceipts: true,
     messageRequests: "all",
   });
+
+  // État pour le modal de changement de mot de passe
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Fetch user data
   useEffect(() => {
@@ -128,12 +132,13 @@ const Settings = () => {
     reader.readAsDataURL(file);
     setHasChanges(true);
   };
-
   const handleNotificationChange = (setting) => {
-    setNotifications({
+    const updatedSettings = {
       ...notifications,
       [setting]: !notifications[setting],
-    });
+    };
+    setNotifications(updatedSettings);
+    updateNotificationSettings(updatedSettings);
     setHasChanges(true);
   };
 
@@ -241,7 +246,6 @@ const Settings = () => {
     alert(`${settingType} settings saved!`);
     resetChangesState();
   };
-
   // Fonction pour gérer l'action du bouton flottant en fonction de l'onglet actif
   const handleFloatingButtonAction = () => {
     switch (activeTab) {
@@ -280,11 +284,94 @@ const Settings = () => {
     );
 
     if (confirmed) {
-      // Implement account deletion logic here
-      console.log("Account deletion requested");
-      alert("Votre compte va être supprimé. Vous allez être déconnecté.");
-      // Then log out
-      handleLogout();
+      // Get user ID from token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found, cannot delete account");
+        return;
+      }
+
+      // Extract user ID from token payload
+      const tokenPayload = JSON.parse(atob(token.split(".")[1]));
+      const userId = tokenPayload.id;
+
+      // Call API to delete account
+      fetch(`${API_URL}/api/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to delete account");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Account deleted successfully:", data);
+          alert(
+            "Votre compte a été supprimé avec succès. Vous allez être déconnecté."
+          );
+          // Log out after successful deletion
+          handleLogout();
+        })
+        .catch((error) => {
+          console.error("Error deleting account:", error);
+          alert(
+            "Une erreur est survenue lors de la suppression de votre compte. Veuillez réessayer."
+          );
+        });
+    }
+  };
+
+  // Handler pour le changement de mot de passe
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Tous les champs sont requis.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError(
+        "Le nouveau mot de passe doit contenir au moins 8 caractères."
+      );
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/users/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPasswordError(
+          data.message || "Erreur lors du changement de mot de passe."
+        );
+      } else {
+        setPasswordSuccess("Mot de passe changé avec succès.");
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setShowPasswordModal(false), 1500);
+      }
+    } catch (err) {
+      setPasswordError("Erreur de connexion au serveur.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -564,7 +651,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications de mentions</h3>
@@ -582,12 +668,50 @@ const Settings = () => {
                         <span className="slider"></span>
                       </label>
                     </div>
-                  </div>
-
+                  </div>{" "}
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Sons de notification</h3>
                       <p>Jouer un son lorsque vous recevez une notification</p>
+                      {notifications.sounds && (
+                        <button
+                          onClick={() => {
+                            // Tester le son directement                            // Utiliser notre utilitaire pour tester le son
+                            import("../../assets/sounds/soundUtils")
+                              .then((module) => {
+                                module
+                                  .testNotificationSound()
+                                  .then((success) => {
+                                    if (success) {
+                                      console.log(
+                                        "Test de son réussi via l'utilitaire"
+                                      );
+                                    } else {
+                                      console.warn("Le test de son a échoué");
+                                    }
+                                  });
+                              })
+                              .catch((error) =>
+                                console.error(
+                                  "Erreur lors de l'import de l'utilitaire de son:",
+                                  error
+                                )
+                              );
+                          }}
+                          style={{
+                            marginTop: "5px",
+                            padding: "3px 10px",
+                            fontSize: "12px",
+                            background: "#333",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Tester le son
+                        </button>
+                      )}
                     </div>
                     <div className="setting-control">
                       <label className="switch">
@@ -600,7 +724,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications par e-mail</h3>
@@ -620,7 +743,6 @@ const Settings = () => {
                       </label>
                     </div>
                   </div>
-
                   <div className="settings-item">
                     <div className="setting-info">
                       <h3>Notifications sur ordinateur</h3>
@@ -647,7 +769,6 @@ const Settings = () => {
             {activeTab === "privacy" && (
               <div className="settings-section">
                 <h2>Paramètres de confidentialité</h2>
-
                 <div className="settings-group">
                   <div className="settings-item">
                     <div className="setting-info">
@@ -666,51 +787,18 @@ const Settings = () => {
                         <option value="none">Personne</option>
                       </select>
                     </div>
-                  </div>
-
-                  <div className="settings-item">
+                  </div>                  {/* Bouton d'accès aux CGU */}                  <div className="settings-item">
                     <div className="setting-info">
-                      <h3>Accusés de lecture</h3>
-                      <p>
-                        Permettre aux autres de savoir quand vous avez lu leurs
-                        messages
-                      </p>
+                      <h3>Conditions Générales d'Utilisation</h3>
+                      <p>Consultez les CGU de SUPCHAT pour connaître vos droits et obligations.</p>
                     </div>
                     <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={privacy.readReceipts}
-                          onChange={() =>
-                            handlePrivacyChange(
-                              "readReceipts",
-                              !privacy.readReceipts
-                            )
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
+                      <a href="/cgu" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'inline-block', textDecoration: 'none' }}>Voir les CGU</a>
                     </div>
                   </div>
 
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Qui peut m'envoyer des demandes de messages</h3>
-                    </div>
-                    <div className="setting-control">
-                      <select
-                        className="form-select"
-                        value={privacy.messageRequests}
-                        onChange={(e) =>
-                          handlePrivacyChange("messageRequests", e.target.value)
-                        }
-                      >
-                        <option value="all">Tout le monde</option>
-                        <option value="friends">Seulement mes amis</option>
-                        <option value="none">Personne</option>
-                      </select>
-                    </div>
-                  </div>
+                  {/* Suppression du paramètre 'Accusés de lecture' ici */}
+                  {/* Suppression du paramètre 'Qui peut m'envoyer des demandes de messages' déjà effectuée */}
                 </div>
 
                 {/* Suppression du bouton d'enregistrement statique */}
@@ -773,18 +861,12 @@ const Settings = () => {
                       Mettez à jour votre mot de passe pour sécuriser votre
                       compte
                     </p>
-                    <button className="btn-secondary">
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setShowPasswordModal(true)}
+                    >
                       Changer de mot de passe
                     </button>
-                  </div>
-
-                  <div className="security-option">
-                    <h3>Authentification à deux facteurs</h3>
-                    <p>
-                      Ajoutez une couche de protection supplémentaire à votre
-                      compte
-                    </p>
-                    <button className="btn-secondary">Configurer l'A2F</button>
                   </div>
 
                   <div className="security-option danger-zone">
@@ -800,7 +882,123 @@ const Settings = () => {
                       Supprimer mon compte
                     </button>
                   </div>
+
+                  <div className="security-option rgpd-export">
+                    <h3>Exporter mes données RGPD</h3>
+                    <p>
+                      Téléchargez toutes vos données personnelles au format JSON
+                      conformément au RGPD.
+                    </p>
+                    <button
+                      className="btn-secondary"
+                      onClick={async () => {
+                        const token = localStorage.getItem("token");
+                        if (!token) {
+                          alert(
+                            "Vous devez être connecté pour exporter vos données."
+                          );
+                          return;
+                        }
+                        try {
+                          const response = await fetch(
+                            `${API_URL}/api/users/rgpd-export`,
+                            {
+                              headers: { Authorization: `Bearer ${token}` },
+                            }
+                          );
+                          if (!response.ok)
+                            throw new Error("Erreur lors de l'export RGPD");
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = "mes_donnees_rgpd.json";
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          alert(
+                            "Erreur lors de l'export RGPD : " + err.message
+                          );
+                        }
+                      }}
+                    >
+                      Exporter mes données RGPD
+                    </button>
+                  </div>
                 </div>
+
+                {/* Modal de changement de mot de passe */}
+                {showPasswordModal && (
+                  <div
+                    className="modal-overlay"
+                    onClick={() => setShowPasswordModal(false)}
+                  >
+                    <div
+                      className="modal-content"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <h2>Changer de mot de passe</h2>
+                      <form onSubmit={handleChangePassword}>
+                        <div className="form-group">
+                          <label>Ancien mot de passe</label>
+                          <input
+                            type="password"
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                            autoFocus
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Nouveau mot de passe</label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Confirmer le nouveau mot de passe</label>
+                          <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        {passwordError && (
+                          <div className="error-message">{passwordError}</div>
+                        )}
+                        {passwordSuccess && (
+                          <div className="success-message">
+                            {passwordSuccess}
+                          </div>
+                        )}
+                        <div className="modal-actions">
+                          <button
+                            type="button"
+                            className="cancel-btn"
+                            onClick={() => setShowPasswordModal(false)}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            type="submit"
+                            className="create-btn"
+                            disabled={isChangingPassword}
+                          >
+                            {isChangingPassword
+                              ? "Changement..."
+                              : "Changer le mot de passe"}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

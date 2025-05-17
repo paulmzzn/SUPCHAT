@@ -2,6 +2,7 @@ import MessagePrive from "../models/MessagePrive.js";
 import Fichier from "../models/Fichier.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
 import path from "path";
+import pool from "../config/dbConnection.js";
 
 export const sendPrivateMessage = async (req, res) => {
   try {
@@ -106,17 +107,51 @@ export const deletePrivateMessage = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
+
+    // Récupérer le message et ses pièces jointes avant suppression
+    const message = await MessagePrive.getById(id);
+    if (!message) {
+      return res.status(404).json({ message: "Message non trouvé" });
+    }
+
+    if (message.fk_expediteur !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Vous ne pouvez pas supprimer ce message" });
+    }
+
+    // Récupérer les pièces jointes associées
+    const attachments = await Fichier.getByPrivateMessageId(id);
+
+    // Supprimer les associations et les fichiers si nécessaire
+    if (attachments.length > 0) {
+      for (const attachment of attachments) {
+        // Supprimer l'association
+        await pool.query(
+          `DELETE FROM message_prive_fichier WHERE fk_message_prive = $1 AND fk_fichier = $2`,
+          [id, attachment.id_fichier]
+        );
+
+        // Supprimer le fichier de S3
+        await deleteFromS3(attachment.url);
+
+        // Supprimer le fichier de la base de données
+        await Fichier.delete(attachment.id_fichier, userId);
+      }
+    }
+
+    // Marquer le message comme supprimé (ou le supprimer complètement)
     const deleted = await MessagePrive.deleteMessage(id, userId);
-    if (!deleted)
-      return res.status(403).json({ message: "Suppression refusée" });
-    // Notifier l'autre utilisateur via socket.io
+
+    // Notifier les clients via socket.io
     const io = req.app.get("io");
     if (io) {
       io.to(`dm:${deleted.fk_expediteur}`)
         .to(`dm:${deleted.fk_destinataire}`)
         .emit("privateMessageDeleted", { id });
     }
-    res.json({ message: "Message supprimé", id });
+
+    res.json({ message: "Message et pièces jointes supprimés", id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -256,8 +291,18 @@ export const getUserConversations = async (req, res) => {
   try {
     const userId = req.user.id;
     const conversations = await MessagePrive.getUserConversations(userId);
+
+    // Log pour debug - voir l'ordre des conversations
+    console.log(
+      "Conversations triées par date du dernier message:",
+      conversations.length > 0
+        ? "Premier ID: " + conversations[0]
+        : "Aucune conversation"
+    );
+
     res.json(conversations);
   } catch (error) {
+    console.error("Erreur lors de la récupération des conversations:", error);
     res.status(500).json({ message: error.message });
   }
 };
