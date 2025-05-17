@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import pool from "../config/dbConnection.js";  // Ajout de l'import pour pool
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -95,4 +96,94 @@ export const optionalAuth = (req, res, next) => {
   }
 
   next();
+};
+
+// Middleware pour vérifier l'appartenance à un workspace
+export const checkWorkspaceMembership = async (req, res, next) => {
+  try {
+    // Vérifier que l'utilisateur est authentifié
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Authentification requise." });
+    }
+    
+    // Récupérer l'ID du workspace depuis les paramètres de route
+    const workspaceId = req.params.workspaceId || req.params.id;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ message: "ID de workspace non fourni." });
+    }
+    
+    // Vérifier si l'utilisateur est membre du workspace
+    const query = `
+      SELECT COUNT(*) AS count 
+      FROM membre_workspace 
+      WHERE fk_utilisateur = $1 AND fk_workspace = $2
+    `;
+    
+    const { rows } = await pool.query(query, [req.user.id, workspaceId]);
+    
+    if (rows[0].count === '0') {
+      console.log(`Accès refusé: L'utilisateur ${req.user.id} n'est pas membre du workspace ${workspaceId}`);
+      return res.status(403).json({ 
+        message: "Vous n'êtes pas membre de ce workspace.",
+        error: "workspace_access_denied"
+      });
+    }
+    
+    // Si l'utilisateur est membre, poursuivre
+    next();
+  } catch (error) {
+    console.error("Erreur lors de la vérification d'appartenance au workspace:", error);
+    return res.status(500).json({ 
+      message: "Erreur lors de la vérification d'accès au workspace.", 
+      error: error.message 
+    });
+  }
+};
+
+// Middleware pour vérifier si l'utilisateur est admin ou propriétaire d'un workspace
+export const checkWorkspaceAdmin = async (req, res, next) => {
+  try {
+    // Vérifier que l'utilisateur est authentifié
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Authentification requise." });
+    }
+    
+    // Récupérer l'ID du workspace depuis les paramètres de route
+    const workspaceId = req.params.workspaceId || req.params.id;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ message: "ID de workspace non fourni." });
+    }
+    
+    // Vérifier si l'utilisateur est admin ou propriétaire du workspace
+    const query = `
+      SELECT fk_role 
+      FROM membre_workspace 
+      WHERE fk_utilisateur = $1 AND fk_workspace = $2
+    `;
+    
+    const { rows } = await pool.query(query, [req.user.id, workspaceId]);
+    
+    if (rows.length === 0 || (rows[0].fk_role !== 1 && rows[0].fk_role !== 2)) {
+      // 1 = propriétaire, 2 = admin
+      console.log(`Accès refusé: L'utilisateur ${req.user.id} n'est pas admin du workspace ${workspaceId}`);
+      return res.status(403).json({ 
+        message: "Permissions insuffisantes. Vous devez être administrateur ou propriétaire.", 
+        error: "insufficient_permissions"
+      });
+    }
+    
+    // Ajouter le rôle à la requête pour y accéder dans le contrôleur si nécessaire
+    req.userWorkspaceRole = rows[0].fk_role;
+    
+    // Si l'utilisateur est admin ou propriétaire, poursuivre
+    next();
+  } catch (error) {
+    console.error("Erreur lors de la vérification des permissions:", error);
+    return res.status(500).json({ 
+      message: "Erreur lors de la vérification des permissions.", 
+      error: error.message 
+    });
+  }
 };

@@ -14,7 +14,13 @@ function AuthCallback() {
         // Utilise la même clé que le reste de l'app (token)
         localStorage.setItem('token', token);
         localStorage.setItem('email', email);
+        
+        // Comme l'authentification OAuth est vérifiée par le fournisseur,
+        // on considère l'utilisateur comme déjà validé
         localStorage.setItem('isValidated', 'true');
+        
+        console.log('Auth callback: token et validation enregistrés');
+        
         // Redirige proprement avec React Router
         navigate('/dashboard', { replace: true });
       } catch (error) {

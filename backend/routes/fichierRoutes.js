@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, checkWorkspaceMembership } from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 import path from "path";
 import dotenv from "dotenv";
@@ -139,7 +139,7 @@ router.get("/user", verifyToken, async (req, res) => {
 });
 
 // Route pour récupérer les fichiers d'un workspace
-router.get("/workspace/:workspaceId", verifyToken, async (req, res) => {
+router.get("/workspace/:workspaceId", verifyToken, checkWorkspaceMembership, async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const fichiers = await Fichier.getByWorkspaceId(workspaceId);
