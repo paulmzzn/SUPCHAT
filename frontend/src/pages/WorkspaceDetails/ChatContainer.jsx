@@ -299,81 +299,30 @@ function ChatContainer({
                         } else {
                           return (
                             <div className="message-text">
-                              <ReactMarkdown
-                                components={{
-                                  p: ({ node, ...props }) => (
-                                    <p
-                                      {...props}
-                                      className="message-paragraph"
-                                    />
-                                  ),
-                                  a: ({ node, href, children, ...props }) => {
-                                    // Enhanced mention handling - detect mentions formatted as @[username](userId)
-                                    const mentionMatch =
-                                      Array.isArray(children) &&
-                                      children[0]?.props?.children &&
-                                      typeof children[0].props.children ===
-                                        "string" &&
-                                      children[0].props.children.match(
-                                        /^@(.+)$/
-                                      );
-
-                                    if (mentionMatch && isUuid(href)) {
-                                      // This is a mention - create a styled badge
-                                      const mentionName = mentionMatch[1];
-                                      const isCurrentUser =
-                                        href === currentUserId;
-                                      return (
-                                        <span
-                                          className={`mention-highlight ${
-                                            isCurrentUser
-                                              ? "current-user-mention"
-                                              : ""
-                                          }`}
-                                          data-userid={href}
-                                        >
-                                          @{mentionName}
-                                        </span>
-                                      );
-                                    }
-
-                                    // For regular links or system messages with strawpoll links
-                                    if (
-                                      systemMsg &&
-                                      href &&
-                                      href.includes("strawpoll.com")
-                                    ) {
-                                      return (
-                                        <a
-                                          href={href}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="message-link"
-                                        >
-                                          {children}
-                                        </a>
-                                      );
-                                    }
-                                    return (
-                                      <a
-                                        href={href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="message-link"
-                                      >
-                                        {children}
-                                      </a>
-                                    );
-                                  },
-                                  text: ({ node, ...props }) => (
-                                    <>{renderTextWithLinks(node.value)}</>
-                                  ),
-                                }}
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                              >
-                                {message.contenu || ""}
-                              </ReactMarkdown>
+                              {message.file_url ? (
+                                // Affichage des fichiers
+                                <div className="message-file">
+                                  {/* Code pour afficher les fichiers */}
+                                  <div className="file-preview">
+                                    {/* Ajuster selon la structure de vos données */}
+                                    <a
+                                      href={message.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleOpenFileViewer(message);
+                                      }}
+                                    >
+                                      {message.file_name || "Fichier joint"}
+                                    </a>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="message-paragraph">
+                                  {renderTextWithLinks(message.contenu)}
+                                </p>
+                              )}
                             </div>
                           );
                         }
@@ -472,47 +421,39 @@ function ChatContainer({
           </div>
 
           <div className="chat-input-area">
-            {(() => {
-              console.log("showChannelSuggestions:", showChannelSuggestions);
-              console.log("channelSuggestions:", channelSuggestions);
-              console.log("displayMessage:", displayMessage);
-              return (
-                showChannelSuggestions &&
-                channelSuggestions.length > 0 && (
-                  <div id="supchat-channels-dropdown">
-                    <div id="supchat-channels-header">
-                      <span>#</span>
-                      <span>Mentionner un canal</span>
-                    </div>
-                    <div id="supchat-channels-list">
-                      {channelSuggestions.map((canal, index) => (
-                        <button
-                          key={canal.id}
-                          className={`supchat-channel-item ${
-                            index === activeChannelSuggestionIndex
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() => handleSelectChannelSuggestion(canal)}
-                          type="button"
-                        >
-                          <FaHashtag style={{ marginRight: 6 }} />
-                          <span className="supchat-channel-name">
-                            {canal.name}
-                          </span>
-                          {canal.isPrivate && (
-                            <FaLock style={{ marginLeft: 6, fontSize: 10 }} />
-                          )}
-                          <span className="supchat-channel-desc">
-                            {canal.description}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+            {showChannelSuggestions &&
+              channelSuggestions &&
+              channelSuggestions.length > 0 && (
+                <div id="supchat-channels-dropdown">
+                  <div id="supchat-channels-header">
+                    <span>#</span>
+                    <span>Mentionner un canal</span>
                   </div>
-                )
-              );
-            })()}
+                  <div id="supchat-channels-list">
+                    {channelSuggestions.map((canal, index) => (
+                      <button
+                        key={canal.id}
+                        className={`supchat-channel-item ${
+                          index === activeChannelSuggestionIndex ? "active" : ""
+                        }`}
+                        onClick={() => handleSelectChannelSuggestion(canal)}
+                        type="button"
+                      >
+                        <FaHashtag style={{ marginRight: 6 }} />
+                        <span className="supchat-channel-name">
+                          {canal.name}
+                        </span>
+                        {canal.isPrivate && (
+                          <FaLock style={{ marginLeft: 6, fontSize: 10 }} />
+                        )}
+                        <span className="supchat-channel-desc">
+                          {canal.description}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             <form
               className="chat-input-container"
               onSubmit={handleSendMessageWithMistralCheck}

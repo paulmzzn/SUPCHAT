@@ -489,10 +489,26 @@ function WorkspaceDetails() {
       }
     }
   };
-
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
+  };
+
+  // Handler pour gérer les clics sur les mentions de canaux
+  const handleChannelClick = (channelName) => {
+    console.log("Canal cliqué:", channelName);
+
+    // Trouver le canal correspondant au nom cliqué
+    const targetChannel = channels.find(
+      (channel) => channel.name.toLowerCase() === channelName.toLowerCase()
+    );
+
+    if (targetChannel) {
+      // Changer le canal actif en utilisant la fonction existante
+      handleSelectChannel(targetChannel);
+    } else {
+      console.warn(`Canal non trouvé: ${channelName}`);
+    }
   };
 
   // Utiliser le handler original pour l'envoi normal
@@ -733,7 +749,9 @@ function WorkspaceDetails() {
           commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
-          renderTextWithLinks={renderTextWithLinks}
+          renderTextWithLinks={(text) =>
+            renderTextWithLinks(text, handleChannelClick)
+          }
           isUuid={isUuid}
           handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
