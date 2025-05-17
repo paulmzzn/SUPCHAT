@@ -63,6 +63,12 @@ function ChatContainer({
   handleSelectActiveItem,
   setShowVideoCallModal,
   handleOpenStrawpollVote,
+  showChannelSuggestions,
+  channelSuggestions,
+  activeChannelSuggestionIndex,
+  handleChannelSuggestionNavigation,
+  handleSelectActiveChannelSuggestion,
+  handleSelectChannelSuggestion,
 }) {
   return (
     <div className="workspace-content-area">
@@ -466,72 +472,47 @@ function ChatContainer({
           </div>
 
           <div className="chat-input-area">
-            {showMentionSuggestions && (
-              <div id="supchat-mentions-dropdown">
-                <div id="supchat-mentions-header">
-                  <span>@</span>
-                  <span>Mentionner un utilisateur</span>
-                </div>
-                <div id="supchat-mentions-list">
-                  {mentionSuggestions.length > 0 ? (
-                    mentionSuggestions.map((user, index) => (
-                      <button
-                        key={user.id}
-                        className={`supchat-mention-item ${
-                          index === activeMentionIndex ? "active" : ""
-                        }`}
-                        onClick={() => handleSelectMention(user)}
-                      >
-                        <div className="supchat-mention-avatar-wrapper">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="supchat-mention-avatar"
-                            />
-                          ) : (
-                            <div className="supchat-mention-avatar">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          {user.isBot && (
-                            <div className="supchat-mention-bot-badge">
-                              <FaRobot style={{ fontSize: "8px" }} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="supchat-mention-details">
-                          <div className="supchat-mention-name">
-                            {user.name}
-                          </div>
-                          <div className="supchat-mention-info">
-                            {user.isBot ? (
-                              <>Assistant IA</>
-                            ) : (
-                              <>
-                                <span
-                                  className={`supchat-mention-status ${
-                                    user.status || "offline"
-                                  }`}
-                                ></span>
-                                {user.status === "online"
-                                  ? "En ligne"
-                                  : "Hors ligne"}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="supchat-mention-no-results">
-                      Aucun utilisateur ne correspond à votre recherche
+            {(() => {
+              console.log("showChannelSuggestions:", showChannelSuggestions);
+              console.log("channelSuggestions:", channelSuggestions);
+              console.log("displayMessage:", displayMessage);
+              return (
+                showChannelSuggestions &&
+                channelSuggestions.length > 0 && (
+                  <div id="supchat-channels-dropdown">
+                    <div id="supchat-channels-header">
+                      <span>#</span>
+                      <span>Mentionner un canal</span>
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-
+                    <div id="supchat-channels-list">
+                      {channelSuggestions.map((canal, index) => (
+                        <button
+                          key={canal.id}
+                          className={`supchat-channel-item ${
+                            index === activeChannelSuggestionIndex
+                              ? "active"
+                              : ""
+                          }`}
+                          onClick={() => handleSelectChannelSuggestion(canal)}
+                          type="button"
+                        >
+                          <FaHashtag style={{ marginRight: 6 }} />
+                          <span className="supchat-channel-name">
+                            {canal.name}
+                          </span>
+                          {canal.isPrivate && (
+                            <FaLock style={{ marginLeft: 6, fontSize: 10 }} />
+                          )}
+                          <span className="supchat-channel-desc">
+                            {canal.description}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              );
+            })()}
             <form
               className="chat-input-container"
               onSubmit={handleSendMessageWithMistralCheck}
@@ -579,7 +560,33 @@ function ChatContainer({
                   }
                   value={displayMessage}
                   onChange={(e) => handleNewMessageChange(e.target.value)}
-                  onKeyDown={handleChatInputKeyDown}
+                  onKeyDown={(e) => {
+                    if (showChannelSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveChannelSuggestion();
+                      }
+                    } else if (showMentionSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleMentionSuggestionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleMentionSuggestionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveMention();
+                      }
+                    } else {
+                      handleChatInputKeyDown && handleChatInputKeyDown(e);
+                    }
+                  }}
                 />
                 <button
                   type="button"

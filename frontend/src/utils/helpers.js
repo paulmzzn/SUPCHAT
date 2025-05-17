@@ -1,4 +1,13 @@
-import { FaFilePdf, FaFileWord, FaFileExcel, FaFileAlt, FaCrown, FaUserShield, FaUser } from "react-icons/fa";
+import {
+  FaFilePdf,
+  FaFileWord,
+  FaFileExcel,
+  FaFileAlt,
+  FaCrown,
+  FaUserShield,
+  FaUser,
+} from "react-icons/fa";
+import React from "react";
 
 // Fonctions utilitaires extraites de WorkspaceDetails.jsx
 
@@ -81,7 +90,9 @@ export const getRoleIcon = (role) => {
     case "owner":
       return <FaCrown className="role-icon owner" title="Propriétaire" />;
     case "admin":
-      return <FaUserShield className="role-icon admin" title="Administrateur" />;
+      return (
+        <FaUserShield className="role-icon admin" title="Administrateur" />
+      );
     case "member":
       return <FaUser className="role-icon member" title="Membre" />;
     default:
@@ -91,7 +102,9 @@ export const getRoleIcon = (role) => {
 
 // Helper pour vérifier si une chaîne est un UUID
 export const isUuid = (str) =>
-  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    str
+  );
 
 // Helper pour logger les interactions avec Mistral
 export const debugMistralInteraction = (message) => {
@@ -101,14 +114,22 @@ export const debugMistralInteraction = (message) => {
 // Helper pour rendre les liens cliquables dans un texte
 export const renderTextWithLinks = (text) => {
   if (!text) return "";
+
+  // Regex pour les URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-  const matches = text.match(urlRegex) || [];
-  return parts.map((part, i) => {
-    if (matches.includes(part)) {
+
+  // Regex pour les mentions de canaux - cherche les motifs comme #canal-name
+  const channelMentionRegex = /#([a-zA-Z0-9_-]+)/g;
+
+  // Étape 1: Traitement des URLs
+  let parts = text.split(urlRegex);
+  const urlMatches = text.match(urlRegex) || [];
+
+  let result = parts.map((part, i) => {
+    if (urlMatches.includes(part)) {
       return (
         <a
-          key={i}
+          key={`url-${i}`}
           href={part}
           target="_blank"
           rel="noopener noreferrer"
@@ -120,6 +141,39 @@ export const renderTextWithLinks = (text) => {
     }
     return part;
   });
+
+  // Étape 2: Traitement des mentions de canaux dans chaque partie qui n'est pas un URL
+  result = result.map((part, index) => {
+    // Ne traiter que les parties textuelles, pas les éléments React
+    if (typeof part !== "string") {
+      return part;
+    }
+
+    const channelParts = part.split(channelMentionRegex);
+    const channelMatches = part.match(channelMentionRegex) || [];
+
+    // Si aucune mention de canal, retourner le texte tel quel
+    if (channelMatches.length === 0) {
+      return part;
+    }
+
+    // Combiner avec les mentions de canaux mises en évidence
+    return channelParts.map((channelPart, i) => {
+      const channelMatch = channelMatches[i - 1];
+      if (i > 0 && channelMatch) {
+        return (
+          <React.Fragment key={`channel-${index}-${i}`}>
+            <span className="channel-mention">{channelMatch}</span>
+            {channelPart}
+          </React.Fragment>
+        );
+      }
+      return channelPart;
+    });
+  });
+
+  // Aplatir le tableau de résultats pour éviter les tableaux imbriqués
+  return result.flat();
 };
 
 /**
