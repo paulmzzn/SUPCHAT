@@ -1,0 +1,186 @@
+import { StyleSheet } from 'react-native';
+
+// Now getStyles is a function that takes the current theme's colors
+export const getStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.primaryBackground,
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: theme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  profileSection: {
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingVertical: 20,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: theme.accentPrimary,
+    overflow: 'hidden',
+  },
+  avatarText: {
+    color: theme.textOnAccent, // Updated
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  avatarImage: { 
+    width: '100%',
+    height: '100%',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+    marginBottom: 6,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: theme.textMuted,
+    marginBottom: 10,
+  },
+  profileBio: {
+    fontSize: 14,
+    color: theme.textPrimary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 16,
+    maxWidth: '80%',
+    lineHeight: 20,
+  },
+  editProfileButton: {
+    backgroundColor: theme.accentBackground,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: theme.accentBorder,
+  },
+  editProfileButtonText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+    marginBottom: 12,
+    marginTop: 10,
+  },
+  settingsCard: {
+    backgroundColor: theme.secondaryCardBackground,
+    borderRadius: 15,
+    paddingVertical: 5,
+    marginBottom: 25,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+  },
+  settingInfo: {
+    flex: 1,
+    paddingRight: 20,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: theme.textMuted,
+    lineHeight: 18,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.borderColor,
+    marginHorizontal: 10,
+  },
+  settingButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+  },
+  settingButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.textPrimary,
+    marginLeft: 12,
+  },
+  logoutButton: {
+    backgroundColor: theme.dangerBackground,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: theme.dangerBorder,
+    marginTop: 10,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: theme.textPlaceholder,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.primaryBackground,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: theme.textPrimary,
+    fontSize: 16,
+  },
+});

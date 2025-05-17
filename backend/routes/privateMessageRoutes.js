@@ -7,6 +7,8 @@ import {
   deletePrivateMessage,
   markPrivateMessageAsRead,
   getUnreadCounts, // <-- Ajout ici
+  deleteConversation, // <-- Ajout ici
+  markAllMessagesAsRead, // <-- Ajout ici
 } from "../controllers/privateMessageController.js";
 import MessagePrive from "../models/MessagePrive.js";
 import multer from "multer";
@@ -178,8 +180,26 @@ router.get("/conversations", verifyToken, async (req, res) => {
   }
 });
 
+// Route optimisée qui retourne les conversations avec les infos utilisateur et derniers messages
+router.get("/conversations-extended", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conversations = await MessagePrive.getUserConversationsExtended(userId);
+    res.json(conversations);
+  } catch (error) {
+    console.error("Error in conversations-extended:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Route pour récupérer le nombre de messages privés non lus (doit être AVANT /:userId !)
 router.get("/unread-counts", verifyToken, getUnreadCounts);
+
+// Ajouter cette route pour supprimer une conversation entière
+router.delete("/conversations/:userId", verifyToken, deleteConversation);
+
+// Ajouter cette route pour marquer tous les messages d'une conversation comme lus
+router.post("/:userId/read-all", verifyToken, markAllMessagesAsRead);
 
 router.get("/:userId", verifyToken, getPrivateConversation);
 router.put("/message/:id", verifyToken, updatePrivateMessage);
