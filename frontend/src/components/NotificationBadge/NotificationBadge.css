@@ -28,9 +28,13 @@
 /* Position pour les badges de workspace */
 .workspace-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  transform: translate(25%, -25%);
+  top: auto;
+  right: auto;
+  left: 100%;
+  margin-left: 5px;
+  transform: none;
+  align-self: center;
+  display: inline-flex;
 }
 
 /* Position pour les badges de messages */

@@ -86,12 +86,14 @@
   justify-content: center;
   flex-grow: 1;
   background: none !important;
+  margin-left: -8px; /* moved a bit more to the left */
 }
 
 .workspace-title-container {
   display: flex;
   align-items: center;
   background: none !important;
+  position: relative;
 }
 
 .workspace-title {
@@ -113,13 +115,13 @@
   color: var(--workspace-private-icon);
   font-size: 0.8rem;
   flex-shrink: 0;
-  margin-left: 5px;
+  margin-left: 6px; /* Reduced from 5px to move left */
 }
 
 .workspace-description {
   font-size: 0.9rem;
   color: var(--workspace-description-color);
-  margin: 0 0 12px 0; /* Espace entre description et stats si la description est courte */
+  margin: 0 0 12px -2px; /* Added negative left margin to move left */
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;

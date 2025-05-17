@@ -299,6 +299,9 @@ function WorkspaceCard({
           <div className="workspace-info">
             <div className="workspace-title-container">
               <h3 className="workspace-title">{workspace.name}</h3>
+              {workspace.unreadNotifications > 0 && (
+                <NotificationBadge count={workspace.unreadNotifications} className="workspace-badge" />
+              )}
               {workspace.isPrivate && (
                 <FaLock className="private-icon" title="Private workspace" />
               )}
