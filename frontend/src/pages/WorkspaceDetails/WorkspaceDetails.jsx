@@ -17,6 +17,7 @@ import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
+import "./poll-styles.css"; // Import des styles pour les sondages
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
@@ -225,11 +226,14 @@ function WorkspaceDetails() {
     setReplyingTo, // Ajouter setReplyingTo ici
     commonEmojis,
 
-    isMistralTyping, // Get the typing state
-    // Mention state and handlers
+    isMistralTyping, // Get the typing state    // Mention state and handlers
     showMentionSuggestions,
     mentionSuggestions,
     activeMentionIndex,
+    // Channel suggestion state
+    showChannelSuggestions,
+    channelSuggestions,
+    activeChannelSuggestionIndex,
     // Handlers
     toggleChannelsVisibility,
     handleChannelInputChange,
@@ -258,12 +262,15 @@ function WorkspaceDetails() {
     setShowEditChannelModal,
     setShowEmojiPicker,
     setNewMessage,
-    getEmojiForType,
-    // New handlers for mentions
+    getEmojiForType, // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
     handleMentionNavigation,
     handleSelectActiveItem,
+    // New handler for channel suggestions
+    handleChannelSuggestionNavigation,
+    handleSelectActiveChannelSuggestion,
+    handleSelectChannelSuggestion,
     // New handler for deleting messages
     handleDeleteMessage,
     handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
@@ -376,12 +383,15 @@ function WorkspaceDetails() {
         };
 
         console.log(`⏳ Ajout du message temporaire au chat`);
-        setMessages((prevMessages) => [...prevMessages, loadingMessage]);
-
-        // Forcer une mise à jour du DOM
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
+        setMessages((prevMessages) => [...prevMessages, loadingMessage]); // Forcer une mise à jour du DOM
+        if (chatContainerRef && chatContainerRef.current) {
+          setTimeout(() => {
+            // Vérifier à nouveau que la référence est toujours valide
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop =
+                chatContainerRef.current.scrollHeight;
+            }
+          }, 50);
         }
 
         console.log(
@@ -439,9 +449,7 @@ function WorkspaceDetails() {
           console.log("❌ Aucun canal actif");
           alert("Veuillez d'abord sélectionner un canal");
         } else if (!socket) {
-          console.log(
-            `❌ Problème de socket - socket n'est pas disponible`
-          );
+          console.log(`❌ Problème de socket - socket n'est pas disponible`);
           alert(
             "Problème de connexion au serveur. Veuillez rafraîchir la page."
           );
@@ -485,10 +493,26 @@ function WorkspaceDetails() {
       }
     }
   };
-
   // Handler pour ouvrir la page de profil
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
+  };
+
+  // Handler pour gérer les clics sur les mentions de canaux
+  const handleChannelClick = (channelName) => {
+    console.log("Canal cliqué:", channelName);
+
+    // Trouver le canal correspondant au nom cliqué
+    const targetChannel = channels.find(
+      (channel) => channel.name.toLowerCase() === channelName.toLowerCase()
+    );
+
+    if (targetChannel) {
+      // Changer le canal actif en utilisant la fonction existante
+      handleSelectChannel(targetChannel);
+    } else {
+      console.warn(`Canal non trouvé: ${channelName}`);
+    }
   };
 
   // Utiliser le handler original pour l'envoi normal
@@ -729,10 +753,21 @@ function WorkspaceDetails() {
           commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
-          renderTextWithLinks={renderTextWithLinks}
+          renderTextWithLinks={(text) =>
+            renderTextWithLinks(text, handleChannelClick)
+          }
           isUuid={isUuid}
           handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
+          // Ajout des props pour les suggestions de canaux
+          showChannelSuggestions={showChannelSuggestions}
+          channelSuggestions={channelSuggestions}
+          activeChannelSuggestionIndex={activeChannelSuggestionIndex}
+          handleChannelSuggestionNavigation={handleChannelSuggestionNavigation}
+          handleSelectActiveChannelSuggestion={
+            handleSelectActiveChannelSuggestion
+          }
+          handleSelectChannelSuggestion={handleSelectChannelSuggestion}
         />
 
         {/* Details Sidebar - Replaced with WorkspaceDetailsSidebar */}
