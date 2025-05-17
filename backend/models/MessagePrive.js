@@ -8,14 +8,41 @@ class MessagePrive {
     fk_destinataire,
     pieces_jointes = [],
     parent_id = null,
+    replyTo = null,
   }) {
+    // Utiliser replyTo comme parent_id s'il est fourni, sinon utiliser parent_id
+    const messageParentId = replyTo || parent_id;
+    
     const result = await pool.query(
       `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation, parent_id)
        VALUES ($1, $2, $3, $4, NOW(), $5)
        RETURNING *`,
-      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), parent_id]
+      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), messageParentId]
     );
-    return result.rows[0];
+    
+    // Si c'est une réponse à un message, récupérer les détails du message parent
+    let messageData = result.rows[0];
+    if (messageParentId) {
+      try {
+        const parentResult = await pool.query(
+          `SELECT id_message_prive, contenu, fk_expediteur FROM message_prive WHERE id_message_prive = $1`,
+          [messageParentId]
+        );
+        if (parentResult.rows.length > 0) {
+          messageData.parent_message = parentResult.rows[0];
+          // Ajouter aussi les informations sous format replyData pour la compatibilité
+          messageData.reply_data = {
+            reply_to: parentResult.rows[0].id_message_prive,
+            reply_content: parentResult.rows[0].contenu,
+            reply_user_id: parentResult.rows[0].fk_expediteur
+          };
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du message parent:", error);
+      }
+    }
+    
+    return messageData;
   }
 
   static async getConversation(userA, userB, limit = 50, offset = 0) {
@@ -56,6 +83,13 @@ class MessagePrive {
             );
             if (parentResult.rows.length > 0) {
               message.parent_message = parentResult.rows[0];
+              
+              // Ajouter les données de réponse au format attendu par l'app mobile
+              message.reply_data = {
+                reply_to: parentResult.rows[0].id_message_prive,
+                reply_content: parentResult.rows[0].contenu,
+                reply_user_id: parentResult.rows[0].fk_expediteur
+              };
             }
           }
 
@@ -111,6 +145,13 @@ class MessagePrive {
         );
         if (parentResult.rows.length > 0) {
           message.parent_message = parentResult.rows[0];
+          
+          // Ajouter les données de réponse au format attendu par l'app mobile
+          message.reply_data = {
+            reply_to: parentResult.rows[0].id_message_prive,
+            reply_content: parentResult.rows[0].contenu,
+            reply_user_id: parentResult.rows[0].fk_expediteur
+          };
         }
       }
 

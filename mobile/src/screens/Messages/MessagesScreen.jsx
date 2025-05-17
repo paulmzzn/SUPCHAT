@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gesture-handler';
 import { getStyles } from './MessagesScreen.styles';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -168,6 +169,9 @@ const MessagesScreen = ({ navigation, route }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [selectedMessageForReaction, setSelectedMessageForReaction] = useState(null);
   const emojiPickerRef = useRef(null);
+
+  // Reference for the text input (for focusing)
+  const textInputRef = useRef(null);
 
   // Use socket context
   const { socket, currentUserId, markMessagesAsRead: markMessagesAsReadContext } = useSocket();
@@ -572,7 +576,25 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // Send message with timestamp update
+  // New function to handle reply
+  const handleReply = (message) => {
+    if (!message) return;
+    
+    setReplyingTo(message);
+    // Focus the text input when replying
+    setTimeout(() => {
+      if (textInputRef && textInputRef.current) {
+        textInputRef.current.focus();
+      }
+    }, 100);
+  };
+
+  // Function to cancel reply
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Modified sendMessage function to include reply information
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !userId || !currentUserId) return;
     
@@ -583,7 +605,14 @@ const MessagesScreen = ({ navigation, route }) => {
       // Clear input immediately for perceived responsiveness
       setNewMessage('');
       
-      // Optimistic message
+      // Prepare reply metadata if replying to a message
+      const replyData = replyingTo ? {
+        reply_to: replyingTo.id_message_prive,
+        reply_content: replyingTo.contenu,
+        reply_user_id: replyingTo.fk_expediteur
+      } : null;
+      
+      // Optimistic message with reply data
       const optimisticMessage = {
         id_message_prive: `temp-${tempId}`,
         contenu: messageText,
@@ -591,7 +620,13 @@ const MessagesScreen = ({ navigation, route }) => {
         fk_destinataire: userId,
         date_envoi: new Date().toISOString(),
         isOptimistic: true,
+        reply_data: replyData
       };
+      
+      // Clear reply state after sending
+      if (replyingTo) {
+        setReplyingTo(null);
+      }
       
       // Mark as animating
       setAnimatingMessages(prev => ({
@@ -616,16 +651,17 @@ const MessagesScreen = ({ navigation, route }) => {
         scrollToBottom(true);
       }, 50);
       
-      // Send via socket
+      // Send via socket with reply data
       if (socket) {
         socket.emit('privateMessage', {
           destinataireId: userId,
           contenu: messageText,
-          tempId
+          tempId,
+          replyTo: replyData ? replyData.reply_to : undefined,
         });
       } else {
         // Fallback to REST API
-        sendMessageViaAPI(messageText);
+        sendMessageViaAPI(messageText, replyData);
       }
       
       // Update conversation timestamp
@@ -637,8 +673,8 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // REST API fallback for sending messages
-  const sendMessageViaAPI = async (messageContent) => {
+  // Updated API message sending to include reply data
+  const sendMessageViaAPI = async (messageContent, replyData) => {
     if (!messageContent || !userId) return;
     
     try {
@@ -651,7 +687,8 @@ const MessagesScreen = ({ navigation, route }) => {
         },
         body: JSON.stringify({
           destinataireId: userId,
-          contenu: messageContent
+          contenu: messageContent,
+          replyTo: replyData ? replyData.reply_to : undefined
         })
       });
       
@@ -672,50 +709,13 @@ const MessagesScreen = ({ navigation, route }) => {
     }
   };
 
-  // Fetch conversation timestamps when component mounts
-  useEffect(() => {
-    const loadConversationTimestamps = async () => {
-      try {
-        const timestampsStr = await AsyncStorage.getItem('conversationTimestamps');
-        if (timestampsStr) {
-          const timestamps = JSON.parse(timestampsStr);
-          setConversationTimestamps(timestamps);
-        }
-      } catch (e) {
-        console.error('Error loading conversation timestamps:', e);
-      }
-    };
-    
-    loadConversationTimestamps();
-  }, []);
-
-  // Initialize timestamps when userId changes
-  useEffect(() => {
-    if (!userId) return;
-    
-    const initializeTimestamp = async () => {
-      try {
-        // Get current timestamps
-        const timestampsStr = await AsyncStorage.getItem('conversationTimestamps');
-        if (timestampsStr) {
-          const timestamps = JSON.parse(timestampsStr);
-          setConversationTimestamps(timestamps);
-          
-          // Initialize timestamp for this conversation if it doesn't exist
-          if (!timestamps[userId]) {
-            await saveConversationTimestamp(userId);
-          }
-        } else {
-          // No existing timestamps, initialize this conversation
-          await saveConversationTimestamp(userId);
-        }
-      } catch (e) {
-        console.error('Error initializing conversation timestamp:', e);
-      }
-    };
-    
-    initializeTimestamp();
-  }, [userId]);
+  // Add this to the right click menu options
+  const handleReplyFromMenu = () => {
+    if (contextMenu.message) {
+      handleReply(contextMenu.message);
+      handleCloseContextMenu();
+    }
+  };
 
   // Render avatar component
   const renderAvatar = (user) => {
@@ -740,6 +740,80 @@ const MessagesScreen = ({ navigation, route }) => {
         </View>
       );
     }
+  };
+
+  // Stocker les références aux composants Swipeable
+  const swipeableRefs = useRef({});
+  
+  // Fonction qui sera appelée lorsque le swipe est terminé et a dépassé un certain seuil
+  const onSwipeableWillOpen = (message) => {
+    // Déclenche directement la réponse au message si le swipe est suffisant
+    handleReply(message);
+    
+    // Ferme immédiatement le swipeable pour ramener le message à sa position d'origine
+    setTimeout(() => {
+      if (swipeableRefs.current[message.id_message_prive]) {
+        swipeableRefs.current[message.id_message_prive].close();
+      }
+    }, 100);
+  };
+
+  // Render the reply action for swipe gestures
+  const renderRightActions = (message) => {
+    return (
+      <RectButton
+        style={styles.replyAction}
+        onPress={() => handleReply(message)}
+      >
+        <Ionicons name="arrow-undo-outline" size={22} style={styles.replyActionIcon} />
+        <Text style={styles.replyActionText}>Répondre</Text>
+      </RectButton>
+    );
+  };
+
+  // Render the reply action for swipe gestures on left side (for received messages)
+  const renderLeftActions = (message) => {
+    return (
+      <RectButton
+        style={styles.replyAction}
+        onPress={() => handleReply(message)}
+      >
+        <Ionicons name="arrow-undo-outline" size={22} style={styles.replyActionIcon} />
+        <Text style={styles.replyActionText}>Répondre</Text>
+      </RectButton>
+    );
+  };
+
+  // Render the reply preview in a message
+  const renderMessageReply = (message, isOwn) => {
+    if (!message.reply_data && !message.replyTo) return null;
+    
+    // Get the reply data either from direct reply_data or from referenced message
+    const replyData = message.reply_data || {
+      reply_content: message.replyContent || "Message d'origine non disponible",
+      reply_user_id: message.replyTo
+    };
+    
+    const isReplyFromSender = replyData.reply_user_id === currentUserId;
+    const replyText = isReplyFromSender ? "vous" : userInfo?.name || "Utilisateur";
+    
+    return (
+      <View style={[
+        styles.messageReplyContainer,
+        // Appliquer une bordure grise pour les messages envoyés et violette pour les messages reçus
+        { borderLeftColor: isOwn ? '#8E8E8E' : themeColors.accentPrimary }
+      ]}>
+        <Text style={[styles.messageReplyText, isOwn && { color: '#FFFFFF' }]}>
+          Réponse à {replyText}
+        </Text>
+        <Text style={[
+          styles.messageReplyContent,
+          { color: isOwn ? '#FFFFFF' : 'rgba(0, 0, 0, 0.7)' }
+        ]} numberOfLines={2}>
+          {replyData.reply_content}
+        </Text>
+      </View>
+    );
   };
 
   // Modified scroll to bottom to work with dynamic content
@@ -992,401 +1066,461 @@ const MessagesScreen = ({ navigation, route }) => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-      enabled
-    >
-      <View style={{ flex: 1 }}>
-        {/* Header with user info */}
-        <View style={styles.chatHeader}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleGoBack}
-          >
-            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-          
-          <View style={styles.chatHeaderInfo}>
-            {renderAvatar(userInfo)}
-            <Text style={styles.chatHeaderName}>
-              {userInfo?.name || 'User'}
-            </Text>
-          </View>
-        </View>
-        
-        {loadingMessages && isInitialLoad ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={themeColors.accentPrimary} />
-            <Text style={styles.loadingText}>Loading messages...</Text>
-          </View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <ScrollView 
-              style={[
-                styles.messagesContainer,
-                keyboardVisible && Platform.OS === "android" && { marginBottom: 5 }
-              ]}
-              ref={messagesScrollRef}
-              onContentSizeChange={() => !loadingMoreMessages && scrollToBottom(false)}
-              keyboardShouldPersistTaps="handled"
-              onScroll={handleScroll}
-              scrollEventThrottle={16} // For smooth scroll detection
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+        enabled
+      >
+        <View style={{ flex: 1 }}>
+          {/* Header with user info */}
+          <View style={styles.chatHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleGoBack}
             >
-              {/* Loading indicator for more messages */}
-              {loadingMoreMessages && (
-                <View style={styles.loadingMoreContainer}>
-                  <ActivityIndicator size="small" color={themeColors.accentPrimary} />
-                  <Text style={styles.loadingMoreText}>Loading older messages...</Text>
-                </View>
-              )}
-              
-              {/* No more messages indicator */}
-              {!hasMoreMessages && messages.length > 0 && (
-                <View style={styles.noMoreMessagesContainer}>
-                  <Text style={styles.noMoreMessagesText}>Beginning of conversation</Text>
-                </View>
-              )}
-              
-              {messages.length === 0 ? (
-                <View style={styles.emptyMessages}>
-                  <Text style={styles.emptyMessagesText}>No messages yet</Text>
-                  <Text style={styles.emptyMessagesSubtext}>Start the conversation!</Text>
-                </View>
-              ) : (
-                messages.map((msg, index) => {
-                  const isOwn = msg.fk_expediteur === currentUserId;
-                  const isAnimating = animatingMessages[msg.id_message_prive];
-                  
-                  // Determine if this message is the last message sent by the current user
-                  const isLastOwnMessage = isOwn && 
-                    messages.slice(index + 1).findIndex(m => m.fk_expediteur === currentUserId) === -1;
-                  
-                  return (
-                    <TouchableOpacity 
-                      key={msg.id_message_prive || `temp-${Date.now()}-${Math.random()}`}
-                      style={[
-                        styles.messageWrapper,
-                        isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper,
-                        isAnimating && styles.animatingMessage
-                      ]}
-                      onLongPress={(event) => {
-                        console.log('Long press detected on message:', msg.id_message_prive);
-                        handleLongPressMessage(msg, event.nativeEvent);
-                      }}
-                      delayLongPress={500}
-                      activeOpacity={0.9}
-                    >
-                      <View style={[
-                        styles.messageBubble,
-                        isOwn ? styles.ownMessage : styles.otherMessage
-                      ]}>
-                        <Text style={isOwn ? styles.ownMessageText : styles.otherMessageText}>
-                          {msg.contenu}
-                        </Text>
+              <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+            
+            <View style={styles.chatHeaderInfo}>
+              {renderAvatar(userInfo)}
+              <Text style={styles.chatHeaderName}>
+                {userInfo?.name || 'User'}
+              </Text>
+            </View>
+          </View>
+          
+          {loadingMessages && isInitialLoad ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.accentPrimary} />
+              <Text style={styles.loadingText}>Loading messages...</Text>
+            </View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <ScrollView 
+                style={[
+                  styles.messagesContainer,
+                  keyboardVisible && Platform.OS === "android" && { marginBottom: 5 }
+                ]}
+                ref={messagesScrollRef}
+                onContentSizeChange={() => !loadingMoreMessages && scrollToBottom(false)}
+                keyboardShouldPersistTaps="handled"
+                onScroll={handleScroll}
+                scrollEventThrottle={16} // For smooth scroll detection
+              >
+                {/* Loading indicator for more messages */}
+                {loadingMoreMessages && (
+                  <View style={styles.loadingMoreContainer}>
+                    <ActivityIndicator size="small" color={themeColors.accentPrimary} />
+                    <Text style={styles.loadingMoreText}>Loading older messages...</Text>
+                  </View>
+                )}
+                
+                {/* No more messages indicator */}
+                {!hasMoreMessages && messages.length > 0 && (
+                  <View style={styles.noMoreMessagesContainer}>
+                    <Text style={styles.noMoreMessagesText}>Beginning of conversation</Text>
+                  </View>
+                )}
+                
+                {messages.length === 0 ? (
+                  <View style={styles.emptyMessages}>
+                    <Text style={styles.emptyMessagesText}>No messages yet</Text>
+                    <Text style={styles.emptyMessagesSubtext}>Start the conversation!</Text>
+                  </View>
+                ) : (
+                  messages.map((msg, index) => {
+                    const isOwn = msg.fk_expediteur === currentUserId;
+                    const isAnimating = animatingMessages[msg.id_message_prive];
+                    
+                    // Determine if this message is the last message sent by the current user
+                    const isLastOwnMessage = isOwn && 
+                      messages.slice(index + 1).findIndex(m => m.fk_expediteur === currentUserId) === -1;
+                    
+                    return (
+                      <Swipeable
+                        key={msg.id_message_prive || `temp-${Date.now()}-${Math.random()}`}
+                        renderRightActions={() => isOwn ? renderRightActions(msg) : null}
+                        renderLeftActions={() => !isOwn ? renderLeftActions(msg) : null}
+                        friction={2}
+                        overshootRight={false}
+                        overshootLeft={false}
+                        rightThreshold={40}
+                        leftThreshold={40}
+                        ref={(ref) => {
+                          if (ref) {
+                            swipeableRefs.current[msg.id_message_prive] = ref;
+                          }
+                        }}
+                        onSwipeableWillOpen={() => onSwipeableWillOpen(msg)}
+                      >
+                        <TouchableOpacity 
+                          style={[
+                            styles.messageWrapper,
+                            isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper,
+                            isAnimating && styles.animatingMessage
+                          ]}
+                          onLongPress={(event) => {
+                            console.log('Long press detected on message:', msg.id_message_prive);
+                            handleLongPressMessage(msg, event.nativeEvent);
+                          }}
+                          delayLongPress={500}
+                          activeOpacity={0.9}
+                        >
+                          <View style={[
+                            styles.messageBubble,
+                            isOwn ? styles.ownMessage : styles.otherMessage
+                          ]}>
+                            {/* Render reply preview if this is a reply */}
+                            {renderMessageReply(msg, isOwn)}
 
-                        {/* Attachment handling */}
-                        {msg.attachments && msg.attachments.length > 0 && (
-                          <View style={styles.attachmentsContainer}>
-                            {/* Vérification si l'attachment existe et a bien une URL */}
-                            {msg.attachments.map((attachment, i) => {
-                              if (!attachment || (!attachment.url && !attachment.presignedUrl)) {
-                                console.warn(`Invalid attachment at index ${i}:`, attachment);
-                                return null;
-                              }
+                            <Text style={isOwn ? styles.ownMessageText : styles.otherMessageText}>
+                              {msg.contenu}
+                            </Text>
 
-                              console.log(`Rendering attachment ${i}:`, {
-                                type: attachment.type,
-                                url: attachment.url,
-                                presignedUrl: attachment.presignedUrl,
-                              });
-
-                              const fileUrl = attachment.url || attachment.presignedUrl;
-                              const fullFileUrl = getFileURL(fileUrl);
-                              console.log(`Full file URL: ${fullFileUrl}`);
-
-                              if (attachment.type?.startsWith('image/')) {
-                                return (
-                                  <TouchableOpacity 
-                                    key={`${msg.id_message_prive}-attachment-${i}`} 
-                                    style={styles.imageAttachment}
-                                    onPress={() => handleOpenAttachment(attachment)}
-                                  >
-                                    <ImageComponent 
-                                      uri={fullFileUrl} 
-                                      style={styles.attachmentImage} 
-                                      resizeMode="cover"
-                                      fileName={attachment.nom_fichier || 'Image'}
-                                    />
-                                    <Text style={styles.imageCaption} numberOfLines={1}>
-                                      {attachment.nom_fichier || 'Image'}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              } else {
-                                return (
-                                  <TouchableOpacity 
-                                    key={`${msg.id_message_prive}-attachment-${i}`} 
-                                    style={styles.fileAttachment}
-                                    onPress={() => handleOpenAttachment(attachment)}
-                                  >
-                                    <View style={styles.fileIconContainer}>
-                                      <Ionicons 
-                                        name={getFileIcon(attachment.type)} 
-                                        size={24} 
-                                        color={themeColors.textPrimary} 
-                                      />
-                                    </View>
-                                    <View style={styles.fileDetails}>
-                                      <Text style={styles.fileName} numberOfLines={1}>
-                                        {attachment.nom_fichier || 'Fichier'}
-                                      </Text>
-                                      <Text style={styles.fileSize}>
-                                        {formatFileSize(attachment.taille_fichier)}
-                                      </Text>
-                                    </View>
-                                    <Ionicons 
-                                      name="eye-outline" 
-                                      size={20} 
-                                      color={themeColors.accentPrimary} 
-                                    />
-                                  </TouchableOpacity>
-                                );
-                              }
-                            })}
-                          </View>
-                        )}
-
-                        {/* Reactions */}
-                        {msg.reactions && msg.reactions.length > 0 && (
-                          <View style={styles.reactionsContainer}>
-                            {msg.reactions.map((reaction, index) => (
-                              <TouchableOpacity
-                                key={`${msg.id_message_prive}-reaction-${index}`}
-                                style={[
-                                  styles.reactionBubble,
-                                  reaction.user_reacted && styles.userReactedBubble
-                                ]}
-                                onPress={() => {
-                                  // Si l'utilisateur a déjà réagi, supprimer la réaction
-                                  if (reaction.user_reacted) {
-                                    handleRemoveReaction(msg.id_message_prive, reaction.reaction_type);
-                                  } 
-                                  // Sinon, ajouter la réaction
-                                  else {
-                                    // Utiliser le même émoji pour ajouter la réaction
-                                    socket.emit('addPrivateMessageReaction', {
-                                      id: msg.id_message_prive,
-                                      reaction: reaction.reaction_type
-                                    });
-                                    
-                                    // Mise à jour optimiste de l'UI
-                                    setMessages(prev => prev.map(m => {
-                                      if (m.id_message_prive === msg.id_message_prive) {
-                                        // Trouver et mettre à jour cette réaction spécifique
-                                        const updatedReactions = m.reactions.map(r => 
-                                          r.reaction_type === reaction.reaction_type 
-                                            ? { ...r, count: r.count + 1, user_reacted: true } 
-                                            : r
-                                        );
-                                        return { ...m, reactions: updatedReactions };
-                                      }
-                                      return m;
-                                    }));
+                            {/* Attachment handling */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <View style={styles.attachmentsContainer}>
+                                {/* Vérification si l'attachment existe et a bien une URL */}
+                                {msg.attachments.map((attachment, i) => {
+                                  if (!attachment || (!attachment.url && !attachment.presignedUrl)) {
+                                    console.warn(`Invalid attachment at index ${i}:`, attachment);
+                                    return null;
                                   }
-                                }}
-                              >
-                                <Text style={styles.reactionEmoji}>{reaction.reaction_type}</Text>
-                                <Text style={styles.reactionCount}>{reaction.count}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        )}
 
-                        <View style={styles.messageInfoContainer}>
-                          <Text style={isOwn ? styles.ownMessageTime : styles.otherMessageTime}>
-                            {formatMessageDate(msg.date_creation || msg.date_envoi)}
-                          </Text>
-                          {isOwn && isLastOwnMessage && (
-                            <View style={styles.readStatusInBubble}>
-                              {msg.date_lecture ? (
-                                <>
-                                  <MaterialIcons 
-                                    name="done-all" 
-                                    size={14} 
-                                    color={themeColors.accentPrimary} 
-                                  />
-                                  <Text style={styles.readStatusText}>Lu</Text>
-                                </>
-                              ) : (
-                                <>
-                                  <MaterialIcons 
-                                    name="done" 
-                                    size={14} 
-                                    color={isOwn ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.6)"} 
-                                  />
-                                  <Text style={styles.sentStatusText}>Envoyé</Text>
-                                </>
+                                  console.log(`Rendering attachment ${i}:`, {
+                                    type: attachment.type,
+                                    url: attachment.url,
+                                    presignedUrl: attachment.presignedUrl,
+                                  });
+
+                                  const fileUrl = attachment.url || attachment.presignedUrl;
+                                  const fullFileUrl = getFileURL(fileUrl);
+                                  console.log(`Full file URL: ${fullFileUrl}`);
+
+                                  if (attachment.type?.startsWith('image/')) {
+                                    return (
+                                      <TouchableOpacity 
+                                        key={`${msg.id_message_prive}-attachment-${i}`} 
+                                        style={styles.imageAttachment}
+                                        onPress={() => handleOpenAttachment(attachment)}
+                                      >
+                                        <ImageComponent 
+                                          uri={fullFileUrl} 
+                                          style={styles.attachmentImage} 
+                                          resizeMode="cover"
+                                          fileName={attachment.nom_fichier || 'Image'}
+                                        />
+                                        <Text style={styles.imageCaption} numberOfLines={1}>
+                                          {attachment.nom_fichier || 'Image'}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  } else {
+                                    return (
+                                      <TouchableOpacity 
+                                        key={`${msg.id_message_prive}-attachment-${i}`} 
+                                        style={styles.fileAttachment}
+                                        onPress={() => handleOpenAttachment(attachment)}
+                                      >
+                                        <View style={styles.fileIconContainer}>
+                                          <Ionicons 
+                                            name={getFileIcon(attachment.type)} 
+                                            size={24} 
+                                            color={themeColors.textPrimary} 
+                                          />
+                                        </View>
+                                        <View style={styles.fileDetails}>
+                                          <Text style={styles.fileName} numberOfLines={1}>
+                                            {attachment.nom_fichier || 'Fichier'}
+                                          </Text>
+                                          <Text style={styles.fileSize}>
+                                            {formatFileSize(attachment.taille_fichier)}
+                                          </Text>
+                                        </View>
+                                        <Ionicons 
+                                          name="eye-outline" 
+                                          size={20} 
+                                          color={themeColors.accentPrimary} 
+                                        />
+                                      </TouchableOpacity>
+                                    );
+                                  }
+                                })}
+                              </View>
+                            )}
+
+                            {/* Reactions */}
+                            {msg.reactions && msg.reactions.length > 0 && (
+                              <View style={styles.reactionsContainer}>
+                                {msg.reactions.map((reaction, index) => (
+                                  <TouchableOpacity
+                                    key={`${msg.id_message_prive}-reaction-${index}`}
+                                    style={[
+                                      styles.reactionBubble,
+                                      reaction.user_reacted && styles.userReactedBubble
+                                    ]}
+                                    onPress={() => {
+                                      // Si l'utilisateur a déjà réagi, supprimer la réaction
+                                      if (reaction.user_reacted) {
+                                        handleRemoveReaction(msg.id_message_prive, reaction.reaction_type);
+                                      } 
+                                      // Sinon, ajouter la réaction
+                                      else {
+                                        // Utiliser le même émoji pour ajouter la réaction
+                                        socket.emit('addPrivateMessageReaction', {
+                                          id: msg.id_message_prive,
+                                          reaction: reaction.reaction_type
+                                        });
+                                        
+                                        // Mise à jour optimiste de l'UI
+                                        setMessages(prev => prev.map(m => {
+                                          if (m.id_message_prive === msg.id_message_prive) {
+                                            // Trouver et mettre à jour cette réaction spécifique
+                                            const updatedReactions = m.reactions.map(r => 
+                                              r.reaction_type === reaction.reaction_type 
+                                                ? { ...r, count: r.count + 1, user_reacted: true } 
+                                                : r
+                                            );
+                                            return { ...m, reactions: updatedReactions };
+                                          }
+                                          return m;
+                                        }));
+                                      }
+                                    }}
+                                  >
+                                    <Text style={styles.reactionEmoji}>{reaction.reaction_type}</Text>
+                                    <Text style={styles.reactionCount}>{reaction.count}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+
+                            <View style={styles.messageInfoContainer}>
+                              <Text style={isOwn ? styles.ownMessageTime : styles.otherMessageTime}>
+                                {formatMessageDate(msg.date_creation || msg.date_envoi)}
+                              </Text>
+                              {isOwn && isLastOwnMessage && (
+                                <View style={styles.readStatusInBubble}>
+                                  {msg.date_lecture ? (
+                                    <>
+                                      <MaterialIcons 
+                                        name="done-all" 
+                                        size={14} 
+                                        color={themeColors.accentPrimary} 
+                                      />
+                                      <Text style={styles.readStatusText}>Lu</Text>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MaterialIcons 
+                                        name="done" 
+                                        size={14} 
+                                        color={isOwn ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.6)"} 
+                                      />
+                                      <Text style={styles.sentStatusText}>Envoyé</Text>
+                                    </>
+                                  )}
+                                </View>
                               )}
                             </View>
-                          )}
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </ScrollView>
-          </View>
-        )}
+                          </View>
+                        </TouchableOpacity>
+                      </Swipeable>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
+          )}
 
-        <View style={[
-          styles.inputContainer,
-          keyboardVisible && Platform.OS === "android" && { paddingBottom: 5 }
-        ]}>
-          <TextInput 
-            style={styles.messageInput}
-            placeholder="Type a message..."
-            value={newMessage}
-            onChangeText={setNewMessage}
-            multiline
-            keyboardAppearance={isDarkMode ? 'dark' : 'light'}
-            placeholderTextColor={isDarkMode ? '#777' : '#999'}
-            selectionColor={isDarkMode ? themeColors.accentPrimary : undefined}
-            cursorColor={isDarkMode ? themeColors.accentPrimary : undefined}
-          />
-          <TouchableOpacity 
-            style={[
-              styles.sendButton,
-              !newMessage.trim() && styles.sendButtonDisabled
-            ]}
-            disabled={!newMessage.trim()}
-            onPress={handleSendMessage}
-          >
-            <Ionicons name="send" size={24} color={themeColors.textOnAccent} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Replace the old preview modal with the MediaViewer component */}
-      <MediaViewer
-        visible={mediaPreview.visible}
-        media={mediaPreview.media}
-        onClose={handleCloseMediaPreview}
-        theme={themeColors}
-      />
-
-      {/* Message context menu */}
-      {contextMenu.visible && (
-        <TouchableOpacity 
-          style={styles.contextMenuOverlay}
-          activeOpacity={1}
-          onPress={handleCloseContextMenu}
-        >
-          <View 
-            style={[
-              styles.contextMenu,
-              {
-                top: contextMenu.position.y - (contextMenu.isOwnMessage ? 160 : 110),
-                left: Math.min(contextMenu.position.x - 100, Dimensions.get('window').width - 230)
-              }
-            ]}
-          >
-            {contextMenu.isOwnMessage ? (
-              <>
-                <TouchableOpacity 
-                  style={styles.contextMenuItem}
-                  onPress={handleEditMessage}
-                >
-                  <Ionicons name="pencil" size={20} color={themeColors.textPrimary} />
-                  <Text style={styles.contextMenuItemText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.contextMenuItem}
-                  onPress={handleAddReaction}
-                >
-                  <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
-                  <Text style={styles.contextMenuItemText}>React</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.contextMenuItem, styles.deleteMenuItem]}
-                  onPress={handleDeleteMessage}
-                >
-                  <Ionicons name="trash-outline" size={20} color="red" />
-                  <Text style={[styles.contextMenuItemText, { color: "red" }]}>Delete</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity 
-                style={styles.contextMenuItem}
-                onPress={handleAddReaction}
-              >
-                <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
-                <Text style={styles.contextMenuItemText}>React</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* Emoji picker for reactions */}
-      {showEmojiPicker && (
-        <TouchableOpacity 
-          style={styles.emojiPickerOverlay}
-          activeOpacity={1}
-          onPress={() => setShowEmojiPicker(false)}
-        >
-          <View 
-            style={styles.emojiPicker}
-            ref={emojiPickerRef}
-          >
-            <ScrollView horizontal style={styles.emojiScrollView}>
-              {['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🤔'].map(emoji => (
+          <View style={[
+            styles.inputContainer,
+            keyboardVisible && Platform.OS === "android" && { paddingBottom: 5 }
+          ]}>
+            {/* Replying UI */}
+            {replyingTo && (
+              <View style={styles.replyContainer}>
+                <View style={styles.replyContent}>
+                  <Text style={styles.replyText}>
+                    Réponse à {replyingTo.fk_expediteur === currentUserId ? "vous-même" : userInfo?.name || "Utilisateur"}
+                  </Text>
+                  <Text style={styles.replyMessage} numberOfLines={1}>
+                    {replyingTo.contenu}
+                  </Text>
+                </View>
                 <TouchableOpacity
-                  key={emoji}
-                  style={styles.emojiButton}
-                  onPress={() => handleEmojiSelect(emoji)}
+                  style={styles.replyCloseButton}
+                  onPress={handleCancelReply}
                 >
-                  <Text style={styles.emojiText}>{emoji}</Text>
+                  <Ionicons name="close" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      )}
+              </View>
+            )}
 
-      {/* Message editing interface */}
-      {editingMessage && (
-        <View style={styles.editOverlay}>
-          <View style={styles.editContainer}>
-            <Text style={styles.editTitle}>Edit Message</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editMessageContent}
-              onChangeText={setEditMessageContent}
-              multiline
-              autoFocus
-              keyboardAppearance={isDarkMode ? 'dark' : 'light'}
-            />
-            <View style={styles.editButtonsContainer}>
+            <View style={styles.inputRow}>
+              <TextInput 
+                ref={textInputRef}
+                style={styles.messageInput}
+                placeholder="Type a message..."
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+                keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+                placeholderTextColor={isDarkMode ? '#777' : '#999'}
+                selectionColor={isDarkMode ? themeColors.accentPrimary : undefined}
+                cursorColor={isDarkMode ? themeColors.accentPrimary : undefined}
+              />
               <TouchableOpacity 
-                style={[styles.editButton, styles.cancelButton]}
-                onPress={handleCancelEdit}
+                style={[
+                  styles.sendButton,
+                  !newMessage.trim() && styles.sendButtonDisabled
+                ]}
+                disabled={!newMessage.trim()}
+                onPress={handleSendMessage}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.editButton, styles.saveButton]}
-                onPress={handleSaveEdit}
-              >
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Ionicons name="send" size={24} color={themeColors.textOnAccent} />
               </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
-    </KeyboardAvoidingView>
+
+        {/* Replace the old preview modal with the MediaViewer component */}
+        <MediaViewer
+          visible={mediaPreview.visible}
+          media={mediaPreview.media}
+          onClose={handleCloseMediaPreview}
+          theme={themeColors}
+        />
+
+        {/* Message context menu */}
+        {contextMenu.visible && (
+          <TouchableOpacity 
+            style={styles.contextMenuOverlay}
+            activeOpacity={1}
+            onPress={handleCloseContextMenu}
+          >
+            <View 
+              style={[
+                styles.contextMenu,
+                {
+                  top: contextMenu.position.y - (contextMenu.isOwnMessage ? 200 : 150),
+                  left: Math.min(contextMenu.position.x - 100, Dimensions.get('window').width - 230)
+                }
+              ]}
+            >
+              {contextMenu.isOwnMessage ? (
+                <>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem}
+                    onPress={handleReplyFromMenu}
+                  >
+                    <Ionicons name="arrow-undo-outline" size={20} color={themeColors.textPrimary} />
+                    <Text style={styles.contextMenuItemText}>Reply</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem}
+                    onPress={handleEditMessage}
+                  >
+                    <Ionicons name="pencil" size={20} color={themeColors.textPrimary} />
+                    <Text style={styles.contextMenuItemText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem}
+                    onPress={handleAddReaction}
+                  >
+                    <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
+                    <Text style={styles.contextMenuItemText}>React</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.contextMenuItem, styles.deleteMenuItem]}
+                    onPress={handleDeleteMessage}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="red" />
+                    <Text style={[styles.contextMenuItemText, { color: "red" }]}>Delete</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem}
+                    onPress={handleReplyFromMenu}
+                  >
+                    <Ionicons name="arrow-undo-outline" size={20} color={themeColors.textPrimary} />
+                    <Text style={styles.contextMenuItemText}>Reply</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem}
+                    onPress={handleAddReaction}
+                  >
+                    <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
+                    <Text style={styles.contextMenuItemText}>React</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Emoji picker for reactions */}
+        {showEmojiPicker && (
+          <TouchableOpacity 
+            style={styles.emojiPickerOverlay}
+            activeOpacity={1}
+            onPress={() => setShowEmojiPicker(false)}
+          >
+            <View 
+              style={styles.emojiPicker}
+              ref={emojiPickerRef}
+            >
+              <ScrollView horizontal style={styles.emojiScrollView}>
+                {['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🤔'].map(emoji => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={styles.emojiButton}
+                    onPress={() => handleEmojiSelect(emoji)}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Message editing interface */}
+        {editingMessage && (
+          <View style={styles.editOverlay}>
+            <View style={styles.editContainer}>
+              <Text style={styles.editTitle}>Edit Message</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editMessageContent}
+                onChangeText={setEditMessageContent}
+                multiline
+                autoFocus
+                keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+              />
+              <View style={styles.editButtonsContainer}>
+                <TouchableOpacity 
+                  style={[styles.editButton, styles.cancelButton]}
+                  onPress={handleCancelEdit}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.editButton, styles.saveButton]}
+                  onPress={handleSaveEdit}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </GestureHandlerRootView>
   );
 };
 
