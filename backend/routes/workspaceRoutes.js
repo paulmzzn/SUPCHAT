@@ -15,7 +15,10 @@ import {
   uploadWorkspaceImages,
   getUserWorkspaces, // Ajout de la nouvelle fonction
   changeMemberRole, // Ajout de la fonction pour changer le rôle d'un membre
-  deleteWorkspaceCascade // Ajout de la fonction pour la suppression en cascade
+  deleteWorkspaceCascade, // Ajout de la fonction pour la suppression en cascade
+  requestJoinWorkspace, // Ajout de la fonction pour demander à rejoindre un workspace
+  getWorkspaceJoinRequests, // Ajout de la fonction pour récupérer les demandes d'adhésion
+  respondToJoinRequest // Ajout de la fonction pour répondre à une demande d'adhésion
 } from '../controllers/workspaceController.js';
 import {
   addFavorite,
@@ -74,5 +77,14 @@ router.post('/:workspaceId/images', upload.fields([
   { name: 'banner', maxCount: 1 },
   { name: 'icon', maxCount: 1 }
 ]), uploadWorkspaceImages);
+
+// Route pour demander à rejoindre un workspace privé
+router.post('/:workspaceId/request-join', verifyToken, requestJoinWorkspace);
+
+// Route pour récupérer les demandes d'adhésion en attente
+router.get('/:workspaceId/requests', verifyToken, getWorkspaceJoinRequests);
+
+// Route pour répondre à une demande d'adhésion
+router.put('/:workspaceId/requests/:requestId', verifyToken, respondToJoinRequest);
 
 export default router;
