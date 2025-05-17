@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, Text, TouchableOpacity, TextInput, Image, 
   ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform,
-  Keyboard, Alert
+  Keyboard, Alert, Dimensions
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -155,6 +155,19 @@ const MessagesScreen = ({ navigation, route }) => {
     visible: false,
     media: null
   });
+
+  // Context menu and message interaction states
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    message: null,
+    position: { x: 0, y: 0 }
+  });
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editMessageContent, setEditMessageContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState(null);
+  const emojiPickerRef = useRef(null);
 
   // Use socket context
   const { socket, currentUserId, markMessagesAsRead: markMessagesAsReadContext } = useSocket();
@@ -321,12 +334,58 @@ const MessagesScreen = ({ navigation, route }) => {
       }
     };
     
+    const handlePrivateMessageUpdated = (msg) => {
+      console.log('Message updated:', msg);
+      if (
+        msg.fk_expediteur === userId || 
+        msg.fk_destinataire === userId
+      ) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === msg.id_message_prive ? msg : m
+          )
+        );
+      }
+    };
+
+    const handlePrivateMessageDeleted = (data) => {
+      console.log('Message deleted:', data);
+      if (data?.id) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.id
+              ? { ...m, is_deleted: true, contenu: "[Message deleted]", attachments: [] }
+              : m
+          )
+        );
+      }
+    };
+
+    const handlePrivateMessageReaction = (data) => {
+      console.log('Message reaction received:', data);
+      if (data?.messageId && data?.reactions) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.messageId
+              ? { ...m, reactions: data.reactions }
+              : m
+          )
+        );
+      }
+    };
+    
     socket.on('privateMessage', handlePrivateMessage);
+    socket.on('privateMessageUpdated', handlePrivateMessageUpdated);
+    socket.on('privateMessageDeleted', handlePrivateMessageDeleted);
+    socket.on('privateMessageReaction', handlePrivateMessageReaction);
     
     return () => {
       socket.off('privateMessage', handlePrivateMessage);
+      socket.off('privateMessageUpdated', handlePrivateMessageUpdated);
+      socket.off('privateMessageDeleted', handlePrivateMessageDeleted);
+      socket.off('privateMessageReaction', handlePrivateMessageReaction);
     };
-  }, [socket, userId, currentUserId]);
+  }, [socket, userId, currentUserId, messages]);
 
   // Modified: Fetch user info and messages when userId changes
   useEffect(() => {
@@ -741,6 +800,183 @@ const MessagesScreen = ({ navigation, route }) => {
     });
   };
 
+  // Handle long press on message to show context menu
+  const handleLongPressMessage = (message, event) => {
+    console.log('Long press detected on message:', message.id_message_prive);
+    
+    // Only allow editing of own messages
+    const isOwnMessage = message.fk_expediteur === currentUserId;
+    
+    // Dans React Native, les coordonnées sont directement dans l'événement, pas dans nativeEvent
+    const pageX = event.pageX || 0;
+    const pageY = event.pageY || 0;
+    
+    // Update context menu state
+    setContextMenu({
+      visible: true,
+      message: message,
+      position: { x: pageX, y: pageY },
+      isOwnMessage
+    });
+
+    // Store the selected message for reaction
+    setSelectedMessageForReaction(message);
+  };
+
+  // Close the context menu
+  const handleCloseContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      message: null,
+      position: { x: 0, y: 0 },
+      isOwnMessage: false
+    });
+  };
+
+  // Handle message edit
+  const handleEditMessage = () => {
+    if (!contextMenu.message || !contextMenu.isOwnMessage) return;
+    
+    setEditingMessage(contextMenu.message);
+    setEditMessageContent(contextMenu.message.contenu);
+    handleCloseContextMenu();
+  };
+
+  // Save edited message
+  const handleSaveEdit = () => {
+    if (!editingMessage || !socket) return;
+    
+    // Emit socket event to update the message
+    socket.emit('editPrivateMessage', {
+      id: editingMessage.id_message_prive,
+      contenu: editMessageContent
+    });
+    
+    // Update UI optimistically
+    setMessages(prev => prev.map(msg => 
+      msg.id_message_prive === editingMessage.id_message_prive 
+        ? { ...msg, contenu: editMessageContent } 
+        : msg
+    ));
+    
+    // Clear editing state
+    setEditingMessage(null);
+    setEditMessageContent('');
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setEditMessageContent('');
+  };
+
+  // Handle message deletion
+  const handleDeleteMessage = () => {
+    if (!contextMenu.message || !contextMenu.isOwnMessage || !socket) return;
+    
+    Alert.alert(
+      "Delete Message",
+      "Are you sure you want to delete this message?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            // Emit socket event to delete the message
+            socket.emit('deletePrivateMessage', {
+              id: contextMenu.message.id_message_prive
+            });
+            
+            // Update UI optimistically
+            setMessages(prev => prev.map(msg => 
+              msg.id_message_prive === contextMenu.message.id_message_prive 
+                ? { ...msg, is_deleted: true, contenu: "[Message deleted]" } 
+                : msg
+            ));
+            
+            // Close the context menu
+            handleCloseContextMenu();
+          }
+        }
+      ]
+    );
+  };
+
+  // Handle adding a reaction
+  const handleAddReaction = () => {
+    // On garde le message du menu contextuel avant de le fermer
+    setSelectedMessageForReaction(contextMenu.message);
+    setShowEmojiPicker(true);
+    handleCloseContextMenu();
+  };
+
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji) => {
+    console.log('Emoji selected:', emoji);
+    
+    if (!selectedMessageForReaction || !socket) {
+      console.error('No message selected for reaction or socket not available');
+      return;
+    }
+    
+    console.log('Adding reaction to message:', selectedMessageForReaction.id_message_prive);
+    
+    // Emit socket event to add reaction with the correct parameter name
+    socket.emit('addPrivateMessageReaction', {
+      id: selectedMessageForReaction.id_message_prive,
+      reaction: emoji  // ✅ Changed from reaction_type to reaction
+    });
+    
+    // Mise à jour optimiste de l'UI
+    const messageId = selectedMessageForReaction.id_message_prive;
+    const existingReactions = selectedMessageForReaction.reactions || [];
+    const hasReaction = existingReactions.find(r => r.reaction_type === emoji);
+    
+    if (!hasReaction) {
+      const updatedReactions = [...existingReactions, {
+        reaction_type: emoji,
+        count: 1,
+        user_reacted: true
+      }];
+      
+      setMessages(prev => prev.map(m => 
+        m.id_message_prive === messageId
+          ? { ...m, reactions: updatedReactions }
+          : m
+      ));
+    }
+    
+    setShowEmojiPicker(false);
+  };
+
+  // Handle removing a reaction
+  const handleRemoveReaction = (messageId, reactionType) => {
+    if (!socket) return;
+    
+    console.log('Removing reaction:', reactionType, 'from message:', messageId);
+    
+    // Emit socket event to remove reaction with the correct parameter name
+    socket.emit('removePrivateMessageReaction', {
+      id: messageId,
+      reaction: reactionType  // Cohérent avec le nom de paramètre utilisé dans handleEmojiSelect
+    });
+    
+    // Mise à jour optimiste de l'UI
+    setMessages(prev => prev.map(msg => {
+      if (msg.id_message_prive === messageId) {
+        const updatedReactions = msg.reactions?.filter(r => 
+          r.reaction_type !== reactionType || !r.user_reacted
+        ) || [];
+        return { ...msg, reactions: updatedReactions };
+      }
+      return msg;
+    }));
+  };
+
   if (!userId) {
     return (
       <View style={styles.errorContainer}>
@@ -828,13 +1064,19 @@ const MessagesScreen = ({ navigation, route }) => {
                     messages.slice(index + 1).findIndex(m => m.fk_expediteur === currentUserId) === -1;
                   
                   return (
-                    <View 
+                    <TouchableOpacity 
                       key={msg.id_message_prive || `temp-${Date.now()}-${Math.random()}`}
                       style={[
                         styles.messageWrapper,
                         isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper,
                         isAnimating && styles.animatingMessage
                       ]}
+                      onLongPress={(event) => {
+                        console.log('Long press detected on message:', msg.id_message_prive);
+                        handleLongPressMessage(msg, event.nativeEvent);
+                      }}
+                      delayLongPress={500}
+                      activeOpacity={0.9}
                     >
                       <View style={[
                         styles.messageBubble,
@@ -847,26 +1089,23 @@ const MessagesScreen = ({ navigation, route }) => {
                         {/* Attachment handling */}
                         {msg.attachments && msg.attachments.length > 0 && (
                           <View style={styles.attachmentsContainer}>
+                            {/* Vérification si l'attachment existe et a bien une URL */}
                             {msg.attachments.map((attachment, i) => {
-                              // Vérification si l'attachment existe et a bien une URL
                               if (!attachment || (!attachment.url && !attachment.presignedUrl)) {
                                 console.warn(`Invalid attachment at index ${i}:`, attachment);
                                 return null;
                               }
 
-                              // Logging pour déboggage
                               console.log(`Rendering attachment ${i}:`, {
                                 type: attachment.type,
                                 url: attachment.url,
                                 presignedUrl: attachment.presignedUrl,
                               });
 
-                              // Construire l'URL complète de l'image
                               const fileUrl = attachment.url || attachment.presignedUrl;
                               const fullFileUrl = getFileURL(fileUrl);
                               console.log(`Full file URL: ${fullFileUrl}`);
 
-                              // Handle image attachments
                               if (attachment.type?.startsWith('image/')) {
                                 return (
                                   <TouchableOpacity 
@@ -885,9 +1124,7 @@ const MessagesScreen = ({ navigation, route }) => {
                                     </Text>
                                   </TouchableOpacity>
                                 );
-                              } 
-                              // Handle other file types
-                              else {
+                              } else {
                                 return (
                                   <TouchableOpacity 
                                     key={`${msg.id_message_prive}-attachment-${i}`} 
@@ -921,6 +1158,52 @@ const MessagesScreen = ({ navigation, route }) => {
                           </View>
                         )}
 
+                        {/* Reactions */}
+                        {msg.reactions && msg.reactions.length > 0 && (
+                          <View style={styles.reactionsContainer}>
+                            {msg.reactions.map((reaction, index) => (
+                              <TouchableOpacity
+                                key={`${msg.id_message_prive}-reaction-${index}`}
+                                style={[
+                                  styles.reactionBubble,
+                                  reaction.user_reacted && styles.userReactedBubble
+                                ]}
+                                onPress={() => {
+                                  // Si l'utilisateur a déjà réagi, supprimer la réaction
+                                  if (reaction.user_reacted) {
+                                    handleRemoveReaction(msg.id_message_prive, reaction.reaction_type);
+                                  } 
+                                  // Sinon, ajouter la réaction
+                                  else {
+                                    // Utiliser le même émoji pour ajouter la réaction
+                                    socket.emit('addPrivateMessageReaction', {
+                                      id: msg.id_message_prive,
+                                      reaction: reaction.reaction_type
+                                    });
+                                    
+                                    // Mise à jour optimiste de l'UI
+                                    setMessages(prev => prev.map(m => {
+                                      if (m.id_message_prive === msg.id_message_prive) {
+                                        // Trouver et mettre à jour cette réaction spécifique
+                                        const updatedReactions = m.reactions.map(r => 
+                                          r.reaction_type === reaction.reaction_type 
+                                            ? { ...r, count: r.count + 1, user_reacted: true } 
+                                            : r
+                                        );
+                                        return { ...m, reactions: updatedReactions };
+                                      }
+                                      return m;
+                                    }));
+                                  }
+                                }}
+                              >
+                                <Text style={styles.reactionEmoji}>{reaction.reaction_type}</Text>
+                                <Text style={styles.reactionCount}>{reaction.count}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+
                         <View style={styles.messageInfoContainer}>
                           <Text style={isOwn ? styles.ownMessageTime : styles.otherMessageTime}>
                             {formatMessageDate(msg.date_creation || msg.date_envoi)}
@@ -950,7 +1233,7 @@ const MessagesScreen = ({ navigation, route }) => {
                           )}
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               )}
@@ -993,6 +1276,116 @@ const MessagesScreen = ({ navigation, route }) => {
         onClose={handleCloseMediaPreview}
         theme={themeColors}
       />
+
+      {/* Message context menu */}
+      {contextMenu.visible && (
+        <TouchableOpacity 
+          style={styles.contextMenuOverlay}
+          activeOpacity={1}
+          onPress={handleCloseContextMenu}
+        >
+          <View 
+            style={[
+              styles.contextMenu,
+              {
+                top: contextMenu.position.y - (contextMenu.isOwnMessage ? 160 : 110),
+                left: Math.min(contextMenu.position.x - 100, Dimensions.get('window').width - 230)
+              }
+            ]}
+          >
+            {contextMenu.isOwnMessage ? (
+              <>
+                <TouchableOpacity 
+                  style={styles.contextMenuItem}
+                  onPress={handleEditMessage}
+                >
+                  <Ionicons name="pencil" size={20} color={themeColors.textPrimary} />
+                  <Text style={styles.contextMenuItemText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.contextMenuItem}
+                  onPress={handleAddReaction}
+                >
+                  <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
+                  <Text style={styles.contextMenuItemText}>React</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.contextMenuItem, styles.deleteMenuItem]}
+                  onPress={handleDeleteMessage}
+                >
+                  <Ionicons name="trash-outline" size={20} color="red" />
+                  <Text style={[styles.contextMenuItemText, { color: "red" }]}>Delete</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity 
+                style={styles.contextMenuItem}
+                onPress={handleAddReaction}
+              >
+                <Ionicons name="happy-outline" size={20} color={themeColors.textPrimary} />
+                <Text style={styles.contextMenuItemText}>React</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Emoji picker for reactions */}
+      {showEmojiPicker && (
+        <TouchableOpacity 
+          style={styles.emojiPickerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowEmojiPicker(false)}
+        >
+          <View 
+            style={styles.emojiPicker}
+            ref={emojiPickerRef}
+          >
+            <ScrollView horizontal style={styles.emojiScrollView}>
+              {['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🤔'].map(emoji => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.emojiButton}
+                  onPress={() => handleEmojiSelect(emoji)}
+                >
+                  <Text style={styles.emojiText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Message editing interface */}
+      {editingMessage && (
+        <View style={styles.editOverlay}>
+          <View style={styles.editContainer}>
+            <Text style={styles.editTitle}>Edit Message</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editMessageContent}
+              onChangeText={setEditMessageContent}
+              multiline
+              autoFocus
+              keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+            />
+            <View style={styles.editButtonsContainer}>
+              <TouchableOpacity 
+                style={[styles.editButton, styles.cancelButton]}
+                onPress={handleCancelEdit}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.editButton, styles.saveButton]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 };

@@ -969,9 +969,11 @@ const socketManager = (io) => {
     socket.on("addPrivateMessageReaction", async (data) => {
       try {
         console.log("Socket.IO: Réaction à message privé reçue", data);
-        const { id: messageId, reaction: reaction_type } = data;
+        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
+        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const reaction_type_final = reactionFromMobile || reaction_type;
 
-        if (!messageId || !reaction_type) {
+        if (!messageId || !reaction_type_final) {
           console.error("Socket.IO: Données de réaction incomplètes");
           socket.emit("error", { message: "Données de réaction incomplètes" });
           return;
@@ -999,7 +1001,7 @@ const socketManager = (io) => {
         await ReactionPrive.create({
           fk_message_prive: messageId,
           fk_utilisateur: socket.user.id,
-          reaction_type,
+          reaction_type: reaction_type_final,
         });
 
         // Récupérer toutes les réactions mises à jour pour ce message
@@ -1050,9 +1052,11 @@ const socketManager = (io) => {
     socket.on("removePrivateMessageReaction", async (data) => {
       try {
         console.log("Socket.IO: Suppression de réaction de message privé", data);
-        const { id: messageId, reaction: reaction_type } = data;
+        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
+        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const reaction_type_final = reactionFromMobile || reaction_type;
 
-        if (!messageId || !reaction_type) {
+        if (!messageId || !reaction_type_final) {
           console.error(
             "Socket.IO: Données de suppression de réaction incomplètes"
           );
@@ -1068,7 +1072,7 @@ const socketManager = (io) => {
         }
 
         // Supprimer la réaction en base de données
-        await ReactionPrive.delete(messageId, socket.user.id, reaction_type);
+        await ReactionPrive.delete(messageId, socket.user.id, reaction_type_final);
 
         // Récupérer toutes les réactions mises à jour pour ce message
         const updatedReactions = await ReactionPrive.getByMessage(
