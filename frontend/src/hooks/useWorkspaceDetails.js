@@ -255,7 +255,7 @@ export const useWorkspaceDetails = (workspaceId) => {
       }));
 
       setChannels(formattedChannels);
-      console.log("Canaux récupérés:", formattedChannels);
+      // console.log("Canaux récupérés:", formattedChannels);
     } catch (err) {
       console.error("Error fetching channels:", err);
       setCanalsError(err.message);
@@ -286,16 +286,16 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
 
       const data = await response.json();
-      console.log("[HOOK] Members data from API:", data);
+      // console.log("[HOOK] Members data from API:", data);
 
       // CORRECTION: Modification de la logique de filtrage pour inclure les utilisateurs en ligne par défaut
       const onlineMembers = data
         .filter((member) => {
           // Vérifier le statut WebSocket en temps réel
           const wsStatus = userStatuses[member.id_utilisateur];
-          console.log(
-            `[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`
-          );
+          // console.log(
+          //   `[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`
+          // );
 
           // Si un statut WebSocket existe, l'utiliser
           if (wsStatus !== undefined) {
@@ -327,10 +327,8 @@ export const useWorkspaceDetails = (workspaceId) => {
           avatar: member.photo_url || member.photo_de_profil || null,
           status: userStatuses[member.id_utilisateur] || "offline",
           role: member.role.toLowerCase(),
-        }));
-
-      console.log("[HOOK] Online members count:", onlineMembers.length);
-      console.log("[HOOK] Offline members count:", offlineMembers.length);
+        })); // console.log("[HOOK] Online members count:", onlineMembers.length);
+      // console.log("[HOOK] Offline members count:", offlineMembers.length);
 
       setMembers({
         online: onlineMembers,
@@ -463,7 +461,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
 
     newSocket.on("connect", () => {
-      console.log("Socket.IO connecté avec succès");
+      // console.log("Socket.IO connecté avec succès");
       setSocket(newSocket);
     });
 
@@ -473,7 +471,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
     return () => {
       if (newSocket) {
-        console.log("Déconnexion de Socket.IO");
+        // console.log("Déconnexion de Socket.IO");
         newSocket.disconnect();
       }
     };
@@ -534,14 +532,15 @@ export const useWorkspaceDetails = (workspaceId) => {
           return [...prev, message];
         }
         return prev;
-      });
-
-      // Scrolle vers le bas pour voir le nouveau message
-      if (chatContainerRef.current) {
+      }); // Scrolle vers le bas pour voir le nouveau message
+      if (chatContainerRef && chatContainerRef.current) {
         setTimeout(() => {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
-        }, 100);
+          // Vérifier à nouveau que la référence est toujours valide
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop =
+              chatContainerRef.current.scrollHeight;
+          }
+        }, 150); // Légère augmentation du délai
       }
     };
 
@@ -686,22 +685,29 @@ export const useWorkspaceDetails = (workspaceId) => {
       fetchWorkspaceMembers();
     }
   }, [userStatuses, fetchWorkspaceMembers, workspaceId]);
-
   // Scroll to bottom effect
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+    // Ajout d'une vérification supplémentaire pour s'assurer que la référence existe
+    // et attendre que le DOM soit complètement rendu
+    if (chatContainerRef && chatContainerRef.current) {
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop =
+            chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
     }
   }, [messages]);
 
   // Scroll to bottom when channel changes (chargement des messages)
   useEffect(() => {
-    if (chatContainerRef.current && activeChannel && !loadingMessages) {
+    if (activeChannel && !loadingMessages) {
       setTimeout(() => {
-        chatContainerRef.current.scrollTop =
-          chatContainerRef.current.scrollHeight;
-      }, 100);
+        if (chatContainerRef && chatContainerRef.current) {
+          chatContainerRef.current.scrollTop =
+            chatContainerRef.current.scrollHeight;
+        }
+      }, 200); // augmentation du délai pour s'assurer que le DOM est bien rendu
     }
   }, [activeChannel, loadingMessages, messages.length]);
 

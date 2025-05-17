@@ -113,30 +113,58 @@ export const debugMistralInteraction = (message) => {
 
 // Helper pour rendre les liens cliquables dans un texte
 export const renderTextWithLinks = (text, onChannelClick) => {
-  console.log("renderTextWithLinks appelé avec:", {
-    text,
-    hasCallback: !!onChannelClick,
-    matchesFound: text && text.includes("#"),
-  });
+  // Suppression des logs de débogage pour la version de production
+  // console.log("renderTextWithLinks appelé avec:", {
+  //   text,
+  //   hasCallback: !!onChannelClick,
+  //   matchesFound: text && text.includes("#"),
+  // });
 
   if (!text) return "";
 
   // Regex pour les URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-
   // Regex pour les mentions de canaux - cherche les motifs comme #canal-name
   const channelRegex = /#([a-zA-Z0-9_-]+)(\s|$)/g;
+  // Format simple pour les sondages
+  const strawpollSimpleRegex =
+    /Sondage créé\s*:\s*([^\[]*)\[([^\]]+)\]\((https?:\/\/strawpoll\.com\/[^\)]+)\)\s*\[strawpoll:([a-zA-Z0-9]+)\]/g;
 
   // Diviser le texte en segments selon les URLs et les mentions de canaux
   const parts = [];
   let lastIndex = 0;
-  let match;
-
-  // Rechercher toutes les correspondances (URLs et mentions de canaux)
+  let match; // Rechercher toutes les correspondances (URLs, mentions de canaux et sondages)
   const matches = [];
 
-  // Trouver toutes les URLs
-  while ((match = urlRegex.exec(text)) !== null) {
+  // Traiter en priorité les liens de sondage pour éviter les conflits avec les URLs normales
+  // Trouver tous les liens Strawpoll en format simple
+  while ((match = strawpollSimpleRegex.exec(text)) !== null) {
+    const pollTitle = match[2].trim();
+    const pollUrl = match[3] || `https://strawpoll.com/${match[4]}`;
+    const pollId = match[4];
+
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      content: match[0],
+      type: "strawpoll",
+      pollTitle,
+      pollUrl,
+      pollId,
+      fullMatch: match[0],
+    });
+  }
+  // Trouver toutes les URLs (mais pas celles déjà capturées dans des sondages)
+  let tempText = text;
+  for (const match of matches) {
+    // Remplacer temporairement les correspondances trouvées pour ne pas les retraiter
+    tempText = tempText.replace(
+      match.fullMatch,
+      " ".repeat(match.fullMatch.length)
+    );
+  }
+
+  while ((match = urlRegex.exec(tempText)) !== null) {
     matches.push({
       start: match.index,
       end: match.index + match[0].length,
@@ -145,8 +173,8 @@ export const renderTextWithLinks = (text, onChannelClick) => {
     });
   }
 
-  // Trouver toutes les mentions de canaux
-  while ((match = channelRegex.exec(text)) !== null) {
+  // Trouver toutes les mentions de canaux (également dans le texte temporaire)
+  while ((match = channelRegex.exec(tempText)) !== null) {
     matches.push({
       start: match.index,
       end: match.index + match[0].length - (match[2] === " " ? 1 : 0), // Ne pas inclure l'espace dans la correspondance
@@ -158,12 +186,17 @@ export const renderTextWithLinks = (text, onChannelClick) => {
 
   // Trier les correspondances par position de début
   matches.sort((a, b) => a.start - b.start);
-
   // Créer les segments finaux
   let currentIndex = 0;
   let key = 0;
+  let skipToIndex = -1; // Variable pour indiquer jusqu'où ignorer le texte
 
   for (const match of matches) {
+    // Si on doit ignorer cette région, passer à la suivante
+    if (match.start < skipToIndex) {
+      continue;
+    }
+
     // Ajouter le texte avant la correspondance
     if (match.start > currentIndex) {
       parts.push(text.substring(currentIndex, match.start));
@@ -182,10 +215,10 @@ export const renderTextWithLinks = (text, onChannelClick) => {
         </a>
       );
     } else if (match.type === "channel") {
-      console.log("Rendu d'une mention de canal:", {
-        channelName: match.channelName,
-        hasCallback: !!onChannelClick,
-      });
+      // console.log("Rendu d'une mention de canal:", {
+      //   channelName: match.channelName,
+      //   hasCallback: !!onChannelClick,
+      // });
 
       parts.push(
         <span
@@ -197,6 +230,30 @@ export const renderTextWithLinks = (text, onChannelClick) => {
           {match.content}
         </span>
       );
+    } else if (match.type === "strawpoll") {
+      // Pour un sondage, on affiche uniquement "Sondage créé : " suivi du titre cliquable
+      parts.push("Sondage créé : ");
+      parts.push(
+        <a
+          key={`strawpoll-${key++}`}
+          href={match.pollUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="strawpoll-link"
+        >
+          {match.pollTitle}
+        </a>
+      );
+
+      // Ajouter un marqueur caché pour que le code de détection de strawpoll fonctionne
+      parts.push(
+        <span key={`strawpoll-marker-${key++}`} style={{ display: "none" }}>
+          [strawpoll:{match.pollId}]
+        </span>
+      );
+
+      // Pour un sondage, on doit ignorer tout le texte original, y compris le lien et l'identifiant
+      skipToIndex = match.end;
     }
 
     currentIndex = match.end;
