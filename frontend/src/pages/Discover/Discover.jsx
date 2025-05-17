@@ -137,10 +137,10 @@ function Discover() {
         <div className="discover-header">
           <h1 className="discover-title">Découvrir</h1>
           <div className="search-bar">
-            <FaSearch className="search-icon" />
+            <FaSearch className="search-icon" />{" "}
             <input
               type="text"
-              placeholder="Search workspaces..."
+              placeholder="Rechercher des espaces de travail..."
               value={searchQuery}
               onChange={handleSearchChange}
             />
@@ -149,7 +149,7 @@ function Discover() {
 
         {/* Workspaces grid */}
         <div className="workspaces-section">
-          <h2 className="section-title">All Workspaces</h2>
+          <h2 className="section-title">Tous les espaces de travail</h2>
 
           {isLoading ? (
             <div className="loading-state">
@@ -171,7 +171,7 @@ function Discover() {
                 ))
               ) : (
                 <div className="no-results">
-                  No workspaces found matching your search.
+                  Aucun espace de travail correspondant à votre recherche.
                 </div>
               )}
             </div>
