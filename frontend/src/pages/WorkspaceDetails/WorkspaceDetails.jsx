@@ -17,6 +17,7 @@ import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
+import "./poll-styles.css"; // Import des styles pour les sondages
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
@@ -382,12 +383,15 @@ function WorkspaceDetails() {
         };
 
         console.log(`⏳ Ajout du message temporaire au chat`);
-        setMessages((prevMessages) => [...prevMessages, loadingMessage]);
-
-        // Forcer une mise à jour du DOM
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
+        setMessages((prevMessages) => [...prevMessages, loadingMessage]); // Forcer une mise à jour du DOM
+        if (chatContainerRef && chatContainerRef.current) {
+          setTimeout(() => {
+            // Vérifier à nouveau que la référence est toujours valide
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop =
+                chatContainerRef.current.scrollHeight;
+            }
+          }, 50);
         }
 
         console.log(
