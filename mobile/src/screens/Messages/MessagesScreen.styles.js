@@ -278,13 +278,11 @@ export const getStyles = (theme) => StyleSheet.create({
 
   // Input area
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     padding: 10,
     backgroundColor: theme.cardBackground,
     borderTopWidth: 1,
     borderTopColor: theme.borderColor,
-    alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 10 : 5, // Reduced padding
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -294,6 +292,11 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowRadius: 2,
     elevation: 5,
     zIndex: 10,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
   messageInput: {
     flex: 1,
@@ -317,6 +320,40 @@ export const getStyles = (theme) => StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: theme.disabledButton,
     opacity: 0.5,
+  },
+  
+  // Reply container in input area
+  replyContainer: {
+    backgroundColor: `${theme.accentPrimary}15`,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.accentPrimary,
+    padding: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    borderRadius: 8,
+    width: '100%',
+    justifyContent: 'space-between', // Aligner les éléments entre eux
+  },
+  replyContent: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  replyText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  replyMessage: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    opacity: 0.8,
+  },
+  replyCloseButton: {
+    width: 28, // Augmenté pour avoir une meilleure zone de touche
+    height: 28, // Augmenté pour avoir une meilleure zone de touche
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start', // Aligner en haut
   },
 
   // Add these new styles for pagination
@@ -855,6 +892,45 @@ export const getStyles = (theme) => StyleSheet.create({
   saveButtonText: {
     color: theme.textOnAccent,
     fontWeight: '600',
+  },
+
+  // Reply action styles for swipe gesture
+  replyAction: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: 100,
+    marginVertical: 5,
+    paddingRight: 15,
+    flexDirection: 'row',
+  },
+  replyActionIcon: {
+    color: theme.textPrimary,
+    marginRight: 5,
+  },
+  replyActionText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  
+  // Message reply styles
+  messageReplyContainer: {
+    borderLeftWidth: 2,
+    borderLeftColor: theme.accentPrimary,
+    paddingLeft: 8,
+    marginBottom: 6,
+    opacity: 0.8,
+  },
+  messageReplyText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#000000', // Noir pour tous les messages "Réponse à"
+    marginBottom: 2,
+  },
+  messageReplyContent: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: theme.textSecondary,
   },
 });
 

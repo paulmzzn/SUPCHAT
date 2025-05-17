@@ -6,17 +6,25 @@ import path from "path";
 export const sendPrivateMessage = async (req, res) => {
   try {
     const expediteurId = req.user.id;
-    const { destinataireId, contenu, attachments } = req.body;
+    const { destinataireId, contenu, attachments, replyTo } = req.body;
     if (!destinataireId) {
       return res.status(400).json({ message: "destinataireId requis" });
     }
 
-    // Créer le message
-    const message = await MessagePrive.create({
+    // Créer le message avec l'information de réponse si présente
+    const messageData = {
       contenu: contenu || "", // Permettre des messages vides si des pièces jointes sont présentes
       fk_expediteur: expediteurId,
       fk_destinataire: destinataireId,
-    });
+    };
+    
+    // Ajouter l'ID du message auquel on répond, si présent
+    if (replyTo) {
+      messageData.replyTo = replyTo;
+    }
+
+    // Créer le message
+    const message = await MessagePrive.create(messageData);
 
     // Associer les pièces jointes si elles sont fournies
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
