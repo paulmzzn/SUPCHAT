@@ -457,12 +457,13 @@ function Workspaces() {
         <div className="glow-circle-left bottom-left"></div>
 
         <div className="workspaces-header">
-          <h1 className="workspaces-title">Mes Workspaces</h1>
+          {" "}
+          <h1 className="workspaces-title">Mes espaces de travail</h1>
           <div className="search-bar">
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Search workspaces..."
+              placeholder="Rechercher des espaces de travail..."
               value={searchQuery}
               onChange={handleSearchChange}
             />
@@ -481,9 +482,10 @@ function Workspaces() {
         ) : (
           <>
             <div className="favorites-section">
+              {" "}
               <div className="section-title">
                 <FaHeart className="section-icon heart-icon" />
-                <h2>Favorites</h2>
+                <h2>Favoris</h2>
               </div>
               <div className="favorites-container">
                 {favoriteWorkspaces.length > 0 ? (
@@ -506,9 +508,9 @@ function Workspaces() {
                   </div>
                 )}
               </div>
-            </div>
+            </div>{" "}
             <div className="workspaces-section">
-              <h2 className="section-title">All Workspaces</h2>
+              <h2 className="section-title">Tous les espaces de travail</h2>
               <div className="workspaces-grid">
                 {" "}
                 <div
@@ -518,8 +520,8 @@ function Workspaces() {
                   {" "}
                   <div className="add-workspace-content">
                     <FaPlusCircle className="plus-icon" aria-hidden="true" />
-                    <p>Create Workspace</p>
-                    <span>Start collaborating with your team</span>
+                    <p>Créer un espace de travail</p>
+                    <span>Commencez à collaborer avec votre équipe</span>
                   </div>
                 </div>{" "}
                 {filteredWorkspaces.map((workspace) => (
@@ -613,8 +615,11 @@ function Workspaces() {
                       </div>
 
                       <div className="workspace-name-emoji">
+                        {" "}
                         <div className="form-group name-input">
-                          <label htmlFor="name">Workspace Name</label>
+                          <label htmlFor="name">
+                            Nom de l'espace de travail
+                          </label>
                           <input
                             type="text"
                             id="name"
@@ -622,34 +627,34 @@ function Workspaces() {
                             value={workspaceForm.name}
                             onChange={handleInputChange}
                             required
-                            placeholder="My Awesome Workspace"
+                            placeholder="Mon super espace de travail"
                           />
                         </div>
                       </div>
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="description">Description</label>
+                      <label htmlFor="description">Description</label>{" "}
                       <textarea
                         id="description"
                         name="description"
                         value={workspaceForm.description}
                         onChange={handleInputChange}
-                        placeholder="What's this workspace about?"
+                        placeholder="À propos de cet espace de travail"
                       ></textarea>
                     </div>
 
                     <div className="privacy-toggle">
+                      {" "}
                       <label htmlFor="isPrivate" className="toggle-label">
-                        <span className="privacy-label">Privacy</span>
+                        <span className="privacy-label">Confidentialité</span>
                         <span className="privacy-description">
                           {" "}
                           {workspaceForm.isPrivate
-                            ? "Private - Only invited members can join"
-                            : "Public - Anyone with the link can join"}
+                            ? "Privé - Seuls les membres invités peuvent rejoindre"
+                            : "Public - Tout le monde avec le lien peut rejoindre"}
                         </span>
                       </label>
-
                       <label className="switch">
                         <input
                           type="checkbox"
@@ -663,17 +668,18 @@ function Workspaces() {
                     </div>
 
                     <div className="modal-actions">
+                      {" "}
                       <button
                         type="button"
                         onClick={handleCloseModal}
                         className="cancel-btn"
                       >
-                        Cancel
+                        Annuler
                       </button>{" "}
                       <button type="submit" className="create-btn">
                         {isEditMode
                           ? "Enregistrer les modifications"
-                          : "Créer le Workspace"}
+                          : "Créer l'espace de travail"}
                       </button>
                     </div>
                   </form>
