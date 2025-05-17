@@ -1421,7 +1421,6 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
     }
   };
-
   const handleNewMessageChange = (value) => {
     setNewMessage(value);
     setDisplayMessage(value);
@@ -1470,21 +1469,29 @@ export const useWorkspaceDetails = (workspaceId) => {
     ) {
       const query = value.slice(lastHashIndex + 1);
       setChannelQuery(query);
-      setShowChannelSuggestions(true);
 
-      // Filtrer les canaux selon la requête
-      const filteredChannels = channels.filter((canal) =>
-        canal.name.toLowerCase().includes(query.toLowerCase())
-      );
+      // Limiter l'affichage des suggestions uniquement lorsque # vient d'être tapé ou s'il y a un texte après
+      if (query === "" || query.length > 0) {
+        setShowChannelSuggestions(true);
 
-      console.log("Filtrage des canaux pour #" + query, {
-        query,
-        canaux: channels.length,
-        filteredChannels: filteredChannels,
-      });
+        // Filtrer les canaux selon la requête
+        const filteredChannels = channels.filter((canal) =>
+          canal.name.toLowerCase().includes(query.toLowerCase())
+        );
 
-      setChannelSuggestions(filteredChannels);
-      setActiveChannelSuggestionIndex(0);
+        // Limiter le nombre de suggestions si nécessaire
+        const maxSuggestions = 5;
+        const limitedChannels = filteredChannels.slice(0, maxSuggestions);
+
+        console.log("Filtrage des canaux pour #" + query, {
+          query,
+          canaux: channels.length,
+          filteredChannels: limitedChannels,
+        });
+
+        setChannelSuggestions(limitedChannels);
+        setActiveChannelSuggestionIndex(0);
+      }
     } else {
       setShowChannelSuggestions(false);
       setChannelQuery("");

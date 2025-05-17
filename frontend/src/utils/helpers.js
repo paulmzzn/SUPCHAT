@@ -112,68 +112,107 @@ export const debugMistralInteraction = (message) => {
 };
 
 // Helper pour rendre les liens cliquables dans un texte
-export const renderTextWithLinks = (text) => {
+export const renderTextWithLinks = (text, onChannelClick) => {
+  console.log("renderTextWithLinks appelé avec:", {
+    text,
+    hasCallback: !!onChannelClick,
+    matchesFound: text && text.includes("#"),
+  });
+
   if (!text) return "";
 
   // Regex pour les URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;
 
   // Regex pour les mentions de canaux - cherche les motifs comme #canal-name
-  const channelMentionRegex = /#([a-zA-Z0-9_-]+)/g;
+  const channelRegex = /#([a-zA-Z0-9_-]+)(\s|$)/g;
 
-  // Étape 1: Traitement des URLs
-  let parts = text.split(urlRegex);
-  const urlMatches = text.match(urlRegex) || [];
+  // Diviser le texte en segments selon les URLs et les mentions de canaux
+  const parts = [];
+  let lastIndex = 0;
+  let match;
 
-  let result = parts.map((part, i) => {
-    if (urlMatches.includes(part)) {
-      return (
+  // Rechercher toutes les correspondances (URLs et mentions de canaux)
+  const matches = [];
+
+  // Trouver toutes les URLs
+  while ((match = urlRegex.exec(text)) !== null) {
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      content: match[0],
+      type: "url",
+    });
+  }
+
+  // Trouver toutes les mentions de canaux
+  while ((match = channelRegex.exec(text)) !== null) {
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length - (match[2] === " " ? 1 : 0), // Ne pas inclure l'espace dans la correspondance
+      content: "#" + match[1], // Juste #nom sans l'espace
+      type: "channel",
+      channelName: match[1], // Nom du canal sans le #
+    });
+  }
+
+  // Trier les correspondances par position de début
+  matches.sort((a, b) => a.start - b.start);
+
+  // Créer les segments finaux
+  let currentIndex = 0;
+  let key = 0;
+
+  for (const match of matches) {
+    // Ajouter le texte avant la correspondance
+    if (match.start > currentIndex) {
+      parts.push(text.substring(currentIndex, match.start));
+    }
+
+    // Ajouter la correspondance formatée
+    if (match.type === "url") {
+      parts.push(
         <a
-          key={`url-${i}`}
-          href={part}
+          key={`link-${key++}`}
+          href={match.content}
           target="_blank"
           rel="noopener noreferrer"
-          className="message-link"
         >
-          {part}
+          {match.content}
         </a>
       );
+    } else if (match.type === "channel") {
+      console.log("Rendu d'une mention de canal:", {
+        channelName: match.channelName,
+        hasCallback: !!onChannelClick,
+      });
+
+      parts.push(
+        <span
+          key={`channel-${key++}`}
+          className="channel-mention clickable"
+          onClick={() => onChannelClick && onChannelClick(match.channelName)}
+          title={`Cliquer pour aller au canal #${match.channelName}`}
+        >
+          {match.content}
+        </span>
+      );
     }
-    return part;
-  });
 
-  // Étape 2: Traitement des mentions de canaux dans chaque partie qui n'est pas un URL
-  result = result.map((part, index) => {
-    // Ne traiter que les parties textuelles, pas les éléments React
-    if (typeof part !== "string") {
-      return part;
-    }
+    currentIndex = match.end;
+  }
 
-    const channelParts = part.split(channelMentionRegex);
-    const channelMatches = part.match(channelMentionRegex) || [];
+  // Ajouter le reste du texte après la dernière correspondance
+  if (currentIndex < text.length) {
+    parts.push(text.substring(currentIndex));
+  }
 
-    // Si aucune mention de canal, retourner le texte tel quel
-    if (channelMatches.length === 0) {
-      return part;
-    }
+  // Si aucune correspondance n'a été trouvée, retourner simplement le texte
+  if (parts.length === 0) {
+    return text;
+  }
 
-    // Combiner avec les mentions de canaux mises en évidence
-    return channelParts.map((channelPart, i) => {
-      const channelMatch = channelMatches[i - 1];
-      if (i > 0 && channelMatch) {
-        return (
-          <React.Fragment key={`channel-${index}-${i}`}>
-            <span className="channel-mention">{channelMatch}</span>
-            {channelPart}
-          </React.Fragment>
-        );
-      }
-      return channelPart;
-    });
-  });
-
-  // Aplatir le tableau de résultats pour éviter les tableaux imbriqués
-  return result.flat();
+  return <>{parts}</>;
 };
 
 /**
