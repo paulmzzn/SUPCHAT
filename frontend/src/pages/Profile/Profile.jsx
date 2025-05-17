@@ -50,7 +50,7 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.60:3001") +
+      (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
 
       `/api/users/${userId}`;
 
@@ -111,7 +111,7 @@ function Profile() {
     try {
       const apiUrl =
 
-        (process.env.REACT_APP_API_URL || "http://192.168.1.60:3001") +
+        (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
 
         `/api/users/${userId}/workspaces`;
 
