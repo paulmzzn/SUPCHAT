@@ -246,7 +246,6 @@ const Settings = () => {
     alert(`${settingType} settings saved!`);
     resetChangesState();
   };
-
   // Fonction pour gérer l'action du bouton flottant en fonction de l'onglet actif
   const handleFloatingButtonAction = () => {
     switch (activeTab) {
@@ -787,6 +786,14 @@ const Settings = () => {
                         <option value="friends">Seulement mes amis</option>
                         <option value="none">Personne</option>
                       </select>
+                    </div>
+                  </div>                  {/* Bouton d'accès aux CGU */}                  <div className="settings-item">
+                    <div className="setting-info">
+                      <h3>Conditions Générales d'Utilisation</h3>
+                      <p>Consultez les CGU de SUPCHAT pour connaître vos droits et obligations.</p>
+                    </div>
+                    <div className="setting-control">
+                      <a href="/cgu" target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'inline-block', textDecoration: 'none' }}>Voir les CGU</a>
                     </div>
                   </div>
 
