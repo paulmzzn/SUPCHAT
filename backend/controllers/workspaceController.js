@@ -219,7 +219,30 @@ export const sendWorkspaceInvitation = async (req, res) => {
       return res.status(404).json({ message: "Workspace non trouvé" });
     }
 
-    // Envoyer l'invitation
+    // Générer un token unique pour l'invitation
+    const token = Math.random().toString(36).substring(2, 15) + 
+                 Math.random().toString(36).substring(2, 15);
+    
+    // Calcul de la date d'expiration (24h à partir de maintenant)
+    const expirationDate = new Date();
+    expirationDate.setHours(expirationDate.getHours() + 24);
+    
+    // Enregistrer l'invitation dans la base de données
+    await pool.query(
+      `INSERT INTO workspace_invitations 
+       (fk_workspace, email_invite, token_invitation, date_expiration) 
+       VALUES ($1, $2, $3, $4)`,
+      [workspaceId, email, token, expirationDate]
+    );
+    
+    console.log("[DEBUG] Invitation enregistrée dans la base de données:", {
+      workspace: workspaceId,
+      email,
+      token,
+      expirationDate
+    });
+
+    // Envoyer l'invitation par email
     await sendInvitation(email, workspaceId, workspace.nom, sender.nom);
 
     res.status(200).json({
@@ -308,8 +331,8 @@ export const getWorkspaceMembers = async (req, res) => {
 export const joinWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const userId = req.user.id; // Récupérer l'ID utilisateur du token JWT
-    const { role = 3 } = req.body; // role par défaut = 3 (member)
+    const userId = req.user.id;
+    const { role = 3, invitedEmail } = req.body; // Récupérer l'email invité du corps de la requête
 
     // Vérifier si l'utilisateur n'est pas déjà membre
     const checkMember = await pool.query(
@@ -335,11 +358,81 @@ export const joinWorkspace = async (req, res) => {
 
     // Si le workspace est privé, vérifier si l'utilisateur a une invitation
     if (workspaceExists.rows[0].is_private) {
-      // Implémenter la vérification des invitations si nécessaire
-      // Pour l'instant, refuser l'accès aux workspaces privés sans invitation
-      return res.status(403).json({
-        message: "Ce workspace est privé. Une invitation est requise.",
-      });
+      // Récupérer l'email de l'utilisateur
+      const userResult = await pool.query(
+        "SELECT email FROM utilisateur WHERE id_utilisateur = $1",
+        [userId]
+      );
+      
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      const userEmail = userResult.rows[0].email;
+      
+      // Vérifier d'abord avec l'email fourni dans la requête (si disponible)
+      let invitationEmail = invitedEmail || userEmail;
+      
+      console.log("[DEBUG] Vérification d'invitation pour workspaceId:", workspaceId);
+      console.log("[DEBUG] Email d'invitation:", invitedEmail);
+      console.log("[DEBUG] Email utilisateur:", userEmail);
+      console.log("[DEBUG] Email utilisé pour la vérification:", invitationEmail);
+      
+      // Vérifier si l'utilisateur a une invitation valide (insensible à la casse) ou une demande acceptée
+      const invitationCheck = await pool.query(
+        `SELECT * FROM workspace_invitations 
+         WHERE fk_workspace = $1 
+         AND LOWER(email_invite) = LOWER($2) 
+         AND date_expiration > NOW()`,
+        [workspaceId, invitationEmail]
+      );
+
+      console.log("[DEBUG] Invitations trouvées:", invitationCheck.rows.length);
+
+      // Si la première tentative échoue, essayer une recherche plus large avec l'email utilisateur
+      let invitationFound = invitationCheck.rows.length > 0;
+      let invitationRow = invitationFound ? invitationCheck.rows[0] : null;
+      
+      // Si aucune invitation n'est trouvée avec l'email fourni, mais qu'un email utilisateur existe,
+      // essayer avec l'email utilisateur si différent de celui fourni
+      if (!invitationFound && userEmail && invitedEmail && userEmail.toLowerCase() !== invitedEmail.toLowerCase()) {
+        console.log("[DEBUG] Tentative supplémentaire avec l'email utilisateur:", userEmail);
+        const fallbackCheck = await pool.query(
+          `SELECT * FROM workspace_invitations 
+           WHERE fk_workspace = $1 
+           AND LOWER(email_invite) = LOWER($2) 
+           AND date_expiration > NOW()`,
+          [workspaceId, userEmail]
+        );
+        
+        invitationFound = fallbackCheck.rows.length > 0;
+        invitationRow = invitationFound ? fallbackCheck.rows[0] : null;
+        console.log("[DEBUG] Invitations trouvées avec email utilisateur:", fallbackCheck.rows.length);
+      }
+
+      const requestCheck = await pool.query(
+        `SELECT * FROM workspace_requests 
+         WHERE fk_workspace = $1 AND fk_utilisateur = $2 
+         AND is_accepted = true`,
+        [workspaceId, userId]
+      );
+
+      console.log("[DEBUG] Demandes acceptées trouvées:", requestCheck.rows.length);
+
+      if (!invitationFound && requestCheck.rows.length === 0) {
+        return res.status(403).json({
+          message: "Ce workspace est privé. Une invitation est requise.",
+        });
+      }
+      
+      // Si l'invitation existe, la supprimer après utilisation
+      if (invitationFound && invitationRow) {
+        console.log("[DEBUG] Suppression de l'invitation utilisée avec email:", invitationRow.email_invite);
+        await pool.query(
+          "DELETE FROM workspace_invitations WHERE id_invitation = $1",
+          [invitationRow.id_invitation]
+        );
+      }
     }
 
     // Ajouter l'utilisateur comme membre avec le rôle spécifié
@@ -514,5 +607,224 @@ export const changeMemberRole = async (req, res) => {
   } catch (error) {
     console.error("Erreur lors du changement de rôle:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const requestJoinWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    // Vérifier si l'utilisateur n'est pas déjà membre
+    const checkMember = await pool.query(
+      "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, userId]
+    );
+
+    if (checkMember.rows.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Vous êtes déjà membre de ce workspace" });
+    }
+
+    // Vérifier si le workspace existe et est privé
+    const workspaceCheck = await pool.query(
+      "SELECT * FROM workspace WHERE id_workspace = $1",
+      [workspaceId]
+    );
+
+    if (workspaceCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Workspace non trouvé" });
+    }
+
+    if (!workspaceCheck.rows[0].is_private) {
+      return res.status(400).json({ 
+        message: "Ce workspace est public. Vous pouvez le rejoindre directement." 
+      });
+    }
+
+    // Vérifier si une demande existe déjà
+    const existingRequest = await pool.query(
+      "SELECT * FROM workspace_requests WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, userId]
+    );
+
+    if (existingRequest.rows.length > 0) {
+      return res.status(400).json({ 
+        message: "Vous avez déjà envoyé une demande pour rejoindre ce workspace" 
+      });
+    }
+
+    // Créer une nouvelle demande
+    await pool.query(
+      "INSERT INTO workspace_requests (fk_utilisateur, fk_workspace, is_invitation) VALUES ($1, $2, false)",
+      [userId, workspaceId]
+    );
+
+    // Notifier les propriétaires/admins du workspace via websocket si possible
+    if (req.app && req.app.get("io")) {
+      // Récupérer les admins et owners du workspace
+      const adminsResult = await pool.query(
+        `SELECT fk_utilisateur FROM membre_workspace 
+         WHERE fk_workspace = $1 AND fk_role IN (1, 2)`,
+        [workspaceId]
+      );
+      
+      const admins = adminsResult.rows.map(row => row.fk_utilisateur);
+      
+      // Émettre une notification aux admins connectés
+      const io = req.app.get("io");
+      admins.forEach(adminId => {
+        io.to(`user:${adminId}`).emit("workspaceJoinRequest", {
+          workspaceId,
+          userId,
+          message: "Nouvelle demande d'adhésion"
+        });
+      });
+    }
+
+    res.status(200).json({
+      message: "Votre demande a été envoyée. Vous serez notifié lorsqu'elle sera traitée."
+    });
+  } catch (error) {
+    console.error("Erreur requestJoinWorkspace:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const respondToJoinRequest = async (req, res) => {
+  try {
+    const { workspaceId, requestId } = req.params;
+    const { accept } = req.body;
+    const adminId = req.user.id;
+
+    // Vérifier si l'admin a les droits (owner ou admin)
+    const roleCheck = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, adminId]
+    );
+
+    if (roleCheck.rows.length === 0 || (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ 
+        message: "Vous n'avez pas les droits pour gérer les demandes d'adhésion" 
+      });
+    }
+
+    // Récupérer les informations de la demande
+    const requestInfo = await pool.query(
+      "SELECT * FROM workspace_requests WHERE id_request = $1 AND fk_workspace = $2",
+      [requestId, workspaceId]
+    );
+
+    if (requestInfo.rows.length === 0) {
+      return res.status(404).json({ message: "Demande non trouvée" });
+    }
+
+    const userId = requestInfo.rows[0].fk_utilisateur;
+
+    if (accept) {
+      // Mettre à jour le statut de la demande
+      await pool.query(
+        "UPDATE workspace_requests SET is_accepted = true, date_reponse = NOW() WHERE id_request = $1",
+        [requestId]
+      );
+
+      // Vérifier si l'utilisateur n'est pas déjà membre (au cas où)
+      const memberCheck = await pool.query(
+        "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+        [workspaceId, userId]
+      );
+
+      if (memberCheck.rows.length === 0) {
+        // Ajouter l'utilisateur comme membre
+        await pool.query(
+          "INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, 3)",
+          [userId, workspaceId]
+        );
+      }
+
+      // Notifier l'utilisateur si possible via websocket
+      if (req.app && req.app.get("io")) {
+        req.app.get("io").to(`user:${userId}`).emit("workspaceJoinRequestAccepted", {
+          workspaceId,
+          message: "Votre demande d'adhésion a été acceptée"
+        });
+      }
+
+      res.status(200).json({ message: "Demande acceptée. L'utilisateur a été ajouté au workspace." });
+    } else {
+      // Rejeter la demande
+      await pool.query(
+        "UPDATE workspace_requests SET is_accepted = false, date_reponse = NOW() WHERE id_request = $1",
+        [requestId]
+      );
+
+      // Notifier l'utilisateur si possible via websocket
+      if (req.app && req.app.get("io")) {
+        req.app.get("io").to(`user:${userId}`).emit("workspaceJoinRequestRejected", {
+          workspaceId,
+          message: "Votre demande d'adhésion a été rejetée"
+        });
+      }
+
+      res.status(200).json({ message: "Demande rejetée." });
+    }
+  } catch (error) {
+    console.error("Erreur respondToJoinRequest:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getWorkspaceJoinRequests = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const adminId = req.user.id;
+
+    // Vérifier si l'admin a les droits (owner ou admin)
+    const roleCheck = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, adminId]
+    );
+
+    if (roleCheck.rows.length === 0 || (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ 
+        message: "Vous n'avez pas les droits pour voir les demandes d'adhésion" 
+      });
+    }
+
+    // Récupérer toutes les demandes non traitées
+    const requests = await pool.query(
+      `SELECT wr.id_request, wr.fk_utilisateur, wr.date_creation, 
+              u.nom as nom_utilisateur, u.email, u.photo_de_profil
+       FROM workspace_requests wr
+       JOIN utilisateur u ON wr.fk_utilisateur = u.id_utilisateur
+       WHERE wr.fk_workspace = $1 
+       AND wr.is_invitation = false
+       AND (wr.is_accepted IS NULL OR wr.date_reponse IS NULL)
+       ORDER BY wr.date_creation DESC`,
+      [workspaceId]
+    );
+
+    // Formater les données
+    const formattedRequests = requests.rows.map(request => {
+      // Formatage de la photo de profil si nécessaire
+      if (request.photo_de_profil && !request.photo_de_profil.startsWith('http')) {
+        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
+        const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
+        request.photo_url = `${s3Endpoint}${bucketName}/${request.photo_de_profil}`.replace(
+          /([^:])\/\/+/g,
+          "$1/"
+        );
+      } else {
+        request.photo_url = request.photo_de_profil;
+      }
+      
+      return request;
+    });
+
+    res.status(200).json(formattedRequests);
+  } catch (error) {
+    console.error("Erreur getWorkspaceJoinRequests:", error);
+    res.status(500).json({ error: error.message });
   }
 };
