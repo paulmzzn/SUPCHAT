@@ -23,9 +23,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
+import { useNotificationSettings } from "../../context/NotificationSettingsContext";
+import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.127:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -115,6 +117,7 @@ function DirectMessages() {
   const location = useLocation();
   const navigate = useNavigate();
   const { refreshUnreadDM } = useSocket();
+  const { notificationSettings } = useNotificationSettings();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState(null);
@@ -367,7 +370,6 @@ function DirectMessages() {
         }
       }
     };
-
     window.addEventListener("storage", storageEventHandler);
 
     // Update the handlePrivateMessage function to safely handle message storage
@@ -387,6 +389,10 @@ function DirectMessages() {
         msg.fk_expediteur !== currentUserId &&
         (!selectedUser || msg.fk_expediteur !== selectedUser)
       ) {
+        // Jouer le son de notification
+        console.log("[DM] Message privé reçu, tentative de lecture du son");
+        playNotificationSound(notificationSettings);
+
         // Update the unread count for this sender
         setUnreadMessageCounts((prev) => {
           const senderId = msg.fk_expediteur;
@@ -510,14 +516,18 @@ function DirectMessages() {
         );
       }
     };
-
     const handlePrivateMessageDeleted = (data) => {
       console.log("Message deleted:", data);
       if (selectedUser) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id_message_prive === data.id
-              ? { ...m, is_deleted: true, contenu: "[message supprimé]" }
+              ? {
+                  ...m,
+                  is_deleted: true,
+                  contenu: "[message supprimé]",
+                  attachments: [], // Vider explicitement les pièces jointes
+                }
               : m
           )
         );
@@ -1700,9 +1710,7 @@ function DirectMessages() {
                                 )}
                               </span>
                             </div>
-
                             <div className="dm-msg-bubble">{msg.contenu}</div>
-
                             {/* Afficher les réactions aux messages privés */}
                             {msg.reactions && msg.reactions.length > 0 && (
                               <div className="dm-msg-reactions">
@@ -1732,108 +1740,113 @@ function DirectMessages() {
                                   </div>
                                 ))}
                               </div>
-                            )}
-
+                            )}{" "}
                             {/* Afficher les pièces jointes du message */}
-                            {msg.attachments &&
+                            {msg &&
+                              msg.is_deleted === false &&
+                              msg.attachments &&
                               Array.isArray(msg.attachments) &&
                               msg.attachments.length > 0 && (
                                 <div className="dm-msg-attachments">
-                                  {msg.attachments.map((attachment) => {
-                                    // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
-                                    const fileUrl = getCompleteFileUrl(
-                                      attachment.presignedUrl || attachment.url
-                                    );
+                                  {msg.attachments
+                                    .filter(
+                                      (attachment) =>
+                                        attachment &&
+                                        (attachment.url ||
+                                          attachment.presignedUrl)
+                                    )
+                                    .map((attachment) => {
+                                      // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
+                                      const fileUrl = getCompleteFileUrl(
+                                        attachment.presignedUrl ||
+                                          attachment.url
+                                      );
 
-                                    console.log(
-                                      "[DM] Affichage fichier avec URL:",
-                                      fileUrl
-                                    );
-
-                                    if (
-                                      attachment.type &&
-                                      attachment.type.startsWith("image/")
-                                    ) {
-                                      // Affichage des images
-                                      return (
-                                        <div
-                                          key={
-                                            attachment.id_fichier ||
-                                            `temp-${Date.now()}`
-                                          }
-                                          className="dm-msg-image-attachment"
-                                        >
-                                          <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                      if (
+                                        attachment.type &&
+                                        attachment.type.startsWith("image/")
+                                      ) {
+                                        // Affichage des images
+                                        return (
+                                          <div
+                                            key={
+                                              attachment.id_fichier ||
+                                              `temp-${Date.now()}`
+                                            }
+                                            className="dm-msg-image-attachment"
                                           >
-                                            <img
-                                              src={fileUrl}
-                                              alt={attachment.nom_fichier}
-                                              className="dm-msg-image"
-                                              onError={(e) => {
-                                                console.error(
-                                                  `[DM] Failed to load image: ${fileUrl}`
-                                                );
-                                                e.target.src =
-                                                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
-                                                e.target.style.padding = "20px";
-                                                e.target.style.width = "80px";
-                                                e.target.style.height = "80px";
-                                                e.target.style.background =
-                                                  "rgba(0,0,0,0.1)";
-                                              }}
-                                            />
-                                          </a>
-                                          <div className="dm-msg-image-filename">
-                                            {attachment.nom_fichier}
-                                          </div>
-                                        </div>
-                                      );
-                                    } else {
-                                      // Autres types de fichiers
-                                      return (
-                                        <div
-                                          key={
-                                            attachment.id_fichier ||
-                                            `temp-${Date.now()}`
-                                          }
-                                          className="dm-msg-file-attachment"
-                                        >
-                                          <div className="dm-msg-file-download-link">
-                                            <div className="dm-msg-file-icon">
-                                              {getFileIcon(attachment.type)}
-                                            </div>
-                                            <div className="dm-msg-file-info">
-                                              <div className="dm-msg-file-name">
-                                                {attachment.nom_fichier}
-                                              </div>
-                                              <div className="dm-msg-file-size">
-                                                {formatFileSize(
-                                                  attachment.taille_fichier
-                                                )}
-                                              </div>
-                                            </div>
-                                            <div
-                                              className="dm-msg-file-download"
-                                              onClick={() =>
-                                                handleDownloadFile(
-                                                  fileUrl,
-                                                  attachment.nom_fichier
-                                                )
-                                              }
+                                            <a
+                                              href={fileUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
                                             >
-                                              <FaDownload />
+                                              <img
+                                                src={fileUrl}
+                                                alt={attachment.nom_fichier}
+                                                className="dm-msg-image"
+                                                onError={(e) => {
+                                                  console.error(
+                                                    `[DM] Failed to load image: ${fileUrl}`
+                                                  );
+                                                  e.target.src =
+                                                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
+                                                  e.target.style.padding =
+                                                    "20px";
+                                                  e.target.style.width = "80px";
+                                                  e.target.style.height =
+                                                    "80px";
+                                                  e.target.style.background =
+                                                    "rgba(0,0,0,0.1)";
+                                                }}
+                                              />
+                                            </a>
+                                            <div className="dm-msg-image-filename">
+                                              {attachment.nom_fichier}
                                             </div>
                                           </div>
-                                        </div>
-                                      );
-                                    }
-                                  })}
+                                        );
+                                      } else {
+                                        // Autres types de fichiers
+                                        return (
+                                          <div
+                                            key={
+                                              attachment.id_fichier ||
+                                              `temp-${Date.now()}`
+                                            }
+                                            className="dm-msg-file-attachment"
+                                          >
+                                            <div className="dm-msg-file-download-link">
+                                              <div className="dm-msg-file-icon">
+                                                {getFileIcon(attachment.type)}
+                                              </div>
+                                              <div className="dm-msg-file-info">
+                                                <div className="dm-msg-file-name">
+                                                  {attachment.nom_fichier}
+                                                </div>
+                                                <div className="dm-msg-file-size">
+                                                  {formatFileSize(
+                                                    attachment.taille_fichier
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div
+                                                className="dm-msg-file-download"
+                                                onClick={() =>
+                                                  handleDownloadFile(
+                                                    fileUrl,
+                                                    attachment.nom_fichier
+                                                  )
+                                                }
+                                              >
+                                                <FaDownload />
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                    })}
                                 </div>
                               )}
-
                             {isOwn && (
                               <div className="dm-msg-read">
                                 {msg.date_lecture
