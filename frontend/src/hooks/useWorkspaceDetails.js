@@ -218,6 +218,13 @@ export const useWorkspaceDetails = (workspaceId) => {
   const [mentionableUsers, setMentionableUsers] = useState([]);
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
 
+  // Ajout pour suggestions de canaux
+  const [showChannelSuggestions, setShowChannelSuggestions] = useState(false);
+  const [channelSuggestions, setChannelSuggestions] = useState([]);
+  const [channelQuery, setChannelQuery] = useState("");
+  const [activeChannelSuggestionIndex, setActiveChannelSuggestionIndex] =
+    useState(0);
+
   // Fetch canals function using useCallback
   const fetchCanals = useCallback(async () => {
     try {
@@ -248,7 +255,7 @@ export const useWorkspaceDetails = (workspaceId) => {
       }));
 
       setChannels(formattedChannels);
-      console.log("Canaux récupérés:", formattedChannels);
+      // console.log("Canaux récupérés:", formattedChannels);
     } catch (err) {
       console.error("Error fetching channels:", err);
       setCanalsError(err.message);
@@ -279,16 +286,16 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
 
       const data = await response.json();
-      console.log("[HOOK] Members data from API:", data);
+      // console.log("[HOOK] Members data from API:", data);
 
       // CORRECTION: Modification de la logique de filtrage pour inclure les utilisateurs en ligne par défaut
       const onlineMembers = data
         .filter((member) => {
           // Vérifier le statut WebSocket en temps réel
           const wsStatus = userStatuses[member.id_utilisateur];
-          console.log(
-            `[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`
-          );
+          // console.log(
+          //   `[HOOK] Member ${member.nom}: WS status=${wsStatus}, DB status=${member.status}`
+          // );
 
           // Si un statut WebSocket existe, l'utiliser
           if (wsStatus !== undefined) {
@@ -320,10 +327,8 @@ export const useWorkspaceDetails = (workspaceId) => {
           avatar: member.photo_url || member.photo_de_profil || null,
           status: userStatuses[member.id_utilisateur] || "offline",
           role: member.role.toLowerCase(),
-        }));
-
-      console.log("[HOOK] Online members count:", onlineMembers.length);
-      console.log("[HOOK] Offline members count:", offlineMembers.length);
+        })); // console.log("[HOOK] Online members count:", onlineMembers.length);
+      // console.log("[HOOK] Offline members count:", offlineMembers.length);
 
       setMembers({
         online: onlineMembers,
@@ -456,7 +461,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
 
     newSocket.on("connect", () => {
-      console.log("Socket.IO connecté avec succès");
+      // console.log("Socket.IO connecté avec succès");
       setSocket(newSocket);
     });
 
@@ -466,7 +471,7 @@ export const useWorkspaceDetails = (workspaceId) => {
 
     return () => {
       if (newSocket) {
-        console.log("Déconnexion de Socket.IO");
+        // console.log("Déconnexion de Socket.IO");
         newSocket.disconnect();
       }
     };
@@ -527,14 +532,15 @@ export const useWorkspaceDetails = (workspaceId) => {
           return [...prev, message];
         }
         return prev;
-      });
-
-      // Scrolle vers le bas pour voir le nouveau message
-      if (chatContainerRef.current) {
+      }); // Scrolle vers le bas pour voir le nouveau message
+      if (chatContainerRef && chatContainerRef.current) {
         setTimeout(() => {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
-        }, 100);
+          // Vérifier à nouveau que la référence est toujours valide
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop =
+              chatContainerRef.current.scrollHeight;
+          }
+        }, 150); // Légère augmentation du délai
       }
     };
 
@@ -679,22 +685,29 @@ export const useWorkspaceDetails = (workspaceId) => {
       fetchWorkspaceMembers();
     }
   }, [userStatuses, fetchWorkspaceMembers, workspaceId]);
-
   // Scroll to bottom effect
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+    // Ajout d'une vérification supplémentaire pour s'assurer que la référence existe
+    // et attendre que le DOM soit complètement rendu
+    if (chatContainerRef && chatContainerRef.current) {
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop =
+            chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
     }
   }, [messages]);
 
   // Scroll to bottom when channel changes (chargement des messages)
   useEffect(() => {
-    if (chatContainerRef.current && activeChannel && !loadingMessages) {
+    if (activeChannel && !loadingMessages) {
       setTimeout(() => {
-        chatContainerRef.current.scrollTop =
-          chatContainerRef.current.scrollHeight;
-      }, 100);
+        if (chatContainerRef && chatContainerRef.current) {
+          chatContainerRef.current.scrollTop =
+            chatContainerRef.current.scrollHeight;
+        }
+      }, 200); // augmentation du délai pour s'assurer que le DOM est bien rendu
     }
   }, [activeChannel, loadingMessages, messages.length]);
 
@@ -1414,49 +1427,99 @@ export const useWorkspaceDetails = (workspaceId) => {
       }
     }
   };
-
   const handleNewMessageChange = (value) => {
+    setNewMessage(value);
     setDisplayMessage(value);
-    const inputElement = document.querySelector(".chat-input-wrapper input");
-    if (!inputElement) return;
-    const cursorPos = inputElement.selectionStart;
-    const textBeforeCursor = value.substring(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-    const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
-    const lastNewlineIndex = textBeforeCursor.lastIndexOf("\n");
-    const lastBreakIndex = Math.max(lastSpaceIndex, lastNewlineIndex);
+
+    // Vérifier pour les mentions utilisateur (@)
+    const lastAtIndex = value.lastIndexOf("@");
+    const lastBreakIndex = Math.max(
+      value.lastIndexOf(" "),
+      value.lastIndexOf("\n")
+    );
+
     if (
       lastAtIndex !== -1 &&
       (lastAtIndex > lastBreakIndex || lastBreakIndex === -1)
     ) {
-      const query = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+      const query = value.slice(lastAtIndex + 1);
       setMentionQuery(query);
-      if (mentionableUsers.length > 0) {
-        const filtered = mentionableUsers.filter((user) =>
-          user.name.toLowerCase().includes(query)
-        );
-        const sorted = [...filtered].sort((a, b) => {
-          if (a.isBot && !b.isBot) return -1;
-          if (!a.isBot && b.isBot) return 1;
-          if (a.status === "online" && b.status !== "online") return -1;
-          if (a.status !== "online" && b.status === "online") return 1;
-          return a.name.localeCompare(b.name);
-        });
-        setMentionSuggestions(sorted.slice(0, 5));
-        setShowMentionSuggestions(sorted.length > 0);
-        setActiveMentionIndex(0);
-      } else {
-        setShowMentionSuggestions(false);
-      }
+      setShowMentionSuggestions(true);
+
+      // Filtrer les utilisateurs selon la requête
+      const filteredUsers = mentionableUsers.filter((user) =>
+        user.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setMentionSuggestions(filteredUsers);
+      setActiveMentionIndex(0);
     } else {
       setShowMentionSuggestions(false);
       setMentionQuery("");
     }
+
+    // Vérifier pour les mentions de canaux (#)
+    const lastHashIndex = value.lastIndexOf("#");
+
+    console.log("Détection de #:", {
+      lastHashIndex,
+      lastBreakIndex,
+      condition:
+        lastHashIndex !== -1 &&
+        (lastHashIndex > lastBreakIndex || lastBreakIndex === -1),
+      channels: channels.length,
+    });
+
+    if (
+      lastHashIndex !== -1 &&
+      (lastHashIndex > lastBreakIndex || lastBreakIndex === -1)
+    ) {
+      const query = value.slice(lastHashIndex + 1);
+      setChannelQuery(query);
+
+      // Limiter l'affichage des suggestions uniquement lorsque # vient d'être tapé ou s'il y a un texte après
+      if (query === "" || query.length > 0) {
+        setShowChannelSuggestions(true);
+
+        // Filtrer les canaux selon la requête
+        const filteredChannels = channels.filter((canal) =>
+          canal.name.toLowerCase().includes(query.toLowerCase())
+        );
+
+        // Limiter le nombre de suggestions si nécessaire
+        const maxSuggestions = 5;
+        const limitedChannels = filteredChannels.slice(0, maxSuggestions);
+
+        console.log("Filtrage des canaux pour #" + query, {
+          query,
+          canaux: channels.length,
+          filteredChannels: limitedChannels,
+        });
+
+        setChannelSuggestions(limitedChannels);
+        setActiveChannelSuggestionIndex(0);
+      }
+    } else {
+      setShowChannelSuggestions(false);
+      setChannelQuery("");
+    }
   };
 
-  const handleMentionNavigation = (direction) => {
-    if (mentionSuggestions.length === 0) return;
+  const handleChannelSuggestionNavigation = (direction) => {
+    if (channelSuggestions.length === 0) return;
+    setActiveChannelSuggestionIndex((currentIndex) => {
+      if (direction === "next") {
+        return (currentIndex + 1) % channelSuggestions.length;
+      } else {
+        return (
+          (currentIndex - 1 + channelSuggestions.length) %
+          channelSuggestions.length
+        );
+      }
+    });
+  };
 
+  const handleMentionSuggestionNavigation = (direction) => {
+    if (mentionSuggestions.length === 0) return;
     setActiveMentionIndex((currentIndex) => {
       if (direction === "next") {
         return (currentIndex + 1) % mentionSuggestions.length;
@@ -1469,7 +1532,14 @@ export const useWorkspaceDetails = (workspaceId) => {
     });
   };
 
-  const handleSelectActiveItem = () => {
+  const handleSelectActiveChannelSuggestion = () => {
+    if (channelSuggestions.length === 0) return;
+    handleSelectChannelSuggestion(
+      channelSuggestions[activeChannelSuggestionIndex]
+    );
+  };
+
+  const handleSelectActiveMention = () => {
     if (mentionSuggestions.length === 0) return;
     handleSelectMention(mentionSuggestions[activeMentionIndex]);
   };
@@ -1484,17 +1554,37 @@ export const useWorkspaceDetails = (workspaceId) => {
     if (lastAtIndex !== -1) {
       const textAfterCursor = currentDisplay.substring(cursorPos);
       // Format the mention to include the user's ID in a markdown link format
-      // This will be parsed later to create the badge with the correct styling
-      const mentionText = `@[${user.name}](${user.id}) `; // Format: @[username](userId)
+      const mentionText = `@${user.name} `;
       const newDisplayValue =
         currentDisplay.substring(0, lastAtIndex) +
         mentionText +
         textAfterCursor;
       setDisplayMessage(newDisplayValue);
       setShowMentionSuggestions(false);
-      setMentionQuery("");
+    }
+  };
+
+  const handleSelectChannelSuggestion = (channel) => {
+    const inputElement = document.querySelector(".chat-input-wrapper input");
+    if (!inputElement) return;
+    const cursorPos = inputElement.selectionStart;
+    const currentDisplay = displayMessage;
+    const textBeforeCursor = currentDisplay.substring(0, cursorPos);
+    const lastHashIndex = textBeforeCursor.lastIndexOf("#");
+    if (lastHashIndex !== -1) {
+      const textAfterCursor = currentDisplay.substring(cursorPos);
+      // Format the mention to include the user's ID in a markdown link format
+      // This will be parsed later to create the badge with the correct styling
+      const mentionText = `#${channel.name} `;
+      const newDisplayValue =
+        currentDisplay.substring(0, lastHashIndex) +
+        mentionText +
+        textAfterCursor;
+      setDisplayMessage(newDisplayValue);
+      setShowChannelSuggestions(false);
+      setChannelQuery("");
       setTimeout(() => {
-        const newCursorPos = lastAtIndex + mentionText.length;
+        const newCursorPos = lastHashIndex + mentionText.length;
         inputElement.focus();
         inputElement.setSelectionRange(newCursorPos, newCursorPos);
       }, 0);
@@ -1590,6 +1680,10 @@ export const useWorkspaceDetails = (workspaceId) => {
     showMentionSuggestions,
     mentionSuggestions,
     activeMentionIndex,
+    // Channel suggestion state
+    showChannelSuggestions,
+    channelSuggestions,
+    activeChannelSuggestionIndex,
     // Handlers
     handleSearchChange,
     toggleChannelsVisibility,
@@ -1622,12 +1716,14 @@ export const useWorkspaceDetails = (workspaceId) => {
     setShowEmojiPicker,
     setNewMessage,
     getEmojiForType, // Export helper if needed in component
-    handleDeleteMessage, // Add the new handler
-    // New handlers for mentions
+    handleDeleteMessage, // Add the new handler    // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
-    handleMentionNavigation,
-    handleSelectActiveItem,
+    handleMentionSuggestionNavigation,
+    handleSelectActiveMention,
+    handleChannelSuggestionNavigation,
+    handleSelectActiveChannelSuggestion,
+    handleSelectChannelSuggestion,
     handleMistralMention, // Exposer cette fonction
     currentUserRole, // Expose le rôle courant
     setReplyingTo, // Ensure setReplyingTo is returned

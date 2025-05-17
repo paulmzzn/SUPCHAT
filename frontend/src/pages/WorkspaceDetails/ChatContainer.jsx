@@ -63,6 +63,12 @@ function ChatContainer({
   handleSelectActiveItem,
   setShowVideoCallModal,
   handleOpenStrawpollVote,
+  showChannelSuggestions,
+  channelSuggestions,
+  activeChannelSuggestionIndex,
+  handleChannelSuggestionNavigation,
+  handleSelectActiveChannelSuggestion,
+  handleSelectChannelSuggestion,
 }) {
   return (
     <div className="workspace-content-area">
@@ -293,81 +299,30 @@ function ChatContainer({
                         } else {
                           return (
                             <div className="message-text">
-                              <ReactMarkdown
-                                components={{
-                                  p: ({ node, ...props }) => (
-                                    <p
-                                      {...props}
-                                      className="message-paragraph"
-                                    />
-                                  ),
-                                  a: ({ node, href, children, ...props }) => {
-                                    // Enhanced mention handling - detect mentions formatted as @[username](userId)
-                                    const mentionMatch =
-                                      Array.isArray(children) &&
-                                      children[0]?.props?.children &&
-                                      typeof children[0].props.children ===
-                                        "string" &&
-                                      children[0].props.children.match(
-                                        /^@(.+)$/
-                                      );
-
-                                    if (mentionMatch && isUuid(href)) {
-                                      // This is a mention - create a styled badge
-                                      const mentionName = mentionMatch[1];
-                                      const isCurrentUser =
-                                        href === currentUserId;
-                                      return (
-                                        <span
-                                          className={`mention-highlight ${
-                                            isCurrentUser
-                                              ? "current-user-mention"
-                                              : ""
-                                          }`}
-                                          data-userid={href}
-                                        >
-                                          @{mentionName}
-                                        </span>
-                                      );
-                                    }
-
-                                    // For regular links or system messages with strawpoll links
-                                    if (
-                                      systemMsg &&
-                                      href &&
-                                      href.includes("strawpoll.com")
-                                    ) {
-                                      return (
-                                        <a
-                                          href={href}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="message-link"
-                                        >
-                                          {children}
-                                        </a>
-                                      );
-                                    }
-                                    return (
-                                      <a
-                                        href={href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="message-link"
-                                      >
-                                        {children}
-                                      </a>
-                                    );
-                                  },
-                                  text: ({ node, ...props }) => (
-                                    <>{renderTextWithLinks(node.value)}</>
-                                  ),
-                                }}
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                              >
-                                {message.contenu || ""}
-                              </ReactMarkdown>
+                              {message.file_url ? (
+                                // Affichage des fichiers
+                                <div className="message-file">
+                                  {/* Code pour afficher les fichiers */}
+                                  <div className="file-preview">
+                                    {/* Ajuster selon la structure de vos données */}
+                                    <a
+                                      href={message.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleOpenFileViewer(message);
+                                      }}
+                                    >
+                                      {message.file_name || "Fichier joint"}
+                                    </a>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="message-paragraph">
+                                  {renderTextWithLinks(message.contenu)}
+                                </p>
+                              )}
                             </div>
                           );
                         }
@@ -466,72 +421,39 @@ function ChatContainer({
           </div>
 
           <div className="chat-input-area">
-            {showMentionSuggestions && (
-              <div id="supchat-mentions-dropdown">
-                <div id="supchat-mentions-header">
-                  <span>@</span>
-                  <span>Mentionner un utilisateur</span>
-                </div>
-                <div id="supchat-mentions-list">
-                  {mentionSuggestions.length > 0 ? (
-                    mentionSuggestions.map((user, index) => (
+            {showChannelSuggestions &&
+              channelSuggestions &&
+              channelSuggestions.length > 0 && (
+                <div id="supchat-channels-dropdown">
+                  <div id="supchat-channels-header">
+                    <span>#</span>
+                    <span>Mentionner un canal</span>
+                  </div>
+                  <div id="supchat-channels-list">
+                    {channelSuggestions.map((canal, index) => (
                       <button
-                        key={user.id}
-                        className={`supchat-mention-item ${
-                          index === activeMentionIndex ? "active" : ""
+                        key={canal.id}
+                        className={`supchat-channel-item ${
+                          index === activeChannelSuggestionIndex ? "active" : ""
                         }`}
-                        onClick={() => handleSelectMention(user)}
+                        onClick={() => handleSelectChannelSuggestion(canal)}
+                        type="button"
                       >
-                        <div className="supchat-mention-avatar-wrapper">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="supchat-mention-avatar"
-                            />
-                          ) : (
-                            <div className="supchat-mention-avatar">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          {user.isBot && (
-                            <div className="supchat-mention-bot-badge">
-                              <FaRobot style={{ fontSize: "8px" }} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="supchat-mention-details">
-                          <div className="supchat-mention-name">
-                            {user.name}
-                          </div>
-                          <div className="supchat-mention-info">
-                            {user.isBot ? (
-                              <>Assistant IA</>
-                            ) : (
-                              <>
-                                <span
-                                  className={`supchat-mention-status ${
-                                    user.status || "offline"
-                                  }`}
-                                ></span>
-                                {user.status === "online"
-                                  ? "En ligne"
-                                  : "Hors ligne"}
-                              </>
-                            )}
-                          </div>
-                        </div>
+                        <FaHashtag style={{ marginRight: 6 }} />
+                        <span className="supchat-channel-name">
+                          {canal.name}
+                        </span>
+                        {canal.isPrivate && (
+                          <FaLock style={{ marginLeft: 6, fontSize: 10 }} />
+                        )}
+                        <span className="supchat-channel-desc">
+                          {canal.description}
+                        </span>
                       </button>
-                    ))
-                  ) : (
-                    <div className="supchat-mention-no-results">
-                      Aucun utilisateur ne correspond à votre recherche
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-
+              )}
             <form
               className="chat-input-container"
               onSubmit={handleSendMessageWithMistralCheck}
@@ -579,7 +501,33 @@ function ChatContainer({
                   }
                   value={displayMessage}
                   onChange={(e) => handleNewMessageChange(e.target.value)}
-                  onKeyDown={handleChatInputKeyDown}
+                  onKeyDown={(e) => {
+                    if (showChannelSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveChannelSuggestion();
+                      }
+                    } else if (showMentionSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleMentionSuggestionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleMentionSuggestionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveMention();
+                      }
+                    } else {
+                      handleChatInputKeyDown && handleChatInputKeyDown(e);
+                    }
+                  }}
                 />
                 <button
                   type="button"
