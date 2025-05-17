@@ -180,8 +180,11 @@ const MessagesScreen = ({ navigation, route }) => {
   const markMessagesAsRead = useCallback((msgs) => {
     if (!socket || !msgs?.length || !userId || !currentUserId) return;
     
+    // Ne marquer comme lus que les messages envoyés par l'autre utilisateur et qui ne sont pas déjà lus
     const unreadMessages = msgs.filter(m => 
-      m.fk_expediteur !== currentUserId && !m.date_lecture
+      m.fk_expediteur === userId && // uniquement les messages de l'autre utilisateur
+      m.fk_expediteur !== currentUserId && // pas les messages envoyés par soi-même
+      !m.date_lecture // messages non lus
     );
     
     if (unreadMessages.length > 0) {
@@ -324,14 +327,8 @@ const MessagesScreen = ({ navigation, route }) => {
           scrollToBottom(true);
         }, 50);
 
-        // Mark the message as read immediately
-        if (msg.fk_expediteur !== currentUserId) {
-          socket.emit('readPrivateMessage', {
-            id: msg.id_message_prive,
-            senderId: msg.fk_expediteur,
-            recipientId: currentUserId
-          });
-        }
+        // Ne pas marquer automatiquement les messages comme lus lors de la réception
+        // Les messages seront marqués comme lus uniquement par l'effet d'interaction utilisateur
 
         // Update timestamp for this conversation in AsyncStorage
         await saveConversationTimestamp(userId);
@@ -406,10 +403,8 @@ const MessagesScreen = ({ navigation, route }) => {
       setIsInitialLoad(true);
       await fetchMessages(userId, 1);
       
-      // Mark messages as read only after fetching them
-      if (markMessagesAsReadContext) {
-        markMessagesAsReadContext(userId);
-      }
+      // Ne pas marquer les messages comme lus automatiquement
+      // Les messages seront marqués comme lus uniquement lorsque l'utilisateur interagit avec la conversation
     };
     
     loadUserAndMessages();
@@ -422,6 +417,16 @@ const MessagesScreen = ({ navigation, route }) => {
       setHasMoreMessages(true);
     };
   }, [userId]);
+
+  // Modifier l'effet pour le marquage comme lu uniquement quand l'utilisateur ouvre la conversation
+  useEffect(() => {
+    if (messages.length === 0 || isInitialLoad || !userId || !currentUserId) return;
+    
+    // Marquer les messages comme lus dès que l'utilisateur ouvre la conversation et que les messages sont chargés
+    console.log('User opened conversation, marking messages as read');
+    markMessagesAsRead(messages);
+    
+  }, [messages, isInitialLoad, userId, currentUserId, markMessagesAsRead]);
 
   // Get user info
   const fetchUserInfo = async (userId) => {
@@ -564,8 +569,8 @@ const MessagesScreen = ({ navigation, route }) => {
       setHasMoreMessages(result.hasMore);
       setIsInitialLoad(false);
       
-      // Mark messages as read, but don't depend on this function in useEffect
-      setTimeout(() => markMessagesAsRead(result.messages), 500);
+      // Supprimé le marquage automatique des messages comme lus
+      // Les messages ne seront marqués comme lus que lorsque l'utilisateur les voit réellement
       
     } catch (e) {
       console.error('Error fetching messages:', e);
