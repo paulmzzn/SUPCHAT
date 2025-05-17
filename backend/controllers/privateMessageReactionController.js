@@ -5,10 +5,12 @@ import ReactionPrive from '../models/ReactionPrive.js';
 export const addReaction = async (req, res) => {
   try {
     const { messageId } = req.params;
-    const { reaction_type } = req.body;
+    // Accepter à la fois reaction_type et reaction pour la compatibilité mobile/web
+    const { reaction_type, reaction } = req.body;
+    const finalReactionType = reaction_type || reaction;
     const userId = req.user.id;
     
-    if (!reaction_type || typeof reaction_type !== 'string' || reaction_type.length === 0) {
+    if (!finalReactionType || typeof finalReactionType !== 'string' || finalReactionType.length === 0) {
       return res.status(400).json({ message: 'Emoji/réaction manquant ou invalide' });
     }
     
@@ -23,7 +25,7 @@ export const addReaction = async (req, res) => {
     await ReactionPrive.create({
       fk_message_prive: messageId,
       fk_utilisateur: userId,
-      reaction_type
+      reaction_type: finalReactionType
     });
     
     const updatedReactions = await ReactionPrive.getByMessage(messageId, userId);
@@ -47,12 +49,19 @@ export const addReaction = async (req, res) => {
 export const removeReaction = async (req, res) => {
   try {
     const { messageId, reactionType } = req.params;
+    // Récupérer aussi le paramètre 'reaction' du corps si présent (compatibilité mobile)
+    const { reaction } = req.body;
+    const finalReactionType = reactionType || reaction;
     const userId = req.user.id;
+    
+    if (!finalReactionType) {
+      return res.status(400).json({ message: 'Type de réaction manquant' });
+    }
     
     const message = await MessagePrive.getById(messageId);
     if (!message) return res.status(404).json({ message: 'Message non trouvé' });
 
-    await ReactionPrive.delete(messageId, userId, reactionType);
+    await ReactionPrive.delete(messageId, userId, finalReactionType);
     const updatedReactions = await ReactionPrive.getByMessage(messageId, userId);
     
     // Notification en temps réel via socket.io

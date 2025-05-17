@@ -184,7 +184,7 @@ const socketManager = (io) => {
     // Améliorer le handler de message privé pour gérer les tempId et la déduplication
     socket.on(
       "privateMessage",
-      async ({ destinataireId, contenu, tempId, replyToId }, callback) => {
+      async ({ destinataireId, contenu, tempId, replyTo, replyToId }, callback) => {
         try {
           console.log(
             `Socket.IO: Message privé reçu de ${
@@ -233,13 +233,16 @@ const socketManager = (io) => {
             return;
           }
 
+          // Référence du message auquel on répond
+          const messageParentId = replyTo || replyToId || null;
+
           // Créer le message en base de données
           console.log("Socket.IO: Création du message privé en base");
           const message = await MessagePrive.create({
             contenu,
             fk_expediteur: expediteurId,
             fk_destinataire: destinataireId,
-            parent_id: replyToId, // Ajout du parent_id
+            parent_id: messageParentId, // Ajout du parent_id
           });
 
           // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
@@ -247,15 +250,19 @@ const socketManager = (io) => {
             message.tempId = tempId;
           }
 
-          // Ajouter le parent_message si parent_id présent
-          if (message.parent_id) {
-            const parent = await MessagePrive.getById(message.parent_id);
-            if (parent) {
-              message.parent_message = {
-                id_message_prive: parent.id_message_prive,
-                contenu: parent.contenu,
-                fk_expediteur: parent.fk_expediteur,
-              };
+          // Si c'est une réponse, ajouter les données de réponse dans un format compatible avec le frontend
+          if (messageParentId) {
+            try {
+              const parentMessage = await MessagePrive.getById(messageParentId);
+              if (parentMessage) {
+                message.reply_data = {
+                  reply_to: parentMessage.id_message_prive,
+                  reply_content: parentMessage.contenu,
+                  reply_user_id: parentMessage.fk_expediteur
+                };
+              }
+            } catch (err) {
+              console.error("Erreur lors de la récupération du message parent:", err);
             }
           }
 
@@ -380,6 +387,33 @@ const socketManager = (io) => {
         });
       } catch (error) {
         socket.emit("error", { message: "Erreur lors de l'accusé de lecture" });
+      }
+    });
+
+    // Ajouter un gestionnaire pour marquer tous les messages comme lus
+    socket.on("readAllPrivateMessages", async ({ senderId, recipientId }) => {
+      try {
+        const userId = socket.user.id;
+
+        // Vérifier que l'utilisateur qui fait la demande est bien le destinataire
+        if (userId !== recipientId) {
+          socket.emit("error", { message: "Non autorisé" });
+          return;
+        }
+
+        const result = await MessagePrive.markAllAsRead(senderId, recipientId);
+
+        if (result.markedCount > 0) {
+          io.to(`dm:${senderId}`).emit("allMessagesRead", {
+            readBy: recipientId,
+            count: result.markedCount,
+            timestamp: new Date(),
+          });
+        }
+      } catch (error) {
+        socket.emit("error", {
+          message: "Erreur lors de l'accusé de lecture groupé",
+        });
       }
     });
 
@@ -1003,9 +1037,11 @@ const socketManager = (io) => {
     socket.on("addPrivateMessageReaction", async (data) => {
       try {
         console.log("Socket.IO: Réaction à message privé reçue", data);
-        const { id: messageId, reaction: reaction_type } = data;
+        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
+        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const reaction_type_final = reactionFromMobile || reaction_type;
 
-        if (!messageId || !reaction_type) {
+        if (!messageId || !reaction_type_final) {
           console.error("Socket.IO: Données de réaction incomplètes");
           socket.emit("error", { message: "Données de réaction incomplètes" });
           return;
@@ -1033,7 +1069,7 @@ const socketManager = (io) => {
         await ReactionPrive.create({
           fk_message_prive: messageId,
           fk_utilisateur: socket.user.id,
-          reaction_type,
+          reaction_type: reaction_type_final,
         });
 
         // Récupérer toutes les réactions mises à jour pour ce message
@@ -1083,13 +1119,14 @@ const socketManager = (io) => {
     // Nouvel événement pour gérer la suppression des réactions aux messages privés
     socket.on("removePrivateMessageReaction", async (data) => {
       try {
-        console.log(
-          "Socket.IO: Suppression de réaction de message privé",
-          data
-        );
-        const { id: messageId, reaction: reaction_type } = data;
 
-        if (!messageId || !reaction_type) {
+        console.log("Socket.IO: Suppression de réaction de message privé", data);
+        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
+        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const reaction_type_final = reactionFromMobile || reaction_type;
+
+
+        if (!messageId || !reaction_type_final) {
           console.error(
             "Socket.IO: Données de suppression de réaction incomplètes"
           );
@@ -1105,7 +1142,7 @@ const socketManager = (io) => {
         }
 
         // Supprimer la réaction en base de données
-        await ReactionPrive.delete(messageId, socket.user.id, reaction_type);
+        await ReactionPrive.delete(messageId, socket.user.id, reaction_type_final);
 
         // Récupérer toutes les réactions mises à jour pour ce message
         const updatedReactions = await ReactionPrive.getByMessage(
