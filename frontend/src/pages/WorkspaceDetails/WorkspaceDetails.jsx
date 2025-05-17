@@ -68,6 +68,83 @@ function WorkspaceDetails() {
   const [showStrawpollVote, setShowStrawpollVote] = useState(false);
   const [currentPollId, setCurrentPollId] = useState(null);
 
+  // État pour suivre si l'utilisateur est bien membre du workspace
+  const [isMember, setIsMember] = useState(null);
+  const [membershipChecking, setMembershipChecking] = useState(true);
+
+  // Vérification si l'utilisateur est membre du workspace avant d'afficher la page
+  useEffect(() => {
+    async function checkWorkspaceMembership() {
+      try {
+        setMembershipChecking(true);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+        
+        // Récupérer l'ID de l'utilisateur connecté
+        const userResponse = await fetch(`${API_URL}/api/users/verify-token`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (!userResponse.ok) {
+          throw new Error("Erreur d'authentification");
+        }
+        
+        const userData = await userResponse.json();
+        const userId = userData.user_id;
+        
+        // Vérifier si l'utilisateur est membre du workspace
+        const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (!membershipResponse.ok) {
+          throw new Error("Impossible de vérifier l'appartenance au workspace");
+        }
+        
+        const membershipData = await membershipResponse.json();
+        setIsMember(membershipData.isMember);
+        
+        // Rediriger si l'utilisateur n'est pas membre
+        if (!membershipData.isMember) {
+          // Vérifier si le workspace existe (pour afficher l'écran approprié)
+          const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
+          if (workspaceResponse.ok) {
+            // Le workspace existe, rediriger vers la page de demande d'adhésion
+            navigate(`/join-workspace?id=${workspaceId}`);
+          } else {
+            // Le workspace n'existe pas
+            navigate('/workspaces', { 
+              state: { 
+                error: "Ce workspace n'existe pas ou vous n'y avez pas accès." 
+              } 
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification d'appartenance au workspace:", error);
+        setIsMember(false);
+        navigate('/workspaces', { 
+          state: { 
+            error: "Impossible de vérifier l'accès à ce workspace." 
+          } 
+        });
+      } finally {
+        setMembershipChecking(false);
+      }
+    }
+    
+    if (workspaceId) {
+      checkWorkspaceMembership();
+    }
+  }, [workspaceId, navigate]);
+
   // Handler pour ouvrir/fermer la boîte à outils
   const handleToggleToolbox = () => setShowToolbox((v) => !v);
   const handleOpenStrawpoll = () => {
@@ -633,6 +710,26 @@ function WorkspaceDetails() {
 
   // Permet d'ouvrir la modal Strawpoll depuis n'importe quel bouton du chat
   window.handleOpenStrawpollResults = handleOpenStrawpollResults;
+
+  if (membershipChecking) {
+    return (
+      <div className="app-layout">
+        <Sidebar />
+        <div className="workspace-details-container">
+          <div className="loading-container">
+            <Spinner size="medium" />
+            <span className="loading-text">
+              Vérification de l'accès au workspace...
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isMember) {
+    return null; // L'utilisateur sera redirigé
+  }
 
   if (loading) {
     return (
