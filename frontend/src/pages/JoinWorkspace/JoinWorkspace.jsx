@@ -94,17 +94,36 @@ function JoinWorkspace() {
     try {
       const token = localStorage.getItem("token");
       
+      // Construire le corps de la requête avec des informations supplémentaires pour les invitations
+      const requestBody = {};
+      
+      // Si un email est présent (cas d'une invitation), l'inclure dans la requête
+      if (email) {
+        requestBody.invitedEmail = email;
+      }
+      
       const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/join`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({})  // Le backend récupère l'ID utilisateur du token
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Si le workspace est privé et que l'utilisateur n'a pas d'invitation valide
+        if (errorData.message && errorData.message.includes("privé")) {
+          // Proposer de faire une demande d'adhésion
+          if (confirm("Ce workspace est privé. Voulez-vous envoyer une demande d'adhésion?")) {
+            return await sendJoinRequest();
+          } else {
+            throw new Error("Vous avez annulé votre demande d'adhésion au workspace privé");
+          }
+        }
+        
         throw new Error(errorData.message || "Erreur lors de la tentative de rejoindre le workspace");
       }
 
@@ -118,6 +137,37 @@ function JoinWorkspace() {
       console.error("Erreur:", error);
       setJoinStatus("error");
       setError(error.message);
+    }
+  };
+
+  // Fonction pour envoyer une demande d'adhésion à un workspace privé
+  const sendJoinRequest = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/request-join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de l'envoi de la demande d'adhésion");
+      }
+
+      // Mettre à jour le statut pour afficher un message approprié
+      setJoinStatus("request-sent");
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de la demande d'adhésion:", error);
+      setError(error.message);
+      setJoinStatus("error");
+      return false;
     }
   };
 
@@ -188,6 +238,18 @@ function JoinWorkspace() {
           <div className="success-message">
             <p>Vous avez rejoint le workspace avec succès!</p>
             <p>Redirection en cours...</p>
+          </div>
+        ) : joinStatus === "request-sent" ? (
+          <div className="success-message">
+            <p>Votre demande d'adhésion a été envoyée!</p>
+            <p>Vous serez notifié lorsque les administrateurs auront traité votre demande.</p>
+            <button 
+              onClick={() => navigate("/workspaces")} 
+              className="primary-button"
+              style={{ marginTop: '20px' }}
+            >
+              Retour aux workspaces
+            </button>
           </div>
         ) : joinStatus === "error" ? (
           <div className="error-message">

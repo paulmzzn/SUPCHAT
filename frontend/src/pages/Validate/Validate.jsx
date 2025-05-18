@@ -58,6 +58,8 @@ function Validate() {
         if (data.token) {
           localStorage.setItem("userToken", data.token);
           localStorage.setItem("userEmail", email);
+          // Ajouter un indicateur de validation pour la sécurité
+          localStorage.setItem("isValidated", "true");
             // If we have a pending invitation, save it to sessionStorage for the login flow
           if (pendingInvitation) {
             sessionStorage.setItem("pendingInvitation", JSON.stringify(pendingInvitation));

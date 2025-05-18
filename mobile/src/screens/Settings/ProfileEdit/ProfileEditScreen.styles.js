@@ -1,0 +1,150 @@
+import { StyleSheet } from 'react-native';
+
+export const getStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.primaryBackground,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: theme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  rightHeaderPlaceholder: {
+    width: 24,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  avatarContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: theme.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: theme.accentPrimary,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarText: {
+    color: theme.textOnAccent,
+    fontSize: 42,
+    fontWeight: 'bold',
+  },
+  editAvatarButtonOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editAvatarButton: {
+    backgroundColor: theme.accentPrimary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  changePhotoText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: theme.textMuted,
+    fontWeight: '500',
+  },
+  formSection: {
+    marginTop: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.textPrimary,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: theme.inputBackground,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: theme.textPrimary,
+    fontSize: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+  },
+  bioInput: {
+    minHeight: 120,
+    paddingTop: 14,
+    textAlignVertical: 'top',
+  },
+  disabledInput: {
+    backgroundColor: theme.disabledInputBackground,
+    color: theme.textMuted,
+  },
+  noteText: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginTop: -16,
+    marginBottom: 20,
+    marginLeft: 5,
+  },
+  saveButton: {
+    backgroundColor: theme.accentPrimary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: theme.textOnAccent,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.primaryBackground,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: theme.textPrimary,
+    fontSize: 16,
+  },
+});

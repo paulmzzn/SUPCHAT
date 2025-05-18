@@ -7,19 +7,21 @@ import {
   deleteCanal,
   getCanalFiles,
 } from "../controllers/canalController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, checkWorkspaceMembership, checkWorkspaceAdmin } from "../middleware/authMiddleware.js";
+import Fichier from "../models/Fichier.js";
 
 const router = express.Router();
 
 // Routes pour les canaux
-// Toutes les routes nécessitent une authentification
-router.post("/workspace/:workspaceId/canals", verifyToken, createCanal);
-router.get("/workspace/:workspaceId/canals", verifyToken, getCanals);
-router.get("/workspace/:workspaceId/canals/:canalId", verifyToken, getCanal);
-router.put("/workspace/:workspaceId/canals/:canalId", verifyToken, updateCanal);
+// Toutes les routes nécessitent une authentification ET une appartenance au workspace
+router.post("/workspace/:workspaceId/canals", verifyToken, checkWorkspaceMembership, createCanal);
+router.get("/workspace/:workspaceId/canals", verifyToken, checkWorkspaceMembership, getCanals);
+router.get("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, getCanal);
+router.put("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, updateCanal);
 router.delete(
   "/workspace/:workspaceId/canals/:canalId",
   verifyToken,
+  checkWorkspaceAdmin, // Nécessite des droits d'admin pour supprimer
   deleteCanal
 );
 
@@ -27,7 +29,7 @@ router.delete(
 router.get("/canals/:canalId/files", verifyToken, getCanalFiles);
 
 // Route pour récupérer tous les fichiers d'un workspace
-router.get("/workspaces/:workspaceId/files", verifyToken, async (req, res) => {
+router.get("/workspaces/:workspaceId/files", verifyToken, checkWorkspaceMembership, async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const files = await Fichier.getByWorkspaceId(workspaceId);

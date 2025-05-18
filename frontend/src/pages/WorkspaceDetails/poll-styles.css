@@ -1,0 +1,73 @@
+/* Style pour les liens de sondage */
+.strawpoll-link {
+  color: #b05fdf !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  transition: all 0.2s ease !important;
+  display: inline-block !important;
+  position: relative !important;
+  padding: 0 2px !important;
+  border-radius: 3px !important;
+}
+
+.strawpoll-link:hover {
+  color: #9348b7 !important;
+  background-color: rgba(147, 72, 183, 0.1) !important;
+  text-decoration: underline !important;
+}
+
+/* Styles pour les boutons de sondage dans les messages */
+.message-poll-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.poll-button {
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.poll-button svg {
+  font-size: 16px;
+}
+
+.poll-results-button {
+  background-color: #f0f2f5;
+  color: #9348b7;
+  border: 1px solid rgba(147, 72, 183, 0.3);
+}
+
+.poll-results-button:hover {
+  background-color: #e4e6ef;
+  box-shadow: 0 3px 8px rgba(147, 72, 183, 0.2);
+  transform: translateY(-1px);
+}
+
+.poll-vote-button {
+  background-color: #9348b7;
+  color: white;
+  border: 1px solid #9348b7;
+}
+
+.poll-vote-button:hover {
+  background-color: #b05fdf;
+  box-shadow: 0 3px 8px rgba(147, 72, 183, 0.3);
+  transform: translateY(-1px);
+}
+
+.poll-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

@@ -7,17 +7,25 @@ import pool from "../config/dbConnection.js";
 export const sendPrivateMessage = async (req, res) => {
   try {
     const expediteurId = req.user.id;
-    const { destinataireId, contenu, attachments } = req.body;
+    const { destinataireId, contenu, attachments, replyTo } = req.body;
     if (!destinataireId) {
       return res.status(400).json({ message: "destinataireId requis" });
     }
 
-    // Créer le message
-    const message = await MessagePrive.create({
+    // Créer le message avec l'information de réponse si présente
+    const messageData = {
       contenu: contenu || "", // Permettre des messages vides si des pièces jointes sont présentes
       fk_expediteur: expediteurId,
       fk_destinataire: destinataireId,
-    });
+    };
+    
+    // Ajouter l'ID du message auquel on répond, si présent
+    if (replyTo) {
+      messageData.replyTo = replyTo;
+    }
+
+    // Créer le message
+    const message = await MessagePrive.create(messageData);
 
     // Associer les pièces jointes si elles sont fournies
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
@@ -168,6 +176,7 @@ export const markPrivateMessageAsRead = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const uploadAttachment = async (req, res) => {
   try {
     console.log("[PrivateMessage] Début de l'upload d'un fichier"); // Vérifier si nous avons un fichier et le destinataire    if (!req.file) {      return res.status(400).json({ message: "Aucun fichier fourni" });    }    const { recipientId, message } = req.body;    const expediteurId = req.user.id;    if (!recipientId) {      return res.status(400).json({ message: "recipientId requis" });    }    console.log("[PrivateMessage] Données reçues:", {      file: req.file.originalname,      recipientId,      expediteurId,      message: message || "(vide)"    });
@@ -297,3 +306,76 @@ export const getUserConversations = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * Supprimer toute une conversation avec un utilisateur
+ */
+export const deleteConversation = async (req, res) => {
+  try {
+    const userId = req.user.id; // L'utilisateur qui fait la demande
+    const otherUserId = req.params.userId; // L'autre utilisateur dans la conversation
+    
+    // Vérifier si les IDs sont valides
+    if (!userId || !otherUserId) {
+      return res.status(400).json({ message: "IDs utilisateurs requis" });
+    }
+
+    // Appeler le modèle pour effectuer la suppression
+    const result = await MessagePrive.deleteConversation(userId, otherUserId);
+    
+    // Notifier les deux utilisateurs via socket.io si disponible
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`dm:${userId}`).to(`dm:${otherUserId}`)
+        .emit("conversationDeleted", { 
+          participants: [userId, otherUserId],
+          deletedBy: userId
+        });
+    }
+    
+    res.json({ 
+      message: "Conversation supprimée", 
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la conversation:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Marquer tous les messages d'un utilisateur comme lus
+ */
+export const markAllMessagesAsRead = async (req, res) => {
+  try {
+    const destinataireId = req.user.id; // L'utilisateur qui marque comme lu
+    const expediteurId = req.params.userId; // L'expéditeur des messages
+    
+    // Vérifier si les IDs sont valides
+    if (!destinataireId || !expediteurId) {
+      return res.status(400).json({ message: "IDs utilisateurs requis" });
+    }
+
+    // Appeler le modèle pour marquer les messages comme lus
+    const result = await MessagePrive.markAllAsRead(expediteurId, destinataireId);
+    
+    // Notifier l'expéditeur via socket.io si disponible
+    const io = req.app.get("io");
+    if (io && result.messages.length > 0) {
+      io.to(`dm:${expediteurId}`).emit("allMessagesRead", {
+        readBy: destinataireId,
+        count: result.markedCount,
+        timestamp: new Date()
+      });
+    }
+    
+    res.json({ 
+      message: "Messages marqués comme lus", 
+      count: result.markedCount,
+      messageIds: result.messages.map(m => m.id_message_prive)
+    });
+  } catch (error) {
+    console.error('Erreur lors du marquage des messages comme lus:', error);
+    res.status(500).json({ message: error.message });
+  }
+}

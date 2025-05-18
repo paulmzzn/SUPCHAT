@@ -27,7 +27,7 @@ const CodeValidation = ({ email }) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
-    
+
     // Utiliser l'email des props ou du localStorage
     const emailToUse = email || localStorage.getItem('email');
     
@@ -57,8 +57,12 @@ const CodeValidation = ({ email }) => {
           localStorage.setItem('token', data.token); // Utiliser 'token' comme clé
           localStorage.setItem('email', emailToUse);
           
+          // Ajouter un indicateur de validation pour la sécurité
+          localStorage.setItem('isValidated', 'true');
+          
           // Vérifier que le token est bien sauvegardé
           console.log("Token sauvegardé:", localStorage.getItem('token') ? "oui" : "non");
+          console.log("Validation enregistrée:", localStorage.getItem('isValidated'));
           
           // Attendre que localStorage soit mis à jour
           setTimeout(() => {
