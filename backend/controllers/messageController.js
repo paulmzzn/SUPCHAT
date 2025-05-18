@@ -80,6 +80,19 @@ export const createMessage = async (req, res) => {
 export const getMessagesByChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
+    
+    if (!channelId) {
+      console.error("getMessagesByChannel: ID de canal manquant", { 
+        params: req.params, 
+        url: req.originalUrl 
+      });
+      return res.status(400).json({ 
+        message: "ID de canal non fourni.",
+        error: "CHANNEL_ID_MISSING",
+        params: req.params
+      });
+    }
+    
     console.log(`Récupération des messages pour canal ${channelId}`);
 
     // Vérifier que le canal existe

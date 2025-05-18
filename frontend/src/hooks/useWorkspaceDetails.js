@@ -338,6 +338,118 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   }, [workspaceId, userStatuses]);
 
+  // Fonction pour récupérer les détails d'un canal spécifique
+  const fetchActiveChannel = useCallback(async (canalId) => {
+    if (!canalId) {
+      console.error("fetchActiveChannel: ID de canal non fourni");
+      return;
+    }
+
+    try {
+      setLoadingMessages(true);
+      const token = localStorage.getItem("token");
+      console.log(`Chargement des détails pour le canal ${canalId}...`);
+      
+      // 1. Récupérer les détails du canal actif (pour obtenir les droits d'accès)
+      const canalDetailsResponse = await fetch(
+        `${API_URL}/api/workspace/${workspaceId}/canals/${canalId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!canalDetailsResponse.ok) {
+        const errorData = await canalDetailsResponse.json();
+        console.error("Erreur API lors de la récupération des détails du canal:", errorData);
+        throw new Error(
+          errorData.message || "Erreur lors du chargement des détails du canal"
+        );
+      }
+      
+      const canalDetails = await canalDetailsResponse.json();
+      console.log("Détails du canal récupérés:", canalDetails);
+      
+      // Mettre à jour le canal actif avec les informations de droits d'accès
+      setActiveChannel({
+        id: canalDetails.id_canal,
+        name: canalDetails.nom,
+        isPrivate: canalDetails.is_private || false,
+        description: canalDetails.description || "",
+        droitAcces: canalDetails.droitAcces || "lecture_ecriture",
+        isCreator: canalDetails.isCreator || false,
+        memberAccess: canalDetails.droitAcces || null
+      });
+
+      // 2. Charger les messages du canal
+      console.log(`Chargement des messages pour le canal ${canalId}...`);
+      const response = await fetch(
+        `${API_URL}/api/messages/canal/${canalId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Erreur API lors du chargement des messages:", errorData);
+        throw new Error(
+          errorData.message || "Erreur lors du chargement des messages"
+        );
+      }
+
+      const data = await response.json();
+      console.log("Messages récupérés:", data);
+
+      // Vérifier et logger les messages avec parent_id mais sans parent_message
+      const messagesWithParentId = data.filter(
+        (msg) => msg.parent_id && !msg.parent_message
+      );
+      if (messagesWithParentId.length > 0) {
+        console.log(
+          `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
+        );
+      }
+
+      // Ajout du mapping des emojis sur les réactions (pour affichage correct)
+      const messagesWithEmojis = data.map((msg) => {
+        if (msg.reactions && Array.isArray(msg.reactions)) {
+          msg.reactions = msg.reactions.map((r) => ({
+            ...r,
+            emoji: r.emoji || getEmojiForType(r.reaction_type),
+          }));
+        }
+        return msg;
+      });
+
+      setMessages(messagesWithEmojis);
+
+      // Marquer le canal comme lu une fois que les messages sont chargés
+      if (socket && socket.connected) {
+        console.log(`Marquage du canal ${canalId} comme lu via socket.io`);
+        socket.emit("markChannelAsRead", { channelId: canalId });
+      } else {
+        // Appel API de secours si le socket n'est pas connecté
+        try {
+          await markChannelAsReadViaAPI(canalId);
+        } catch (markReadError) {
+          console.error("Erreur pour marquer le canal comme lu:", markReadError);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur:", error);
+      setMessages([]);
+      // En cas d'erreur, ne pas mettre le canal à null pour éviter une boucle
+      // mais informer l'utilisateur
+      alert("Erreur lors du chargement des messages: " + error.message);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [workspaceId, socket, setActiveChannel, setMessages, setLoadingMessages]);
+
   // Fetch workspace details effect
   useEffect(() => {
     const fetchWorkspaceDetails = async () => {
@@ -867,6 +979,22 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
+  const handleSelectChannel = useCallback(
+    async (channel) => {
+      try {
+        if (!channel || !channel.id) {
+          console.error("handleSelectChannel: canal sans ID");
+          return;
+        }
+        
+        await fetchActiveChannel(channel.id);
+      } catch (error) {
+        console.error("Erreur lors de la sélection du canal:", error);
+      }
+    },
+    [fetchActiveChannel]
+  );
+
   // Handlers
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
   const toggleChannelsVisibility = () => setShowChannels(!showChannels);
@@ -1036,92 +1164,6 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
   };
 
-  const handleSelectChannel = useCallback(
-    async (channel) => {
-      try {
-        setActiveChannel(channel);
-        setLoadingMessages(true);
-        const token = localStorage.getItem("token");
-        console.log(`Chargement des messages pour le canal ${channel.id}...`);
-        const response = await fetch(
-          `${API_URL}/api/messages/canal/${channel.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Erreur API:", errorData);
-          throw new Error(
-            errorData.message || "Erreur lors du chargement des messages"
-          );
-        }
-        const data = await response.json();
-        console.log("Messages récupérés:", data);
-
-        // Vérifier et logger les messages avec parent_id mais sans parent_message
-        const messagesWithParentId = data.filter(
-          (msg) => msg.parent_id && !msg.parent_message
-        );
-        if (messagesWithParentId.length > 0) {
-          console.log(
-            `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
-          );
-        }
-
-        // Ajout du mapping des emojis sur les réactions (pour affichage correct)
-        const messagesWithEmojis = data.map((msg) => {
-          if (msg.reactions && Array.isArray(msg.reactions)) {
-            msg.reactions = msg.reactions.map((r) => ({
-              ...r,
-              emoji: r.emoji || getEmojiForType(r.reaction_type),
-            }));
-          }
-          return msg;
-        });
-
-        setMessages(messagesWithEmojis);
-
-        // Marquer le canal comme lu une fois que les messages sont chargés
-        // et que l'utilisateur a interagi avec ce canal
-        if (socket && socket.connected) {
-          console.log(`Marquage du canal ${channel.id} comme lu`);
-          socket.emit("markChannelAsRead", { channelId: channel.id });
-        } else {
-          // Appel API de secours si le socket n'est pas connecté
-          try {
-            const markReadResponse = await fetch(
-              `${API_URL}/api/messages/channel/${channel.id}/read`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            if (markReadResponse.ok) {
-              console.log(`Canal ${channel.id} marqué comme lu via API REST`);
-            }
-          } catch (markReadError) {
-            console.error(
-              "Erreur pour marquer le canal comme lu:",
-              markReadError
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Erreur:", error);
-        setMessages([]);
-      } finally {
-        setLoadingMessages(false);
-      }
-    },
-    [socket]
-  );
-
   // Fonction pour marquer un canal comme lu
   const markChannelAsRead = useCallback(
     async (channel) => {
@@ -1160,6 +1202,15 @@ export const useWorkspaceDetails = (workspaceId) => {
   // Fonction de fallback pour marquer un canal comme lu via API REST
   const markChannelAsReadViaAPI = async (channelId) => {
     try {
+      if (!channelId) {
+        throw new Error("ID de canal non fourni.");
+      }
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token d'authentification manquant");
+      }
+      
       console.log(`Canal ${channelId} marqué comme lu via API REST (fallback)`);
       const markReadResponse = await fetch(
         `${API_URL}/api/messages/channel/${channelId}/read`,
@@ -1176,7 +1227,7 @@ export const useWorkspaceDetails = (workspaceId) => {
         console.log(`Canal ${channelId} marqué comme lu via API REST`);
 
         // Après avoir marqué le canal comme lu via API, rafraîchir les compteurs de messages non lus
-        await refreshUnreadChannelCounts();
+        await refreshUnreadChannelCounts(token);
       } else {
         console.error(
           "Erreur API lors du marquage du canal comme lu:",
@@ -1192,8 +1243,17 @@ export const useWorkspaceDetails = (workspaceId) => {
   };
 
   // Fonction pour rafraîchir les compteurs de messages non lus
-  const refreshUnreadChannelCounts = async () => {
+  const refreshUnreadChannelCounts = async (token) => {
     try {
+      if (!token) {
+        token = localStorage.getItem("token");
+      }
+      
+      if (!token) {
+        console.error("Token d'authentification manquant pour rafraîchir les compteurs");
+        return;
+      }
+      
       const unreadResponse = await fetch(`${API_URL}/api/messages/unread`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1207,8 +1267,8 @@ export const useWorkspaceDetails = (workspaceId) => {
         // Émettre un événement pour mettre à jour les badges
         const event = new CustomEvent("unreadChannelMessagesUpdated", {
           detail: {
-            total: unreadData.total,
-            channels: unreadData.channels,
+            total: unreadData.total || 0,
+            channels: unreadData.channels || [],
           },
         });
         window.dispatchEvent(event);
@@ -1216,11 +1276,11 @@ export const useWorkspaceDetails = (workspaceId) => {
         // Mettre à jour localStorage
         localStorage.setItem(
           "unreadChannelMessages",
-          unreadData.total.toString()
+          (unreadData.total || 0).toString()
         );
         localStorage.setItem(
           "unreadChannelMessagesDetails",
-          JSON.stringify(unreadData.channels)
+          JSON.stringify(unreadData.channels || [])
         );
       }
     } catch (error) {
@@ -1632,6 +1692,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     currentUserRole, // Expose le rôle courant
     setReplyingTo, // Ensure setReplyingTo is returned
     userStatuses, // Expose userStatuses
+    fetchActiveChannel, // Exposer la fonction fetchActiveChannel
   };
 };
 

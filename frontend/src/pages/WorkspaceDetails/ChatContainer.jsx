@@ -14,6 +14,14 @@ import {
   FaImage,
   FaCode,
   FaVoteYea,
+  FaUsers,
+  FaEye,
+  FaCommentSlash,
+  FaTimes,
+  FaRegSmile,
+  FaPlus,
+  FaAt,
+  FaUser,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -62,8 +70,13 @@ function ChatContainer({
   isUuid,
   handleSelectActiveItem,
   setShowVideoCallModal,
-  handleOpenStrawpollVote,
+  handleManageChannelMembers,
+  isChannelPrivate,
+  canManageMembers,
+  currentUserAccessRight,
 }) {
+  const canWriteInChannel = !activeChannel?.isPrivate || currentUserAccessRight !== "read";
+
   return (
     <div className="workspace-content-area">
       <div className="glow-circle-right top-right"></div>
@@ -93,6 +106,20 @@ function ChatContainer({
                 <FaVideo />
                 <span>Appel vidéo</span>
               </button>
+              {isChannelPrivate && canManageMembers && (
+                <button
+                  className="manage-members-button"
+                  onClick={handleManageChannelMembers}
+                  title="Gérer les membres"
+                >
+                  <FaUsers />
+                </button>
+              )}
+              {isChannelPrivate && currentUserAccessRight === "read" && (
+                <div className="read-only-indicator" title="Canal en lecture seule">
+                  <FaEye /> Lecture seule
+                </div>
+              )}
             </div>
           </div>
 
@@ -302,7 +329,6 @@ function ChatContainer({
                                     />
                                   ),
                                   a: ({ node, href, children, ...props }) => {
-                                    // Enhanced mention handling - detect mentions formatted as @[username](userId)
                                     const mentionMatch =
                                       Array.isArray(children) &&
                                       children[0]?.props?.children &&
@@ -313,7 +339,6 @@ function ChatContainer({
                                       );
 
                                     if (mentionMatch && isUuid(href)) {
-                                      // This is a mention - create a styled badge
                                       const mentionName = mentionMatch[1];
                                       const isCurrentUser =
                                         href === currentUserId;
@@ -331,7 +356,6 @@ function ChatContainer({
                                       );
                                     }
 
-                                    // For regular links or system messages with strawpoll links
                                     if (
                                       systemMsg &&
                                       href &&
@@ -567,25 +591,39 @@ function ChatContainer({
                   onClick={() =>
                     fileInputRef.current && fileInputRef.current.click()
                   }
+                  disabled={!canWriteInChannel}
+                  title={
+                    !canWriteInChannel
+                      ? "Vous êtes en lecture seule dans ce canal"
+                      : "Ajouter un fichier"
+                  }
                 >
                   <FaPaperclip />
                 </button>
                 <input
                   type="text"
                   placeholder={
-                    activeChannel
-                      ? `Message dans #${activeChannel.name}`
-                      : "Message..."
+                    canWriteInChannel
+                      ? activeChannel
+                        ? `Message dans #${activeChannel.name}`
+                        : "Message..."
+                      : "Ce canal est en lecture seule"
                   }
                   value={displayMessage}
                   onChange={(e) => handleNewMessageChange(e.target.value)}
                   onKeyDown={handleChatInputKeyDown}
+                  disabled={!canWriteInChannel}
                 />
                 <button
                   type="button"
                   className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
-                  title="Outils"
+                  title={
+                    !canWriteInChannel
+                      ? "Vous êtes en lecture seule dans ce canal"
+                      : "Outils"
+                  }
                   onClick={handleToggleToolbox}
+                  disabled={!canWriteInChannel}
                 >
                   <FaTools />
                   <span className="toolbox-tooltip">Outils</span>
@@ -593,14 +631,19 @@ function ChatContainer({
                 <button
                   type="submit"
                   className="chat-send-btn"
-                  disabled={!displayMessage.trim()}
+                  disabled={!displayMessage.trim() || !canWriteInChannel}
                   aria-label="Envoyer le message"
+                  title={
+                    !canWriteInChannel
+                      ? "Vous êtes en lecture seule dans ce canal"
+                      : "Envoyer"
+                  }
                 >
                   <FaPaperPlane />
                   <span className="send-btn-pulse"></span>
                 </button>
               </div>
-              {showToolbox && (
+              {showToolbox && canWriteInChannel && (
                 <div className="chat-toolbox-menu">
                   <button
                     className="chat-toolbox-item"
