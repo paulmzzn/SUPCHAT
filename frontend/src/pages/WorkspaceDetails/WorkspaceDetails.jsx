@@ -18,6 +18,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
 import "./poll-styles.css"; // Import des styles pour les sondages
+import "./mentions-styles.css"; // Import des styles pour les mentions
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
 import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
 import { API_URL } from "../../config/config"; // Ajout import pour API_URL
@@ -80,67 +81,75 @@ function WorkspaceDetails() {
         setMembershipChecking(true);
         const token = localStorage.getItem("token");
         if (!token) {
-          navigate('/login');
+          navigate("/login");
           return;
         }
-        
+
         // Récupérer l'ID de l'utilisateur connecté
         const userResponse = await fetch(`${API_URL}/api/users/verify-token`, {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
-        
+
         if (!userResponse.ok) {
           throw new Error("Erreur d'authentification");
         }
-        
+
         const userData = await userResponse.json();
         const userId = userData.user_id;
-        
+
         // Vérifier si l'utilisateur est membre du workspace
-        const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+        const membershipResponse = await fetch(
+          `${API_URL}/api/workspaces/${workspaceId}/members/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
-        
+        );
+
         if (!membershipResponse.ok) {
           throw new Error("Impossible de vérifier l'appartenance au workspace");
         }
-        
+
         const membershipData = await membershipResponse.json();
         setIsMember(membershipData.isMember);
-        
+
         // Rediriger si l'utilisateur n'est pas membre
         if (!membershipData.isMember) {
           // Vérifier si le workspace existe (pour afficher l'écran approprié)
-          const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
+          const workspaceResponse = await fetch(
+            `${API_URL}/api/workspaces/${workspaceId}`
+          );
           if (workspaceResponse.ok) {
             // Le workspace existe, rediriger vers la page de demande d'adhésion
             navigate(`/join-workspace?id=${workspaceId}`);
           } else {
             // Le workspace n'existe pas
-            navigate('/workspaces', { 
-              state: { 
-                error: "Ce workspace n'existe pas ou vous n'y avez pas accès." 
-              } 
+            navigate("/workspaces", {
+              state: {
+                error: "Ce workspace n'existe pas ou vous n'y avez pas accès.",
+              },
             });
           }
         }
       } catch (error) {
-        console.error("Erreur lors de la vérification d'appartenance au workspace:", error);
+        console.error(
+          "Erreur lors de la vérification d'appartenance au workspace:",
+          error
+        );
         setIsMember(false);
-        navigate('/workspaces', { 
-          state: { 
-            error: "Impossible de vérifier l'accès à ce workspace." 
-          } 
+        navigate("/workspaces", {
+          state: {
+            error: "Impossible de vérifier l'accès à ce workspace.",
+          },
         });
       } finally {
         setMembershipChecking(false);
       }
     }
-    
+
     if (workspaceId) {
       checkWorkspaceMembership();
     }
@@ -339,11 +348,12 @@ function WorkspaceDetails() {
     setShowEditChannelModal,
     setShowEmojiPicker,
     setNewMessage,
-    getEmojiForType, // New handlers for mentions
+    getEmojiForType,
+    // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
-    handleMentionNavigation,
-    handleSelectActiveItem,
+    handleMentionSuggestionNavigation,
+    handleSelectActiveMention,
     // New handler for channel suggestions
     handleChannelSuggestionNavigation,
     handleSelectActiveChannelSuggestion,
@@ -552,20 +562,18 @@ function WorkspaceDetails() {
     }
 
     console.log("🏁 Fin de handleFileUpload");
-  };
-
-  // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
+  }; // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
   const handleChatInputKeyDown = (e) => {
     if (showMentionSuggestions && mentionSuggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        handleMentionNavigation("next");
+        handleMentionSuggestionNavigation("next");
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        handleMentionNavigation("prev");
+        handleMentionSuggestionNavigation("prev");
       } else if (e.key === "Enter") {
         // Si la fenêtre de suggestions est ouverte, sélectionne l'élément actif
-        handleSelectActiveItem();
+        handleSelectActiveMention();
         e.preventDefault();
       }
     }
@@ -590,6 +598,26 @@ function WorkspaceDetails() {
     } else {
       console.warn(`Canal non trouvé: ${channelName}`);
     }
+  }; // Handler pour gérer les clics sur les mentions d'utilisateurs
+  const handleUserClick = (userId, userName) => {
+    console.log("Utilisateur cliqué:", userName, "avec ID:", userId);
+
+    // Vérifier si c'est Mistral AI
+    if (userId === "00000000-0000-0000-0000-000000000001") {
+      // Insérer une mention de Mistral dans le champ de texte actuel avec un espace après
+      const mistralMention = `@[${userName}](${userId}) `;
+
+      // Si le champ est vide, ajouter seulement la mention, sinon ajouter à la fin du texte actuel
+      const newValue = displayMessage.trim()
+        ? `${displayMessage} ${mistralMention}`
+        : mistralMention;
+
+      handleNewMessageChange(newValue);
+      return;
+    }
+
+    // Rediriger vers la conversation privée (direct-messages)
+    navigate(`/direct-messages/${userId}`);
   };
 
   // Utiliser le handler original pour l'envoi normal
@@ -840,6 +868,8 @@ function WorkspaceDetails() {
           mentionSuggestions={mentionSuggestions}
           activeMentionIndex={activeMentionIndex}
           handleSelectMention={handleSelectMention}
+          handleMentionNavigation={handleMentionSuggestionNavigation}
+          handleSelectActiveItem={handleSelectActiveMention}
           handleSendMessageWithMistralCheck={handleSendMessageWithMistralCheck}
           showToolbox={showToolbox}
           handleToggleToolbox={handleToggleToolbox}
@@ -851,10 +881,9 @@ function WorkspaceDetails() {
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
           renderTextWithLinks={(text) =>
-            renderTextWithLinks(text, handleChannelClick)
+            renderTextWithLinks(text, handleChannelClick, handleUserClick)
           }
           isUuid={isUuid}
-          handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
           // Ajout des props pour les suggestions de canaux
           showChannelSuggestions={showChannelSuggestions}
