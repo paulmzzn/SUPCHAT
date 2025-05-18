@@ -19,7 +19,8 @@ function Login() {
   const [resetMessage, setResetMessage] = useState("");
   const [pendingInvitation, setPendingInvitation] = useState(null);
   const navigate = useNavigate();
-    useEffect(() => {
+
+  useEffect(() => {
     // Check for pending invitation
     const pendingInviteData = sessionStorage.getItem("pendingInvitation");
     if (pendingInviteData) {
@@ -29,6 +30,10 @@ function Login() {
         console.error("Error parsing pending invitation data:", e);
       }
     }
+    
+    // IMPORTANT: Lors du chargement de la page de login, réinitialiser le statut de validation
+    // pour forcer l'utilisateur à valider son code à chaque nouvelle connexion
+    localStorage.removeItem('isValidated');
   }, []);
 
   const handleSubmit = async (e) => {
@@ -52,9 +57,14 @@ function Login() {
         localStorage.setItem('email', email);
         localStorage.setItem('token', data.token);
         
+        // S'assurer que l'indicateur de validation est bien supprimé
+        localStorage.removeItem('isValidated');
+        
         console.log('Email et token sauvegardés dans localStorage');
         console.log('Token présent:', localStorage.getItem('token') ? "oui" : "non");
-          // Handle pending workspace invitation if present
+        console.log('isValidated:', localStorage.getItem('isValidated') || 'non défini');
+        
+        // Handle pending workspace invitation if present
         if (pendingInvitation && pendingInvitation.workspaceId) {
           // Clean up sessionStorage
           sessionStorage.removeItem("pendingInvitation");
@@ -65,7 +75,7 @@ function Login() {
         } else {
           console.log('Connexion réussie, redirection vers /code');
           // Regular flow - go to 2FA
-          navigate('/code');
+          navigate('/code', { state: { email } });
         }
       } else {
         setError(data.message || 'Erreur de connexion');

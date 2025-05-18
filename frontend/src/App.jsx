@@ -91,14 +91,27 @@ function App() {
     return isAuth;
   };
 
+  // Fonction complète qui vérifie à la fois le token ET la validation du code
+  const isFullyAuthenticated = () => {
+    const token = localStorage.getItem("token");
+    const isValidated = localStorage.getItem("isValidated") === "true";
+    console.log("[App.jsx] isFullyAuthenticated() appelé");
+    console.log("- Token présent:", token ? "Oui" : "Non");
+    console.log("- Code validé:", isValidated ? "Oui" : "Non");
+    return (token !== null && token !== undefined) && isValidated;
+  };
+
   // Composant amélioré pour les routes protégées
   const ProtectedRoute = ({ children }) => {
     const isAuth = isAuthenticated();
+    const isValidated = localStorage.getItem("isValidated") === "true";
     console.log(
       "[App.jsx] ProtectedRoute rendu - authChecked:",
       authChecked,
       ", isAuth:",
-      isAuth
+      isAuth,
+      ", isValidated:",
+      isValidated
     );
     if (!authChecked) {
       console.log(
@@ -111,6 +124,12 @@ function App() {
         "[App.jsx] ProtectedRoute - Redirection vers login car non authentifié"
       );
       return <Navigate to="/login" replace />;
+    }
+    if (isAuth && !isValidated) {
+      console.log(
+        "[App.jsx] ProtectedRoute - Redirection vers /code car authentifié mais code non validé"
+      );
+      return <Navigate to="/code" replace />;
     }
     console.log(
       "[App.jsx] ProtectedRoute - Utilisateur authentifié, affichage du contenu protégé"
@@ -283,12 +302,16 @@ function App() {
                     </>
                   }
                 />
-                {/* Route par défaut */}
+                {/* Route par défaut modifiée pour vérifier aussi l'indicateur isValidated */}
                 <Route
                   path="/"
                   element={
                     isAuthenticated() ? (
-                      <Navigate to="/workspaces" />
+                      localStorage.getItem("isValidated") === "true" ? (
+                        <Navigate to="/workspaces" />
+                      ) : (
+                        <Navigate to="/code" />
+                      )
                     ) : (
                       <Navigate to="/login" />
                     )

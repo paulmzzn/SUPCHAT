@@ -8,20 +8,43 @@ class MessagePrive {
     fk_destinataire,
     pieces_jointes = [],
     parent_id = null,
+    replyTo = null,
   }) {
+    // Utiliser replyTo comme parent_id s'il est fourni, sinon utiliser parent_id
+    const messageParentId = replyTo || parent_id;
+    
     const result = await pool.query(
       `INSERT INTO message_prive (contenu, fk_expediteur, fk_destinataire, pieces_jointes, date_creation, parent_id)
        VALUES ($1, $2, $3, $4, NOW(), $5)
        RETURNING *`,
-      [
-        contenu,
-        fk_expediteur,
-        fk_destinataire,
-        JSON.stringify(pieces_jointes),
-        parent_id,
-      ]
+
+      [contenu, fk_expediteur, fk_destinataire, JSON.stringify(pieces_jointes), messageParentId]
+
     );
-    return result.rows[0];
+    
+    // Si c'est une réponse à un message, récupérer les détails du message parent
+    let messageData = result.rows[0];
+    if (messageParentId) {
+      try {
+        const parentResult = await pool.query(
+          `SELECT id_message_prive, contenu, fk_expediteur FROM message_prive WHERE id_message_prive = $1`,
+          [messageParentId]
+        );
+        if (parentResult.rows.length > 0) {
+          messageData.parent_message = parentResult.rows[0];
+          // Ajouter aussi les informations sous format replyData pour la compatibilité
+          messageData.reply_data = {
+            reply_to: parentResult.rows[0].id_message_prive,
+            reply_content: parentResult.rows[0].contenu,
+            reply_user_id: parentResult.rows[0].fk_expediteur
+          };
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du message parent:", error);
+      }
+    }
+    
+    return messageData;
   }
 
   static async getConversation(userA, userB, limit = 50, offset = 0) {
@@ -62,6 +85,13 @@ class MessagePrive {
             );
             if (parentResult.rows.length > 0) {
               message.parent_message = parentResult.rows[0];
+              
+              // Ajouter les données de réponse au format attendu par l'app mobile
+              message.reply_data = {
+                reply_to: parentResult.rows[0].id_message_prive,
+                reply_content: parentResult.rows[0].contenu,
+                reply_user_id: parentResult.rows[0].fk_expediteur
+              };
             }
           }
 
@@ -117,6 +147,13 @@ class MessagePrive {
         );
         if (parentResult.rows.length > 0) {
           message.parent_message = parentResult.rows[0];
+          
+          // Ajouter les données de réponse au format attendu par l'app mobile
+          message.reply_data = {
+            reply_to: parentResult.rows[0].id_message_prive,
+            reply_content: parentResult.rows[0].contenu,
+            reply_user_id: parentResult.rows[0].fk_expediteur
+          };
         }
       }
 
@@ -362,6 +399,133 @@ class MessagePrive {
       return counts;
     } catch (error) {
       console.error("Erreur dans MessagePrive.getUnreadCounts:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supprimer tous les messages d'une conversation entre deux utilisateurs
+   * @param {string} userA - ID du premier utilisateur
+   * @param {string} userB - ID du deuxième utilisateur
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  static async deleteConversation(userA, userB) {
+    try {
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET is_deleted = true, contenu = '[message supprimé]', date_modification = NOW()
+         WHERE (fk_expediteur = $1 AND fk_destinataire = $2)
+            OR (fk_expediteur = $2 AND fk_destinataire = $1)
+         RETURNING *`,
+        [userA, userB]
+      );
+      return {
+        success: true,
+        deletedCount: result.rowCount,
+        messages: result.rows
+      };
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.deleteConversation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marquer tous les messages d'un expéditeur comme lus par le destinataire
+   * @param {string} expediteurId - ID de l'expéditeur des messages
+   * @param {string} destinataireId - ID du destinataire qui marque comme lu
+   * @returns {Promise<Object>} - Résultat de l'opération
+   */
+  static async markAllAsRead(expediteurId, destinataireId) {
+    try {
+      const result = await pool.query(
+        `UPDATE message_prive
+         SET date_lecture = NOW()
+         WHERE fk_expediteur = $1 AND fk_destinataire = $2 AND date_lecture IS NULL
+         RETURNING id_message_prive, date_lecture`,
+        [expediteurId, destinataireId]
+      );
+      return {
+        success: true,
+        markedCount: result.rowCount,
+        messages: result.rows
+      };
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.markAllAsRead:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Récupérer toutes les conversations d'un utilisateur avec les infos utilisateur et derniers messages
+   * Cette méthode optimisée récupère tout en une seule requête pour améliorer les performances
+   * 
+   * @param {string} userId - L'ID de l'utilisateur connecté
+   * @returns {Promise<Array>} - Un tableau d'objets contenant les infos de conversation complètes
+   */
+  static async getUserConversationsExtended(userId) {
+    try {
+      // Étape 1: Récupérer tous les utilisateurs avec qui l'utilisateur a conversé
+      const conversationUsers = await this.getUserConversations(userId);
+      if (!conversationUsers || conversationUsers.length === 0) {
+        return [];
+      }
+
+      // Étape 2: Créer un tableau de promesses pour récupérer en parallèle
+      // les informations de chaque utilisateur et le dernier message
+      const conversationPromises = conversationUsers.map(async (otherUserId) => {
+        // Récupérer les informations de l'utilisateur
+        const userInfoResult = await pool.query(
+          `SELECT id_utilisateur, nom, email, photo_de_profil 
+           FROM utilisateur 
+           WHERE id_utilisateur = $1`,
+          [otherUserId]
+        );
+        const userInfo = userInfoResult.rows[0] || null;
+
+        // Récupérer le dernier message échangé
+        const lastMessageResult = await pool.query(
+          `SELECT * FROM message_prive
+           WHERE ((fk_expediteur = $1 AND fk_destinataire = $2) OR
+                 (fk_expediteur = $2 AND fk_destinataire = $1))
+           AND is_deleted = false
+           ORDER BY date_creation DESC
+           LIMIT 1`,
+          [userId, otherUserId]
+        );
+        const lastMessage = lastMessageResult.rows[0] || null;
+
+        // Récupérer le nombre de messages non lus de cet utilisateur
+        const unreadCountResult = await pool.query(
+          `SELECT COUNT(*) as unread_count
+           FROM message_prive
+           WHERE fk_expediteur = $1 
+           AND fk_destinataire = $2
+           AND date_lecture IS NULL
+           AND is_deleted = false`,
+          [otherUserId, userId]
+        );
+        const unreadCount = parseInt(unreadCountResult.rows[0].unread_count || 0, 10);
+
+        // Déterminer le timestamp de la dernière activité pour le tri
+        let lastActivity = 0;
+        if (lastMessage) {
+          lastActivity = new Date(lastMessage.date_creation).getTime();
+        }
+
+        return {
+          userId: otherUserId,
+          userInfo,
+          lastMessage,
+          unreadCount,
+          lastActivity
+        };
+      });
+
+      // Attendre toutes les promesses et renvoyer les résultats
+      return await Promise.all(conversationPromises);
+    } catch (error) {
+      console.error('Erreur dans MessagePrive.getUserConversationsExtended:', error);
       throw error;
     }
   }
