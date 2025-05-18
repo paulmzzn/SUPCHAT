@@ -614,10 +614,8 @@ function WorkspaceDetails() {
 
       handleNewMessageChange(newValue);
       return;
-    }
-
-    // Rediriger vers la conversation privée (direct-messages)
-    navigate(`/direct-messages/${userId}`);
+    } // Rediriger vers la conversation privée (direct-messages)
+    navigate(`/direct-messages?userId=${userId}`);
   };
 
   // Utiliser le handler original pour l'envoi normal

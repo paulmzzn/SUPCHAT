@@ -1,0 +1,23 @@
+.user-mention.clickable {
+  cursor: pointer;
+  background-color: rgba(74, 122, 255, 0.1);
+  border-radius: 4px;
+  padding: 0 4px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.user-mention.clickable:hover {
+  background-color: rgba(74, 122, 255, 0.2);
+  text-decoration: underline;
+}
+
+/* Assurez-vous que le reste du message n'est pas cliquable */
+.dm-msg-bubble {
+  cursor: text;
+}
+
+/* Ajouter un effet de surbrillance lors du survol */
+.user-mention.clickable:hover strong {
+  color: #4a7aff;
+}

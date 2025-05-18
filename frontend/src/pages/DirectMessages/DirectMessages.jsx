@@ -1160,6 +1160,23 @@ function DirectMessages() {
     }
   };
 
+  // Ajouter cette fonction ici
+  const handleUserClick = (userId, username) => {
+    console.log(`Utilisateur cliqué: ${username} (ID: ${userId})`);
+
+    // Ouvrir une conversation avec cet utilisateur
+    if (userId && userId !== currentUserId) {
+      // Vérifier si l'utilisateur est dans la liste des conversations
+      if (!conversations.includes(userId)) {
+        // Ajouter l'utilisateur à la liste des conversations
+        setConversations((prev) => [...prev, userId]);
+      }
+
+      // Charger les messages avec cet utilisateur
+      fetchMessages(userId);
+    }
+  };
+
   // Gestionnaire pour le menu contextuel
   const handleMessageContextMenu = (e, msg) => {
     e.preventDefault();
@@ -1411,17 +1428,78 @@ function DirectMessages() {
     } else {
       alert("Vous devez être connecté pour télécharger des fichiers.");
     }
-  };
-
-  // Démarrage auto d'une conversation si userId passé en query
+  }; // Démarrage auto d'une conversation si userId passé en query ou en paramètre d'URL
   useEffect(() => {
+    // Vérifier d'abord les paramètres de recherche URL (query params)
     const params = new URLSearchParams(location.search);
     const userIdFromQuery = params.get("userId");
-    if (userIdFromQuery) {
-      setSelectedUser(userIdFromQuery);
-      fetchMessages(userIdFromQuery);
+
+    // Vérifier ensuite si l'URL contient un ID direct comme /direct-messages/{userId}
+    const pathParts = location.pathname.split("/");
+    const userIdFromPath = pathParts.length > 2 ? pathParts[2] : null;
+
+    // Utiliser l'ID de la query ou du path, avec priorité à la query
+    const userId = userIdFromQuery || userIdFromPath;
+
+    if (userId) {
+      console.log(`[DM] ID utilisateur détecté dans l'URL: ${userId}`);
+      setSelectedUser(userId);
+      fetchMessages(userId);
     }
-  }, [location.search]);
+  }, [location.search, location.pathname]);
+
+  // Fonction pour rendre les mentions cliquables
+  const renderTextWithMentions = (text) => {
+    if (!text) return "";
+
+    // Regex pour détecter les mentions au format @[userId:username]
+    const mentionRegex = /@\[(\w+):([^\]]+)\]/g;
+
+    // Si pas de mentions, retourner le texte tel quel
+    if (!mentionRegex.test(text)) return text;
+
+    // Réinitialiser le pointeur de regex
+    mentionRegex.lastIndex = 0;
+
+    // Diviser le texte en parties normales et mentions
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      // Ajouter le texte avant la mention
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      } // Ajouter la mention sous forme d'élément cliquable
+      const userId = match[1];
+      const username = match[2];
+      parts.push(
+        <span
+          key={`mention-${userId}-${match.index}`}
+          className="mention-tag"
+          onClick={() => {
+            console.log(
+              `Redirection vers conversation avec ${username} (ID: ${userId})`
+            );
+
+            // Rediriger vers la route correcte - assurez-vous que cette route existe dans votre routeur
+            navigate(`/direct-messages?userId=${userId}`);
+          }}
+        >
+          @{username}
+        </span>
+      );
+
+      lastIndex = mentionRegex.lastIndex;
+    }
+
+    // Ajouter le texte restant après la dernière mention
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts;
+  };
 
   return (
     <div className="app-layout">
@@ -1710,7 +1788,9 @@ function DirectMessages() {
                                 )}
                               </span>
                             </div>
-                            <div className="dm-msg-bubble">{msg.contenu}</div>
+                            <div className="dm-msg-bubble">
+                              {renderTextWithMentions(msg.contenu)}
+                            </div>
                             {/* Afficher les réactions aux messages privés */}
                             {msg.reactions && msg.reactions.length > 0 && (
                               <div className="dm-msg-reactions">
