@@ -18,7 +18,8 @@ import {
   deleteWorkspaceCascade, // Ajout de la fonction pour la suppression en cascade
   requestJoinWorkspace, // Ajout de la fonction pour demander à rejoindre un workspace
   getWorkspaceJoinRequests, // Ajout de la fonction pour récupérer les demandes d'adhésion
-  respondToJoinRequest // Ajout de la fonction pour répondre à une demande d'adhésion
+  respondToJoinRequest, // Ajout de la fonction pour répondre à une demande d'adhésion
+  getUserJoinRequests // Nouvelle fonction pour récupérer les demandes d'un utilisateur
 } from '../controllers/workspaceController.js';
 import {
   addFavorite,
@@ -86,5 +87,8 @@ router.get('/:workspaceId/requests', verifyToken, getWorkspaceJoinRequests);
 
 // Route pour répondre à une demande d'adhésion
 router.put('/:workspaceId/requests/:requestId', verifyToken, respondToJoinRequest);
+
+// Route pour récupérer les demandes d'adhésion d'un utilisateur
+router.get('/user/requests', verifyToken, getUserJoinRequests);
 
 export default router;

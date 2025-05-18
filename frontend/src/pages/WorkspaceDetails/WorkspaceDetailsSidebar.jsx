@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   FaChevronDown,
   FaChevronRight,
@@ -15,6 +15,9 @@ import {
   FaTimesCircle,
   FaRegMoon,
   FaUserPlus,
+  FaBell,
+  FaCheck,
+  FaTimes,
 } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
@@ -65,6 +68,177 @@ function WorkspaceDetailsSidebar({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
   const [isInviting, setIsInviting] = useState(false);
+
+  // States for join requests management
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [requestError, setRequestError] = useState(null);
+  const [processingRequestId, setProcessingRequestId] = useState(null);
+
+  // Référence pour le panneau des demandes d'adhésion
+  const joinRequestsPanelRef = useRef(null);
+
+  // Solution simplifiée: une référence pour suivre si une requête est en cours
+  const isLoadingRef = useRef(false);
+
+  // Gestionnaire de clic global pour fermer le panneau si on clique ailleurs
+  useEffect(() => {
+    if (!showJoinRequests) return;
+
+    function handleClickOutside(event) {
+      // Ne rien faire si on clique sur le bouton de demandes
+      const requestButton = document.querySelector(".join-requests-btn");
+      if (requestButton && requestButton.contains(event.target)) {
+        return;
+      }
+
+      // Fermer le panneau si on clique en dehors
+      if (
+        joinRequestsPanelRef.current &&
+        !joinRequestsPanelRef.current.contains(event.target)
+      ) {
+        setShowJoinRequests(false);
+      }
+    }
+
+    // Ajouter l'écouteur d'événement après un délai
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showJoinRequests]);
+
+  // Charger les demandes quand le composant est monté ou quand le workspace change
+  useEffect(() => {
+    if (
+      (currentUserRole === "owner" || currentUserRole === "admin") &&
+      workspace &&
+      workspace.id
+    ) {
+      // Charger les demandes une première fois au montage du composant
+      loadJoinRequests();
+    }
+  }, [workspace?.id, currentUserRole]);
+
+  // Nouveau: effet qui charge les demandes quand le panel est ouvert
+  useEffect(() => {
+    if (
+      showJoinRequests &&
+      (currentUserRole === "owner" || currentUserRole === "admin") &&
+      workspace &&
+      workspace.id
+    ) {
+      loadJoinRequests();
+    }
+  }, [showJoinRequests]);
+
+  // Fonction séparée pour charger les demandes
+  const loadJoinRequests = () => {
+    // Utiliser fetchJoinRequests seulement si aucune requête n'est en cours
+    if (!isLoadingRef.current) {
+      fetchJoinRequests();
+    }
+  };
+
+  const fetchJoinRequests = async () => {
+    if (!workspace || !workspace.id || isLoadingRef.current) return;
+
+    // Marquer qu'une requête est en cours avec la référence
+    isLoadingRef.current = true;
+    setLoadingRequests(true);
+    setRequestError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/workspaces/${workspace.id}/requests`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setJoinRequests(data);
+      } else {
+        setRequestError(
+          data.message || "Erreur lors de la récupération des demandes"
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des demandes d'adhésion:",
+        error
+      );
+      setRequestError("Erreur de connexion au serveur");
+    } finally {
+      setLoadingRequests(false);
+      // Libérer le verrou après une petite pause
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 300);
+    }
+  };
+
+  const handleRespondToRequest = async (
+    requestId,
+    accept,
+    rejectReason = null
+  ) => {
+    if (!workspace || !workspace.id) return;
+
+    try {
+      setProcessingRequestId(requestId);
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/workspaces/${workspace.id}/requests/${requestId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            accept,
+            rejectReason,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Retirer la demande de la liste
+        setJoinRequests((requests) =>
+          requests.filter((req) => req.id_request !== requestId)
+        );
+
+        // Si c'était la dernière demande et qu'il n'y en a plus, rafraîchir pour être sûr
+        if (joinRequests.length === 1) {
+          // Attendre un peu avant de rafraîchir
+          setTimeout(() => {
+            loadJoinRequests();
+          }, 300);
+        }
+      } else {
+        alert(data.message || "Erreur lors du traitement de la demande");
+      }
+    } catch (error) {
+      console.error("Erreur lors du traitement de la demande:", error);
+      alert("Erreur de connexion au serveur");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
 
   // Handlers for invitation
   const handleOpenInviteModal = () => {
@@ -328,33 +502,6 @@ function WorkspaceDetailsSidebar({
 
   return (
     <div className="details-sidebar">
-      {/* Add invite button in the top-right corner */}
-      {(currentUserRole === "owner" || currentUserRole === "admin") && (
-        <button
-          className="invite-button-sidebar"
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            background: "var(--primary-color)",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            padding: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-            zIndex: 10,
-          }}
-          onClick={handleOpenInviteModal}
-          title="Inviter un utilisateur"
-        >
-          <FaUserPlus />
-        </button>
-      )}
-
       <div className="details-section">
         <div className="section-header" onClick={toggleMembers}>
           {showMembers ? (
@@ -363,7 +510,138 @@ function WorkspaceDetailsSidebar({
             <FaChevronRight className="toggle-icon" />
           )}
           <h3>Membres ({members.online.length + members.offline.length})</h3>
+
+          {/* Boutons d'action pour les admins/owners, alignés avec le titre */}
+          {(currentUserRole === "owner" || currentUserRole === "admin") && (
+            <div
+              className="member-actions-container"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Bouton des demandes d'adhésion avec badge de notification */}
+              <button
+                className="member-action-btn join-requests-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowJoinRequests((prev) => !prev);
+                  // Pas besoin de code supplémentaire ici car le useEffect sur showJoinRequests va charger les données
+                }}
+                title="Demandes d'adhésion"
+              >
+                <FaBell />
+                {joinRequests.length > 0 && (
+                  <span className="join-requests-badge">
+                    {joinRequests.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Bouton d'invitation */}
+              <button
+                className="member-action-btn invite-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenInviteModal();
+                }}
+                title="Inviter un utilisateur"
+              >
+                <FaUserPlus />
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Panel de demandes d'adhésion */}
+        {showJoinRequests &&
+          (currentUserRole === "owner" || currentUserRole === "admin") && (
+            <div
+              className="join-requests-panel"
+              ref={joinRequestsPanelRef}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h4>Demandes d'adhésion</h4>
+
+              {loadingRequests ? (
+                <div className="join-requests-loading">
+                  Chargement des demandes...
+                </div>
+              ) : requestError ? (
+                <div className="join-requests-error">{requestError}</div>
+              ) : joinRequests.length === 0 ? (
+                <div className="join-requests-empty">
+                  Aucune demande en attente
+                </div>
+              ) : (
+                <ul className="join-requests-list">
+                  {joinRequests.map((request) => (
+                    <li key={request.id_request} className="join-request-item">
+                      <div className="join-request-user">
+                        {request.photo_url ? (
+                          <img
+                            src={request.photo_url}
+                            alt={request.nom_utilisateur}
+                            className="join-request-avatar"
+                          />
+                        ) : (
+                          <div className="join-request-avatar-placeholder">
+                            {request.nom_utilisateur
+                              ? request.nom_utilisateur[0].toUpperCase()
+                              : "?"}
+                          </div>
+                        )}
+                        <div className="join-request-details">
+                          <div className="join-request-name">
+                            {request.nom_utilisateur}
+                          </div>
+                          <div className="join-request-email">
+                            {request.email}
+                          </div>
+                          {request.message && (
+                            <div className="join-request-message">
+                              <em>"{request.message}"</em>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="join-request-actions">
+                        <button
+                          className="join-request-accept"
+                          onClick={() =>
+                            handleRespondToRequest(request.id_request, true)
+                          }
+                          disabled={
+                            processingRequestId === request.id_request
+                          }
+                        >
+                          <FaCheck /> Accepter
+                        </button>
+                        <button
+                          className="join-request-reject"
+                          onClick={() => {
+                            const reason = prompt(
+                              "Raison du refus (optionnel):"
+                            );
+                            handleRespondToRequest(
+                              request.id_request,
+                              false,
+                              reason
+                            );
+                          }}
+                          disabled={
+                            processingRequestId === request.id_request
+                          }
+                        >
+                          <FaTimes /> Refuser
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
         {showMembers && (
           <div className="members-container">
             <div className="members-subsection">
