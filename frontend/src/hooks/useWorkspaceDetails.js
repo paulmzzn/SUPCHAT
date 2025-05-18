@@ -11,6 +11,7 @@ import {
   FaAngry,
   FaRobot,
 } from "react-icons/fa"; // Added FaRobot for consistency
+import { formatMention, isMention } from "../utils/helpers"; // Import formatMention
 
 // Helper pour formater la taille du fichier
 function formatFileSize(bytes) {
@@ -1543,7 +1544,6 @@ export const useWorkspaceDetails = (workspaceId) => {
     if (mentionSuggestions.length === 0) return;
     handleSelectMention(mentionSuggestions[activeMentionIndex]);
   };
-
   const handleSelectMention = (user) => {
     const inputElement = document.querySelector(".chat-input-wrapper input");
     if (!inputElement) return;
@@ -1554,7 +1554,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     if (lastAtIndex !== -1) {
       const textAfterCursor = currentDisplay.substring(cursorPos);
       // Format the mention to include the user's ID in a markdown link format
-      const mentionText = `@${user.name} `;
+      // Using the formatMention helper function to create the properly formatted mention
+      const mentionText = `${formatMention(user.name, user.id)} `;
       const newDisplayValue =
         currentDisplay.substring(0, lastAtIndex) +
         mentionText +
@@ -1590,44 +1591,33 @@ export const useWorkspaceDetails = (workspaceId) => {
       }, 0);
     }
   };
+  const handleMistralMention = (text) => {
+    // Vérifier tous les formats possibles de mention à Mistral
+    const isMistralMention =
+      text.toLowerCase().includes("@mistral") ||
+      text.toLowerCase().includes("mistral ai") ||
+      text.includes("00000000-0000-0000-0000-000000000001");
 
-  const handleMistralMention = useCallback(
-    (message) => {
-      // Vérifier si le message contient une mention de Mistral
-      const mistralMentionPattern = /@Mistral/i;
-      if (mistralMentionPattern.test(message)) {
-        console.log("Mention de Mistral détectée");
+    if (isMistralMention && socket && activeChannel) {
+      // Marquer Mistral comme "est en train d'écrire"
+      setIsMistralTyping(true);
 
-        if (socket && socket.connected && activeChannel) {
-          console.log(
-            "Socket connecté, tentative d'envoi directement à Mistral"
-          );
+      // Envoyer le message au serveur
+      socket.emit("message", {
+        canal_id: activeChannel.id,
+        content: text,
+        workspace_id: workspaceId,
+      });
 
-          // Activer manuellement l'indicateur de frappe avant l'envoi
-          setIsMistralTyping(true);
+      // Réinitialiser le message après envoi
+      setNewMessage("");
+      setDisplayMessage("");
 
-          socket.emit("mistralRequest", {
-            content: message,
-            channelId: activeChannel.id,
-          });
+      return true;
+    }
 
-          // Réinitialiser newMessage et displayMessage
-          setNewMessage("");
-          setDisplayMessage("");
-
-          return true;
-        }
-      }
-      return false;
-    },
-    [
-      socket,
-      activeChannel,
-      setNewMessage,
-      setDisplayMessage,
-      setIsMistralTyping,
-    ]
-  );
+    return false;
+  };
 
   // Return all state and handlers needed by the component
   return {
