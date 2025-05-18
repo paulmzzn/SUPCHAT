@@ -1412,12 +1412,15 @@ function DirectMessages() {
       alert("Vous devez être connecté pour télécharger des fichiers.");
     }
   };
-
   // Démarrage auto d'une conversation si userId passé en query
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const userIdFromQuery = params.get("userId");
+    const userIdFromQuery = params.get("userId") || params.get("user");
+    
+    console.log("[DM] Paramètre d'URL détecté:", userIdFromQuery);
+    
     if (userIdFromQuery) {
+      console.log("[DM] Sélection automatique de l'utilisateur:", userIdFromQuery);
       setSelectedUser(userIdFromQuery);
       fetchMessages(userIdFromQuery);
     }

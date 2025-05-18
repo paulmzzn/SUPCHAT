@@ -68,11 +68,11 @@ const NotificationBubble = ({
     
     return truncated + "...";
   };
-
   // Fonction pour naviguer vers la conversation
   const handleClick = () => {
     if (type === "privateMessage" && userId) {
-      navigate(`/direct-messages?user=${userId}`);
+      console.log("[NotificationBubble] Navigation vers conversation privée avec userId:", userId);
+      navigate(`/direct-messages?userId=${userId}`);
     } else if (type === "channelMessage" && channelId) {
       navigate(`/workspace/${workspaceId}?channel=${channelId}`);
     }
