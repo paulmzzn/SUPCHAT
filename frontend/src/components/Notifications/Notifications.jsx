@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../../services/userService";
 // Importer l'utilitaire de gestion des sons
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
+import NotificationBubble from "../NotificationBadge/NotificationBubble";
 import "./Notifications.css";
 
 const Notifications = () => {
@@ -53,15 +54,20 @@ const Notifications = () => {
     
     return truncated + "...";
   };
-
   // Fonction pour ajouter une nouvelle notification
   const addNotification = async (notification) => {
     const notificationId = Date.now();
 
+    console.log("🔍 DEBUG - Notification reçue:", notification);
+    console.log("🔍 DEBUG - Photo URL brute:", notification.photoUrl);
+    console.log("🔍 DEBUG - Nom brut:", notification.senderName);
+
     // Si un userId est fourni, récupérer les données du profil
     let userProfile = null;
     if (notification.userId) {
+      console.log("🔍 DEBUG - Récupération du profil pour userId:", notification.userId);
       userProfile = await getUserProfile(notification.userId);
+      console.log("🔍 DEBUG - Profil utilisateur récupéré:", userProfile);
     }
 
     const fullNotification = {
@@ -70,6 +76,8 @@ const Notifications = () => {
       userProfile,
       timestamp: new Date(),
     };
+    
+    console.log("🔍 DEBUG - Notification complète:", fullNotification);
 
     setNotifications((prev) => [
       ...prev,
@@ -95,39 +103,62 @@ const Notifications = () => {
       navigate(`/workspace/${notification.workspaceId}?channel=${notification.channelId}`);
     }
   };
-
   // Écouter les événements de message privé
   useEffect(() => {
     if (!socket) return;
-
+    
     // Réception d'un nouveau message privé
-    const handlePrivateMessage = (msg) => {
+    const handlePrivateMessage = async (msg) => {
       const userId = localStorage.getItem("userId");
+      console.log("🔍 DEBUG - Message privé reçu:", msg);
+      console.log("🔍 DEBUG - Structure complète du message:", JSON.stringify(msg, null, 2));
+      
       // Si le message est destiné à l'utilisateur actuel
       if (msg.fk_destinataire === userId) {
+        // Récupérer le profil de l'expéditeur pour avoir des informations complètes
+        let expediteurProfile = null;
+        if (msg.fk_expediteur || msg.fk_utilisateur) {
+          const expediteurId = msg.fk_expediteur || msg.fk_utilisateur;
+          expediteurProfile = await getUserProfile(expediteurId);
+          console.log("👤 DEBUG - Profil de l'expéditeur récupéré pour message privé:", expediteurProfile);
+        }
+        
+        // Utiliser les données du profil si disponibles, sinon se rabattre sur les données du message
         addNotification({
           type: "privateMessage",
           title: "Nouveau message",
           content: msg.contenu,
-          userId: msg.fk_utilisateur,
-          photoUrl: msg.photo_url || null,
-          senderName: msg.nom || "Utilisateur"
+          userId: msg.fk_expediteur || msg.fk_utilisateur,
+          photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur")
         });
       }
     };
 
     // Réception d'un nouveau message dans un canal
-    const handleChannelMessage = (msg) => {
+    const handleChannelMessage = async (msg) => {
       const userId = localStorage.getItem("userId");
+      
+      console.log("🔍 DEBUG - Message canal reçu:", msg);
+      console.log("🔍 DEBUG - Structure complète du message canal:", JSON.stringify(msg, null, 2));
+      
       // Si le message n'est pas de l'utilisateur actuel
       if (msg.fk_utilisateur !== userId) {
+        // Récupérer le profil de l'expéditeur pour avoir des informations complètes
+        let expediteurProfile = null;
+        if (msg.fk_utilisateur) {
+          expediteurProfile = await getUserProfile(msg.fk_utilisateur);
+          console.log("👤 DEBUG - Profil de l'expéditeur récupéré pour message canal:", expediteurProfile);
+        }
+        
+        // Utiliser les données du profil si disponibles, sinon se rabattre sur les données du message
         addNotification({
           type: "channelMessage",
           title: `Nouveau message dans ${msg.nom_canal || "canal"}`,
           content: msg.contenu,
           userId: msg.fk_utilisateur,
-          photoUrl: msg.photo_url || null,
-          senderName: msg.nom || "Utilisateur",
+          photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur"),
           channelId: msg.fk_canal,
           workspaceId: msg.fk_workspace
         });
@@ -146,10 +177,8 @@ const Notifications = () => {
   // Supprime une notification
   const removeNotification = (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  if (notifications.length === 0) return null;
-
+  };  if (notifications.length === 0) return null;
+  
   return (
     <div className={`notifications-container ${theme === 'light' ? 'theme-light' : 'theme-dark'}`}>
       {notifications.map((notification) => {
@@ -159,65 +188,45 @@ const Notifications = () => {
         
         // Si on a récupéré le profil utilisateur, utiliser ces données
         if (notification.userProfile) {
-          avatarUrl = avatarUrl || notification.userProfile.photo_url;
-          senderName = senderName || notification.userProfile.nom || notification.userProfile.name || notification.userProfile.username;
+          console.log("🖼️ DEBUG - Données userProfile pour avatar:", notification.userProfile);
+          
+          // Vérifier toutes les propriétés possibles pour le champ photo
+          const possiblePhotoFields = ['photo_url', 'photo', 'photo_de_profil', 'avatar', 'image'];
+          for (const field of possiblePhotoFields) {
+            if (notification.userProfile[field]) {
+              console.log(`🖼️ DEBUG - Champ photo trouvé: ${field} =`, notification.userProfile[field]);
+              if (!avatarUrl) avatarUrl = notification.userProfile[field];
+            }
+          }
+          
+          // Vérifier toutes les propriétés possibles pour le nom
+          const possibleNameFields = ['nom', 'name', 'username', 'pseudo', 'displayName', 'prenom'];
+          for (const field of possibleNameFields) {
+            if (notification.userProfile[field]) {
+              console.log(`👤 DEBUG - Champ nom trouvé: ${field} =`, notification.userProfile[field]);
+              if (!senderName || senderName === "Utilisateur") senderName = notification.userProfile[field];
+            }
+          }
         }
         
+        console.log("🖼️ DEBUG - Avatar URL finale:", avatarUrl);
+        console.log("👤 DEBUG - Nom final:", senderName);
+        
+        // Utiliser le composant NotificationBubble pour un affichage cohérent
         return (
-          <div
+          <NotificationBubble 
             key={notification.id}
-            className={`notification ${notification.type}`}
-            onClick={() => {
-              navigateToConversation(notification);
-              removeNotification(notification.id);
-            }}
-          >
-            <div className="notification-avatar">
-              {avatarUrl ? (
-                <img 
-                  src={avatarUrl} 
-                  alt={`Avatar de ${senderName}`} 
-                  className="avatar-image" 
-                  onError={(e) => {
-                    e.target.onerror = null; 
-                    e.target.style.display = 'none';
-                    e.target.parentNode.querySelector('.avatar-placeholder').style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <div className="avatar-placeholder" style={{display: avatarUrl ? 'none' : 'flex'}}>
-                {senderName ? senderName.charAt(0).toUpperCase() : '?'}
-              </div>
-            </div>
-            <div className="notification-content">
-              <div className="notification-header">
-                <h4>
-                  {notification.type === "privateMessage" 
-                    ? `Message de ${senderName}` 
-                    : notification.title}
-                </h4>
-                <button
-                  className="close-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeNotification(notification.id);
-                  }}
-                  aria-label="Fermer la notification"
-                >
-                  ×
-                </button>
-              </div>
-              <p className="notification-message">
-                {getMessagePreview(notification.content)}
-              </p>
-              <small className="notification-time">
-                {new Date(notification.timestamp).toLocaleTimeString(undefined, {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </small>
-            </div>
-          </div>
+            userId={notification.userId}
+            senderName={senderName}
+            content={notification.content}
+            photoUrl={avatarUrl}
+            timestamp={notification.timestamp}
+            type={notification.type}
+            channelId={notification.channelId}
+            workspaceId={notification.workspaceId}
+            userProfile={notification.userProfile}
+            onClose={() => removeNotification(notification.id)}
+          />
         );
       })}
     </div>

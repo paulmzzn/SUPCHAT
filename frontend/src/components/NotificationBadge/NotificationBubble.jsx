@@ -26,16 +26,31 @@ const NotificationBubble = ({
   type,
   channelId,
   workspaceId,
-  onClose
+  onClose,
+  userProfile
 }) => {
   const navigate = useNavigate();
-
+  // Déterminer la véritable URL de la photo
+  console.log("[NotificationBubble] Props reçues:", {
+    userId, 
+    senderName, 
+    photoUrl, 
+    userProfile: userProfile ? JSON.stringify(userProfile) : "undefined"
+  });
+  
+  const avatarUrl = photoUrl || 
+                   (userProfile && (userProfile.photo_de_profil || userProfile.avatar || userProfile.photo_url));
+                   
+  console.log("[NotificationBubble] avatarUrl déterminée:", avatarUrl);
   // Fonction pour formater l'aperçu du message
   const getMessagePreview = (text) => {
     if (!text) return "Nouveau message";
     
     // Supprimer les balises HTML si présentes
-    const cleanContent = text.replace(/<[^>]*>?/gm, '');
+    const cleanContent = text.replace(/<[^>]*>/gm, '');
+    
+    console.log("[NotificationBubble] Contenu original:", text);
+    console.log("[NotificationBubble] Contenu nettoyé:", cleanContent);
     
     // Limiter à 60 caractères
     const previewLength = 60;
@@ -72,29 +87,28 @@ const NotificationBubble = ({
     <div 
       className={`notification-bubble ${type}`}
       onClick={handleClick}
-    >
-      <div className="notification-avatar">
-        {photoUrl ? (
+    >      <div className="notification-avatar">
+        {avatarUrl ? (
           <img 
-            src={photoUrl} 
-            alt={`Avatar de ${senderName}`} 
+            src={avatarUrl} 
+            alt={`Avatar de ${senderName || 'utilisateur'}`} 
             className="avatar-image" 
             onError={(e) => {
+              console.log("[NotificationBubble] Erreur de chargement d'image:", avatarUrl);
               e.target.onerror = null; 
               e.target.style.display = 'none';
               e.target.parentNode.querySelector('.avatar-placeholder').style.display = 'flex';
             }}
           />
         ) : null}
-        <div className="avatar-placeholder" style={{display: photoUrl ? 'none' : 'flex'}}>
+        <div className="avatar-placeholder" style={{display: avatarUrl ? 'none' : 'flex'}}>
           {senderName ? senderName.charAt(0).toUpperCase() : '?'}
         </div>
       </div>
-      <div className="notification-content">
-        <div className="notification-header">
+      <div className="notification-content">        <div className="notification-header">
           <h4>
             {type === "privateMessage" 
-              ? `Message de ${senderName}` 
+              ? `Message de ${senderName || (userProfile ? userProfile.username || userProfile.name || userProfile.displayName || "Utilisateur" : "Utilisateur")}` 
               : `Nouveau message dans un canal`}
           </h4>
           <button
