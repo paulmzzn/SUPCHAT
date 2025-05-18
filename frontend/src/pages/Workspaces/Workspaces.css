@@ -91,6 +91,7 @@
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 1rem;
+  padding-top: 8px; /* Ajouté pour laisser de l'espace aux badges de notification */
 }
 
 .favorite-item {
@@ -122,6 +123,8 @@
   background-size: cover;
   background-position: center;
   margin-bottom: 8px;
+  position: relative;
+  z-index: 1; /* Crée un nouveau contexte d'empilement */
 }
 
 .favorite-icon.empty {
