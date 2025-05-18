@@ -1,0 +1,195 @@
+/* Styles pour les boutons d'action dans l'en-tête de section membres */
+.member-actions-container {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.member-action-btn {
+  background: none;
+  border: none;
+  color: var(--workspace-details-text, #bbbcc4);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.member-action-btn:hover {
+  color: var(--workspace-details-text-hover, #ffffff);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Badge de notification pour les demandes en attente */
+.join-requests-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ff3b5c;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--workspace-details-bg, #1e1e2e);
+}
+
+/* Panel des demandes d'adhésion */
+.join-requests-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin: 4px 0px 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.join-requests-panel h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: var(--workspace-details-text, #bbbcc4);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.join-requests-loading, 
+.join-requests-error,
+.join-requests-empty {
+  color: var(--workspace-details-text-muted, #9b9ba8);
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 12px 0;
+  font-style: italic;
+}
+
+.join-requests-error {
+  color: #ff6b6b;
+}
+
+.join-requests-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.join-request-item {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.join-request-item:last-child {
+  margin-bottom: 0;
+}
+
+.join-request-user {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.join-request-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.join-request-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--workspace-details-glow1, #b05fdf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.join-request-details {
+  flex: 1;
+}
+
+.join-request-name {
+  font-weight: 500;
+  color: var(--workspace-details-text-bright, #ffffff);
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.join-request-email {
+  color: var(--workspace-details-text-muted, #9b9ba8);
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.join-request-message {
+  font-size: 0.85rem;
+  color: var(--workspace-details-text, #bbbcc4);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-top: 6px;
+  border-left: 2px solid var(--workspace-details-glow1, #b05fdf);
+}
+
+.join-request-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.join-request-accept,
+.join-request-reject {
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.join-request-accept {
+  background-color: var(--workspace-details-glow1, #b05fdf);
+  color: white;
+  flex: 1;
+}
+
+.join-request-accept:hover {
+  background-color: #9348b7;
+}
+
+.join-request-reject {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--workspace-details-text, #bbbcc4);
+}
+
+.join-request-reject:hover {
+  background-color: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.join-request-accept:disabled,
+.join-request-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
