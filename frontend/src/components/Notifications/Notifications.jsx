@@ -92,12 +92,12 @@ const Notifications = () => {
     // Jouer le son de notification
     playNotificationSound(notificationSettings);
   };
-
   // Fonction pour naviguer vers la conversation
   const navigateToConversation = (notification) => {
     if (notification.type === "privateMessage" && notification.userId) {
       // Naviguer vers la conversation privée
-      navigate(`/direct-messages?user=${notification.userId}`);
+      console.log("[Notifications] Navigation vers conversation privée avec userId:", notification.userId);
+      navigate(`/direct-messages?userId=${notification.userId}`);
     } else if (notification.type === "channelMessage" && notification.channelId) {
       // Naviguer vers le canal du workspace
       navigate(`/workspace/${notification.workspaceId}?channel=${notification.channelId}`);
