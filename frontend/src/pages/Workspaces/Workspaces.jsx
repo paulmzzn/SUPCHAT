@@ -517,12 +517,12 @@ function Workspaces() {
                           className="favorite-icon"
                           style={{ backgroundImage: `url(${workspace.icon})` }}
                         >
-                        </div>
-                        <span className="favorite-name">
-                          {workspace.name}
                           {unread > 0 && (
                             <NotificationBadge count={unread} className="workspace-badge" />
                           )}
+                        </div>
+                        <span className="favorite-name">
+                          {workspace.name}
                         </span>
                       </div>
                     );
