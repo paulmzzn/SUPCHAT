@@ -27,12 +27,6 @@ function ActivitySection({ userStats = {} }) {
         </div>
         <div className="statistique-item">
           <span className="statistique-value">
-            {safeNumber(userStats.mentions)}
-          </span>
-          <span className="statistique-label">mentions</span>
-        </div>
-        <div className="statistique-item">
-          <span className="statistique-value">
             {safeNumber(userStats.workspaces)}
           </span>
           <span className="statistique-label">workspaces</span>
