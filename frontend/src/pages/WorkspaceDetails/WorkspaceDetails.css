@@ -3170,3 +3170,105 @@ span.channel-mention:hover,
 .remove-member-btn:hover {
   background: rgba(244, 67, 54, 0.2);
 }
+
+/* Styles pour les onglets de la barre latérale */
+.sidebar-tabs {
+  display: flex;
+  background-color: var(--workspace-details-sidebar-bg);
+  border-bottom: var(--workspace-details-sidebar-border);
+  margin-bottom: 10px;
+  padding: 0 16px;
+}
+
+.sidebar-tab {
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--workspace-details-section-header);
+  position: relative;
+}
+
+.sidebar-tab:hover {
+  color: var(--workspace-details-add-channel-hover);
+}
+
+.sidebar-tab.active {
+  color: var(--workspace-details-add-channel-hover);
+  border-bottom: 3px solid #9348b7;
+  font-weight: 600;
+}
+
+.sidebar-tab.active::before {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, #9348b7, #b05fdf);
+  border-radius: 3px 3px 0 0;
+}
+
+.sidebar-tab:not(.active):hover {
+  border-bottom: 3px solid rgba(147, 72, 183, 0.3);
+}
+
+.sidebar-tab .badge {
+  background-color: #ff3b5c;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  position: relative;
+  top: -1px;
+}
+
+.sidebar-tab-content {
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+.sidebar-tab-pane {
+  display: none;
+  height: 100%;
+}
+
+.sidebar-tab-pane.active {
+  display: block;
+}
+
+/* Support du thème clair pour les onglets */
+.theme-light .sidebar-tabs {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.theme-light .sidebar-tab {
+  color: #b0b3b8;
+}
+
+.theme-light .sidebar-tab:hover {
+  color: #9348b7;
+}
+
+.theme-light .sidebar-tab.active {
+  color: #9348b7;
+  border-bottom: 3px solid #9348b7;
+}
+
+.theme-light .sidebar-tab.active::before {
+  background: linear-gradient(to right, #9348b7, #b05fdf);
+}
+
+.theme-light .sidebar-tab:not(.active):hover {
+  border-bottom: 3px solid rgba(147, 72, 183, 0.2);
+}
