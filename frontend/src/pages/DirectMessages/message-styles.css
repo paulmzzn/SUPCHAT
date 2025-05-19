@@ -21,3 +21,63 @@
 .user-mention.clickable:hover strong {
   color: #4a7aff;
 }
+
+/* Styles pour les suggestions de mentions */
+.dm-mention-suggestions {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  background-color: #2f3136;
+  border: 1px solid #4a7aff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  max-height: 200px;
+  overflow-y: auto;
+  width: 250px;
+  z-index: 10;
+}
+
+.dm-mention-suggestion {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dm-mention-suggestion.active,
+.dm-mention-suggestion:hover {
+  background-color: #4a7aff33;
+}
+
+.dm-mention-avatar,
+.dm-mention-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 10px;
+  background-color: #4a7aff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+.dm-mention-name {
+  font-weight: 500;
+}
+
+.mention-tag {
+  background-color: rgba(88, 101, 242, 0.15);
+  color: #5865f2;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mention-tag:hover {
+  background-color: rgba(88, 101, 242, 0.3);
+}
