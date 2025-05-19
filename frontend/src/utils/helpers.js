@@ -112,7 +112,7 @@ export const debugMistralInteraction = (message) => {
 };
 
 // Helper pour rendre les liens cliquables dans un texte
-export const renderTextWithLinks = (text, onChannelClick) => {
+export const renderTextWithLinks = (text, onChannelClick, onUserClick) => {
   // Suppression des logs de débogage pour la version de production
   // console.log("renderTextWithLinks appelé avec:", {
   //   text,
@@ -126,6 +126,8 @@ export const renderTextWithLinks = (text, onChannelClick) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   // Regex pour les mentions de canaux - cherche les motifs comme #canal-name
   const channelRegex = /#([a-zA-Z0-9_-]+)(\s|$)/g;
+  // Regex pour les mentions d'utilisateurs - cherche les motifs comme @[username](userId)
+  const userMentionRegex = /@\[([^\]]+)\]\(([0-9a-f-]+)\)(\s|$)/g;
   // Format simple pour les sondages
   const strawpollSimpleRegex =
     /Sondage créé\s*:\s*([^\[]*)\[([^\]]+)\]\((https?:\/\/strawpoll\.com\/[^\)]+)\)\s*\[strawpoll:([a-zA-Z0-9]+)\]/g;
@@ -172,7 +174,6 @@ export const renderTextWithLinks = (text, onChannelClick) => {
       type: "url",
     });
   }
-
   // Trouver toutes les mentions de canaux (également dans le texte temporaire)
   while ((match = channelRegex.exec(tempText)) !== null) {
     matches.push({
@@ -181,6 +182,18 @@ export const renderTextWithLinks = (text, onChannelClick) => {
       content: "#" + match[1], // Juste #nom sans l'espace
       type: "channel",
       channelName: match[1], // Nom du canal sans le #
+    });
+  }
+
+  // Trouver toutes les mentions d'utilisateurs
+  while ((match = userMentionRegex.exec(tempText)) !== null) {
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length - (match[3] === " " ? 1 : 0), // Ne pas inclure l'espace dans la correspondance
+      content: `@[${match[1]}](${match[2]})`, // La mention complète @[username](userId)
+      type: "user",
+      userName: match[1], // Nom de l'utilisateur sans le @[]
+      userId: match[2], // ID de l'utilisateur
     });
   }
 
@@ -228,6 +241,19 @@ export const renderTextWithLinks = (text, onChannelClick) => {
           title={`Cliquer pour aller au canal #${match.channelName}`}
         >
           {match.content}
+        </span>
+      );
+    } else if (match.type === "user") {
+      parts.push(
+        <span
+          key={`user-${key++}`}
+          className="user-mention clickable username-clickable"
+          onClick={() =>
+            onUserClick && onUserClick(match.userId, match.userName)
+          }
+          title={`${match.userName}`}
+        >
+          <strong>@{match.userName}</strong>
         </span>
       );
     } else if (match.type === "strawpoll") {
