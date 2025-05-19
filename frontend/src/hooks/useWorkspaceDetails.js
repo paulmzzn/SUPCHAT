@@ -887,81 +887,82 @@ export const useWorkspaceDetails = (workspaceId) => {
   }, [members]);
 
   // Effet pour la recherche unifiée
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!searchQuery.trim() || searchQuery.length < 2 || !workspaceId) {
-        setSearchResults({ channels: [], users: [], messages: [] });
-        setIsSearching(false);
-        return;
-      }
+  const searchWorkspace = useCallback(async () => {
+    if (searchQuery.trim().length < 2) {
+      setSearchResults({ channels: [], users: [], messages: [] });
+      setIsSearching(false);
+      return;
+    }
 
-      setIsSearching(true);
-
-      try {
-        const token = localStorage.getItem("token");
-        // Utiliser une requête GET avec query dans l'URL comme attendu par le backend
-        const response = await fetch(
-          `${API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(
-            searchQuery
-          )}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Erreur lors de la recherche");
+    setIsSearching(true);
+    try {
+      console.log(`Recherche dans le workspace ${workspaceId} pour: ${searchQuery}`);
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(
+          searchQuery.trim()
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        const data = await response.json();
-
-        // Formater les données pour l'affichage
-        const formattedResults = {
-          channels:
-            data.canaux?.map((channel) => ({
-              id: channel.id_canal,
-              name: channel.nom,
-              description: channel.description || "",
-              isPrivate: channel.is_private || false,
-            })) || [],
-          users:
-            data.utilisateurs?.map((user) => ({
-              id: user.id_utilisateur,
-              name: user.nom,
-              avatar: user.photo_url || user.photo_de_profil || null,
-              status:
-                userStatuses[user.id_utilisateur] || user.status || "offline",
-            })) || [],
-          messages:
-            data.messages?.map((message) => ({
-              id: message.id_message,
-              contenu: message.contenu,
-              date_creation: message.date_creation || message.created_at,
-              userName: message.nom_utilisateur || message.nom,
-              userId: message.id_utilisateur,
-              channelId: message.id_canal,
-              channelName: message.nom_canal,
-            })) || [],
-        };
-
-        setSearchResults(formattedResults);
-      } catch (err) {
-        console.error("Erreur lors de la recherche:", err);
-        setSearchResults({ channels: [], users: [], messages: [] });
-      } finally {
-        setIsSearching(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la recherche");
       }
-    };
 
-    // Ajout d'un délai pour éviter trop d'appels API pendant la frappe
+      const data = await response.json();
+      console.log("Résultats de recherche:", data);
+
+      // Formater les résultats pour assurer la compatibilité
+      const formattedResults = {
+        channels:
+          data.canaux?.map((channel) => ({
+            id: channel.id_canal,
+            name: channel.nom, // Assurer la présence de la propriété 'name'
+            nom: channel.nom,   // Conserver 'nom' pour la compatibilité
+            description: channel.description || "",
+            isPrivate: channel.is_private || false,
+          })) || [],
+        users:
+          data.utilisateurs?.map((user) => ({
+            id: user.id_utilisateur,
+            name: user.nom,
+            avatar: user.photo_url || user.photo_de_profil || null,
+            status:
+              userStatuses[user.id_utilisateur] || user.status || "offline",
+          })) || [],
+        messages:
+          data.messages?.map((message) => ({
+            id: message.id_message,
+            contenu: message.contenu,
+            date_creation: message.date_creation || message.created_at,
+            userName: message.nom_utilisateur || message.nom,
+            userId: message.id_utilisateur,
+            channelId: message.id_canal,
+            channelName: message.nom_canal,
+          })) || [],
+      };
+
+      setSearchResults(formattedResults);
+    } catch (err) {
+      console.error("Erreur lors de la recherche:", err);
+      setSearchResults({ channels: [], users: [], messages: [] });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchQuery, workspaceId, userStatuses, API_URL]);
+
+  useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      performSearch();
+      searchWorkspace();
     }, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, workspaceId, userStatuses]);
+  }, [searchQuery, searchWorkspace]);
 
   // Fonction pour sélectionner un résultat de recherche
   const handleSelectSearchResult = (type, result) => {
