@@ -27,7 +27,7 @@ export function SocketProvider({ children }) {
   const socketRef = useRef(null);
 
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.167:3000";
+  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.141:3000";
 
 
   // Fonction pour rafraîchir le compteur de messages privés non lus
