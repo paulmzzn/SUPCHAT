@@ -23,18 +23,27 @@ export function SocketProvider({ children }) {
 
   // Ajouter un state pour les statuts utilisateur
   const [userStatuses, setUserStatuses] = useState({});
-
   const socketRef = useRef(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.167:3000";
-
+  // Permettre l'utilisation de la variable d'environnement ou une valeur de secours
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return; // Ne pas essayer sans token
+
     try {
+      // Ajouter un timeout pour éviter les longs délais d'attente
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes maximum
+
       const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId); // Nettoyer le timeout
+
       if (res.ok) {
         const data = await res.json();
         // data = { [userId]: count, ... }
@@ -49,22 +58,55 @@ export function SocketProvider({ children }) {
           detail: { count: total },
         });
         window.dispatchEvent(event);
+      } else {
+        console.warn(
+          "Erreur lors du rafraîchissement du compteur: Statut",
+          res.status
+        );
+        // Utiliser les données mises en cache précédemment si disponibles
+        const cachedCount = localStorage.getItem("unreadPrivateMessages");
+        if (cachedCount) {
+          setGlobalNotifications((prev) => ({
+            ...prev,
+            private: parseInt(cachedCount, 10),
+          }));
+        }
       }
     } catch (e) {
       console.error(
         "Erreur lors du rafraîchissement du compteur de messages:",
         e
       );
+      // Ne pas afficher d'erreur pour les aborts (timeout ou navigation)
+      if (e.name !== "AbortError") {
+        // Utiliser les données mises en cache précédemment si disponibles
+        const cachedCount = localStorage.getItem("unreadPrivateMessages");
+        if (cachedCount) {
+          setGlobalNotifications((prev) => ({
+            ...prev,
+            private: parseInt(cachedCount, 10),
+          }));
+        }
+      }
     }
   };
-
   // Nouvelle fonction pour rafraîchir le compteur de messages non lus par canal
   const refreshUnreadChannels = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return; // Ne pas essayer sans token
+
     try {
+      // Ajouter un timeout pour éviter les longs délais d'attente
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes maximum
+
       const res = await fetch(`${API_URL}/api/messages/unread`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId); // Nettoyer le timeout
+
       if (res.ok) {
         const data = await res.json();
         // data = { channels: { [channelId]: count, ... }, total: number }
@@ -89,15 +131,58 @@ export function SocketProvider({ children }) {
           },
         });
         window.dispatchEvent(event);
+      } else {
+        console.warn(
+          "Erreur lors du rafraîchissement des canaux non lus: Statut",
+          res.status
+        );
+        // Utiliser les données mises en cache précédemment si disponibles
+        const cachedTotal = localStorage.getItem("unreadChannelMessages");
+        const cachedDetails = localStorage.getItem(
+          "unreadChannelMessagesDetails"
+        );
+
+        if (cachedTotal && cachedDetails) {
+          try {
+            const channels = JSON.parse(cachedDetails);
+            setGlobalNotifications((prev) => ({
+              ...prev,
+              workspace: parseInt(cachedTotal, 10),
+              channels: channels,
+            }));
+          } catch (err) {
+            console.error("Erreur de parsing des données en cache:", err);
+          }
+        }
       }
     } catch (e) {
       console.error(
         "Erreur lors du rafraîchissement du compteur de messages par canal:",
         e
       );
+      // Ne pas afficher d'erreur pour les aborts (timeout ou navigation)
+      if (e.name !== "AbortError") {
+        // Utiliser les données mises en cache précédemment si disponibles
+        const cachedTotal = localStorage.getItem("unreadChannelMessages");
+        const cachedDetails = localStorage.getItem(
+          "unreadChannelMessagesDetails"
+        );
+
+        if (cachedTotal && cachedDetails) {
+          try {
+            const channels = JSON.parse(cachedDetails);
+            setGlobalNotifications((prev) => ({
+              ...prev,
+              workspace: parseInt(cachedTotal, 10),
+              channels: channels,
+            }));
+          } catch (err) {
+            console.error("Erreur de parsing des données en cache:", err);
+          }
+        }
+      }
     }
   };
-
   // Initialisation du socket au démarrage de l'application
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -105,42 +190,114 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    try {
-      const socketOptions = {
-        auth: { token },
-        transports: ["websocket", "polling"], // Try websocket first, fallback to polling
-        reconnection: true,
-        reconnectionAttempts: 15, // Increased from 10
-        reconnectionDelay: 1000, // Decreased initial delay
-        reconnectionDelayMax: 10000,
-        timeout: 30000, // Increased from 20000
-        autoConnect: true,
-      };
+    // Petite temporisation avant de tenter la connexion socket
+    // pour laisser le temps à l'application de s'initialiser
+    const timeoutId = setTimeout(() => {
+      try {
+        const socketOptions = {
+          auth: { token },
+          transports: ["websocket", "polling"], // Try websocket first, fallback to polling
+          reconnection: true,
+          reconnectionAttempts: 30, // Augmenté pour plus de résilience
+          reconnectionDelay: 1000, // Délai initial court
+          reconnectionDelayMax: 30000, // Délai maximal plus long (30 sec)
+          timeout: 10000, // Timeout plus court pour détecter rapidement les problèmes
+          autoConnect: true,
+          forceNew: false,
+          query: { token }, // Inclure aussi le token dans la query pour plus de flexibilité
+        };
 
-      const newSocket = io(API_URL, socketOptions);
+        // Log de debug temporaire
+        console.debug("[Socket] Tentative de connexion au serveur", API_URL);
 
-      newSocket.on("connect", () => {
-        newSocket.emit("joinPrivate"); // Rejoindre la room privée
+        const newSocket = io(API_URL, socketOptions);
 
-        // Fetch notifications on reconnect to ensure badges are up-to-date
-        refreshUnreadDM();
-        refreshUnreadChannels();
-      });
+        newSocket.on("connect", () => {
+          console.log("[Socket] Connexion établie");
+          newSocket.emit("joinPrivate"); // Rejoindre la room privée
 
-      newSocket.on("connect_error", (err) => {
-        console.error("[Socket] Erreur de connexion:", err);
-      });
+          // Fetch notifications on reconnect to ensure badges are up-to-date
+          setTimeout(() => {
+            // Légère temporisation pour laisser au serveur le temps de traiter le joinPrivate
+            refreshUnreadDM();
+            refreshUnreadChannels();
+          }, 500);
+        });
+        newSocket.on("connect_error", (err) => {
+          console.error("[Socket] Erreur de connexion:", err.message);
 
-      setSocket(newSocket);
-      socketRef.current = newSocket;
+          // Si la connexion échoue en raison d'une erreur d'autorisation, rediriger vers la page de connexion
+          if (
+            err.message === "Authorization failed" ||
+            err.message.includes("auth")
+          ) {
+            console.warn("[Socket] Problème d'authentification, déconnexion");
+            // La déconnexion sera gérée par un autre composant - nous informons simplement ici
+          }
+        });
 
-      return () => {
-        newSocket.off();
-        newSocket.disconnect();
-      };
-    } catch (error) {
-      console.error("[Socket] Erreur lors de l'initialisation:", error);
-    }
+        // Ajouter des gestionnaires d'événements pour la reconnexion
+        newSocket.on("disconnect", (reason) => {
+          console.warn("[Socket] Déconnecté:", reason);
+
+          // Si le serveur nous a déconnecté intentionnellement, ne pas tenter de reconnexion automatique
+          if (reason === "io server disconnect") {
+            console.warn(
+              "[Socket] Déconnexion initiée par le serveur, pas de reconnexion automatique"
+            );
+          }
+        });
+
+        newSocket.on("reconnect", (attemptNumber) => {
+          console.log("[Socket] Reconnecté après", attemptNumber, "tentatives");
+
+          // Rejoindre la room privée à nouveau
+          newSocket.emit("joinPrivate");
+
+          // Rafraîchir les compteurs
+          setTimeout(() => {
+            refreshUnreadDM();
+            refreshUnreadChannels();
+          }, 1000);
+        });
+
+        newSocket.on("reconnect_attempt", (attemptNumber) => {
+          console.log("[Socket] Tentative de reconnexion #", attemptNumber);
+        });
+
+        newSocket.on("reconnect_error", (error) => {
+          console.error(
+            "[Socket] Erreur lors de la reconnexion:",
+            error.message
+          );
+        });
+
+        newSocket.on("reconnect_failed", () => {
+          console.error(
+            "[Socket] Échec de la reconnexion après le nombre maximal de tentatives"
+          );
+          // Essayer de recréer un nouveau socket après un délai
+          setTimeout(() => {
+            if (socketRef.current) {
+              socketRef.current.close();
+              socketRef.current = null;
+              setSocket(null);
+              // L'effet useEffect se déclenchera à nouveau et tentera de créer un nouveau socket
+            }
+          }, 5000);
+        });
+
+        setSocket(newSocket);
+        socketRef.current = newSocket;
+
+        return () => {
+          newSocket.off();
+          newSocket.disconnect();
+        };
+      } catch (error) {
+        console.error("[Socket] Erreur lors de l'initialisation:", error);
+      }
+    }, 0); // Fermé avec un délai de 0
   }, [API_URL]);
 
   // Initialisation des compteurs de messages non lus au montage
@@ -400,7 +557,6 @@ export function SocketProvider({ children }) {
 
     loadWorkspaces();
   }, [socket, API_URL]);
-
   return (
     <SocketContext.Provider
       value={{
@@ -413,7 +569,7 @@ export function SocketProvider({ children }) {
         setUserStatus, // Fonction pour changer le statut
       }}
     >
-      {children}
+      {children}{" "}
     </SocketContext.Provider>
   );
 }

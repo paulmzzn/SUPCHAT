@@ -1,4 +1,5 @@
 // Hook personnalisé pour gérer les messages
+
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
@@ -36,68 +37,7 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
 
-  /**
-   * Récupère les messages d'une conversation
-   * @param {string} userId - ID de l'utilisateur
-   */
-  const fetchMessages = useCallback(async (userId) => {
-    if (!userId) return;
-
-    try {
-      setLoadingMessages(true);
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `${API_URL}/api/private-messages/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des messages");
-      }
-
-      const data = await response.json();
-
-      // Enrichir les messages avec les pièces jointes
-      const messagesWithAttachments = await Promise.all(
-        data.map(async (msg) => {
-          if (!msg.id_message_prive) return msg;
-
-          try {
-            const attachments = await fetchMessageAttachments(
-              msg.id_message_prive
-            );
-            return { ...msg, attachments };
-          } catch (error) {
-            console.error(
-              "Erreur lors de la récupération des pièces jointes:",
-              error
-            );
-            return { ...msg, attachments: [] };
-          }
-        })
-      );
-
-      setMessages(messagesWithAttachments);
-
-      // Marquer les messages comme lus
-      markMessagesAsRead(messagesWithAttachments);
-    } catch (error) {
-      console.error("Erreur:", error);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
-
-  /**
-   * Récupère les pièces jointes d'un message
-   * @param {string} messageId - ID du message
-   * @returns {Array} - Liste des pièces jointes
-   */
+  // --- Pièces jointes ---
   const fetchMessageAttachments = useCallback(async (messageId) => {
     try {
       const token = localStorage.getItem("token");
@@ -109,18 +49,102 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
           },
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des pièces jointes");
-      }
-
+      if (!response.ok) return [];
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error("Erreur:", error);
       return [];
     }
   }, []);
+
+  // --- Marquer comme lus ---
+  const markMessagesAsRead = useCallback(
+    (msgs) => {
+      if (
+        !socket?.connected ||
+        !selectedUser ||
+        !msgs?.length ||
+        !currentUserId
+      )
+        return;
+      const unreadMessages = msgs.filter(
+        (msg) =>
+          msg.fk_expediteur === selectedUser &&
+          msg.fk_destinataire === currentUserId &&
+          !msg.date_lecture
+      );
+      if (unreadMessages.length === 0) return;
+      socket.emit(
+        "markPrivateMessagesAsRead",
+        {
+          messages: unreadMessages.map((msg) => msg.id_message_prive),
+          sender: selectedUser,
+        },
+        (response) => {
+          if (!response.success) {
+            console.error("Erreur lors du marquage des messages comme lus");
+          }
+        }
+      );
+      setMessages((currentMessages) =>
+        currentMessages.map((msg) => {
+          if (msg.fk_expediteur === selectedUser && !msg.date_lecture) {
+            return { ...msg, date_lecture: new Date().toISOString() };
+          }
+          return msg;
+        })
+      );
+    },
+    [socket, selectedUser, currentUserId]
+  );
+
+  // --- Récupérer les messages ---
+  const fetchMessages = useCallback(
+    async (userId) => {
+      if (!userId) return;
+      try {
+        setLoadingMessages(true);
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${API_URL}/api/private-messages/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        if (!response.ok)
+          throw new Error(
+            `Erreur lors de la récupération des messages: ${response.status}`
+          );
+        const data = await response.json();
+        // Enrichir les messages avec les pièces jointes
+        const messagesWithAttachments = await Promise.all(
+          data.map(async (msg) => {
+            if (!msg.id_message_prive) return msg;
+            try {
+              const attachments = await fetchMessageAttachments(
+                msg.id_message_prive
+              );
+              return { ...msg, attachments };
+            } catch {
+              return { ...msg, attachments: [] };
+            }
+          })
+        );
+        setMessages(messagesWithAttachments);
+        markMessagesAsRead(messagesWithAttachments);
+      } catch (error) {
+        setMessages([]);
+        if (error.message.includes("404")) {
+          // Nouvelle conversation, aucun message existant
+        }
+      } finally {
+        setLoadingMessages(false);
+      }
+    },
+    [fetchMessageAttachments, markMessagesAsRead]
+  );
 
   /**
    * Envoie un message à un utilisateur
@@ -226,57 +250,6 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
       }
     },
     []
-  );
-
-  /**
-   * Marque les messages comme lus
-   * @param {Array} msgs - Liste des messages
-   */
-  const markMessagesAsRead = useCallback(
-    (msgs) => {
-      if (
-        !socket?.connected ||
-        !selectedUser ||
-        !msgs?.length ||
-        !currentUserId
-      )
-        return;
-
-      // Trouver les messages non lus envoyés par l'autre utilisateur
-      const unreadMessages = msgs.filter(
-        (msg) =>
-          msg.fk_expediteur === selectedUser &&
-          msg.fk_destinataire === currentUserId &&
-          !msg.date_lecture
-      );
-
-      if (unreadMessages.length === 0) return;
-
-      // Marquer comme lus via socket
-      socket.emit(
-        "markPrivateMessagesAsRead",
-        {
-          messages: unreadMessages.map((msg) => msg.id_message_prive),
-          sender: selectedUser,
-        },
-        (response) => {
-          if (!response.success) {
-            console.error("Erreur lors du marquage des messages comme lus");
-          }
-        }
-      );
-
-      // Mettre à jour localement
-      setMessages((currentMessages) =>
-        currentMessages.map((msg) => {
-          if (msg.fk_expediteur === selectedUser && !msg.date_lecture) {
-            return { ...msg, date_lecture: new Date().toISOString() };
-          }
-          return msg;
-        })
-      );
-    },
-    [socket, selectedUser, currentUserId]
   );
 
   /**
@@ -402,55 +375,120 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
    * Gère la sélection de fichier
    * @param {Event} e - Événement de changement de fichier
    */
-  const handleFileSelect = useCallback(async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const handleFileSelect = useCallback(
+    async (e) => {
+      console.log("[DM] handleFileSelect déclenché");
+      const files = Array.from(e.target.files);
+      if (files.length === 0) {
+        console.log("[DM] Aucun fichier sélectionné");
+        return;
+      }
 
-    setUploadingFile(true);
+      console.log("[DM] Fichiers sélectionnés :", files);
 
-    try {
-      const token = localStorage.getItem("token");
-      const uploads = [];
-
+      // Vérification de la taille des fichiers
       for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
+        if (file.size > 10 * 1024 * 1024) {
+          // 10 MB
+          alert("Les fichiers ne doivent pas dépasser 10MB");
+          return;
+        }
+      }
 
-        const response = await fetch(
-          `${API_URL}/api/files/private-message-attachment`,
-          {
+      try {
+        setUploadingFile(true);
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Vous devez être connecté");
+          return;
+        }
+
+        // Utiliser la même URL d'upload que dans DirectMessages2.jsx
+        const uploadUrl = `${API_URL}/api/private-messages/upload`;
+        console.log("[DM] URL d'upload utilisée :", uploadUrl);
+
+        const uploadedAttachments = [];
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          // Si vous avez besoin de spécifier le destinataire
+          if (selectedUser) {
+            formData.append("recipientId", selectedUser);
+          }
+
+          console.log(`[DM] Envoi du fichier ${file.name} en cours...`);
+
+          const response = await fetch(uploadUrl, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
             },
             body: formData,
-          }
-        );
+          });
 
-        if (!response.ok) {
-          throw new Error(`Erreur lors de l'upload du fichier ${file.name}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(
+              `[DM] Erreur lors de l'upload (${response.status}):`,
+              errorText
+            );
+            throw new Error(
+              `Erreur ${response.status} lors de l'upload du fichier ${file.name}`
+            );
+          }
+
+          const data = await response.json();
+          console.log("[DM] Réponse upload OK :", data);
+
+          // Si le backend renvoie directement un message avec la pièce jointe
+          if (data.message_prive) {
+            // Récupérer les pièces jointes du message créé
+            let attachments = [];
+            try {
+              attachments = await fetchMessageAttachments(
+                data.message_prive.id_message_prive
+              );
+            } catch (err) {
+              console.error("[DM] Erreur récupération pièces jointes:", err);
+            }
+
+            // Ajouter le message à l'UI
+            setMessages((prev) => [
+              ...prev,
+              { ...data.message_prive, attachments },
+            ]);
+          }
+          // Sinon, ajouter le fichier à la liste des pièces jointes pour envoi ultérieur
+          else if (data.fichier) {
+            uploadedAttachments.push(data.fichier);
+          }
         }
 
-        const data = await response.json();
-        uploads.push({
-          id_fichier: data.id_fichier,
-          nom_fichier: data.nom_fichier || file.name,
-          type: file.type,
-          taille_fichier: file.size,
-          url: data.url,
-        });
-      }
+        // Mettre à jour l'état des pièces jointes
+        if (uploadedAttachments.length > 0) {
+          setAttachments((prev) => [...prev, ...uploadedAttachments]);
+          console.log(
+            "[DM] Pièces jointes ajoutées à l'état local :",
+            uploadedAttachments
+          );
+        }
 
-      setAttachments((prev) => [...prev, ...uploads]);
-      // Réinitialiser le champ file input
-      e.target.value = "";
-    } catch (error) {
-      console.error("Erreur lors de l'upload:", error);
-      alert("Une erreur est survenue lors de l'upload du fichier");
-    } finally {
-      setUploadingFile(false);
-    }
-  }, []);
+        // Réinitialiser l'input file
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (err) {
+        console.error("[DM] Erreur lors de l'upload:", err);
+        alert(`Erreur lors de l'upload: ${err.message}`);
+      } finally {
+        setUploadingFile(false);
+      }
+    },
+    [selectedUser, setMessages, fileInputRef]
+  );
 
   /**
    * Déclenche le sélecteur de fichier

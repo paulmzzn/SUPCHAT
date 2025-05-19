@@ -30,52 +30,13 @@ export const useConversations = () => {
   });
 
   /**
-   * Récupère la liste des conversations
+   * Calcule le nombre total de messages non lus
+   * @param {Object} countsObj - Objet avec les compteurs par conversation
+   * @returns {number} - Total des messages non lus
    */
-  const fetchConversations = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `${API_URL}/api/private-messages/conversations`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des conversations");
-      }
-
-      const data = await response.json();
-      setConversations(data.conversations || []);
-
-      // Récupérer les infos utilisateurs pour chaque conversation
-      const convUsers = data.conversations || [];
-
-      // Charger aussi les compteurs de messages non lus
-      const unreadCountsFromStorage = safeJSONParse(
-        localStorage.getItem("unreadDMCounts"),
-        {}
-      );
-      setUnreadMessageCounts(unreadCountsFromStorage);
-
-      // Calculer le total de messages non lus
-      const total = calculateTotalUnreadCount(unreadCountsFromStorage);
-      setTotalUnreadCount(total);
-
-      // Charger les informations de chaque utilisateur
-      await Promise.all(convUsers.map((userId) => fetchUserInfo(userId)));
-    } catch (error) {
-      console.error("Erreur:", error);
-      setError("Impossible de charger les conversations");
-    } finally {
-      setLoading(false);
-    }
+  const calculateTotalUnreadCount = useCallback((countsObj) => {
+    if (!countsObj) return 0;
+    return Object.values(countsObj).reduce((sum, count) => sum + count, 0);
   }, []);
 
   /**
@@ -119,6 +80,60 @@ export const useConversations = () => {
   }, []);
 
   /**
+   * Récupère la liste des conversations
+   */
+  const fetchConversations = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+
+      console.log("[useConversations] Récupération des conversations...");
+
+      const response = await fetch(
+        `${API_URL}/api/private-messages/conversations`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`[useConversations] Erreur HTTP: ${response.status}`);
+        throw new Error(
+          `Erreur lors de la récupération des conversations: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      let convList = [];
+      if (Array.isArray(data)) {
+        convList = data;
+      } else if (data.conversations && Array.isArray(data.conversations)) {
+        convList = data.conversations;
+      } else {
+        console.error("[useConversations] Format de données invalide:", data);
+        throw new Error("Format de données invalide pour les conversations");
+      }
+
+      console.log(
+        `[useConversations] ${convList.length} conversations récupérées:`,
+        convList
+      );
+      setConversations(convList);
+
+      // Charger les infos utilisateurs pour chaque conversation
+      await Promise.all(convList.map((userId) => fetchUserInfo(userId)));
+    } catch (error) {
+      console.error("[useConversations] Erreur:", error);
+      setError("Impossible de charger les conversations");
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUserInfo]);
+  /**
    * Récupère la liste des utilisateurs disponibles
    */
   const fetchAvailableUsers = useCallback(async () => {
@@ -146,16 +161,6 @@ export const useConversations = () => {
       setLoadingUsers(false);
     }
   }, []);
-  /**
-   * Calcule le nombre total de messages non lus
-   * @param {Object} countsObj - Objet avec les compteurs par conversation
-   * @returns {number} - Total des messages non lus
-   */
-  const calculateTotalUnreadCount = useCallback((countsObj) => {
-    if (!countsObj) return 0;
-    return Object.values(countsObj).reduce((sum, count) => sum + count, 0);
-  }, []);
-
   /**
    * Met à jour les compteurs de messages non lus
    * @param {Object} newCounts - Nouveaux compteurs
@@ -194,23 +199,26 @@ export const useConversations = () => {
   /**
    * Démarre une conversation avec un utilisateur
    * @param {string} userId - ID de l'utilisateur
+   * @returns {string} - ID de l'utilisateur ajouté
    */
+
   const startConversationWith = useCallback(
     (userId) => {
-      // Ajouter à la liste des conversations si pas déjà présent
+      if (!userId) return null;
+
+      // Vérifier si l'utilisateur est déjà dans les conversations
       if (!conversations.includes(userId)) {
         setConversations((prev) => [...prev, userId]);
       }
 
-      // Fermer le modal
-      setShowNewConversationModal(false);
-
-      // Réinitialiser la recherche
-      setSearchUserQuery("");
+      // Si l'utilisateur n'est pas dans usersInfo, on récupère ses infos
+      if (!usersInfo[userId]) {
+        fetchUserInfo(userId);
+      }
 
       return userId;
     },
-    [conversations]
+    [conversations, usersInfo, fetchUserInfo]
   );
 
   /**

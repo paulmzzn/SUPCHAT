@@ -77,7 +77,6 @@ const MessageArea = ({
       {/* Éléments SVG pour l'arrière-plan */}
       <div className="glow-circle-right top-right"></div>
       <div className="glow-circle-left bottom-left"></div>
-
       {/* Header avec infos du contact */}
       <div className="dm-header">
         <div className="dm-header-info">
@@ -107,7 +106,6 @@ const MessageArea = ({
           </div>
         </div>
       </div>
-
       {/* Messages */}
       <MessageContainer
         messages={messages}
@@ -124,7 +122,6 @@ const MessageArea = ({
         formatFileSize={formatFileSize}
         onDownloadFile={onDownloadFile}
       />
-
       {/* Éditeur de message (si un message est en cours d'édition) */}
       {editingMessage && (
         <MessageEditor
@@ -133,8 +130,7 @@ const MessageArea = ({
           onSave={handleSaveEdit}
           onCancel={handleCancelEdit}
         />
-      )}
-
+      )}{" "}
       {/* Input de nouveau message (si aucun message n'est en cours d'édition) */}
       {!editingMessage && (
         <MessageInput
@@ -146,6 +142,7 @@ const MessageArea = ({
           removeAttachment={removeAttachment}
           uploadingFile={uploadingFile}
           fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
           onAttachmentClick={handleAttachmentClick}
           onSubmit={handleSendMessage}
           handleInputChange={handleInputChange}
@@ -156,7 +153,6 @@ const MessageArea = ({
           onMentionSelect={onMentionSelect}
         />
       )}
-
       {/* Menu contextuel pour les messages */}
       <MessageContextMenu
         visible={messageContextMenu.visible}
@@ -169,7 +165,6 @@ const MessageArea = ({
         onAddReaction={onAddReaction}
         onClose={onCloseMessageContextMenu}
       />
-
       {/* Sélecteur d'emoji */}
       <EmojiPicker
         show={showEmojiPicker}

@@ -17,6 +17,7 @@ const MessageInput = ({
   removeAttachment,
   uploadingFile,
   fileInputRef,
+  handleFileSelect,
   onAttachmentClick,
   onSubmit,
   handleInputChange,
@@ -70,16 +71,12 @@ const MessageInput = ({
       )}
 
       <div className="dm-input-wrapper">
-        {/* Input file caché */}
         <input
-          ref={fileInputRef}
           type="file"
-          onChange={(e) =>
-            e.target.files && e.target.files.length > 0
-              ? handleInputChange(e)
-              : null
-          }
+          ref={fileInputRef}
           style={{ display: "none" }}
+          onChange={handleFileSelect}
+          multiple
         />
 
         {/* Bouton d'attachement */}
