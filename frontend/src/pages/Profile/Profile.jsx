@@ -110,7 +110,6 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
       const apiUrl =
-
         (process.env.REACT_APP_API_URL || "http://REDACTED:3001") +
 
         `/api/users/${userId}/workspaces`;
