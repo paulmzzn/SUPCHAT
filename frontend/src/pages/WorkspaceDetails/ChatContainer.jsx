@@ -14,7 +14,6 @@ import {
   FaImage,
   FaCode,
   FaVoteYea,
-
   FaUsers,
   FaEye,
   FaCommentSlash,
@@ -23,8 +22,8 @@ import {
   FaPlus,
   FaAt,
   FaUser,
-
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -84,9 +83,11 @@ function ChatContainer({
   handleChannelSuggestionNavigation,
   handleSelectActiveChannelSuggestion,
   handleSelectChannelSuggestion,
-
 }) {
-  const canWriteInChannel = activeChannel?.isPrivate ? currentUserAccessRight === "lecture_ecriture" : true;
+  const navigate = useNavigate();
+  const canWriteInChannel = activeChannel?.isPrivate
+    ? currentUserAccessRight === "lecture_ecriture"
+    : true;
 
   return (
     <div className="workspace-content-area">
@@ -118,7 +119,10 @@ function ChatContainer({
                 <span>Appel vidéo</span>
               </button>
               {isChannelPrivate && currentUserAccessRight === "read" && (
-                <div className="read-only-indicator" title="Canal en lecture seule">
+                <div
+                  className="read-only-indicator"
+                  title="Canal en lecture seule"
+                >
                   <FaEye /> Lecture seule
                 </div>
               )}
@@ -244,16 +248,16 @@ function ChatContainer({
                             {message.fk_utilisateur ===
                             "00000000-0000-0000-0000-000000000001" ? (
                               <>
+                                {" "}
                                 <strong
                                   className="username-clickable"
-                                  onClick={() =>
-                                    handleSelectMention({
-                                      id: "00000000-0000-0000-0000-000000000001",
-                                      name: message.nom,
-                                      avatar:
-                                        "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
-                                    })
-                                  }
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    navigate(
+                                      `/direct-messages?userId=00000000-0000-0000-0000-000000000001`
+                                    );
+                                  }}
                                   title="Cliquer pour envoyer un message privé"
                                 >
                                   {message.nom}
@@ -264,13 +268,14 @@ function ChatContainer({
                             ) : (
                               <strong
                                 className="username-clickable"
-                                onClick={() =>
-                                  handleSelectMention({
-                                    id: message.fk_utilisateur,
-                                    name: message.nom,
-                                  })
-                                }
-                                title="Cliquer pour mentionner cet utilisateur"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  navigate(
+                                    `/direct-messages?userId=${message.fk_utilisateur}`
+                                  );
+                                }}
+                                title="Cliquer pour envoyer un message privé"
                               >
                                 {message.nom}
                               </strong>
@@ -343,7 +348,6 @@ function ChatContainer({
                         } else {
                           return (
                             <div className="message-text">
-
                               <ReactMarkdown
                                 components={{
                                   p: ({ node, ...props }) => (
@@ -361,7 +365,6 @@ function ChatContainer({
                                       children[0].props.children.match(
                                         /^@(.+)$/
                                       );
-
                                     if (mentionMatch && isUuid(href)) {
                                       const mentionName = mentionMatch[1];
                                       const isCurrentUser =
@@ -374,12 +377,20 @@ function ChatContainer({
                                               : ""
                                           }`}
                                           data-userid={href}
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            navigate(
+                                              `/direct-messages?userId=${href}`
+                                            );
+                                          }}
+                                          style={{ cursor: "pointer" }}
+                                          title="Cliquer pour envoyer un message privé"
                                         >
                                           @{mentionName}
                                         </span>
                                       );
                                     }
-
                                     if (
                                       systemMsg &&
                                       href &&
@@ -402,6 +413,16 @@ function ChatContainer({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="message-link"
+                                        onClick={(e) => {
+                                          if (isUuid(href)) {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            navigate(
+                                              `/direct-messages?userId=${href}`
+                                            );
+                                            return;
+                                          }
+                                        }}
                                       >
                                         {children}
                                       </a>
@@ -437,7 +458,6 @@ function ChatContainer({
                                   </div>
                                 </div>
                               )}
-
                             </div>
                           );
                         }
@@ -516,18 +536,19 @@ function ChatContainer({
                 <div className="message-content">
                   {" "}
                   <div className="message-header">
+                    {" "}
                     <span className="message-author">
+                      {" "}
                       <strong
                         className="username-clickable"
-                        onClick={() =>
-                          handleSelectMention({
-                            id: "00000000-0000-0000-0000-000000000001",
-                            name: "Mistral AI",
-                            avatar:
-                              "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
-                          })
-                        }
-                        title="Cliquer pour envoyer un message à Mistral AI"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate(
+                            `/direct-messages?userId=00000000-0000-0000-0000-000000000001`
+                          );
+                        }}
+                        title="Cliquer pour envoyer un message privé"
                       >
                         Mistral AI
                       </strong>
@@ -545,7 +566,6 @@ function ChatContainer({
                 </div>
               </div>
             )}
-
           </div>
 
           {canWriteInChannel ? (
@@ -694,7 +714,9 @@ function ChatContainer({
                   />
                   <button
                     type="button"
-                    className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
+                    className={`chat-toolbox-btn ${
+                      showToolbox ? "active" : ""
+                    }`}
                     title="Outils"
                     onClick={handleToggleToolbox}
                   >
@@ -711,7 +733,7 @@ function ChatContainer({
                     <span className="send-btn-pulse"></span>
                   </button>
                 </div>
-                
+
                 {showToolbox && (
                   <div className="chat-toolbox-menu">
                     <button
@@ -719,7 +741,9 @@ function ChatContainer({
                       onClick={handleOpenStrawpoll}
                     >
                       <FaPoll className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">Créer un sondage</span>
+                      <span className="toolbox-item-text">
+                        Créer un sondage
+                      </span>
                     </button>
                     <button className="chat-toolbox-item">
                       <FaImage className="toolbox-item-icon" />
@@ -729,39 +753,51 @@ function ChatContainer({
                     </button>
                     <button className="chat-toolbox-item">
                       <FaCode className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">Formater du code</span>
+                      <span className="toolbox-item-text">
+                        Formater du code
+                      </span>
                     </button>
                   </div>
                 )}
               </form>
             </div>
           ) : (
-            <div className="read-only-message" style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '12px 20px',
-              margin: '10px 20px',
-              background: 'linear-gradient(145deg, rgba(40, 40, 45, 0.4), rgba(50, 50, 55, 0.3))',
-              borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-              color: 'rgba(255, 255, 255, 0.7)',
-              textAlign: 'center'
-            }}>
-              <FaCommentSlash style={{
-                fontSize: '1.5rem',
-                color: '#ff4757',
-                marginRight: '10px',
-                filter: 'drop-shadow(0 1px 3px rgba(255, 71, 87, 0.4))'
-              }} />
-              <p style={{
-                fontSize: '0.95rem',
-                fontWeight: '600',
-                letterSpacing: '0.02em',
-                margin: '0'
-              }}>Vous êtes en lecture seule dans ce canal</p>
+            <div
+              className="read-only-message"
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "12px 20px",
+                margin: "10px 20px",
+                background:
+                  "linear-gradient(145deg, rgba(40, 40, 45, 0.4), rgba(50, 50, 55, 0.3))",
+                borderRadius: "10px",
+                border: "1px solid rgba(255, 255, 255, 0.06)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                color: "rgba(255, 255, 255, 0.7)",
+                textAlign: "center",
+              }}
+            >
+              <FaCommentSlash
+                style={{
+                  fontSize: "1.5rem",
+                  color: "#ff4757",
+                  marginRight: "10px",
+                  filter: "drop-shadow(0 1px 3px rgba(255, 71, 87, 0.4))",
+                }}
+              />
+              <p
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  letterSpacing: "0.02em",
+                  margin: "0",
+                }}
+              >
+                Vous êtes en lecture seule dans ce canal
+              </p>
             </div>
           )}
         </div>
