@@ -90,14 +90,12 @@ function WorkspaceDetails() {
 
         const userData = await userResponse.json();
         const userId = userData.user_id;
-
         
         const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
           headers: {
             Authorization: `Bearer ${token}`
-
           }
-        );
+        });
 
         if (!membershipResponse.ok) {
           throw new Error("Impossible de vérifier l'appartenance au workspace");
@@ -106,7 +104,6 @@ function WorkspaceDetails() {
         const membershipData = await membershipResponse.json();
         setIsMember(membershipData.isMember);
 
-        
         if (!membershipData.isMember) {
           const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
 
@@ -285,10 +282,6 @@ function WorkspaceDetails() {
     replyingTo,
     setReplyingTo,
     commonEmojis,
-    isMistralTyping,
-    showMentionSuggestions,
-    mentionSuggestions,
-    activeMentionIndex,
     isMistralTyping, // Get the typing state    // Mention state and handlers
     showMentionSuggestions,
     mentionSuggestions,

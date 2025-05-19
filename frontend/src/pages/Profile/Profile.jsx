@@ -50,7 +50,7 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://REDACTED:3001") +
+      (process.env.REACT_APP_API_URL || "http://192.168.1.167:3001") +
 
       `/api/users/${userId}`;
 
@@ -110,7 +110,7 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
       const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://REDACTED:3001") +
+        (process.env.REACT_APP_API_URL || "http://192.168.1.167:3001") +
 
         `/api/users/${userId}/workspaces`;
 
