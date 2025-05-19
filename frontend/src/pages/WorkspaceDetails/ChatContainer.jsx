@@ -14,6 +14,7 @@ import {
   FaImage,
   FaCode,
   FaVoteYea,
+
   FaUsers,
   FaEye,
   FaCommentSlash,
@@ -22,6 +23,7 @@ import {
   FaPlus,
   FaAt,
   FaUser,
+
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -56,6 +58,8 @@ function ChatContainer({
   mentionSuggestions,
   activeMentionIndex,
   handleSelectMention,
+  handleMentionNavigation,
+  handleSelectActiveItem,
   handleSendMessageWithMistralCheck,
   showToolbox,
   handleToggleToolbox,
@@ -68,12 +72,19 @@ function ChatContainer({
   handleAddReaction,
   renderTextWithLinks,
   isUuid,
-  handleSelectActiveItem,
   setShowVideoCallModal,
   handleManageChannelMembers,
   isChannelPrivate,
   canManageMembers,
   currentUserAccessRight,
+  handleOpenStrawpollVote,
+  showChannelSuggestions,
+  channelSuggestions,
+  activeChannelSuggestionIndex,
+  handleChannelSuggestionNavigation,
+  handleSelectActiveChannelSuggestion,
+  handleSelectChannelSuggestion,
+
 }) {
   const canWriteInChannel = activeChannel?.isPrivate ? currentUserAccessRight === "lecture_ecriture" : true;
 
@@ -113,7 +124,6 @@ function ChatContainer({
               )}
             </div>
           </div>
-
           <div className="chat-messages" ref={chatContainerRef}>
             {loadingMessages ? (
               <div className="chat-loading">Chargement des messages...</div>
@@ -227,20 +237,43 @@ function ChatContainer({
                               </div>
                             </div>
                           );
-                        })()}
-
+                        })()}{" "}
                       {!systemMsg && (
                         <div className="message-header">
                           <span className="message-author">
                             {message.fk_utilisateur ===
                             "00000000-0000-0000-0000-000000000001" ? (
                               <>
-                                <span>{message.nom}</span>
+                                <strong
+                                  className="username-clickable"
+                                  onClick={() =>
+                                    handleSelectMention({
+                                      id: "00000000-0000-0000-0000-000000000001",
+                                      name: message.nom,
+                                      avatar:
+                                        "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
+                                    })
+                                  }
+                                  title="Cliquer pour envoyer un message privé"
+                                >
+                                  {message.nom}
+                                </strong>
                                 <span className="bot-icon-spacer"> </span>
                                 <FaRobot className="bot-icon" />
                               </>
                             ) : (
-                              message.nom
+                              <strong
+                                className="username-clickable"
+                                onClick={() =>
+                                  handleSelectMention({
+                                    id: message.fk_utilisateur,
+                                    name: message.nom,
+                                  })
+                                }
+                                title="Cliquer pour mentionner cet utilisateur"
+                              >
+                                {message.nom}
+                              </strong>
                             )}
                           </span>
                           <span className="message-time">
@@ -248,7 +281,6 @@ function ChatContainer({
                           </span>
                         </div>
                       )}
-
                       {(() => {
                         const fileData = parseFileContent(message.contenu);
                         if (fileData && !systemMsg) {
@@ -311,6 +343,7 @@ function ChatContainer({
                         } else {
                           return (
                             <div className="message-text">
+
                               <ReactMarkdown
                                 components={{
                                   p: ({ node, ...props }) => (
@@ -383,11 +416,37 @@ function ChatContainer({
                               >
                                 {message.contenu || ""}
                               </ReactMarkdown>
+
+                              {message.file_url ? (
+                                // Affichage des fichiers
+                                <div className="message-file">
+                                  {/* Code pour afficher les fichiers */}
+                                  <div className="file-preview">
+                                    {/* Ajuster selon la structure de vos données */}
+                                    <a
+                                      href={message.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleOpenFileViewer(message);
+                                      }}
+                                    >
+                                      {message.file_name || "Fichier joint"}
+                                    </a>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="message-paragraph">
+                                  {" "}
+                                  {renderTextWithLinks(message.contenu)}
+                                </p>
+                              )}
+
                             </div>
                           );
                         }
                       })()}
-
                       {!systemMsg &&
                         message.reactions &&
                         message.reactions.length > 0 && (
@@ -407,7 +466,6 @@ function ChatContainer({
                             ))}
                           </div>
                         )}
-
                       {!systemMsg &&
                         (() => {
                           const strawpollMatch =
@@ -461,9 +519,23 @@ function ChatContainer({
                   />
                 </div>
                 <div className="message-content">
+                  {" "}
                   <div className="message-header">
                     <span className="message-author">
-                      Mistral AI
+                      <strong
+                        className="username-clickable"
+                        onClick={() =>
+                          handleSelectMention({
+                            id: "00000000-0000-0000-0000-000000000001",
+                            name: "Mistral AI",
+                            avatar:
+                              "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
+                          })
+                        }
+                        title="Cliquer pour envoyer un message à Mistral AI"
+                      >
+                        Mistral AI
+                      </strong>
                       <span className="bot-icon-spacer"> </span>
                       <FaRobot className="bot-icon" />
                     </span>
@@ -478,6 +550,7 @@ function ChatContainer({
                 </div>
               </div>
             )}
+
           </div>
 
           {canWriteInChannel ? (
@@ -567,6 +640,7 @@ function ChatContainer({
                     >
                       ×
                     </button>
+
                   </div>
                 )}
                 <input
@@ -587,17 +661,84 @@ function ChatContainer({
                   >
                     <FaPaperclip />
                   </button>
-                  <input
-                    type="text"
-                    placeholder={
-                      activeChannel
-                        ? `Message dans #${activeChannel.name}`
-                        : "Message..."
+
+                </div>
+              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                style={{ display: "none" }}
+                id="file-upload-input"
+              />
+              <div className="chat-input-wrapper">
+                <button
+                  type="button"
+                  className="chat-attachment-btn"
+                  onClick={() =>
+                    fileInputRef.current && fileInputRef.current.click()
+                  }
+                >
+                  <FaPaperclip />
+                </button>
+                <input
+                  type="text"
+                  placeholder={
+                    activeChannel
+                      ? `Message dans #${activeChannel.name}`
+                      : "Message..."
+                  }
+                  value={displayMessage}
+                  onChange={(e) => handleNewMessageChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (showChannelSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleChannelSuggestionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveChannelSuggestion();
+                      }
+                    } else if (showMentionSuggestions) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        handleMentionNavigation("next");
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        handleMentionNavigation("prev");
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectActiveItem();
+                      }
+                    } else {
+                      handleChatInputKeyDown && handleChatInputKeyDown(e);
                     }
-                    value={displayMessage}
-                    onChange={(e) => handleNewMessageChange(e.target.value)}
-                    onKeyDown={handleChatInputKeyDown}
-                  />
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
+                  title="Outils"
+                  onClick={handleToggleToolbox}
+                >
+                  <FaTools />
+                  <span className="toolbox-tooltip">Outils</span>
+                </button>
+                <button
+                  type="submit"
+                  className="chat-send-btn"
+                  disabled={!displayMessage.trim()}
+                  aria-label="Envoyer le message"
+                >
+                  <FaPaperPlane />
+                  <span className="send-btn-pulse"></span>
+                </button>
+              </div>
+              {showToolbox && (
+                <div className="chat-toolbox-menu">
                   <button
                     type="button"
                     className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
