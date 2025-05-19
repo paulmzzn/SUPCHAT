@@ -100,6 +100,98 @@ export const useSocket = (currentUserId) => {
         }));
       });
 
+      // Gestion des nouveaux messages privés
+      newSocket.on("private_message", async (msg) => {
+        console.log("[DM] Received private message:", msg);
+
+        if (!currentUserId) return;
+
+        // Mise à jour du compteur de messages non lus
+        if (
+          msg.fk_expediteur !== currentUserId &&
+          (!selectedUser || msg.fk_expediteur !== selectedUser)
+        ) {
+          // Jouer une notification sonore
+          playNotificationSound(notificationSettings);
+
+          updateUnreadCounts((prev) => {
+            const senderId = msg.fk_expediteur;
+            const newCounts = {
+              ...prev,
+              [senderId]: (prev[senderId] || 0) + 1,
+            };
+            return newCounts;
+          });
+        }
+
+        // Ajouter à la conversation active si pertinent
+        if (
+          selectedUser &&
+          (msg.fk_expediteur === selectedUser ||
+            msg.fk_destinataire === selectedUser)
+        ) {
+          let attachments = [];
+          try {
+            if (msg.id_message_prive) {
+              // Récupérer les pièces jointes du message
+              const response = await fetch(
+                `${API_URL}/api/private-messages/${msg.id_message_prive}/attachments`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  },
+                }
+              );
+
+              if (response.ok) {
+                attachments = await response.json();
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching attachments:", error);
+          }
+
+          // Ajouter message à l'UI
+          setMessages((prev) => {
+            // Vérifier si le message existe déjà (par ID ou tempId)
+            const exists = prev.some(
+              (m) =>
+                m.id_message_prive === msg.id_message_prive ||
+                (m.isOptimistic && m.tempId === msg.tempId)
+            );
+
+            if (exists) {
+              return prev.map((m) => {
+                if (
+                  m.id_message_prive === msg.id_message_prive ||
+                  (m.isOptimistic && m.tempId === msg.tempId)
+                ) {
+                  return {
+                    ...msg,
+                    attachments,
+                    isOptimistic: false, // Remplacer le message optimiste par la version serveur
+                  };
+                }
+                return m;
+              });
+            } else {
+              return [...prev, { ...msg, attachments }];
+            }
+          });
+
+          // Scroll vers le bas pour voir le nouveau message
+          scrollToBottom();
+        }
+
+        // Mettre à jour la liste des conversations si nouveau contact
+        if (
+          !conversations.includes(msg.fk_expediteur) &&
+          msg.fk_expediteur !== currentUserId
+        ) {
+          fetchConversations();
+        }
+      });
+
       setSocket(newSocket);
 
       return newSocket;

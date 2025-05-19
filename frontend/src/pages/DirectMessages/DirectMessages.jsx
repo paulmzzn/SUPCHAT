@@ -1,525 +1,348 @@
-import React, { useEffect, useState, useRef } from "react";
-import { io } from "socket.io-client";
-import {
-  FaUserCircle,
-  FaPaperPlane,
-  FaPaperclip,
-  FaSearch,
-  FaPlus,
-  FaTimes,
-  FaReply,
-  FaRegSmile,
-  FaFile,
-  FaFileAlt,
-  FaFileImage,
-  FaFilePdf,
-  FaFileWord,
-  FaFileExcel,
-  FaFileVideo,
-  FaFileAudio,
-  FaDownload,
-} from "react-icons/fa";
+import React, { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar/Sidebar";
-import Spinner from "../../components/Spinner/Spinner";
 import { useSocket } from "../../context/SocketContext";
 import { useNotificationSettings } from "../../context/NotificationSettingsContext";
+import Sidebar from "../../components/Sidebar/Sidebar";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
+
+// Components
+import ConversationList from "./components/ConversationList/ConversationList";
+import NewConversationModal from "./components/ConversationList/NewConversationModal";
+import ConversationContextMenu from "./components/ConversationList/ConversationContextMenu";
+import MessageArea from "./components/MessageArea/MessageArea";
+
+// Hooks
+import { useConversations } from "./hooks/useConversations";
+import { useMessages } from "./hooks/useMessages";
+
+// Utilitaires
+import {
+  formatMessageDate,
+  getFileIcon,
+  formatFileSize,
+  getCompleteFileUrl,
+} from "./utils/messageUtils";
+
 import "./DirectMessages.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.167:3000";
 
-// Helper pour formater la date
-const formatMessageDate = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return (
-    date.toLocaleDateString() +
-    " " +
-    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  );
-};
-
-// Add this utility function near the top of your component
-const safeJSONParse = (jsonString, fallback = null) => {
-  try {
-    return typeof jsonString === "string" ? JSON.parse(jsonString) : fallback;
-  } catch (error) {
-    console.error("JSON parse error:", error);
-    return fallback;
-  }
-};
-
-const safeJSONStringify = (obj) => {
-  try {
-    return typeof obj === "object" ? JSON.stringify(obj) : obj;
-  } catch (error) {
-    console.error("JSON stringify error:", error);
-    return "";
-  }
-};
-
-// Fonction utilitaire pour déterminer l'icône d'un fichier selon son type
-const getFileIcon = (fileType) => {
-  if (!fileType) return <FaFile />;
-
-  if (fileType.startsWith("image/")) return <FaFileImage />;
-  if (fileType.includes("pdf")) return <FaFilePdf />;
-  if (fileType.includes("word") || fileType.includes("document"))
-    return <FaFileWord />;
-  if (fileType.includes("excel") || fileType.includes("spreadsheet"))
-    return <FaFileExcel />;
-  if (fileType.startsWith("video/")) return <FaFileVideo />;
-  if (fileType.startsWith("audio/")) return <FaFileAudio />;
-
-  return <FaFileAlt />;
-};
-
-// Fonction utilitaire pour formater la taille des fichiers
-const formatFileSize = (bytes) => {
-  if (!bytes) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
-};
-
-// Fonction pour construire l'URL complète d'un fichier
-const getCompleteFileUrl = (fileUrl) => {
-  if (!fileUrl) return "";
-
-  // Si l'URL est déjà complète (commence par http ou https), la renvoyer telle quelle
-  if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
-    return fileUrl;
-  }
-
-  // Pour les fichiers S3 (messages privés), construire l'URL S3 complète (virtual-hosted style)
-  if (
-    fileUrl.startsWith("private-messages/") ||
-    fileUrl.startsWith("private-messages/files/")
-  ) {
-    return `https://s3-supchat.s3.fr-par.scw.cloud/${fileUrl}`;
-  }
-
-  // Pour les URLs relatives classiques, garder le fallback API
-  if (!fileUrl.startsWith("/api/files/")) {
-    return `${API_URL}/api/files/${fileUrl}`;
-  }
-
-  // Si l'URL commence déjà par /api/files/, juste ajouter l'URL de base
-  return `${API_URL}${fileUrl}`;
-};
-
+/**
+ * Composant principal de gestion des messages directs
+ */
 function DirectMessages() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { refreshUnreadDM } = useSocket();
+  const { socket, refreshUnreadDM } = useSocket();
   const { notificationSettings } = useNotificationSettings();
-  const [conversations, setConversations] = useState([]);
+
+  // États principaux
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserInfo, setSelectedUserInfo] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [usersInfo, setUsersInfo] = useState({});
-  const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [socket, setSocket] = useState(null);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const messagesContainerRef = useRef(null);
-  const [showNewConversationModal, setShowNewConversationModal] =
-    useState(false);
-  const [searchUserQuery, setSearchUserQuery] = useState("");
-  const [availableUsers, setAvailableUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  // Menu contextuel pour les messages
-  const [messageContextMenu, setMessageContextMenu] = useState({
-    visible: false,
-    xPos: 0,
-    yPos: 0,
-    messageId: null,
-    isOwnMessage: false,
-    message: null,
-  });
-  // Menu contextuel pour les conversations
-  const [conversationContextMenu, setConversationContextMenu] = useState({
-    visible: false,
-    xPos: 0,
-    yPos: 0,
-    userId: null,
-  });
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [editingMessage, setEditingMessage] = useState(null);
-  const [editMessageContent, setEditMessageContent] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
-    top: 0,
-    left: 0,
-  });
-  const emojiPickerRef = useRef(null);
-  const [unreadMessageCounts, setUnreadMessageCounts] = useState({});
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
-  // Add this state for current user ID
-  const [currentUserId, setCurrentUserId] = useState(null);
+  // Gestion conversations et utilisateurs
+  const {
+    conversations,
+    usersInfo,
+    loading,
+    error,
+    unreadMessageCounts,
+    totalUnreadCount,
+    searchQuery,
+    setSearchQuery,
+    showNewConversationModal,
+    setShowNewConversationModal,
+    searchUserQuery,
+    setSearchUserQuery,
+    availableUsers,
+    filteredUsers,
+    loadingUsers,
+    conversationContextMenu,
+    setConversationContextMenu,
+    fetchConversations,
+    fetchUserInfo,
+    fetchAvailableUsers,
+    updateUnreadCounts,
+    getFilteredConversations,
+    startConversationWith,
+    deleteConversation,
+  } = useConversations();
 
-  // Ajout des états pour gérer les pièces jointes
-  const [attachments, setAttachments] = useState([]);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const fileInputRef = useRef(null);
+  // Gestion messages et interactions
+  const {
+    messages,
+    loadingMessages,
+    newMessage,
+    setNewMessage,
+    replyingTo,
+    setReplyingTo,
+    editingMessage,
+    setEditingMessage,
+    editMessageContent,
+    setEditMessageContent,
+    attachments,
+    setAttachments,
+    uploadingFile,
+    messageContextMenu,
+    setMessageContextMenu,
+    showEmojiPicker,
+    setShowEmojiPicker,
+    emojiPickerPosition,
+    setEmojiPickerPosition,
+    messagesContainerRef,
+    fileInputRef,
+    emojiPickerRef,
+    fetchMessages,
+    sendMessage,
+    markMessagesAsRead,
+    deleteMessage,
+    editMessage,
+    addReaction,
+    downloadFile,
+    handleFileSelect,
+    triggerFileInput,
+    scrollToBottom,
+    setMessages,
+  } = useMessages(selectedUser, socket, currentUserId);
 
-  // Ajouter ces états pour gérer les mentions
-  const [mentionSearch, setMentionSearch] = useState("");
+  // État pour les mentions
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const [mentionStartIndex, setMentionStartIndex] = useState(null);
-  const [mentionMap, setMentionMap] = useState(new Map()); // Nouvelle map pour stocker les mentions
+  const [mentionMap, setMentionMap] = useState(new Map());
 
-  // Récupère l'ID utilisateur courant et vérifie la validité du token
-  const checkTokenValidity = () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.log("[DM] Token non trouvé dans localStorage");
-        return { valid: false, error: "Token non trouvé" };
-      }
-
-      // Découper et décoder le token JWT
-      const parts = token.split(".");
-      if (parts.length !== 3) {
-        console.log("[DM] Format de token JWT invalide");
-        return { valid: false, error: "Format de token invalide" };
-      }
-
-      // Décoder le payload (partie centrale du token)
-      const payload = JSON.parse(atob(parts[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-
-      console.log("[DM] Informations token:", {
-        userId: payload.id,
-        email: payload.email,
-        issued: new Date(payload.iat * 1000).toLocaleString(),
-        expires: new Date(payload.exp * 1000).toLocaleString(),
-        currentTime: new Date(currentTime * 1000).toLocaleString(),
-        isExpired: currentTime > payload.exp,
-        timeRemaining:
-          payload.exp - currentTime > 0
-            ? `${Math.floor((payload.exp - currentTime) / 3600)} heures`
-            : "Expiré",
-      });
-
-      return {
-        valid: currentTime < payload.exp,
-        error: currentTime > payload.exp ? "Token expiré" : null,
-        details: payload,
-      };
-    } catch (error) {
-      console.error("[DM] Erreur lors de la vérification du token:", error);
-      return { valid: false, error: error.message };
-    }
-  };
-
-  // Ajouter cet état pour suivre l'état de connexion du socket
-  const [socketStatus, setSocketStatus] = useState({
-    connected: false,
-    connecting: false,
-    error: null,
-    reconnectAttempts: 0,
-  });
-
-  // Connexion socket et joinPrivate - amélioration de la robustesse
+  // Vérification du token et récupération de l'ID utilisateur
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    console.log("[DM] Initializing socket connection with token:", token);
-    console.log("[DM] API_URL utilisé pour le socket:", API_URL);
-
-    // Définir l'état comme "en cours de connexion"
-    setSocketStatus((prev) => ({ ...prev, connecting: true }));
-
-    // Vérifier d'abord si l'API est accessible
-    fetch(`${API_URL}/api/users/verify-token`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => {
-        if (response.ok) {
-          console.log("[DM] Backend API token verification OK");
-          return response.json();
-        } else {
-          console.error(
-            "[DM] Backend API token verification ERROR:",
-            response.status
-          );
-          setSocketStatus((prev) => ({
-            ...prev,
-            connecting: false,
-            error: `API inaccessible: ${response.status}`,
-          }));
-          throw new Error(`API inaccessible: ${response.status}`);
+    const checkTokenValidity = () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("Token non trouvé dans localStorage");
+          return { valid: false, error: "Token non trouvé" };
         }
-      })
-      .then((text) => {
-        console.log("[DM] Ping response:", text);
 
-        // Configuration complète pour Socket.IO
-        const socketOptions = {
-          auth: { token },
-          transports: ["websocket", "polling"], // Try websocket first, then polling
-          reconnection: true,
-          reconnectionAttempts: 15, // Increased from 10
-          reconnectionDelay: 1000, // Decreased initial delay to reconnect faster
-          reconnectionDelayMax: 10000,
-          timeout: 30000, // Increased from 20000
-          autoConnect: true,
-          forceNew: false, // Changed to false to reuse existing connection when possible
-        };
-
-        console.log("[DM] Creating socket with options:", socketOptions);
-
-        // Créer l'instance du socket
-        const newSocket = io(API_URL, socketOptions);
-
-        // Événements de connexion et de diagnostic
-        newSocket.on("connect_error", (err) => {
-          console.error("[DM] Socket.io connection error:", err);
-          setSocketStatus((prev) => ({
-            ...prev,
-            connected: false,
-            connecting: false,
-            error: err.message,
-            reconnectAttempts: prev.reconnectAttempts + 1,
-          }));
-        });
-
-        newSocket.on("connect", () => {
-          console.log(
-            "[DM] Socket.io connecté avec succès avec ID:",
-            newSocket.id
-          );
-          setSocketStatus({
-            connected: true,
-            connecting: false,
-            error: null,
-            reconnectAttempts: 0,
-          });
-
-          // Rejoindre la room privée seulement après connexion réussie
-          console.log("[DM] Tentative de rejoindre la room privée");
-          newSocket.emit("joinPrivate");
-        });
-
-        newSocket.on("disconnect", (reason) => {
-          console.log("[DM] Socket.io disconnected, reason:", reason);
-          setSocketStatus((prev) => ({
-            ...prev,
-            connected: false,
-            connecting: reason === "io server disconnect" ? false : true,
-          }));
-        });
-
-        // Autres événements de debug
-        newSocket.on("error", (error) => {
-          console.error("[DM] Socket.io error event:", error);
-        });
-
-        newSocket.on("reconnect_attempt", (attempt) => {
-          console.log("[DM] Socket.io reconnect attempt #", attempt);
-          setSocketStatus((prev) => ({
-            ...prev,
-            connecting: true,
-            reconnectAttempts: attempt,
-          }));
-        });
-
-        newSocket.on("reconnect", (attempt) => {
-          console.log("[DM] Socket.io reconnecté après", attempt, "tentatives");
-          setSocketStatus({
-            connected: true,
-            connecting: false,
-            error: null,
-            reconnectAttempts: 0,
-          });
-
-          // Rejoindre la room privée après reconnexion
-          newSocket.emit("joinPrivate");
-        });
-
-        setSocket(newSocket);
-
-        return () => {
-          console.log("[DM] Cleanup: Déconnexion du socket");
-          newSocket.off();
-          newSocket.disconnect();
-        };
-      })
-      .catch((err) => {
-        console.error("[DM] Backend API setup failed:", err);
-        setSocketStatus((prev) => ({
-          ...prev,
-          connecting: false,
-          error: err.message,
-        }));
-      });
-  }, []);
-
-  // Réception des nouveaux messages privés en temps réel
-  useEffect(() => {
-    if (!socket) return;
-
-    // Fix the storage event listener to prevent parsing errors
-    const storageEventHandler = (event) => {
-      if (event.key && event.key.startsWith("lastMessage_")) {
-        try {
-          // Only try to parse if it's a valid string
-          if (event.newValue && typeof event.newValue === "string") {
-            // Just validate but don't use the result - this prevents parsing errors
-            JSON.parse(event.newValue);
-          }
-        } catch (e) {
-          console.warn("[DM] Storage event error:", e);
+        // Découper et décoder le token JWT
+        const parts = token.split(".");
+        if (parts.length !== 3) {
+          console.log("Format de token JWT invalide");
+          return { valid: false, error: "Format de token invalide" };
         }
+
+        // Décoder le payload (partie centrale du token)
+        const payload = JSON.parse(atob(parts[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+
+        return {
+          valid: currentTime < payload.exp,
+          error: currentTime > payload.exp ? "Token expiré" : null,
+          details: payload,
+        };
+      } catch (error) {
+        console.error("Erreur lors de la vérification du token:", error);
+        return { valid: false, error: error.message };
       }
     };
-    window.addEventListener("storage", storageEventHandler);
 
-    // Update the handlePrivateMessage function to safely handle message storage
+    const tokenStatus = checkTokenValidity();
+    if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
+      setCurrentUserId(tokenStatus.details.id);
+    } else {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // Charger les conversations au démarrage
+  useEffect(() => {
+    if (currentUserId) {
+      fetchConversations();
+    }
+  }, [currentUserId, fetchConversations]);
+
+  // Effet pour lire les paramètres d'URL et charger la conversation appropriée
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userIdFromQuery = params.get("userId");
+
+    if (userIdFromQuery && currentUserId) {
+      setSelectedUser(userIdFromQuery);
+      fetchMessages(userIdFromQuery);
+
+      // Charger les informations de l'utilisateur si nécessaire
+      if (!usersInfo[userIdFromQuery]) {
+        fetchUserInfo(userIdFromQuery).then((userInfo) => {
+          if (userInfo) {
+            setSelectedUserInfo(userInfo);
+          }
+        });
+      } else {
+        setSelectedUserInfo(usersInfo[userIdFromQuery]);
+      }
+    }
+  }, [location.search, currentUserId, fetchMessages, fetchUserInfo, usersInfo]);
+
+  // Gestion des événements WebSocket
+  useEffect(() => {
+    if (!socket || !currentUserId) return;
+
+    // Gestion des nouveaux messages privés
     const handlePrivateMessage = async (msg) => {
       console.log("[DM] Received private message:", msg);
 
-      // Protection: skip if currentUserId is not yet defined
-      if (!currentUserId) {
-        console.log(
-          "[DM] Skipping message processing, currentUserId not defined yet"
-        );
-        return;
-      }
+      if (!currentUserId) return;
 
-      // Only count as unread if it's not from current user and not in current conversation
+      // Mise à jour du compteur de messages non lus
       if (
         msg.fk_expediteur !== currentUserId &&
         (!selectedUser || msg.fk_expediteur !== selectedUser)
       ) {
-        // Jouer le son de notification
-        console.log("[DM] Message privé reçu, tentative de lecture du son");
+        // Jouer une notification sonore selon les paramètres utilisateur
         playNotificationSound(notificationSettings);
 
-        // Update the unread count for this sender
-        setUnreadMessageCounts((prev) => {
+        // Mise à jour du compteur
+        updateUnreadCounts((prev) => {
           const senderId = msg.fk_expediteur;
-          const newCounts = {
-            ...prev,
-            [senderId]: (prev[senderId] || 0) + 1,
-          };
-
-          // Update total count
-          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          const newCounts = { ...prev, [senderId]: (prev[senderId] || 0) + 1 };
           return newCounts;
         });
-      }
 
-      // Ne rien faire si le message n'est pas pertinent pour la conversation active
-      if (
-        !selectedUser ||
-        (msg.fk_expediteur !== selectedUser &&
-          msg.fk_destinataire !== selectedUser)
-      ) {
-        console.log(
-          "[DM] Message not relevant for current conversation, ignoring"
-        );
-        return;
-      }
+        // Afficher une notification toast si la fenêtre n'est pas active
+        if (document.visibilityState !== "visible") {
+          // Récupérer les infos de l'expéditeur
+          const senderInfo =
+            usersInfo[msg.fk_expediteur] ||
+            (await fetchUserInfo(msg.fk_expediteur));
+          const senderName = senderInfo?.name || "Utilisateur";
 
-      // Récupérer les pièces jointes du message
-      let attachments = [];
-      try {
-        if (msg.id_message_prive) {
-          console.log(
-            "[DM] Fetching attachments for new message:",
-            msg.id_message_prive
+          // Créer le contenu de la notification
+          const messagePreview =
+            msg.contenu.length > 50
+              ? msg.contenu.substring(0, 50) + "..."
+              : msg.contenu;
+
+          // Afficher la notification
+          toast.info(
+            <div
+              onClick={() => {
+                navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+                toast.dismiss();
+              }}
+            >
+              <strong>{senderName}</strong>
+              <p>{messagePreview}</p>
+              {msg.attachments && msg.attachments.length > 0 && (
+                <p>
+                  <i>Contient {msg.attachments.length} pièce(s) jointe(s)</i>
+                </p>
+              )}
+            </div>,
+            {
+              position: "bottom-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              onClick: () => {
+                navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+              },
+            }
           );
-          attachments = await fetchMessageAttachments(msg.id_message_prive);
-          console.log("[DM] Attachments retrieved:", attachments);
+
+          // Utiliser l'API de notification du navigateur si autorisé
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const notifOptions = {
+              body: messagePreview,
+              icon: senderInfo?.avatar || "/logo192.png",
+            };
+
+            const notification = new Notification(
+              `Message de ${senderName}`,
+              notifOptions
+            );
+
+            notification.onclick = function () {
+              window.focus();
+              navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+              this.close();
+            };
+          }
         }
-      } catch (error) {
-        console.error(
-          "[DM] Error fetching attachments for new message:",
-          error
-        );
       }
 
-      // Ajouter les pièces jointes au message
-      const msgWithAttachments = { ...msg, attachments };
+      // Ajouter à la conversation active si pertinent
+      if (
+        selectedUser &&
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
+      ) {
+        let attachments = [];
+        try {
+          if (msg.id_message_prive) {
+            // Récupérer les pièces jointes du message
+            const response = await fetch(
+              `${API_URL}/api/private-messages/${msg.id_message_prive}/attachments`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
 
-      setMessages((prev) => {
-        // Vérifier si le message existe déjà (par id ou contenu+expéditeur pour les messages optimistes)
-        const messageExists = prev.some((existingMsg) => {
-          // Vérifier par ID réel
-          if (existingMsg.id_message_prive === msg.id_message_prive)
-            return true;
+            if (response.ok) {
+              attachments = await response.json();
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching attachments:", error);
+        }
 
-          // Vérifier par ID temporaire si présent
-          if (
-            msg.tempId &&
-            existingMsg.id_message_prive === `temp-${msg.tempId}`
-          )
-            return true;
+        // Ajouter message à l'UI
+        setMessages((prev) => {
+          // Vérifier si le message existe déjà
+          const exists = prev.some(
+            (m) =>
+              m.id_message_prive === msg.id_message_prive ||
+              (m.isOptimistic && m.tempId === msg.tempId)
+          );
 
-          // Vérifier par contenu et expéditeur (pour messages optimistes)
-          if (
-            existingMsg.isOptimistic &&
-            existingMsg.contenu === msg.contenu &&
-            existingMsg.fk_expediteur === msg.fk_expediteur
-          )
-            return true;
-
-          return false;
+          if (exists) {
+            return prev.map((m) => {
+              if (
+                m.id_message_prive === msg.id_message_prive ||
+                (m.isOptimistic && m.tempId === msg.tempId)
+              ) {
+                return { ...msg, attachments };
+              }
+              return m;
+            });
+          } else {
+            return [...prev, { ...msg, attachments }];
+          }
         });
 
-        if (messageExists) {
-          // Remplacer les messages optimistes par la version réelle avec pièces jointes
-          return prev.map((m) => {
-            if (m.id_message_prive === msg.id_message_prive)
-              return msgWithAttachments;
+        // Scroll vers le bas pour voir le nouveau message
+        scrollToBottom();
+      }
 
-            if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`)
-              return msgWithAttachments;
-
-            if (
-              m.isOptimistic &&
-              m.contenu === msg.contenu &&
-              m.fk_expediteur === msg.fk_expediteur
-            )
-              return msgWithAttachments;
-
-            return m;
-          });
-        } else {
-          // Ajouter uniquement si le message n'existe pas
-          return [...prev, msgWithAttachments];
-        }
-      });
-
-      scrollToBottom(); // Si c'est un nouveau message d'un nouveau contact, rafraîchir la liste des conversations
+      // Mettre à jour la liste des conversations si nouveau contact
       if (
         !conversations.includes(msg.fk_expediteur) &&
         msg.fk_expediteur !== currentUserId
       ) {
         fetchConversations();
       }
-
-      // Rafraîchir la liste des conversations pour mettre à jour l'ordre (du plus récent au plus ancien)
-      // Cela permet de remonter une conversation en haut de la liste quand un nouveau message est reçu
-      fetchConversations();
     };
 
+    // Gestion de la mise à jour des messages
     const handlePrivateMessageUpdated = (msg) => {
-      console.log("Message updated:", msg);
       if (
         selectedUser &&
         (msg.fk_expediteur === selectedUser ||
@@ -532,8 +355,9 @@ function DirectMessages() {
         );
       }
     };
+
+    // Gestion de la suppression des messages
     const handlePrivateMessageDeleted = (data) => {
-      console.log("Message deleted:", data);
       if (selectedUser) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -542,7 +366,7 @@ function DirectMessages() {
                   ...m,
                   is_deleted: true,
                   contenu: "[message supprimé]",
-                  attachments: [], // Vider explicitement les pièces jointes
+                  attachments: [],
                 }
               : m
           )
@@ -550,16 +374,12 @@ function DirectMessages() {
       }
     };
 
+    // Gestion des messages lus
     const handlePrivateMessageRead = (data) => {
-      console.log("[DM] Message read event:", data);
       if (selectedUser) {
         setMessages((prev) =>
           prev.map((m) => {
-            // Check if this is the message that was read
             if (m.id_message_prive === data.id) {
-              console.log(
-                `[DM] Marking message ${m.id_message_prive} as read at ${data.date_lecture}`
-              );
               return { ...m, date_lecture: data.date_lecture };
             }
             return m;
@@ -568,16 +388,12 @@ function DirectMessages() {
       }
     };
 
-    // Gérer les réactions aux messages privés
+    // Gestion des réactions aux messages
     const handlePrivateMessageReaction = (data) => {
-      console.log("[DM] Message reaction event:", data);
       if (selectedUser) {
         setMessages((prev) =>
           prev.map((m) => {
             if (m.id_message_prive === data.messageId) {
-              console.log(
-                `[DM] Updating reactions for message ${m.id_message_prive}`
-              );
               return { ...m, reactions: data.reactions };
             }
             return m;
@@ -586,1051 +402,251 @@ function DirectMessages() {
       }
     };
 
+    // Abonnement aux événements
     socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageRead", handlePrivateMessageRead);
     socket.on("privateMessageReaction", handlePrivateMessageReaction);
 
+    // Nettoyage
     return () => {
-      // Clean up event listener on unmount
-      window.removeEventListener("storage", storageEventHandler);
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
       socket.off("privateMessageRead", handlePrivateMessageRead);
       socket.off("privateMessageReaction", handlePrivateMessageReaction);
     };
-  }, [socket, selectedUser, conversations, currentUserId]);
+  }, [
+    socket,
+    currentUserId,
+    selectedUser,
+    conversations,
+    updateUnreadCounts,
+    notificationSettings,
+    fetchConversations,
+    scrollToBottom,
+    setMessages,
+  ]);
 
-  // Scroll to bottom when messages change
-  const scrollToBottom = () => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Récupère la liste des utilisateurs avec qui j'ai une conversation
-  const fetchConversations = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/private-messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const err = await res.text();
-        setError(`Erreur lors de la récupération des conversations: ${err}`);
-        console.error("API Error:", err);
-        setConversations([]);
-        return;
+  // Sélection d'un utilisateur
+  const handleSelectUser = useCallback(
+    (userId) => {
+      // Effacer le compteur de messages non lus
+      if (unreadMessageCounts[userId]) {
+        const newCounts = { ...unreadMessageCounts };
+        newCounts[userId] = 0;
+        updateUnreadCounts(newCounts);
+        if (refreshUnreadDM) refreshUnreadDM();
       }
 
-      const data = await res.json();
-      console.log("Conversations reçues:", data);
-      setConversations(data);
-
-      // Précharge les infos utilisateurs
-      for (const userId of data) {
-        fetchUserInfo(userId);
-      }
-    } catch (e) {
-      setError(`Erreur réseau: ${e.message}`);
-      console.error("Network Error:", e);
-      setConversations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // Récupère les infos d'un utilisateur
-  const fetchUserInfo = async (userId) => {
-    if (usersInfo[userId]) return usersInfo[userId];
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        console.error(
-          `Erreur lors de la récupération des infos utilisateur ${userId}`
-        );
-        return null;
-      }
-
-      const data = await res.json();
-
-      // Log to debug the user data structure
-      console.log(`[DM] Fetched user data for ${userId}:`, data);
-
-      // Create a normalized user object with all possible fields
-      const userInfo = {
-        id: userId,
-        name: data.nom || data.name || "Utilisateur",
-        avatar: data.photo_de_profil || data.avatar || null,
-        // Preserve all original fields for reference
-        ...data,
-      };
-
-      console.log(`[DM] Normalized user info:`, userInfo);
-
-      // Update the usersInfo state with this user
-      setUsersInfo((prev) => ({ ...prev, [userId]: userInfo }));
-      return userInfo;
-    } catch (e) {
-      console.error(
-        `Erreur lors de la récupération des infos utilisateur ${userId}:`,
-        e
-      );
-      // Return a fallback user object if fetch fails
-      const fallbackUser = {
-        id: userId,
-        name: "Utilisateur",
-        avatar: null,
-      };
-      setUsersInfo((prev) => ({ ...prev, [userId]: fallbackUser }));
-      return fallbackUser;
-    }
-  };
-
-  // Ajout d'une fonction pour récupérer les pièces jointes d'un message privé
-  const fetchMessageAttachments = async (messageId) => {
-    try {
-      console.log(
-        `[DM] Récupération des pièces jointes pour le message ${messageId}`
-      );
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/attachments/private-messages/${messageId}/attachments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(
-        `[DM] Pièces jointes récupérées pour le message ${messageId}:`,
-        data
-      );
-      return data;
-    } catch (error) {
-      console.error(
-        "[DM] Erreur lors de la récupération des pièces jointes:",
-        error
-      );
-      return [];
-    }
-  };
-
-  // Récupère les messages d'une conversation
-  const fetchMessages = async (userId) => {
-    try {
-      setLoadingMessages(true);
+      // Mettre à jour l'utilisateur sélectionné et charger ses messages
       setSelectedUser(userId);
+      setSelectedUserInfo(usersInfo[userId]);
+      fetchMessages(userId);
 
-      // Récupérer les informations de l'utilisateur sélectionné
-      let userInfo = usersInfo[userId];
-      if (!userInfo) {
-        userInfo = await fetchUserInfo(userId);
-      }
-      setSelectedUserInfo(userInfo);
+      // Mettre à jour l'URL pour les partages directs
+      navigate(`/direct-messages?userId=${userId}`);
+    },
+    [
+      unreadMessageCounts,
+      updateUnreadCounts,
+      refreshUnreadDM,
+      usersInfo,
+      fetchMessages,
+      navigate,
+    ]
+  );
 
-      // Clear unread messages for this user
-      setUnreadMessageCounts((prev) => {
-        const newCounts = { ...prev, [userId]: 0 };
-        setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
-        return newCounts;
-      });
-      // Rafraîchir le compteur global (Sidebar) immédiatement
-      if (refreshUnreadDM) refreshUnreadDM();
-
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/private-messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        setError(
-          `Erreur lors de la récupération des messages: ${await res.text()}`
-        );
-        setMessages([]);
-        return;
-      }
-
-      const data = await res.json();
-      console.log("Messages récupérés:", data);
-
-      // Pour chaque message, récupérer ses pièces jointes UNIQUEMENT si non présentes
-      const messagesWithAttachments = await Promise.all(
-        data.map(async (message) => {
-          if (message.attachments && message.attachments.length > 0) {
-            return message; // Pas de doublon
-          }
-          try {
-            const attachments = await fetchMessageAttachments(
-              message.id_message_prive
-            );
-            return { ...message, attachments };
-          } catch (error) {
-            return { ...message, attachments: [] };
-          }
-        })
-      );
-      setMessages(messagesWithAttachments);
-
-      // Marquer les messages non lus comme lus
-      markMessagesAsRead(data);
-    } catch (e) {
-      setError(`Erreur lors de la récupération des messages: ${e.message}`);
-      setMessages([]);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  // Improve the markMessagesAsRead function to be more robust
-  const markMessagesAsRead = (msgs) => {
-    if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId)
-      return;
-
-    const unreadMessages = msgs.filter(
-      (m) => m.fk_expediteur !== currentUserId && !m.date_lecture
-    );
-
-    if (unreadMessages.length > 0) {
-      console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
-      unreadMessages.forEach((msg) => {
-        socket.emit("readPrivateMessage", {
-          id: msg.id_message_prive,
-          senderId: msg.fk_expediteur,
-          recipientId: currentUserId,
-        });
-      });
-
-      // Appel à refreshUnreadDM pour mettre à jour le compteur global sur toutes les pages
-      if (refreshUnreadDM) {
-        console.log(
-          "[DM] Rafraîchissement du compteur global de messages non lus"
-        );
-        refreshUnreadDM();
-      }
-    }
-  };
-
-  // Add useEffect to handle visibility changes and mark messages as read
-  // when the user is looking at them
-  useEffect(() => {
-    if (!selectedUser || !messages.length || !socket) return;
-
-    // Mark messages as read when they are displayed
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        markMessagesAsRead(messages);
-      }
-    };
-
-    // Mark messages as read when focus returns to the window
-    window.addEventListener("focus", () => markMessagesAsRead(messages));
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // Initial marking when messages are loaded
-    markMessagesAsRead(messages);
-
-    return () => {
-      window.removeEventListener("focus", () => markMessagesAsRead(messages));
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [selectedUser, messages, socket]);
-
-  // Fonction pour gérer la sélection de fichier
-  const handleFileSelect = async (e) => {
-    console.log("[DM] handleFileSelect déclenché");
-    const file = e.target.files[0];
-    if (!file) {
-      console.log("[DM] Aucun fichier sélectionné");
-      return;
-    }
-    console.log("[DM] Fichier sélectionné :", file);
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Le fichier ne doit pas dépasser 10MB");
-      console.log("[DM] Fichier trop volumineux :", file.size);
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Vous devez être connecté");
-        console.log("[DM] Token manquant");
-        return;
-      }
-
-      // Correction de l'URL d'upload pour les messages privés
-      const uploadUrl = `${API_URL}/api/private-messages/upload`;
-      console.log("[DM] URL d'upload utilisée :", uploadUrl);
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("recipientId", selectedUser); // ou autre champ selon votre backend
-
-      // Affichage du contenu du FormData pour debug
-      for (let pair of formData.entries()) {
-        console.log("[DM] FormData:", pair[0], pair[1]);
-      }
-
-      setUploadingFile(true);
-      console.log("[DM] Envoi du fichier en cours...");
-
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      console.log("[DM] Réponse upload status :", response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("[DM] Erreur lors de l'upload:", errorData);
-        alert(errorData.message || "Erreur lors de l'upload du fichier");
-        return;
-      }
-
-      const data = await response.json();
-      console.log("[DM] Réponse upload OK :", data);
-
-      // Correction : si le backend retourne un message_prive, l'ajouter directement à l'UI
-      if (data.message_prive) {
-        // Récupérer les pièces jointes du message créé (pour cohérence UI)
-        let attachments = [];
-        try {
-          attachments = await fetchMessageAttachments(
-            data.message_prive.id_message_prive
-          );
-        } catch (err) {
-          attachments = [];
-        }
-        setMessages((prev) => [
-          ...prev,
-          { ...data.message_prive, attachments },
-        ]);
-        setNewMessage("");
-        setReplyingTo(null);
-        setAttachments([]);
-        // On ne fait PAS de sendMessage après un upload de fichier
-        return;
-      }
-
-      // Ajouter le fichier à la liste des pièces jointes
-      setAttachments([...attachments, data.fichier]);
-      console.log("[DM] Pièce jointe ajoutée à l'état local :", data.fichier);
-    } catch (err) {
-      console.error("[DM] Erreur lors de l'upload:", err);
-      alert("Erreur lors de l'upload du fichier");
-    } finally {
-      setUploadingFile(false);
-      // Réinitialiser l'input file pour permettre de sélectionner à nouveau le même fichier
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      console.log("[DM] Fin de handleFileSelect");
-    }
-  };
-
-  // Fonction pour déclencher le sélecteur de fichier
-  const handleAttachmentClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Modifiez la fonction d'envoi pour gérer différents états de connexion
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
-      return;
-
-    try {
-      // Convertir les mentions visibles au format interne pour le traitement
-      let processedMessage = newMessage;
-
-      // Remplacer chaque @username par son format interne @[userId:username]
-      mentionMap.forEach((internalFormat, visibleMention) => {
-        // Utiliser une regex pour trouver la mention exacte (avec un espace ou la fin de la chaîne après)
-        const mentionRegex = new RegExp(`${visibleMention}(\\s|$)`, "g");
-        processedMessage = processedMessage.replace(
-          mentionRegex,
-          `${internalFormat} `
-        );
-      });
-
-      console.log("[DM] Message traité avec mentions:", processedMessage);
-
-      // Créer un objet message local pour l'affichage immédiat
-      const optimisticMessage = {
-        id_message_prive: `temp-${Date.now()}`,
-        contenu: processedMessage, // Utiliser le message traité avec le format interne
-        fk_expediteur: currentUserId,
-        fk_destinataire: selectedUser,
-        date_envoi: new Date().toISOString(),
-        date_creation: new Date().toISOString(),
-        isOptimistic: true,
-        attachments: attachments.map((att) => ({
-          id_fichier: att.id_fichier,
-          nom_fichier: att.nom_fichier,
-          // Utiliser directement l'URL sans transformation
-          url: att.url || att.presignedUrl,
-          presignedUrl: att.presignedUrl || att.url,
-          type: att.type,
-          taille_fichier: att.taille_fichier,
-        })),
-      };
-
-      // Ajouter le message optimiste à l'UI
-      setMessages((prev) => [...prev, optimisticMessage]);
-
-      const messageData = {
-        destinataireId: selectedUser,
-        contenu: processedMessage, // Utiliser le message traité
-        tempId: Date.now().toString(),
-        replyToId: replyingTo ? replyingTo.id_message_prive : null,
-        attachments: attachments.map((att) => att.id_fichier),
-      };
-
-      // Envoi via socket ou API REST
-      if (socket && socketStatus.connected) {
-        socket.emit("privateMessage", messageData, (response) => {
-          if (response && !response.ok) {
-            console.error("Erreur socket:", response.message);
-            sendMessageViaAPI(
-              newMessage,
-              selectedUser,
-              replyingTo,
-              attachments.map((att) => att.id_fichier)
-            );
-          }
-        });
-      } else {
-        await sendMessageViaAPI(
-          newMessage,
-          selectedUser,
-          replyingTo,
-          attachments.map((att) => att.id_fichier)
-        );
-      }
-
-      // Réinitialiser l'état après envoi
-      setNewMessage("");
-      setReplyingTo(null);
-      setAttachments([]);
-      setMentionMap(new Map()); // Vider la carte des mentions
-    } catch (e) {
-      console.error("Erreur lors de l'envoi du message:", e);
-      setError(`Erreur lors de l'envoi du message: ${e.message}`);
-    }
-  };
-
-  // Fonction de fallback pour l'API REST avec paramètres explicites
-  const sendMessageViaAPI = async (
-    messageContent,
-    recipientId,
-    replyToMessage,
-    attachmentIds = []
-  ) => {
-    if (!messageContent && attachmentIds.length === 0) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/private-messages/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          destinataireId: recipientId,
-          contenu: messageContent || "",
-          replyToId: replyToMessage ? replyToMessage.id_message_prive : null,
-          attachments: attachmentIds,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(await res.text());
-      }
-
-      const data = await res.json(); // Mise à jour des messages pour remplacer le message optimiste
-      setMessages((prev) => {
-        const exists = prev.some(
-          (m) => !m.isOptimistic && m.id_message_prive === data.id_message_prive
-        );
-
-        if (exists) return prev;
-
-        return prev.map((m) =>
-          m.isOptimistic && m.contenu === messageContent ? data : m
-        );
-      });
-
-      // Rafraîchir la liste des conversations pour mettre à jour l'ordre
-      fetchConversations();
-    } catch (apiError) {
-      console.error("API fallback failed:", apiError);
-      setError(`Échec de l'envoi du message. Veuillez réessayer.`);
-    }
-  };
-
-  // Filtre les conversations basées sur la recherche
-  const filteredConversations = searchQuery.trim()
-    ? conversations.filter((userId) => {
-        const user = usersInfo[userId] || {};
-        return user.name?.toLowerCase().includes(searchQuery.toLowerCase());
-      })
-    : conversations;
-
-  // Récupérer la liste de tous les utilisateurs disponibles
-  const fetchAvailableUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        console.error("Erreur lors de la récupération des utilisateurs");
-        setAvailableUsers([]);
-        setFilteredUsers([]);
-        return;
-      }
-
-      const data = await res.json();
-      // Correction : les utilisateurs ont l'id sous 'id_utilisateur'
-      // Exclure l'utilisateur courant et ceux déjà en conversation
-      const filteredData = data.filter(
-        (user) =>
-          user.id_utilisateur !== currentUserId &&
-          !conversations.includes(user.id_utilisateur)
-      );
-      setAvailableUsers(filteredData);
-      setFilteredUsers(filteredData);
-    } catch (e) {
-      console.error("Erreur lors de la récupération des utilisateurs:", e);
-      setAvailableUsers([]);
-      setFilteredUsers([]);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  // Filtrer les utilisateurs selon la recherche
-  useEffect(() => {
-    if (searchUserQuery.trim() === "") {
-      setFilteredUsers(availableUsers);
-    } else {
-      const filtered = availableUsers.filter((user) =>
-        (user.nom || "").toLowerCase().includes(searchUserQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchUserQuery, availableUsers]);
-
-  // Ouvrir le modal de nouvelle conversation
-  const handleOpenNewConversation = () => {
+  // Démarrer une nouvelle conversation
+  const handleOpenNewConversation = useCallback(() => {
     setShowNewConversationModal(true);
     fetchAvailableUsers();
-  };
+  }, [setShowNewConversationModal, fetchAvailableUsers]);
 
-  // Démarrer une conversation avec un utilisateur
-  const startConversationWith = (userId) => {
-    setShowNewConversationModal(false);
-    fetchMessages(userId);
+  // Sélectionner un utilisateur depuis la modale nouvelle conversation
+  const handleStartConversation = useCallback(
+    (userId) => {
+      // Ajouter à la liste des conversations si nécessaire
+      const addedUserId = startConversationWith(userId);
 
-    // Si cet utilisateur n'est pas déjà dans la liste des conversations, ajoutez-le
-    if (!conversations.includes(userId)) {
-      setConversations((prev) => [...prev, userId]);
-    }
-  };
+      // Charger les messages de cet utilisateur
+      handleSelectUser(addedUserId);
 
-  // Ajouter cette fonction ici
-  const handleUserClick = (userId, username) => {
-    console.log(`Utilisateur cliqué: ${username} (ID: ${userId})`);
+      // Fermer la modale
+      setShowNewConversationModal(false);
+    },
+    [startConversationWith, handleSelectUser, setShowNewConversationModal]
+  );
 
-    // Ouvrir une conversation avec cet utilisateur
-    if (userId && userId !== currentUserId) {
-      // Vérifier si l'utilisateur est dans la liste des conversations
-      if (!conversations.includes(userId)) {
-        // Ajouter l'utilisateur à la liste des conversations
-        setConversations((prev) => [...prev, userId]);
-      }
+  // Gestion du menu contextuel des messages
+  const handleMessageContextMenu = useCallback(
+    (e, msg) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOwnMsg = msg.fk_expediteur === currentUserId;
+      setMessageContextMenu({
+        visible: true,
+        xPos: e.pageX,
+        yPos: e.pageY,
+        messageId: msg.id_message_prive,
+        isOwnMessage: isOwnMsg,
+        message: msg,
+      });
+    },
+    [currentUserId, setMessageContextMenu]
+  );
 
-      // Charger les messages avec cet utilisateur
-      fetchMessages(userId);
-    }
-  };
+  // Fermer le menu contextuel des messages
+  const handleCloseMessageContextMenu = useCallback(() => {
+    setMessageContextMenu((prev) => ({ ...prev, visible: false }));
+  }, [setMessageContextMenu]);
 
-  // Gestionnaire pour le menu contextuel
-  const handleMessageContextMenu = (e, msg) => {
-    e.preventDefault();
-    const isOwnMsg = msg.fk_expediteur === currentUserId;
-    setMessageContextMenu({
-      visible: true,
-      xPos: e.pageX,
-      yPos: e.pageY,
-      messageId: msg.id_message_prive,
-      isOwnMessage: isOwnMsg,
-      message: msg,
-    });
-  };
+  // Gestion du menu contextuel des conversations
+  const handleConversationContextMenu = useCallback(
+    (e, userId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setConversationContextMenu({
+        visible: true,
+        xPos: e.pageX,
+        yPos: e.pageY,
+        userId: userId,
+      });
+    },
+    [setConversationContextMenu]
+  );
 
-  const handleCloseMessageContextMenu = () => {
-    setMessageContextMenu({ ...messageContextMenu, visible: false });
-  };
-
-  // Gestionnaire pour le menu contextuel des conversations
-  const handleConversationContextMenu = (e, userId) => {
-    e.preventDefault();
-    setConversationContextMenu({
-      visible: true,
-      xPos: e.pageX,
-      yPos: e.pageY,
-      userId: userId,
-    });
-  };
-
-  const handleCloseConversationContextMenu = () => {
-    setConversationContextMenu({ ...conversationContextMenu, visible: false });
-  };
-
-  // Fonction pour supprimer une conversation
-  const handleDeleteConversation = async () => {
-    try {
-      if (!conversationContextMenu.userId) return;
-
-      const userId = conversationContextMenu.userId;
-
-      // Confirmation avant suppression
-      if (
-        !window.confirm(
-          "Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
-        )
-      ) {
-        return;
-      }
-
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${API_URL}/api/private-messages/conversations/${userId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(
-          `Erreur lors de la suppression : ${res.status} - ${errorText}`
-        );
-      }
-
-      // Mise à jour de l'UI si suppression réussie
-      setConversations((prev) => prev.filter((id) => id !== userId));
-
-      // Si la conversation supprimée est celle affichée actuellement
-      if (selectedUser === userId) {
-        setSelectedUser(null);
-        setMessages([]);
-      }
-
-      handleCloseConversationContextMenu();
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la conversation:", error);
-      alert(
-        `Erreur lors de la suppression de la conversation: ${error.message}`
-      );
-    }
-  };
+  // Fermer le menu contextuel des conversations
+  const handleCloseConversationContextMenu = useCallback(() => {
+    setConversationContextMenu((prev) => ({ ...prev, visible: false }));
+  }, [setConversationContextMenu]);
 
   // Répondre à un message
-  const handleReplyMessage = () => {
+  const handleReplyMessage = useCallback(() => {
     setReplyingTo(messageContextMenu.message);
-    // Ne plus ajouter automatiquement le pseudo dans le champ de saisie
     handleCloseMessageContextMenu();
-    const inputElement = document.querySelector(".dm-input");
-    if (inputElement) inputElement.focus();
-  };
+  }, [messageContextMenu, setReplyingTo, handleCloseMessageContextMenu]);
 
-  // Supprimer un message
-  const handleDeleteMessage = async () => {
-    try {
-      if (!socket || !messageContextMenu.messageId) return;
-
-      socket.emit("deletePrivateMessage", { id: messageContextMenu.messageId });
-      handleCloseMessageContextMenu();
-    } catch (error) {
-      console.error("Erreur lors de la suppression du message:", error);
-      setError("Erreur lors de la suppression du message");
-    }
-  };
-
-  // Commencer à éditer un message
-  const handleEditMessage = () => {
+  // Modifier un message
+  const handleEditMessage = useCallback(() => {
     setEditingMessage(messageContextMenu.message);
     setEditMessageContent(messageContextMenu.message.contenu);
     handleCloseMessageContextMenu();
-  };
+  }, [
+    messageContextMenu,
+    setEditingMessage,
+    setEditMessageContent,
+    handleCloseMessageContextMenu,
+  ]);
 
-  // Sauvegarder les modifications d'un message
-  const handleSaveEdit = async () => {
-    try {
-      if (!socket || !editingMessage) return;
+  // Supprimer un message
+  const handleDeleteMessage = useCallback(() => {
+    if (!socket || !messageContextMenu.messageId) return;
 
-      socket.emit("editPrivateMessage", {
-        id: editingMessage.id_message_prive,
-        contenu: editMessageContent,
-      });
+    socket.emit("deletePrivateMessage", { id: messageContextMenu.messageId });
+    handleCloseMessageContextMenu();
+  }, [socket, messageContextMenu, handleCloseMessageContextMenu]);
 
-      setEditingMessage(null);
-      setEditMessageContent("");
-    } catch (error) {
-      console.error("Erreur lors de la modification du message:", error);
-      setError("Erreur lors de la modification du message");
-    }
-  };
-
-  // Annuler l'édition
-  const handleCancelEdit = () => {
-    setEditingMessage(null);
-    setEditMessageContent("");
-  };
-
-  // Annuler la réponse
-  const handleCancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  // Gérer l'ajout d'une réaction à un message
-  const handleAddReaction = () => {
+  // Ajouter une réaction
+  const handleAddReaction = useCallback(() => {
     setShowEmojiPicker(true);
     setEmojiPickerPosition({
       top: messageContextMenu.yPos,
       left: messageContextMenu.xPos,
     });
     handleCloseMessageContextMenu();
-  };
+  }, [
+    messageContextMenu,
+    setShowEmojiPicker,
+    setEmojiPickerPosition,
+    handleCloseMessageContextMenu,
+  ]);
 
-  // Gérer la sélection d'un emoji
-  const handleEmojiSelect = (emoji) => {
-    if (!socket || !messageContextMenu.messageId) return;
+  // Sélectionner un emoji
+  const handleEmojiSelect = useCallback(
+    (emoji) => {
+      if (!socket || !messageContextMenu.messageId) return;
 
-    socket.emit("addPrivateMessageReaction", {
-      id: messageContextMenu.messageId,
-      reaction: emoji,
-    });
+      socket.emit("addPrivateMessageReaction", {
+        id: messageContextMenu.messageId,
+        reaction: emoji,
+      });
 
-    setShowEmojiPicker(false);
-  };
+      setShowEmojiPicker(false);
+    },
+    [socket, messageContextMenu, setShowEmojiPicker]
+  );
 
-  // Fermer le sélecteur d'emoji lorsqu'on clique en dehors
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target)
-      ) {
-        setShowEmojiPicker(false);
-      }
-    };
+  // Gestion des mentions
+  const renderTextWithMentions = useCallback(
+    (text) => {
+      if (!text) return "";
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+      const mentionRegex = /@\[([0-9a-f-]+):([^\]]+)\]/g;
+      const parts = [];
+      let lastIndex = 0;
+      let match;
 
-  // Correction pour l'affichage des conversations/messages après reload
-  useEffect(() => {
-    if (selectedUser) {
-      fetchMessages(selectedUser);
-    }
-    // eslint-disable-next-line
-  }, [selectedUser]);
+      while ((match = mentionRegex.exec(text)) !== null) {
+        // Ajouter le texte avant la mention
+        if (match.index > lastIndex) {
+          parts.push(text.substring(lastIndex, match.index));
+        }
 
-  // Add this function to calculate total unread messages
-  const calculateTotalUnreadCount = (countsObj) => {
-    return Object.values(countsObj).reduce((total, count) => total + count, 0);
-  };
-
-  // Add this effect to update the unread count in localStorage for the Sidebar
-  useEffect(() => {
-    localStorage.setItem("unreadPrivateMessages", totalUnreadCount.toString());
-    const event = new CustomEvent("unreadMessagesUpdated", {
-      detail: { count: totalUnreadCount },
-    });
-    window.dispatchEvent(event);
-  }, [totalUnreadCount]);
-
-  // Add an effect to load initial unread counts when component mounts
-  useEffect(() => {
-    // Check for any stored unread messages in localStorage or fetch from API
-    const fetchUnreadCounts = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
-          `${API_URL}/api/private-messages/unread-counts`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+        // Ajouter la mention comme élément cliquable
+        const userId = match[1];
+        const username = match[2];
+        parts.push(
+          <span
+            key={`mention-${userId}-${match.index}`}
+            className="mention-tag"
+            onClick={() => {
+              navigate(`/direct-messages?userId=${userId}`);
+            }}
+          >
+            @{username}
+          </span>
         );
 
-        if (res.ok) {
-          const data = await res.json();
-          setUnreadMessageCounts(data);
-          setTotalUnreadCount(calculateTotalUnreadCount(data));
-        }
-      } catch (e) {
-        console.error("Error fetching unread counts:", e);
+        lastIndex = mentionRegex.lastIndex;
       }
-    };
 
-    fetchUnreadCounts();
-  }, []);
-
-  // Vérifier le token au chargement du composant
-  useEffect(() => {
-    // Vérifier si le token est valide
-    const tokenStatus = checkTokenValidity();
-    console.log("[DM] Statut du token:", tokenStatus);
-
-    if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
-      // Définir l'ID utilisateur à partir du token JWT
-      setCurrentUserId(tokenStatus.details.id);
-      console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
-    } else {
-      setError(
-        `Erreur d'authentification: ${
-          tokenStatus.error || "Token invalide"
-        }. Veuillez vous reconnecter.`
-      );
-    }
-  }, []);
-
-  // Fonction pour télécharger un fichier
-  const handleDownloadFile = (fileUrl, fileName) => {
-    // Si l'URL est déjà complète, extraire le chemin du fichier
-    const extractFilePath = (url) => {
-      if (url.startsWith("http")) {
-        try {
-          // Si l'URL contient le bucket S3, extraire le chemin
-          if (url.includes("s3-supchat.s3.fr-par.scw.cloud")) {
-            const parts = url.split("s3-supchat.s3.fr-par.scw.cloud/");
-            if (parts.length > 1) {
-              return parts[1];
-            }
-          }
-          // Sinon, retourner l'URL complète
-          return url;
-        } catch (error) {
-          console.error(
-            "Erreur lors de l'extraction du chemin de fichier:",
-            error
-          );
-          return url;
-        }
+      // Ajouter le texte restant
+      if (lastIndex < text.length) {
+        parts.push(text.substring(lastIndex));
       }
-      // Si ce n'est pas une URL complète, c'est déjà un chemin relatif
-      return fileUrl;
-    };
 
-    // Extraire le chemin du fichier
-    const filePath = extractFilePath(fileUrl);
+      return parts;
+    },
+    [navigate]
+  );
 
-    // Construire l'URL de téléchargement via le backend
-    const token = localStorage.getItem("token");
-    const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
-      filePath
-    )}`;
-
-    if (token) {
-      // Utiliser fetch pour envoyer le token dans l'en-tête
-      fetch(downloadUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error("Erreur de téléchargement");
-          return response.blob();
-        })
-        .then((blob) => {
-          // Créer une URL d'objet pour le blob
-          const objectUrl = window.URL.createObjectURL(blob);
-
-          // Créer un élément a temporaire pour déclencher le téléchargement
-          const a = document.createElement("a");
-          a.href = objectUrl;
-          a.download = fileName || "download";
-          document.body.appendChild(a);
-          a.click();
-
-          // Nettoyer
-          window.URL.revokeObjectURL(objectUrl);
-          document.body.removeChild(a);
-        })
-        .catch((error) => {
-          console.error("Erreur lors du téléchargement du fichier:", error);
-          alert("Impossible de télécharger le fichier. Veuillez réessayer.");
-        });
-    } else {
-      alert("Vous devez être connecté pour télécharger des fichiers.");
-    }
-  }; // Démarrage auto d'une conversation si userId passé en query ou en paramètre d'URL
-  useEffect(() => {
-    // Vérifier d'abord les paramètres de recherche URL (query params)
-    const params = new URLSearchParams(location.search);
-    const userIdFromQuery = params.get("userId");
-
-    // Vérifier ensuite si l'URL contient un ID direct comme /direct-messages/{userId}
-    const pathParts = location.pathname.split("/");
-    const userIdFromPath = pathParts.length > 2 ? pathParts[2] : null;
-
-    // Utiliser l'ID de la query ou du path, avec priorité à la query
-    const userId = userIdFromQuery || userIdFromPath;
-
-    if (userId) {
-      console.log(`[DM] ID utilisateur détecté dans l'URL: ${userId}`);
-      setSelectedUser(userId);
-      fetchMessages(userId);
-    }
-  }, [location.search, location.pathname]);
-
-  // Fonction pour rendre les mentions cliquables
-  const renderTextWithMentions = (text) => {
-    if (!text) return "";
-
-    // Regex pour détecter les mentions au format @[userId:username]
-    const mentionRegex = /@\[(\w+):([^\]]+)\]/g;
-
-    // Si pas de mentions, retourner le texte tel quel
-    if (!mentionRegex.test(text)) return text;
-
-    // Réinitialiser le pointeur de regex
-    mentionRegex.lastIndex = 0;
-
-    // Diviser le texte en parties normales et mentions
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = mentionRegex.exec(text)) !== null) {
-      // Ajouter le texte avant la mention
-      if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index));
-      } // Ajouter la mention sous forme d'élément cliquable
-      const userId = match[1];
-      const username = match[2];
-      parts.push(
-        <span
-          key={`mention-${userId}-${match.index}`}
-          className="mention-tag"
-          onClick={() => {
-            console.log(
-              `Redirection vers conversation avec ${username} (ID: ${userId})`
-            );
-
-            // Rediriger vers la route correcte - assurez-vous que cette route existe dans votre routeur
-            navigate(`/direct-messages?userId=${userId}`);
-          }}
-        >
-          @{username}
-        </span>
-      );
-
-      lastIndex = mentionRegex.lastIndex;
-    }
-
-    // Ajouter le texte restant après la dernière mention
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
-    }
-
-    return parts;
-  };
-
-  // Ajouter cette fonction pour gérer la saisie dans le champ de message
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setNewMessage(value);
-
-    // Vérifier si l'utilisateur est en train de taper une mention
-    const lastAtIndex = value.lastIndexOf("@");
-    if (lastAtIndex !== -1) {
-      const textAfterAt = value.substring(lastAtIndex + 1);
-      const spaceAfterAt = textAfterAt.indexOf(" ");
-      const searchText =
-        spaceAfterAt === -1
-          ? textAfterAt
-          : textAfterAt.substring(0, spaceAfterAt);
-
-      if (
-        searchText.length === 0 ||
-        (searchText.length > 0 && spaceAfterAt === -1)
-      ) {
-        // Début d'une mention
-        setMentionStartIndex(lastAtIndex);
-        setMentionSearch(searchText.toLowerCase());
-        searchUserMentions(searchText);
+  // Recherche des utilisateurs pour les mentions
+  const searchUserMentions = useCallback(
+    async (searchText) => {
+      if (!searchText) {
+        setMentionSuggestions([]);
         return;
       }
-    }
 
-    // Pas de mention en cours
-    setShowMentionSuggestions(false);
-  };
+      try {
+        // Utiliser les utilisateurs déjà en mémoire
+        if (Object.keys(usersInfo).length > 0) {
+          const users = Object.values(usersInfo).filter(
+            (user) =>
+              user.name &&
+              user.name.toLowerCase().includes(searchText.toLowerCase())
+          );
 
-  // Fonction pour rechercher des utilisateurs pour les mentions
-  const searchUserMentions = async (searchText) => {
-    if (!searchText && searchText !== "") return;
+          if (users.length > 0) {
+            setMentionSuggestions(users);
+            setActiveMentionIndex(0);
+            return;
+          }
+        }
 
-    try {
-      setShowMentionSuggestions(true);
-
-      // Utilisez la liste des conversations ou récupérez tous les utilisateurs
-      let users = [];
-
-      // Option 1: Utiliser les utilisateurs déjà chargés (conversations existantes)
-      if (Object.keys(usersInfo).length > 0) {
-        users = Object.values(usersInfo).filter(
-          (user) =>
-            user.name &&
-            user.name.toLowerCase().includes(searchText.toLowerCase())
-        );
-      }
-
-      // Option 2: Si besoin, charger plus d'utilisateurs depuis l'API
-      if (users.length < 5) {
+        // Sinon, requête API
         const token = localStorage.getItem("token");
         const res = await fetch(`${API_URL}/api/users?search=${searchText}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -1638,949 +654,1109 @@ function DirectMessages() {
 
         if (res.ok) {
           const apiUsers = await res.json();
-
-          // Normaliser les données
           const normalizedUsers = apiUsers.map((user) => ({
             id: user.id_utilisateur,
             name: user.nom || "Utilisateur",
-            avatar: user.photo_de_profil,
           }));
 
-          // Fusionner avec les utilisateurs existants et éviter les doublons
-          const existingIds = users.map((u) => u.id);
-          const uniqueUsers = [
-            ...users,
-            ...normalizedUsers.filter((u) => !existingIds.includes(u.id)),
-          ];
-
-          users = uniqueUsers;
+          setMentionSuggestions(normalizedUsers);
+          setActiveMentionIndex(0);
         }
+      } catch (error) {
+        console.error("Erreur lors de la recherche d'utilisateurs:", error);
       }
+    },
+    [usersInfo]
+  );
 
-      setMentionSuggestions(users.slice(0, 5)); // Limiter à 5 suggestions max
-      setActiveMentionIndex(0);
-    } catch (error) {
-      console.error("Erreur lors de la recherche des mentions:", error);
+  // Insérer une mention
+  const handleMentionSelect = useCallback(
+    (user) => {
+      if (!mentionStartIndex && mentionStartIndex !== 0) return;
+
+      // Extraire les parties du message
+      const beforeMention = newMessage.substring(0, mentionStartIndex);
+      const afterSearchText = newMessage.substring(
+        mentionStartIndex +
+          (newMessage.substring(mentionStartIndex).indexOf(" ") > -1
+            ? newMessage.substring(mentionStartIndex).indexOf(" ") +
+              mentionStartIndex
+            : newMessage.length)
+      );
+
+      // Format visible pour l'utilisateur: @username
+      const visibleText = `${beforeMention}@${user.name} ${afterSearchText}`;
+
+      // Format interne pour le traitement: @[userId:username]
+      const internalFormat = `@[${user.id}:${user.name}]`;
+
+      // Mémoriser la position du curseur
+      const cursorPosition = mentionStartIndex + user.name.length + 2; // +2 pour @ et espace
+
+      // Mettre à jour l'affichage
+      setNewMessage(visibleText);
+
+      // Stocker la correspondance
+      const newMentionMap = new Map(mentionMap);
+      newMentionMap.set(`@${user.name}`, internalFormat);
+      setMentionMap(newMentionMap);
+
+      // Fermer la liste de suggestions
       setShowMentionSuggestions(false);
-    }
-  };
+      setMentionStartIndex(null);
 
-  // Fonction pour insérer une mention
-  const insertMention = (user) => {
-    if (mentionStartIndex === null) return;
+      // Remettre le focus
+      setTimeout(() => {
+        const inputElement = document.querySelector(".dm-input");
+        if (inputElement) {
+          inputElement.focus();
+          if (typeof inputElement.setSelectionRange === "function") {
+            inputElement.setSelectionRange(cursorPosition, cursorPosition);
+          }
+        }
+      }, 0);
+    },
+    [mentionStartIndex, newMessage, mentionMap, setNewMessage]
+  );
 
-    // Partie avant la mention
-    const beforeMention = newMessage.substring(0, mentionStartIndex);
+  // Gérer l'entrée utilisateur pour les mentions
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setNewMessage(value);
 
-    // Partie après le texte de recherche
-    const afterSearchText = newMessage.substring(
-      mentionStartIndex + mentionSearch.length + 1
-    ); // +1 pour le @
+      // Détecter les @mentions
+      const lastAtPos = value.lastIndexOf("@");
+      if (lastAtPos !== -1) {
+        const textAfterAt = value.substring(lastAtPos + 1);
+        const spaceAfterAt = textAfterAt.indexOf(" ");
+        const mentionSearch =
+          spaceAfterAt === -1
+            ? textAfterAt
+            : textAfterAt.substring(0, spaceAfterAt);
 
-    // Format visible pour l'utilisateur: @username
-    const visibleText = `${beforeMention}@${user.name} ${afterSearchText}`;
-
-    // Format interne pour le traitement: @[userId:username]
-    const internalFormat = `@[${user.id}:${user.name}]`;
-
-    // Mémoriser la position actuelle du curseur
-    const cursorPosition = mentionStartIndex + user.name.length + 2; // +2 pour @ et espace
-
-    // Mettre à jour l'affichage avec le format visible
-    setNewMessage(visibleText);
-
-    // Stocker en mémoire les correspondances entre affichage et format interne
-    const newMentionMap = new Map(mentionMap);
-    newMentionMap.set(`@${user.name}`, internalFormat);
-    setMentionMap(newMentionMap);
-
-    // Fermer la liste de suggestions
-    setShowMentionSuggestions(false);
-    setMentionStartIndex(null);
-
-    // Remettre le focus sur l'input et positionner le curseur
-    setTimeout(() => {
-      const inputElement = document.querySelector(".dm-input");
-      if (inputElement) {
-        inputElement.focus();
-        // Positionner le curseur après la mention
-        if (typeof inputElement.setSelectionRange === "function") {
-          inputElement.setSelectionRange(cursorPosition, cursorPosition);
+        if (
+          mentionSearch.length === 0 ||
+          (mentionSearch.length > 0 && spaceAfterAt === -1)
+        ) {
+          setMentionStartIndex(lastAtPos);
+          searchUserMentions(mentionSearch);
+          setShowMentionSuggestions(true);
+          return;
         }
       }
-    }, 0);
-  };
 
-  // Dans le JSX, remplacer l'input existant par:
-  <input
-    type="text"
-    placeholder={`Message à ${selectedUserInfo?.name || "l'utilisateur"}`}
-    value={newMessage}
-    onChange={handleInputChange}
-    className="dm-input"
-    disabled={uploadingFile}
-    onKeyDown={(e) => {
-      if (showMentionSuggestions) {
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          setActiveMentionIndex((prev) =>
-            prev < mentionSuggestions.length - 1 ? prev + 1 : prev
+      setShowMentionSuggestions(false);
+    },
+    [setNewMessage, searchUserMentions]
+  );
+
+  // Envoyer un message
+  const handleSendMessage = useCallback(
+    (e) => {
+      e?.preventDefault();
+
+      if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
+        return;
+
+      try {
+        // Convertir les mentions visibles en format interne
+        let processedMessage = newMessage;
+        mentionMap.forEach((internalFormat, visibleMention) => {
+          const mentionRegex = new RegExp(`${visibleMention}(\\s|$)`, "g");
+          processedMessage = processedMessage.replace(
+            mentionRegex,
+            `${internalFormat} `
           );
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          setActiveMentionIndex((prev) => (prev > 0 ? prev - 1 : 0));
-        } else if (e.key === "Enter" && mentionSuggestions.length > 0) {
-          e.preventDefault();
-          insertMention(mentionSuggestions[activeMentionIndex]);
-        } else if (e.key === "Escape") {
-          setShowMentionSuggestions(false);
+        });
+
+        // Générer un ID temporaire unique pour identifier ce message
+        const tempId = `temp-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
+        // Créer un message optimiste pour l'affichage immédiat
+        const optimisticMsg = {
+          id_message_prive: tempId,
+          contenu: processedMessage,
+          fk_expediteur: currentUserId,
+          fk_destinataire: selectedUser,
+          date_envoi: new Date().toISOString(),
+          date_creation: new Date().toISOString(),
+          isOptimistic: true,
+          tempId: tempId, // Pour identification par le serveur
+          attachments: attachments.map((att) => ({
+            id_fichier: att.id_fichier,
+            nom_fichier: att.nom_fichier,
+            url: att.url || att.presignedUrl,
+            presignedUrl: att.presignedUrl || att.url,
+            type: att.type,
+            taille_fichier: att.taille_fichier,
+          })),
+        };
+
+        // Ajouter à l'UI immédiatement
+        setMessages((prev) => [...prev, optimisticMsg]);
+
+        // Préparer les données pour l'envoi
+        const messageData = {
+          destinataireId: selectedUser,
+          contenu: processedMessage,
+          tempId: tempId,
+          replyToId: replyingTo ? replyingTo.id_message_prive : null,
+          attachments: attachments.map((att) => att.id_fichier),
+        };
+
+        console.log("[DM] Envoi du message avec pièces jointes:", messageData);
+
+        // Envoi via socket
+        if (socket && socket.connected) {
+          socket.emit("privateMessage", messageData, (response) => {
+            if (response && !response.ok) {
+              console.error("Erreur socket:", response.message);
+              // Fallback vers API REST
+              sendMessage(
+                processedMessage,
+                selectedUser,
+                replyingTo,
+                attachments.map((att) => att.id_fichier)
+              );
+            }
+          });
+        } else {
+          // Envoi via API REST si socket non disponible
+          sendMessage(
+            processedMessage,
+            selectedUser,
+            replyingTo,
+            attachments.map((att) => att.id_fichier)
+          );
+        }
+
+        // Réinitialiser les états après envoi
+        setNewMessage("");
+        setReplyingTo(null);
+        setAttachments([]);
+        setMentionMap(new Map());
+
+        // Scroll vers le bas
+        scrollToBottom();
+      } catch (e) {
+        console.error("Erreur lors de l'envoi du message:", e);
+      }
+    },
+    [
+      newMessage,
+      attachments,
+      selectedUser,
+      currentUserId,
+      mentionMap,
+      replyingTo,
+      socket,
+      setMessages,
+      setNewMessage,
+      setReplyingTo,
+      setAttachments,
+      scrollToBottom,
+      sendMessage,
+    ]
+  );
+
+  // Demander l'autorisation pour les notifications du navigateur
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if (
+        "Notification" in window &&
+        Notification.permission !== "granted" &&
+        Notification.permission !== "denied"
+      ) {
+        try {
+          const permission = await Notification.requestPermission();
+          console.log(`[DM] Notification permission ${permission}`);
+        } catch (error) {
+          console.error(
+            "[DM] Error requesting notification permission:",
+            error
+          );
         }
       }
-    }}
-  />;
+    };
 
-  // Ajouter le composant de suggestions de mentions après l'input
-  {
-    showMentionSuggestions && mentionSuggestions.length > 0 && (
-      <div className="dm-mention-suggestions">
-        {mentionSuggestions.map((user, index) => (
-          <div
-            key={user.id}
-            className={`dm-mention-suggestion ${
-              index === activeMentionIndex ? "active" : ""
-            }`}
-            onClick={() => insertMention(user)}
+    requestNotificationPermission();
+
+    // Vérification du token et récupération de l'ID utilisateur
+    const checkTokenValidity = () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("Token non trouvé dans localStorage");
+          return { valid: false, error: "Token non trouvé" };
+        }
+
+        // Découper et décoder le token JWT
+        const parts = token.split(".");
+        if (parts.length !== 3) {
+          console.log("Format de token JWT invalide");
+          return { valid: false, error: "Format de token invalide" };
+        }
+
+        // Décoder le payload (partie centrale du token)
+        const payload = JSON.parse(atob(parts[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+
+        return {
+          valid: currentTime < payload.exp,
+          error: currentTime > payload.exp ? "Token expiré" : null,
+          details: payload,
+        };
+      } catch (error) {
+        console.error("Erreur lors de la vérification du token:", error);
+        return { valid: false, error: error.message };
+      }
+    };
+
+    const tokenStatus = checkTokenValidity();
+    if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
+      setCurrentUserId(tokenStatus.details.id);
+    } else {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // Charger les conversations au démarrage
+  useEffect(() => {
+    if (currentUserId) {
+      fetchConversations();
+    }
+  }, [currentUserId, fetchConversations]);
+
+  // Effet pour lire les paramètres d'URL et charger la conversation appropriée
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userIdFromQuery = params.get("userId");
+
+    if (userIdFromQuery && currentUserId) {
+      setSelectedUser(userIdFromQuery);
+      fetchMessages(userIdFromQuery);
+
+      // Charger les informations de l'utilisateur si nécessaire
+      if (!usersInfo[userIdFromQuery]) {
+        fetchUserInfo(userIdFromQuery).then((userInfo) => {
+          if (userInfo) {
+            setSelectedUserInfo(userInfo);
+          }
+        });
+      } else {
+        setSelectedUserInfo(usersInfo[userIdFromQuery]);
+      }
+    }
+  }, [location.search, currentUserId, fetchMessages, fetchUserInfo, usersInfo]);
+
+  // Gestion des événements WebSocket
+  useEffect(() => {
+    if (!socket || !currentUserId) return;
+
+    // Gestion des nouveaux messages privés
+    const handlePrivateMessage = async (msg) => {
+      console.log("[DM] Received private message:", msg);
+
+      if (!currentUserId) return;
+
+      // Mise à jour du compteur de messages non lus
+      if (
+        msg.fk_expediteur !== currentUserId &&
+        (!selectedUser || msg.fk_expediteur !== selectedUser)
+      ) {
+        // Jouer une notification sonore selon les paramètres utilisateur
+        playNotificationSound(notificationSettings);
+
+        // Mise à jour du compteur
+        updateUnreadCounts((prev) => {
+          const senderId = msg.fk_expediteur;
+          const newCounts = { ...prev, [senderId]: (prev[senderId] || 0) + 1 };
+          return newCounts;
+        });
+
+        // Afficher une notification toast si la fenêtre n'est pas active
+        if (document.visibilityState !== "visible") {
+          // Récupérer les infos de l'expéditeur
+          const senderInfo =
+            usersInfo[msg.fk_expediteur] ||
+            (await fetchUserInfo(msg.fk_expediteur));
+          const senderName = senderInfo?.name || "Utilisateur";
+
+          // Créer le contenu de la notification
+          const messagePreview =
+            msg.contenu.length > 50
+              ? msg.contenu.substring(0, 50) + "..."
+              : msg.contenu;
+
+          // Afficher la notification
+          toast.info(
+            <div
+              onClick={() => {
+                navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+                toast.dismiss();
+              }}
+            >
+              <strong>{senderName}</strong>
+              <p>{messagePreview}</p>
+              {msg.attachments && msg.attachments.length > 0 && (
+                <p>
+                  <i>Contient {msg.attachments.length} pièce(s) jointe(s)</i>
+                </p>
+              )}
+            </div>,
+            {
+              position: "bottom-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              onClick: () => {
+                navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+              },
+            }
+          );
+
+          // Utiliser l'API de notification du navigateur si autorisé
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const notifOptions = {
+              body: messagePreview,
+              icon: senderInfo?.avatar || "/logo192.png",
+            };
+
+            const notification = new Notification(
+              `Message de ${senderName}`,
+              notifOptions
+            );
+
+            notification.onclick = function () {
+              window.focus();
+              navigate(`/direct-messages?userId=${msg.fk_expediteur}`);
+              this.close();
+            };
+          }
+        }
+      }
+
+      // Ajouter à la conversation active si pertinent
+      if (
+        selectedUser &&
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
+      ) {
+        let attachments = [];
+        try {
+          if (msg.id_message_prive) {
+            // Récupérer les pièces jointes du message
+            const response = await fetch(
+              `${API_URL}/api/private-messages/${msg.id_message_prive}/attachments`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              attachments = await response.json();
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching attachments:", error);
+        }
+
+        // Ajouter message à l'UI
+        setMessages((prev) => {
+          // Vérifier si le message existe déjà
+          const exists = prev.some(
+            (m) =>
+              m.id_message_prive === msg.id_message_prive ||
+              (m.isOptimistic && m.tempId === msg.tempId)
+          );
+
+          if (exists) {
+            return prev.map((m) => {
+              if (
+                m.id_message_prive === msg.id_message_prive ||
+                (m.isOptimistic && m.tempId === msg.tempId)
+              ) {
+                return { ...msg, attachments };
+              }
+              return m;
+            });
+          } else {
+            return [...prev, { ...msg, attachments }];
+          }
+        });
+
+        // Scroll vers le bas pour voir le nouveau message
+        scrollToBottom();
+      }
+
+      // Mettre à jour la liste des conversations si nouveau contact
+      if (
+        !conversations.includes(msg.fk_expediteur) &&
+        msg.fk_expediteur !== currentUserId
+      ) {
+        fetchConversations();
+      }
+    };
+
+    // Gestion de la mise à jour des messages
+    const handlePrivateMessageUpdated = (msg) => {
+      if (
+        selectedUser &&
+        (msg.fk_expediteur === selectedUser ||
+          msg.fk_destinataire === selectedUser)
+      ) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === msg.id_message_prive ? msg : m
+          )
+        );
+      }
+    };
+
+    // Gestion de la suppression des messages
+    const handlePrivateMessageDeleted = (data) => {
+      if (selectedUser) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id_message_prive === data.id
+              ? {
+                  ...m,
+                  is_deleted: true,
+                  contenu: "[message supprimé]",
+                  attachments: [],
+                }
+              : m
+          )
+        );
+      }
+    };
+
+    // Gestion des messages lus
+    const handlePrivateMessageRead = (data) => {
+      if (selectedUser) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id_message_prive === data.id) {
+              return { ...m, date_lecture: data.date_lecture };
+            }
+            return m;
+          })
+        );
+      }
+    };
+
+    // Gestion des réactions aux messages
+    const handlePrivateMessageReaction = (data) => {
+      if (selectedUser) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id_message_prive === data.messageId) {
+              return { ...m, reactions: data.reactions };
+            }
+            return m;
+          })
+        );
+      }
+    };
+
+    // Abonnement aux événements
+    socket.on("privateMessage", handlePrivateMessage);
+    socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
+    socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
+    socket.on("privateMessageRead", handlePrivateMessageRead);
+    socket.on("privateMessageReaction", handlePrivateMessageReaction);
+
+    // Nettoyage
+    return () => {
+      socket.off("privateMessage", handlePrivateMessage);
+      socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
+      socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
+      socket.off("privateMessageRead", handlePrivateMessageRead);
+      socket.off("privateMessageReaction", handlePrivateMessageReaction);
+    };
+  }, [
+    socket,
+    currentUserId,
+    selectedUser,
+    conversations,
+    updateUnreadCounts,
+    notificationSettings,
+    fetchConversations,
+    scrollToBottom,
+    setMessages,
+  ]);
+
+  // Sélection d'un utilisateur
+  const handleSelectUser = useCallback(
+    (userId) => {
+      // Effacer le compteur de messages non lus
+      if (unreadMessageCounts[userId]) {
+        const newCounts = { ...unreadMessageCounts };
+        newCounts[userId] = 0;
+        updateUnreadCounts(newCounts);
+        if (refreshUnreadDM) refreshUnreadDM();
+      }
+
+      // Mettre à jour l'utilisateur sélectionné et charger ses messages
+      setSelectedUser(userId);
+      setSelectedUserInfo(usersInfo[userId]);
+      fetchMessages(userId);
+
+      // Mettre à jour l'URL pour les partages directs
+      navigate(`/direct-messages?userId=${userId}`);
+    },
+    [
+      unreadMessageCounts,
+      updateUnreadCounts,
+      refreshUnreadDM,
+      usersInfo,
+      fetchMessages,
+      navigate,
+    ]
+  );
+
+  // Démarrer une nouvelle conversation
+  const handleOpenNewConversation = useCallback(() => {
+    setShowNewConversationModal(true);
+    fetchAvailableUsers();
+  }, [setShowNewConversationModal, fetchAvailableUsers]);
+
+  // Sélectionner un utilisateur depuis la modale nouvelle conversation
+  const handleStartConversation = useCallback(
+    (userId) => {
+      // Ajouter à la liste des conversations si nécessaire
+      const addedUserId = startConversationWith(userId);
+
+      // Charger les messages de cet utilisateur
+      handleSelectUser(addedUserId);
+
+      // Fermer la modale
+      setShowNewConversationModal(false);
+    },
+    [startConversationWith, handleSelectUser, setShowNewConversationModal]
+  );
+
+  // Gestion du menu contextuel des messages
+  const handleMessageContextMenu = useCallback(
+    (e, msg) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOwnMsg = msg.fk_expediteur === currentUserId;
+      setMessageContextMenu({
+        visible: true,
+        xPos: e.pageX,
+        yPos: e.pageY,
+        messageId: msg.id_message_prive,
+        isOwnMessage: isOwnMsg,
+        message: msg,
+      });
+    },
+    [currentUserId, setMessageContextMenu]
+  );
+
+  // Fermer le menu contextuel des messages
+  const handleCloseMessageContextMenu = useCallback(() => {
+    setMessageContextMenu((prev) => ({ ...prev, visible: false }));
+  }, [setMessageContextMenu]);
+
+  // Gestion du menu contextuel des conversations
+  const handleConversationContextMenu = useCallback(
+    (e, userId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setConversationContextMenu({
+        visible: true,
+        xPos: e.pageX,
+        yPos: e.pageY,
+        userId: userId,
+      });
+    },
+    [setConversationContextMenu]
+  );
+
+  // Fermer le menu contextuel des conversations
+  const handleCloseConversationContextMenu = useCallback(() => {
+    setConversationContextMenu((prev) => ({ ...prev, visible: false }));
+  }, [setConversationContextMenu]);
+
+  // Répondre à un message
+  const handleReplyMessage = useCallback(() => {
+    setReplyingTo(messageContextMenu.message);
+    handleCloseMessageContextMenu();
+  }, [messageContextMenu, setReplyingTo, handleCloseMessageContextMenu]);
+
+  // Modifier un message
+  const handleEditMessage = useCallback(() => {
+    setEditingMessage(messageContextMenu.message);
+    setEditMessageContent(messageContextMenu.message.contenu);
+    handleCloseMessageContextMenu();
+  }, [
+    messageContextMenu,
+    setEditingMessage,
+    setEditMessageContent,
+    handleCloseMessageContextMenu,
+  ]);
+
+  // Supprimer un message
+  const handleDeleteMessage = useCallback(() => {
+    if (!socket || !messageContextMenu.messageId) return;
+
+    socket.emit("deletePrivateMessage", { id: messageContextMenu.messageId });
+    handleCloseMessageContextMenu();
+  }, [socket, messageContextMenu, handleCloseMessageContextMenu]);
+
+  // Ajouter une réaction
+  const handleAddReaction = useCallback(() => {
+    setShowEmojiPicker(true);
+    setEmojiPickerPosition({
+      top: messageContextMenu.yPos,
+      left: messageContextMenu.xPos,
+    });
+    handleCloseMessageContextMenu();
+  }, [
+    messageContextMenu,
+    setShowEmojiPicker,
+    setEmojiPickerPosition,
+    handleCloseMessageContextMenu,
+  ]);
+
+  // Sélectionner un emoji
+  const handleEmojiSelect = useCallback(
+    (emoji) => {
+      if (!socket || !messageContextMenu.messageId) return;
+
+      socket.emit("addPrivateMessageReaction", {
+        id: messageContextMenu.messageId,
+        reaction: emoji,
+      });
+
+      setShowEmojiPicker(false);
+    },
+    [socket, messageContextMenu, setShowEmojiPicker]
+  );
+
+  // Gestion des mentions
+  const renderTextWithMentions = useCallback(
+    (text) => {
+      if (!text) return "";
+
+      const mentionRegex = /@\[([0-9a-f-]+):([^\]]+)\]/g;
+      const parts = [];
+      let lastIndex = 0;
+      let match;
+
+      while ((match = mentionRegex.exec(text)) !== null) {
+        // Ajouter le texte avant la mention
+        if (match.index > lastIndex) {
+          parts.push(text.substring(lastIndex, match.index));
+        }
+
+        // Ajouter la mention comme élément cliquable
+        const userId = match[1];
+        const username = match[2];
+        parts.push(
+          <span
+            key={`mention-${userId}-${match.index}`}
+            className="mention-tag"
+            onClick={() => {
+              navigate(`/direct-messages?userId=${userId}`);
+            }}
           >
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="dm-mention-avatar"
-              />
-            ) : (
-              <div className="dm-mention-avatar-placeholder">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <span className="dm-mention-name">{user.name}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
+            @{username}
+          </span>
+        );
+
+        lastIndex = mentionRegex.lastIndex;
+      }
+
+      // Ajouter le texte restant
+      if (lastIndex < text.length) {
+        parts.push(text.substring(lastIndex));
+      }
+
+      return parts;
+    },
+    [navigate]
+  );
+
+  // Recherche des utilisateurs pour les mentions
+  const searchUserMentions = useCallback(
+    async (searchText) => {
+      if (!searchText) {
+        setMentionSuggestions([]);
+        return;
+      }
+
+      try {
+        // Utiliser les utilisateurs déjà en mémoire
+        if (Object.keys(usersInfo).length > 0) {
+          const users = Object.values(usersInfo).filter(
+            (user) =>
+              user.name &&
+              user.name.toLowerCase().includes(searchText.toLowerCase())
+          );
+
+          if (users.length > 0) {
+            setMentionSuggestions(users);
+            setActiveMentionIndex(0);
+            return;
+          }
+        }
+
+        // Sinon, requête API
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/users?search=${searchText}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const apiUsers = await res.json();
+          const normalizedUsers = apiUsers.map((user) => ({
+            id: user.id_utilisateur,
+            name: user.nom || "Utilisateur",
+          }));
+
+          setMentionSuggestions(normalizedUsers);
+          setActiveMentionIndex(0);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la recherche d'utilisateurs:", error);
+      }
+    },
+    [usersInfo]
+  );
+
+  // Insérer une mention
+  const handleMentionSelect = useCallback(
+    (user) => {
+      if (!mentionStartIndex && mentionStartIndex !== 0) return;
+
+      // Extraire les parties du message
+      const beforeMention = newMessage.substring(0, mentionStartIndex);
+      const afterSearchText = newMessage.substring(
+        mentionStartIndex +
+          (newMessage.substring(mentionStartIndex).indexOf(" ") > -1
+            ? newMessage.substring(mentionStartIndex).indexOf(" ") +
+              mentionStartIndex
+            : newMessage.length)
+      );
+
+      // Format visible pour l'utilisateur: @username
+      const visibleText = `${beforeMention}@${user.name} ${afterSearchText}`;
+
+      // Format interne pour le traitement: @[userId:username]
+      const internalFormat = `@[${user.id}:${user.name}]`;
+
+      // Mémoriser la position du curseur
+      const cursorPosition = mentionStartIndex + user.name.length + 2; // +2 pour @ et espace
+
+      // Mettre à jour l'affichage
+      setNewMessage(visibleText);
+
+      // Stocker la correspondance
+      const newMentionMap = new Map(mentionMap);
+      newMentionMap.set(`@${user.name}`, internalFormat);
+      setMentionMap(newMentionMap);
+
+      // Fermer la liste de suggestions
+      setShowMentionSuggestions(false);
+      setMentionStartIndex(null);
+
+      // Remettre le focus
+      setTimeout(() => {
+        const inputElement = document.querySelector(".dm-input");
+        if (inputElement) {
+          inputElement.focus();
+          if (typeof inputElement.setSelectionRange === "function") {
+            inputElement.setSelectionRange(cursorPosition, cursorPosition);
+          }
+        }
+      }, 0);
+    },
+    [mentionStartIndex, newMessage, mentionMap, setNewMessage]
+  );
+
+  // Gérer l'entrée utilisateur pour les mentions
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setNewMessage(value);
+
+      // Détecter les @mentions
+      const lastAtPos = value.lastIndexOf("@");
+      if (lastAtPos !== -1) {
+        const textAfterAt = value.substring(lastAtPos + 1);
+        const spaceAfterAt = textAfterAt.indexOf(" ");
+        const mentionSearch =
+          spaceAfterAt === -1
+            ? textAfterAt
+            : textAfterAt.substring(0, spaceAfterAt);
+
+        if (
+          mentionSearch.length === 0 ||
+          (mentionSearch.length > 0 && spaceAfterAt === -1)
+        ) {
+          setMentionStartIndex(lastAtPos);
+          searchUserMentions(mentionSearch);
+          setShowMentionSuggestions(true);
+          return;
+        }
+      }
+
+      setShowMentionSuggestions(false);
+    },
+    [setNewMessage, searchUserMentions]
+  );
+
+  // Envoyer un message
+  const handleSendMessage = useCallback(
+    (e) => {
+      e?.preventDefault();
+
+      if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
+        return;
+
+      try {
+        // Convertir les mentions visibles en format interne
+        let processedMessage = newMessage;
+        mentionMap.forEach((internalFormat, visibleMention) => {
+          const mentionRegex = new RegExp(`${visibleMention}(\\s|$)`, "g");
+          processedMessage = processedMessage.replace(
+            mentionRegex,
+            `${internalFormat} `
+          );
+        });
+
+        // Générer un ID temporaire unique pour identifier ce message
+        const tempId = `temp-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
+        // Créer un message optimiste pour l'affichage immédiat
+        const optimisticMsg = {
+          id_message_prive: tempId,
+          contenu: processedMessage,
+          fk_expediteur: currentUserId,
+          fk_destinataire: selectedUser,
+          date_envoi: new Date().toISOString(),
+          date_creation: new Date().toISOString(),
+          isOptimistic: true,
+          tempId: tempId, // Pour identification par le serveur
+          attachments: attachments.map((att) => ({
+            id_fichier: att.id_fichier,
+            nom_fichier: att.nom_fichier,
+            url: att.url || att.presignedUrl,
+            presignedUrl: att.presignedUrl || att.url,
+            type: att.type,
+            taille_fichier: att.taille_fichier,
+          })),
+        };
+
+        // Ajouter à l'UI immédiatement
+        setMessages((prev) => [...prev, optimisticMsg]);
+
+        // Préparer les données pour l'envoi
+        const messageData = {
+          destinataireId: selectedUser,
+          contenu: processedMessage,
+          tempId: tempId,
+          replyToId: replyingTo ? replyingTo.id_message_prive : null,
+          attachments: attachments.map((att) => att.id_fichier),
+        };
+
+        console.log("[DM] Envoi du message avec pièces jointes:", messageData);
+
+        // Envoi via socket
+        if (socket && socket.connected) {
+          socket.emit("privateMessage", messageData, (response) => {
+            if (response && !response.ok) {
+              console.error("Erreur socket:", response.message);
+              // Fallback vers API REST
+              sendMessage(
+                processedMessage,
+                selectedUser,
+                replyingTo,
+                attachments.map((att) => att.id_fichier)
+              );
+            }
+          });
+        } else {
+          // Envoi via API REST si socket non disponible
+          sendMessage(
+            processedMessage,
+            selectedUser,
+            replyingTo,
+            attachments.map((att) => att.id_fichier)
+          );
+        }
+
+        // Réinitialiser les états après envoi
+        setNewMessage("");
+        setReplyingTo(null);
+        setAttachments([]);
+        setMentionMap(new Map());
+
+        // Scroll vers le bas
+        scrollToBottom();
+      } catch (e) {
+        console.error("Erreur lors de l'envoi du message:", e);
+      }
+    },
+    [
+      newMessage,
+      attachments,
+      selectedUser,
+      currentUserId,
+      mentionMap,
+      replyingTo,
+      socket,
+      setMessages,
+      setNewMessage,
+      setReplyingTo,
+      setAttachments,
+      scrollToBottom,
+      sendMessage,
+    ]
+  );
 
   return (
     <div className="app-layout">
       <Sidebar unreadMessageCount={totalUnreadCount} />
       <div className="dm-layout">
-        {/* Sidebar des conversations */}{" "}
-        <div className="dm-sidebar">
-          <div className="dm-sidebar-header">
-            <h3 className="dm-title">Messages privés</h3>
+        {/* Liste des conversations */}
+        <ConversationList
+          conversations={getFilteredConversations()}
+          usersInfo={usersInfo}
+          selectedUser={selectedUser}
+          loading={loading}
+          error={error}
+          unreadMessageCounts={unreadMessageCounts}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onUserSelect={handleSelectUser}
+          onOpenNewConversation={handleOpenNewConversation}
+          onConversationContextMenu={handleConversationContextMenu}
+        />
 
-            <div className="dm-search">
-              <div className="dm-search-input-wrapper">
-                <FaSearch className="dm-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Rechercher des conversations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="dm-search-input"
-                />
-              </div>
-            </div>
+        {/* Zone des messages */}
+        <MessageArea
+          selectedUser={selectedUser}
+          selectedUserInfo={selectedUserInfo}
+          messages={messages}
+          loadingMessages={loadingMessages}
+          currentUserId={currentUserId}
+          usersInfo={usersInfo}
+          newMessage={newMessage}
+          setNewMessage={setNewMessage}
+          replyingTo={replyingTo}
+          editingMessage={editingMessage}
+          editMessageContent={editMessageContent}
+          setEditMessageContent={setEditMessageContent}
+          attachments={attachments}
+          uploadingFile={uploadingFile}
+          messageContextMenu={messageContextMenu}
+          showEmojiPicker={showEmojiPicker}
+          emojiPickerPosition={emojiPickerPosition}
+          messagesContainerRef={messagesContainerRef}
+          fileInputRef={fileInputRef}
+          emojiPickerRef={emojiPickerRef}
+          handleFileSelect={handleFileSelect} // Assurez-vous que cette prop est correctement transmise
+          handleAttachmentClick={triggerFileInput}
+          handleSendMessage={handleSendMessage}
+          handleInputChange={handleInputChange}
+          handleCancelReply={() => setReplyingTo(null)}
+          handleSaveEdit={() => {
+            if (!editingMessage) return;
+            editMessage(editingMessage.id_message_prive, editMessageContent);
+            setEditingMessage(null);
+            setEditMessageContent("");
+          }}
+          handleCancelEdit={() => {
+            setEditingMessage(null);
+            setEditMessageContent("");
+          }}
+          removeAttachment={(index) => {
+            setAttachments(attachments.filter((_, i) => i !== index));
+          }}
+          onMessageContextMenu={handleMessageContextMenu}
+          onCloseMessageContextMenu={handleCloseMessageContextMenu}
+          onReplyMessage={handleReplyMessage}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={handleDeleteMessage}
+          onAddReaction={handleAddReaction}
+          onEmojiSelect={handleEmojiSelect}
+          onDownloadFile={downloadFile}
+          showMentionSuggestions={showMentionSuggestions}
+          mentionSuggestions={mentionSuggestions}
+          activeMentionIndex={activeMentionIndex}
+          onMentionSelect={handleMentionSelect}
+          renderTextWithMentions={renderTextWithMentions}
+          formatMessageDate={formatMessageDate}
+          getFileIcon={getFileIcon}
+          getCompleteFileUrl={getCompleteFileUrl}
+          formatFileSize={formatFileSize}
+        />
 
-            {/* Bouton nouvelle conversation */}
-            <button
-              className="dm-new-conversation-button"
-              onClick={handleOpenNewConversation}
-            >
-              Démarrer une conversation
-            </button>
-          </div>
-
-          {error && <div className="dm-error">{error}</div>}
-
-          <ul className="dm-conv-list">
-            {loading ? (
-              <li className="dm-empty">
-                <div className="loading-container">
-                  <Spinner size="small" />
-                  <span className="loading-text">
-                    Chargement des conversations...
-                  </span>
-                </div>
-              </li>
-            ) : filteredConversations.length === 0 ? (
-              <li className="dm-empty">
-                {searchQuery ? "Aucun résultat" : "Aucune conversation"}
-              </li>
-            ) : (
-              filteredConversations.map((userId) => {
-                const user = usersInfo[userId] || {};
-                const unreadCount = unreadMessageCounts[userId] || 0;
-                return (
-                  <li
-                    key={userId}
-                    className={`dm-conv-item ${
-                      selectedUser === userId ? "active" : ""
-                    }`}
-                    onClick={() => fetchMessages(userId)}
-                    onContextMenu={(e) =>
-                      handleConversationContextMenu(e, userId)
-                    }
-                  >
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name || "User"}
-                        className="dm-avatar"
-                      />
-                    ) : (
-                      <div className="dm-avatar">
-                        <div className="dm-avatar-placeholder">
-                          {user.name ? user.name[0].toUpperCase() : "U"}
-                        </div>
-                      </div>
-                    )}
-                    <span className="dm-username">
-                      {user.name || "Utilisateur"}
-                    </span>
-                    {unreadCount > 0 && (
-                      <span className="dm-unread-badge">{unreadCount}</span>
-                    )}
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
-        {/* Zone principale des messages */}
-        <div className="dm-main">
-          {/* Éléments SVG pour l'arrière-plan */}
-          <div className="glow-circle-right top-right"></div>
-          <div className="glow-circle-left bottom-left"></div>
-
-          {!selectedUser ? (
-            <div className="dm-empty-msg">
-              <h2>Sélectionnez une conversation</h2>
-              <p>Choisissez un contact pour afficher vos messages</p>
-            </div>
-          ) : (
-            <>
-              {/* Header avec infos du contact */}
-              <div className="dm-header">
-                <div className="dm-header-info">
-                  {selectedUserInfo?.avatar ? (
-                    <img
-                      src={selectedUserInfo.avatar}
-                      alt={selectedUserInfo.name || "User"}
-                      className="dm-header-avatar"
-                    />
-                  ) : (
-                    <FaUserCircle className="dm-header-avatar" />
-                  )}
-                  <h2 className="dm-header-username">
-                    {selectedUserInfo?.name || "Utilisateur"}
-                  </h2>
-                  <div className="dm-header-status">
-                    <span
-                      className={`status-dot ${
-                        selectedUserInfo?.status === "online"
-                          ? "online"
-                          : "offline"
-                      }`}
-                    ></span>
-                    <span>
-                      {selectedUserInfo?.status === "online"
-                        ? "En ligne"
-                        : "Hors ligne"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div className="dm-messages" ref={messagesContainerRef}>
-                {loadingMessages ? (
-                  <div className="dm-loading">Chargement des messages...</div>
-                ) : messages.length === 0 ? (
-                  <div className="dm-empty-msg">
-                    <p>Aucun message</p>
-                    <p>Envoyez le premier message !</p>
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isOwn = msg.fk_expediteur === currentUserId;
-
-                    // Get the sender info, with strong fallbacks if missing
-                    const senderId = msg.fk_expediteur;
-                    const senderInfo = usersInfo[senderId] || {};
-
-                    // Determine display name with fallbacks
-                    const displayName =
-                      senderInfo.name ||
-                      senderInfo.nom ||
-                      (isOwn ? "Vous" : "Utilisateur");
-
-                    // Determine the avatar source with fallbacks
-                    const avatarSrc =
-                      senderInfo.avatar || senderInfo.photo_de_profil;
-
-                    // Si c'est un message qu'on est en train d'éditer
-                    if (
-                      editingMessage &&
-                      editingMessage.id_message_prive === msg.id_message_prive
-                    ) {
-                      return (
-                        <div
-                          key={msg.id_message_prive}
-                          className={`dm-message ${
-                            isOwn ? "own" : "other"
-                          } editing`}
-                        >
-                          {" "}
-                          {/* Avatar supprimé pour simplifier l'interface des messages directs */}
-                          <div className="dm-msg-content">
-                            <div className="dm-edit-container">
-                              <textarea
-                                value={editMessageContent}
-                                onChange={(e) =>
-                                  setEditMessageContent(e.target.value)
-                                }
-                                className="dm-edit-textarea"
-                                autoFocus
-                              />
-                              <div className="dm-edit-actions">
-                                <button
-                                  onClick={handleSaveEdit}
-                                  className="dm-edit-save"
-                                >
-                                  Enregistrer
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="dm-edit-cancel"
-                                >
-                                  Annuler
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={msg.id_message_prive}
-                        className={`dm-message ${isOwn ? "own" : "other"}`}
-                        id={`msg-${msg.id_message_prive}`}
-                        onContextMenu={(e) => handleMessageContextMenu(e, msg)}
-                      >
-                        {" "}
-                        {/* Avatar supprimé pour simplifier l'interface des messages directs */}
-                        <div className="dm-msg-content">
-                          {/* Wrapper pour contenir la réponse et le contenu du message */}
-                          <div className="dm-message-wrapper">
-                            {/* Afficher le message parent (réponse) dans les messages privés, même style que workspaces */}
-                            {msg.parent_id || msg.parent_message ? (
-                              <div
-                                className="message-reply-to"
-                                onClick={() => {
-                                  const parentId =
-                                    msg.parent_id ||
-                                    msg.parent_message?.id_message_prive;
-                                  if (parentId) {
-                                    const element = document.getElementById(
-                                      `msg-${parentId}`
-                                    );
-                                    if (element) {
-                                      element.scrollIntoView({
-                                        behavior: "smooth",
-                                        block: "center",
-                                      });
-                                      element.classList.add(
-                                        "highlight-message"
-                                      );
-                                      setTimeout(
-                                        () =>
-                                          element.classList.remove(
-                                            "highlight-message"
-                                          ),
-                                        2000
-                                      );
-                                    }
-                                  }
-                                }}
-                              >
-                                <span className="reply-icon">
-                                  <FaReply />
-                                </span>
-                                <div className="reply-content">
-                                  <span className="reply-author">
-                                    {msg.parent_message
-                                      ? usersInfo[
-                                          msg.parent_message.fk_expediteur
-                                        ]?.name || "Utilisateur"
-                                      : msg.parent_id
-                                      ? usersInfo[
-                                          messages.find(
-                                            (m) =>
-                                              m.id_message_prive ===
-                                              msg.parent_id
-                                          )?.fk_expediteur
-                                        ]?.name || "Utilisateur"
-                                      : "Utilisateur"}
-                                  </span>
-                                  <span className="reply-text">
-                                    {msg.parent_message
-                                      ? msg.parent_message.contenu
-                                      : msg.parent_id
-                                      ? messages.find(
-                                          (m) =>
-                                            m.id_message_prive === msg.parent_id
-                                        )?.contenu ||
-                                        "Message original non disponible"
-                                      : "Message original non disponible"}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : null}
-                            <div className="dm-msg-header">
-                              <span className="dm-msg-author">
-                                {displayName}
-                              </span>
-                              <span className="dm-msg-date">
-                                {formatMessageDate(
-                                  msg.date_creation || msg.date_envoi
-                                )}
-                              </span>
-                            </div>
-                            <div className="dm-msg-bubble">
-                              {renderTextWithMentions(msg.contenu)}
-                            </div>
-                            {/* Afficher les réactions aux messages privés */}
-                            {msg.reactions && msg.reactions.length > 0 && (
-                              <div className="dm-msg-reactions">
-                                {msg.reactions.map((reaction, index) => (
-                                  <div
-                                    key={`${reaction.reaction_type}-${index}`}
-                                    className="dm-msg-reaction"
-                                    onClick={() => {
-                                      // Si l'utilisateur a déjà réagi avec cet emoji, supprimer sa réaction
-                                      if (reaction.has_reacted) {
-                                        socket.emit(
-                                          "removePrivateMessageReaction",
-                                          {
-                                            id: msg.id_message_prive,
-                                            reaction: reaction.reaction_type,
-                                          }
-                                        );
-                                      }
-                                    }}
-                                  >
-                                    <span className="dm-reaction-emoji">
-                                      {reaction.reaction_type}
-                                    </span>
-                                    <span className="dm-reaction-count">
-                                      {reaction.count}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}{" "}
-                            {/* Afficher les pièces jointes du message */}
-                            {msg &&
-                              msg.is_deleted === false &&
-                              msg.attachments &&
-                              Array.isArray(msg.attachments) &&
-                              msg.attachments.length > 0 && (
-                                <div className="dm-msg-attachments">
-                                  {msg.attachments
-                                    .filter(
-                                      (attachment) =>
-                                        attachment &&
-                                        (attachment.url ||
-                                          attachment.presignedUrl)
-                                    )
-                                    .map((attachment) => {
-                                      // Toujours utiliser getCompleteFileUrl pour garantir une URL complète
-                                      const fileUrl = getCompleteFileUrl(
-                                        attachment.presignedUrl ||
-                                          attachment.url
-                                      );
-
-                                      if (
-                                        attachment.type &&
-                                        attachment.type.startsWith("image/")
-                                      ) {
-                                        // Affichage des images
-                                        return (
-                                          <div
-                                            key={
-                                              attachment.id_fichier ||
-                                              `temp-${Date.now()}`
-                                            }
-                                            className="dm-msg-image-attachment"
-                                          >
-                                            <a
-                                              href={fileUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                            >
-                                              <img
-                                                src={fileUrl}
-                                                alt={attachment.nom_fichier}
-                                                className="dm-msg-image"
-                                                onError={(e) => {
-                                                  console.error(
-                                                    `[DM] Failed to load image: ${fileUrl}`
-                                                  );
-                                                  e.target.src =
-                                                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23999" d="M21 5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5zm-2 14H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>';
-                                                  e.target.style.padding =
-                                                    "20px";
-                                                  e.target.style.width = "80px";
-                                                  e.target.style.height =
-                                                    "80px";
-                                                  e.target.style.background =
-                                                    "rgba(0,0,0,0.1)";
-                                                }}
-                                              />
-                                            </a>
-                                            <div className="dm-msg-image-filename">
-                                              {attachment.nom_fichier}
-                                            </div>
-                                          </div>
-                                        );
-                                      } else {
-                                        // Autres types de fichiers
-                                        return (
-                                          <div
-                                            key={
-                                              attachment.id_fichier ||
-                                              `temp-${Date.now()}`
-                                            }
-                                            className="dm-msg-file-attachment"
-                                          >
-                                            <div className="dm-msg-file-download-link">
-                                              <div className="dm-msg-file-icon">
-                                                {getFileIcon(attachment.type)}
-                                              </div>
-                                              <div className="dm-msg-file-info">
-                                                <div className="dm-msg-file-name">
-                                                  {attachment.nom_fichier}
-                                                </div>
-                                                <div className="dm-msg-file-size">
-                                                  {formatFileSize(
-                                                    attachment.taille_fichier
-                                                  )}
-                                                </div>
-                                              </div>
-                                              <div
-                                                className="dm-msg-file-download"
-                                                onClick={() =>
-                                                  handleDownloadFile(
-                                                    fileUrl,
-                                                    attachment.nom_fichier
-                                                  )
-                                                }
-                                              >
-                                                <FaDownload />
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                    })}
-                                </div>
-                              )}
-                            {isOwn && (
-                              <div className="dm-msg-read">
-                                {msg.date_lecture
-                                  ? `✓ Lu ${formatMessageDate(
-                                      msg.date_lecture
-                                    )}`
-                                  : "✓ Envoyé"}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Formulaire d'envoi de message avec zone de réponse et upload de fichiers */}
-              <form className="dm-input-form" onSubmit={handleSendMessage}>
-                {replyingTo && (
-                  <div className="dm-replying-to">
-                    <div className="dm-replying-info">
-                      <span>Réponse à </span>
-                      <strong>
-                        {usersInfo[replyingTo.fk_expediteur]?.name ||
-                          "Utilisateur"}
-                      </strong>
-                      <span className="dm-replying-content">
-                        : {replyingTo.contenu}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="dm-cancel-reply"
-                      onClick={handleCancelReply}
-                    >
-                      <FaTimes />
-                    </button>
-                  </div>
-                )}
-
-                {/* Afficher les pièces jointes en attente */}
-                {attachments.length > 0 && (
-                  <div className="dm-attachments-preview">
-                    {attachments.map((att, index) => (
-                      <div
-                        key={att.id_fichier || index}
-                        className="dm-attachment-preview"
-                      >
-                        <span className="attachment-name">
-                          {att.nom_fichier}
-                        </span>
-                        <button
-                          type="button"
-                          className="attachment-remove"
-                          onClick={() =>
-                            setAttachments(
-                              attachments.filter((_, i) => i !== index)
-                            )
-                          }
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="dm-input-wrapper">
-                  {/* Input file caché déclenché par le bouton d'attachement */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleFileSelect}
-                    style={{ display: "none" }}
-                  />
-                  <button
-                    type="button"
-                    className={`dm-attachment-btn ${
-                      uploadingFile ? "uploading" : ""
-                    }`}
-                    onClick={handleAttachmentClick}
-                    disabled={uploadingFile}
-                  >
-                    <FaPaperclip />
-                    {uploadingFile && <span className="upload-spinner"></span>}
-                  </button>
-                  <input
-                    type="text"
-                    placeholder={`Message à ${
-                      selectedUserInfo?.name || "l'utilisateur"
-                    }`}
-                    value={newMessage}
-                    onChange={handleInputChange}
-                    className="dm-input"
-                    disabled={uploadingFile}
-                    onKeyDown={(e) => {
-                      if (showMentionSuggestions) {
-                        if (e.key === "ArrowDown") {
-                          e.preventDefault();
-                          setActiveMentionIndex((prev) =>
-                            prev < mentionSuggestions.length - 1
-                              ? prev + 1
-                              : prev
-                          );
-                        } else if (e.key === "ArrowUp") {
-                          e.preventDefault();
-                          setActiveMentionIndex((prev) =>
-                            prev > 0 ? prev - 1 : 0
-                          );
-                        } else if (
-                          e.key === "Enter" &&
-                          mentionSuggestions.length > 0
-                        ) {
-                          e.preventDefault();
-                          insertMention(mentionSuggestions[activeMentionIndex]);
-                        } else if (e.key === "Escape") {
-                          setShowMentionSuggestions(false);
-                        }
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="dm-send-btn"
-                    disabled={
-                      (!newMessage.trim() && attachments.length === 0) ||
-                      uploadingFile
-                    }
-                  >
-                    <FaPaperPlane />
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </div>
-        {/* Modal pour nouvelle conversation */}
-        {showNewConversationModal && (
-          <div className="dm-modal-overlay">
-            <div className="dm-modal">
-              <div className="dm-modal-header">
-                <h3>Nouvelle conversation</h3>
-                <button
-                  className="dm-modal-close"
-                  onClick={() => setShowNewConversationModal(false)}
-                >
-                  <FaTimes />
-                </button>
-              </div>
-
-              <div className="dm-modal-body">
-                <div className="dm-search-input-wrapper modal">
-                  <FaSearch className="dm-search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher un utilisateur..."
-                    value={searchUserQuery}
-                    onChange={(e) => setSearchUserQuery(e.target.value)}
-                    className="dm-search-input"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="dm-users-list">
-                  {loadingUsers ? (
-                    <div className="dm-loading-users">
-                      Chargement des utilisateurs...
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="dm-no-users">Aucun utilisateur trouvé</div>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <div
-                        key={user.id_utilisateur}
-                        className="dm-user-item"
-                        onClick={() =>
-                          startConversationWith(user.id_utilisateur)
-                        }
-                      >
-                        {user.photo_de_profil ? (
-                          <img
-                            src={user.photo_de_profil}
-                            alt={user.nom}
-                            className="dm-avatar"
-                          />
-                        ) : (
-                          <div className="dm-avatar">
-                            <FaUserCircle className="dm-avatar-placeholder" />
-                          </div>
-                        )}
-                        <span className="dm-username">
-                          {user.nom ||
-                            `Utilisateur ${user.id_utilisateur.substring(
-                              0,
-                              6
-                            )}`}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Menu contextuel pour les messages */}
-        {messageContextMenu.visible && (
-          <div
-            className="dm-context-menu"
-            style={{
-              top: messageContextMenu.yPos,
-              left: messageContextMenu.xPos,
-            }}
-          >
-            {messageContextMenu.isOwnMessage ? (
-              <>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleEditMessage}
-                >
-                  Modifier
-                </div>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleDeleteMessage}
-                >
-                  Supprimer
-                </div>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleReplyMessage}
-                >
-                  <FaReply className="dm-context-menu-icon" /> Répondre
-                </div>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleAddReaction}
-                >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
-                  réaction
-                </div>
-              </>
-            ) : (
-              <>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleReplyMessage}
-                >
-                  <FaReply className="dm-context-menu-icon" /> Répondre
-                </div>
-                <div
-                  className="dm-context-menu-item"
-                  onClick={handleAddReaction}
-                >
-                  <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
-                  réaction
-                </div>
-              </>
-            )}
-          </div>
-        )}
         {/* Menu contextuel pour les conversations */}
         {conversationContextMenu.visible && (
-          <div
-            className="dm-context-menu"
-            style={{
-              top: conversationContextMenu.yPos,
-              left: conversationContextMenu.xPos,
+          <ConversationContextMenu
+            visible={conversationContextMenu.visible}
+            xPos={conversationContextMenu.xPos}
+            yPos={conversationContextMenu.yPos}
+            userId={conversationContextMenu.userId}
+            onOpenConversation={(userId) => {
+              handleSelectUser(userId);
+              handleCloseConversationContextMenu();
             }}
-          >
-            {" "}
-            <div
-              className="dm-context-menu-item"
-              onClick={() => {
-                setSelectedUser(conversationContextMenu.userId);
-                fetchMessages(conversationContextMenu.userId);
-                setConversationContextMenu({
-                  ...conversationContextMenu,
-                  visible: false,
-                });
-              }}
-            >
-              Ouvrir la conversation
-            </div>
-            <div
-              className="dm-context-menu-item dm-context-menu-item-danger"
-              onClick={() => {
-                // Confirmation avant suppression
-                if (
-                  window.confirm(
-                    "Voulez-vous vraiment supprimer cette conversation ? Les messages seront définitivement supprimés."
-                  )
-                ) {
-                  // Supprimer de la liste des conversations
-                  setConversations((prev) =>
-                    prev.filter((id) => id !== conversationContextMenu.userId)
-                  ); // Si c'est la conversation actuellement sélectionnée, désélectionner
-                  if (selectedUser === conversationContextMenu.userId) {
-                    setSelectedUser(null);
-                    setMessages([]);
-                  }
-
-                  // Appel API pour supprimer les messages (si nécessaire)
-                  const token = localStorage.getItem("token");
-                  fetch(
-                    `${API_URL}/api/private-messages/conversations/${conversationContextMenu.userId}`,
-                    {
-                      method: "DELETE",
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                      },
-                    }
-                  )
-                    .then((response) => {
-                      if (!response.ok)
-                        throw new Error("Erreur lors de la suppression");
-                      console.log("Conversation supprimée avec succès");
-                    })
-                    .catch((error) => {
-                      console.error(
-                        "Erreur lors de la suppression de la conversation:",
-                        error
-                      );
-                      alert(
-                        "Impossible de supprimer la conversation. Veuillez réessayer plus tard."
-                      );
-                    });
-                }
-
-                // Fermer le menu contextuel
-                setConversationContextMenu({
-                  ...conversationContextMenu,
-                  visible: false,
-                });
-              }}
-            >
-              Supprimer la conversation
-            </div>
-          </div>
-        )}
-        {/* Sélecteur d'emoji */}
-        {showEmojiPicker && (
-          <div
-            className="dm-emoji-picker"
-            style={{
-              top: emojiPickerPosition.top,
-              left: emojiPickerPosition.left,
+            onDeleteConversation={(userId) => {
+              deleteConversation(userId);
+              if (selectedUser === userId) {
+                setSelectedUser(null);
+                setSelectedUserInfo(null);
+                navigate("/direct-messages");
+              }
+              handleCloseConversationContextMenu();
             }}
-            ref={emojiPickerRef}
-          >
-            <div className="dm-emoji-grid">
-              {["👍", "❤️", "😂", "😮", "😢", "😡"].map((emoji) => (
-                <div
-                  key={emoji}
-                  className="dm-emoji-item"
-                  onClick={() => handleEmojiSelect(emoji)}
-                >
-                  {emoji}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}{" "}
-        {/* Couche transparente pour fermer le menu des messages */}
-        {messageContextMenu.visible && (
-          <div
-            className="dm-context-menu-overlay"
-            onClick={handleCloseMessageContextMenu}
+            onClose={handleCloseConversationContextMenu}
           />
         )}
-        {/* Couche transparente pour fermer le menu des conversations */}
-        {conversationContextMenu.visible && (
-          <div
-            className="dm-context-menu-overlay"
-            onClick={() => {
-              setConversationContextMenu({
-                ...conversationContextMenu,
-                visible: false,
-              });
-            }}
+
+        {/* Modal pour nouvelle conversation */}
+        {showNewConversationModal && (
+          <NewConversationModal
+            show={showNewConversationModal}
+            onClose={() => setShowNewConversationModal(false)}
+            searchQuery={searchUserQuery}
+            setSearchQuery={setSearchUserQuery}
+            filteredUsers={filteredUsers}
+            loadingUsers={loadingUsers}
+            onStartConversation={handleStartConversation}
           />
         )}
       </div>
+
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 }
