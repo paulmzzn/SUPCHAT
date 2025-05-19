@@ -34,7 +34,7 @@
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--dm-title-color);
-  margin: 12px 0;
+  margin: 0 0 20px 0; /* Ajusté pour un meilleur espacement */
   text-align: center;
   letter-spacing: 0.03em;
 }
@@ -51,7 +51,7 @@
 }
 
 .dm-new-conversation-button {
-  width: 90%;
+  width: 100%; /* Changé de 90% à 100% pour correspondre à la largeur de la barre de recherche */
   margin: 12px auto;
   display: block;
   padding: 10px 15px;
@@ -60,10 +60,11 @@
   font-weight: 600;
   font-size: 0.85rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px; /* Ajusté pour correspondre à la barre de recherche */
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  box-sizing: border-box; /* Ajouté pour garantir que le padding est inclus dans la largeur */
 }
 
 .dm-new-conversation-button:hover {
@@ -72,8 +73,8 @@
 }
 
 .dm-search {
-  margin-top: 12px;
   width: 100%;
+  margin-bottom: 12px; /* Ajouté pour créer un espacement cohérent */
 }
 
 .dm-search-input-wrapper {
@@ -934,6 +935,15 @@
   background: rgba(147, 72, 183, 0.2);
 }
 
+/* Style pour le bouton de suppression */
+.dm-context-menu-item-danger {
+  color: #ff6a6a;
+}
+
+.dm-context-menu-item-danger:hover {
+  background: rgba(255, 106, 106, 0.2);
+}
+
 .dm-context-menu-overlay {
   position: fixed;
   top: 0;
@@ -1177,7 +1187,7 @@
 
 /* Badge de notification pour messages non lus dans la liste des conversations */
 .dm-unread-badge {
-  background: #9348B7;
+  background: #9348b7;
   color: white;
   font-size: 10px;
   font-weight: bold;
