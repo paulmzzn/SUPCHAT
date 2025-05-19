@@ -267,9 +267,6 @@ function Profile() {
                     >
                       <FaComment /> Message
                     </button>
-                    <button className="action-button add-friend">
-                      <FaUserFriends /> Ajouter
-                    </button>
                   </div>
                 )}
               </div>
