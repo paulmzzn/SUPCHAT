@@ -16,6 +16,7 @@ import {
   getUserById,
   exportRgpdData,
   changePassword,
+  getUserActivityStats, // Import de la nouvelle fonction de contrôleur
 } from "../controllers/userController.js";
 import passport from "passport";
 import jwt from "jsonwebtoken";
@@ -77,7 +78,7 @@ router.get(
 
   passport.authenticate("google", {
 
-    failureRedirect: "http://192.168.1.167:3001/login",
+    failureRedirect: "http://192.168.1.143:3001/login",
 
   }),
 
@@ -91,7 +92,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://192.168.1.167:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.143:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -106,7 +107,7 @@ router.get(
 
   passport.authenticate("github", {
 
-    failureRedirect: "http://192.168.1.167:3001/login",
+    failureRedirect: "http://192.168.1.143:3001/login",
 
   }),
 
@@ -118,7 +119,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-      `http://192.168.1.167:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://192.168.1.143:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -223,5 +224,8 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
 // Route pour changer le mot de passe (utilisateur connecté)
 router.post("/change-password", verifyToken, changePassword);
+
+// Route pour les statistiques d'activité de l'utilisateur
+router.get("/:id/activity-stats", verifyToken, getUserActivityStats);
 
 export default router;
