@@ -832,6 +832,67 @@ export const exportRgpdData = async (req, res) => {
   }
 };
 
+// Fetch user activity statistics
+export const getUserActivityStats = async (req, res) => {
+  try {
+    // Prend l'id depuis les params (route RESTful) ou fallback sur l'utilisateur connecté
+    const userId = req.params.id || req.user.id;
+
+    // Get number of messages sent by the user
+    const messagesResult = await pool.query(
+      "SELECT COUNT(*) as message_count FROM message WHERE fk_utilisateur = $1",
+      [userId]
+    );
+    const messageCount = parseInt(messagesResult.rows[0].message_count) || 0;
+
+    // Get number of replies (messages that are replies, i.e. have a parent_id)
+    const repliesResult = await pool.query(
+      "SELECT COUNT(*) as reply_count FROM message WHERE fk_utilisateur = $1 AND parent_id IS NOT NULL",
+      [userId]
+    );
+    const replyCount = parseInt(repliesResult.rows[0].reply_count) || 0;
+
+    // Get number of mentions (user mentioned in messages)
+    const mentionsResult = await pool.query(
+      "SELECT COUNT(*) as mention_count FROM message WHERE contenu LIKE $1",
+      [`%@\[${userId}:%`]
+    );
+    const mentionCount = parseInt(mentionsResult.rows[0].mention_count) || 0;
+
+    // Get number of active channels (channels where user has sent messages in the last 30 days)
+    const activeChannelsResult = await pool.query(
+      `SELECT COUNT(DISTINCT fk_canal) as active_channels 
+       FROM message 
+       WHERE fk_utilisateur = $1 
+       AND date_envoi > NOW() - INTERVAL '30 days'`,
+      [userId]
+    );
+    const activeChannelsCount =
+      parseInt(activeChannelsResult.rows[0].active_channels) || 0;
+
+    // Get number of workspaces user is a member of
+    const workspacesResult = await pool.query(
+      "SELECT COUNT(*) as workspace_count FROM membre_workspace WHERE fk_utilisateur = $1",
+      [userId]
+    );
+    const workspaceCount = parseInt(workspacesResult.rows[0].workspace_count) || 0;
+
+    res.status(200).json({
+      messageCount,
+      replyCount,
+      mentionCount,
+      activeChannelsCount,
+      workspaceCount,
+    });
+  } catch (error) {
+    console.error("Error fetching user activity statistics:", error);
+    res.status(500).json({
+      message: "Error fetching user activity statistics",
+      error: error.message,
+    });
+  }
+};
+
 export {
   registerUser,
   getAllUsers,
