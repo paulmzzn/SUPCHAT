@@ -136,6 +136,7 @@ function DirectMessages() {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  // Menu contextuel pour les messages
   const [messageContextMenu, setMessageContextMenu] = useState({
     visible: false,
     xPos: 0,
@@ -143,6 +144,13 @@ function DirectMessages() {
     messageId: null,
     isOwnMessage: false,
     message: null,
+  });
+  // Menu contextuel pour les conversations
+  const [conversationContextMenu, setConversationContextMenu] = useState({
+    visible: false,
+    xPos: 0,
+    yPos: 0,
+    userId: null,
   });
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -1200,6 +1208,71 @@ function DirectMessages() {
     setMessageContextMenu({ ...messageContextMenu, visible: false });
   };
 
+  // Gestionnaire pour le menu contextuel des conversations
+  const handleConversationContextMenu = (e, userId) => {
+    e.preventDefault();
+    setConversationContextMenu({
+      visible: true,
+      xPos: e.pageX,
+      yPos: e.pageY,
+      userId: userId,
+    });
+  };
+
+  const handleCloseConversationContextMenu = () => {
+    setConversationContextMenu({ ...conversationContextMenu, visible: false });
+  };
+
+  // Fonction pour supprimer une conversation
+  const handleDeleteConversation = async () => {
+    try {
+      if (!conversationContextMenu.userId) return;
+
+      const userId = conversationContextMenu.userId;
+
+      // Confirmation avant suppression
+      if (
+        !window.confirm(
+          "Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
+        )
+      ) {
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_URL}/api/private-messages/conversations/${userId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(
+          `Erreur lors de la suppression : ${res.status} - ${errorText}`
+        );
+      }
+
+      // Mise à jour de l'UI si suppression réussie
+      setConversations((prev) => prev.filter((id) => id !== userId));
+
+      // Si la conversation supprimée est celle affichée actuellement
+      if (selectedUser === userId) {
+        setSelectedUser(null);
+        setMessages([]);
+      }
+
+      handleCloseConversationContextMenu();
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la conversation:", error);
+      alert(
+        `Erreur lors de la suppression de la conversation: ${error.message}`
+      );
+    }
+  };
+
   // Répondre à un message
   const handleReplyMessage = () => {
     setReplyingTo(messageContextMenu.message);
@@ -1700,7 +1773,7 @@ function DirectMessages() {
     <div className="app-layout">
       <Sidebar unreadMessageCount={totalUnreadCount} />
       <div className="dm-layout">
-        {/* Sidebar des conversations */}
+        {/* Sidebar des conversations */}{" "}
         <div className="dm-sidebar">
           <div className="dm-sidebar-header">
             <h3 className="dm-title">Messages privés</h3>
@@ -1754,6 +1827,9 @@ function DirectMessages() {
                       selectedUser === userId ? "active" : ""
                     }`}
                     onClick={() => fetchMessages(userId)}
+                    onContextMenu={(e) =>
+                      handleConversationContextMenu(e, userId)
+                    }
                   >
                     {user.avatar ? (
                       <img
@@ -1780,7 +1856,6 @@ function DirectMessages() {
             )}
           </ul>
         </div>
-
         {/* Zone principale des messages */}
         <div className="dm-main">
           {/* Éléments SVG pour l'arrière-plan */}
@@ -2259,7 +2334,6 @@ function DirectMessages() {
             </>
           )}
         </div>
-
         {/* Modal pour nouvelle conversation */}
         {showNewConversationModal && (
           <div className="dm-modal-overlay">
@@ -2329,7 +2403,6 @@ function DirectMessages() {
             </div>
           </div>
         )}
-
         {/* Menu contextuel pour les messages */}
         {messageContextMenu.visible && (
           <div
@@ -2386,7 +2459,85 @@ function DirectMessages() {
             )}
           </div>
         )}
+        {/* Menu contextuel pour les conversations */}
+        {conversationContextMenu.visible && (
+          <div
+            className="dm-context-menu"
+            style={{
+              top: conversationContextMenu.yPos,
+              left: conversationContextMenu.xPos,
+            }}
+          >
+            {" "}
+            <div
+              className="dm-context-menu-item"
+              onClick={() => {
+                setSelectedUser(conversationContextMenu.userId);
+                fetchMessages(conversationContextMenu.userId);
+                setConversationContextMenu({
+                  ...conversationContextMenu,
+                  visible: false,
+                });
+              }}
+            >
+              Ouvrir la conversation
+            </div>
+            <div
+              className="dm-context-menu-item dm-context-menu-item-danger"
+              onClick={() => {
+                // Confirmation avant suppression
+                if (
+                  window.confirm(
+                    "Voulez-vous vraiment supprimer cette conversation ? Les messages seront définitivement supprimés."
+                  )
+                ) {
+                  // Supprimer de la liste des conversations
+                  setConversations((prev) =>
+                    prev.filter((id) => id !== conversationContextMenu.userId)
+                  ); // Si c'est la conversation actuellement sélectionnée, désélectionner
+                  if (selectedUser === conversationContextMenu.userId) {
+                    setSelectedUser(null);
+                    setMessages([]);
+                  }
 
+                  // Appel API pour supprimer les messages (si nécessaire)
+                  const token = localStorage.getItem("token");
+                  fetch(
+                    `${API_URL}/api/private-messages/conversations/${conversationContextMenu.userId}`,
+                    {
+                      method: "DELETE",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                      },
+                    }
+                  )
+                    .then((response) => {
+                      if (!response.ok)
+                        throw new Error("Erreur lors de la suppression");
+                      console.log("Conversation supprimée avec succès");
+                    })
+                    .catch((error) => {
+                      console.error(
+                        "Erreur lors de la suppression de la conversation:",
+                        error
+                      );
+                      alert(
+                        "Impossible de supprimer la conversation. Veuillez réessayer plus tard."
+                      );
+                    });
+                }
+
+                // Fermer le menu contextuel
+                setConversationContextMenu({
+                  ...conversationContextMenu,
+                  visible: false,
+                });
+              }}
+            >
+              Supprimer la conversation
+            </div>
+          </div>
+        )}
         {/* Sélecteur d'emoji */}
         {showEmojiPicker && (
           <div
@@ -2409,13 +2560,24 @@ function DirectMessages() {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Couche transparente pour fermer le menu */}
+        )}{" "}
+        {/* Couche transparente pour fermer le menu des messages */}
         {messageContextMenu.visible && (
           <div
             className="dm-context-menu-overlay"
             onClick={handleCloseMessageContextMenu}
+          />
+        )}
+        {/* Couche transparente pour fermer le menu des conversations */}
+        {conversationContextMenu.visible && (
+          <div
+            className="dm-context-menu-overlay"
+            onClick={() => {
+              setConversationContextMenu({
+                ...conversationContextMenu,
+                visible: false,
+              });
+            }}
           />
         )}
       </div>
