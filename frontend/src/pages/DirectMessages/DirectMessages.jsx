@@ -27,7 +27,7 @@ import { useNotificationSettings } from "../../context/NotificationSettingsConte
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.169:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.141:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -163,6 +163,14 @@ function DirectMessages() {
   const [attachments, setAttachments] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Ajouter ces états pour gérer les mentions
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState([]);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const [mentionStartIndex, setMentionStartIndex] = useState(null);
+  const [mentionMap, setMentionMap] = useState(new Map()); // Nouvelle map pour stocker les mentions
 
   // Récupère l'ID utilisateur courant et vérifie la validité du token
   const checkTokenValidity = () => {
@@ -952,27 +960,29 @@ function DirectMessages() {
   // Modifiez la fonction d'envoi pour gérer différents états de connexion
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    // Empêcher l'envoi si un fichier vient d'être uploadé et a déjà créé un message
     if ((!newMessage.trim() && attachments.length === 0) || !selectedUser)
       return;
 
     try {
-      console.log(
-        "[DM] Sending message to:",
-        selectedUser,
-        "content:",
-        newMessage,
-        "attachments:",
-        attachments
-      );
+      // Convertir les mentions visibles au format interne pour le traitement
+      let processedMessage = newMessage;
 
-      // Générer un ID temporaire pour déduplication
-      const tempId = Date.now().toString();
+      // Remplacer chaque @username par son format interne @[userId:username]
+      mentionMap.forEach((internalFormat, visibleMention) => {
+        // Utiliser une regex pour trouver la mention exacte (avec un espace ou la fin de la chaîne après)
+        const mentionRegex = new RegExp(`${visibleMention}(\\s|$)`, "g");
+        processedMessage = processedMessage.replace(
+          mentionRegex,
+          `${internalFormat} `
+        );
+      });
+
+      console.log("[DM] Message traité avec mentions:", processedMessage);
 
       // Créer un objet message local pour l'affichage immédiat
       const optimisticMessage = {
-        id_message_prive: `temp-${tempId}`,
-        contenu: newMessage,
+        id_message_prive: `temp-${Date.now()}`,
+        contenu: processedMessage, // Utiliser le message traité avec le format interne
         fk_expediteur: currentUserId,
         fk_destinataire: selectedUser,
         date_envoi: new Date().toISOString(),
@@ -989,19 +999,13 @@ function DirectMessages() {
         })),
       };
 
-      // Debug pour voir ce qui est affiché
-      console.log(
-        "[DM] Optimistic message with attachments:",
-        optimisticMessage
-      );
-
       // Ajouter le message optimiste à l'UI
       setMessages((prev) => [...prev, optimisticMessage]);
 
       const messageData = {
         destinataireId: selectedUser,
-        contenu: newMessage,
-        tempId,
+        contenu: processedMessage, // Utiliser le message traité
+        tempId: Date.now().toString(),
         replyToId: replyingTo ? replyingTo.id_message_prive : null,
         attachments: attachments.map((att) => att.id_fichier),
       };
@@ -1032,6 +1036,7 @@ function DirectMessages() {
       setNewMessage("");
       setReplyingTo(null);
       setAttachments([]);
+      setMentionMap(new Map()); // Vider la carte des mentions
     } catch (e) {
       console.error("Erreur lors de l'envoi du message:", e);
       setError(`Erreur lors de l'envoi du message: ${e.message}`);
@@ -1500,6 +1505,196 @@ function DirectMessages() {
 
     return parts;
   };
+
+  // Ajouter cette fonction pour gérer la saisie dans le champ de message
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    // Vérifier si l'utilisateur est en train de taper une mention
+    const lastAtIndex = value.lastIndexOf("@");
+    if (lastAtIndex !== -1) {
+      const textAfterAt = value.substring(lastAtIndex + 1);
+      const spaceAfterAt = textAfterAt.indexOf(" ");
+      const searchText =
+        spaceAfterAt === -1
+          ? textAfterAt
+          : textAfterAt.substring(0, spaceAfterAt);
+
+      if (
+        searchText.length === 0 ||
+        (searchText.length > 0 && spaceAfterAt === -1)
+      ) {
+        // Début d'une mention
+        setMentionStartIndex(lastAtIndex);
+        setMentionSearch(searchText.toLowerCase());
+        searchUserMentions(searchText);
+        return;
+      }
+    }
+
+    // Pas de mention en cours
+    setShowMentionSuggestions(false);
+  };
+
+  // Fonction pour rechercher des utilisateurs pour les mentions
+  const searchUserMentions = async (searchText) => {
+    if (!searchText && searchText !== "") return;
+
+    try {
+      setShowMentionSuggestions(true);
+
+      // Utilisez la liste des conversations ou récupérez tous les utilisateurs
+      let users = [];
+
+      // Option 1: Utiliser les utilisateurs déjà chargés (conversations existantes)
+      if (Object.keys(usersInfo).length > 0) {
+        users = Object.values(usersInfo).filter(
+          (user) =>
+            user.name &&
+            user.name.toLowerCase().includes(searchText.toLowerCase())
+        );
+      }
+
+      // Option 2: Si besoin, charger plus d'utilisateurs depuis l'API
+      if (users.length < 5) {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_URL}/api/users?search=${searchText}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const apiUsers = await res.json();
+
+          // Normaliser les données
+          const normalizedUsers = apiUsers.map((user) => ({
+            id: user.id_utilisateur,
+            name: user.nom || "Utilisateur",
+            avatar: user.photo_de_profil,
+          }));
+
+          // Fusionner avec les utilisateurs existants et éviter les doublons
+          const existingIds = users.map((u) => u.id);
+          const uniqueUsers = [
+            ...users,
+            ...normalizedUsers.filter((u) => !existingIds.includes(u.id)),
+          ];
+
+          users = uniqueUsers;
+        }
+      }
+
+      setMentionSuggestions(users.slice(0, 5)); // Limiter à 5 suggestions max
+      setActiveMentionIndex(0);
+    } catch (error) {
+      console.error("Erreur lors de la recherche des mentions:", error);
+      setShowMentionSuggestions(false);
+    }
+  };
+
+  // Fonction pour insérer une mention
+  const insertMention = (user) => {
+    if (mentionStartIndex === null) return;
+
+    // Partie avant la mention
+    const beforeMention = newMessage.substring(0, mentionStartIndex);
+
+    // Partie après le texte de recherche
+    const afterSearchText = newMessage.substring(
+      mentionStartIndex + mentionSearch.length + 1
+    ); // +1 pour le @
+
+    // Format visible pour l'utilisateur: @username
+    const visibleText = `${beforeMention}@${user.name} ${afterSearchText}`;
+
+    // Format interne pour le traitement: @[userId:username]
+    const internalFormat = `@[${user.id}:${user.name}]`;
+
+    // Mémoriser la position actuelle du curseur
+    const cursorPosition = mentionStartIndex + user.name.length + 2; // +2 pour @ et espace
+
+    // Mettre à jour l'affichage avec le format visible
+    setNewMessage(visibleText);
+
+    // Stocker en mémoire les correspondances entre affichage et format interne
+    const newMentionMap = new Map(mentionMap);
+    newMentionMap.set(`@${user.name}`, internalFormat);
+    setMentionMap(newMentionMap);
+
+    // Fermer la liste de suggestions
+    setShowMentionSuggestions(false);
+    setMentionStartIndex(null);
+
+    // Remettre le focus sur l'input et positionner le curseur
+    setTimeout(() => {
+      const inputElement = document.querySelector(".dm-input");
+      if (inputElement) {
+        inputElement.focus();
+        // Positionner le curseur après la mention
+        if (typeof inputElement.setSelectionRange === "function") {
+          inputElement.setSelectionRange(cursorPosition, cursorPosition);
+        }
+      }
+    }, 0);
+  };
+
+  // Dans le JSX, remplacer l'input existant par:
+  <input
+    type="text"
+    placeholder={`Message à ${selectedUserInfo?.name || "l'utilisateur"}`}
+    value={newMessage}
+    onChange={handleInputChange}
+    className="dm-input"
+    disabled={uploadingFile}
+    onKeyDown={(e) => {
+      if (showMentionSuggestions) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setActiveMentionIndex((prev) =>
+            prev < mentionSuggestions.length - 1 ? prev + 1 : prev
+          );
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setActiveMentionIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        } else if (e.key === "Enter" && mentionSuggestions.length > 0) {
+          e.preventDefault();
+          insertMention(mentionSuggestions[activeMentionIndex]);
+        } else if (e.key === "Escape") {
+          setShowMentionSuggestions(false);
+        }
+      }
+    }}
+  />;
+
+  // Ajouter le composant de suggestions de mentions après l'input
+  {
+    showMentionSuggestions && mentionSuggestions.length > 0 && (
+      <div className="dm-mention-suggestions">
+        {mentionSuggestions.map((user, index) => (
+          <div
+            key={user.id}
+            className={`dm-mention-suggestion ${
+              index === activeMentionIndex ? "active" : ""
+            }`}
+            onClick={() => insertMention(user)}
+          >
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="dm-mention-avatar"
+              />
+            ) : (
+              <div className="dm-mention-avatar-placeholder">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="dm-mention-name">{user.name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -2020,9 +2215,34 @@ function DirectMessages() {
                       selectedUserInfo?.name || "l'utilisateur"
                     }`}
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleInputChange}
                     className="dm-input"
                     disabled={uploadingFile}
+                    onKeyDown={(e) => {
+                      if (showMentionSuggestions) {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setActiveMentionIndex((prev) =>
+                            prev < mentionSuggestions.length - 1
+                              ? prev + 1
+                              : prev
+                          );
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setActiveMentionIndex((prev) =>
+                            prev > 0 ? prev - 1 : 0
+                          );
+                        } else if (
+                          e.key === "Enter" &&
+                          mentionSuggestions.length > 0
+                        ) {
+                          e.preventDefault();
+                          insertMention(mentionSuggestions[activeMentionIndex]);
+                        } else if (e.key === "Escape") {
+                          setShowMentionSuggestions(false);
+                        }
+                      }
+                    }}
                   />
                   <button
                     type="submit"
