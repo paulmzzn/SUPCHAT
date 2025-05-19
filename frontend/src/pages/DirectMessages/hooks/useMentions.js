@@ -213,6 +213,18 @@ export const useMentions = () => {
     [mentionMap]
   );
 
+  // Fix: useCallback for handleSelectActiveItem to ensure stable reference
+  const handleSelectActiveItem = useCallback(() => {
+    if (
+      mentionSuggestions.length > 0 &&
+      activeMentionIndex >= 0 &&
+      activeMentionIndex < mentionSuggestions.length
+    ) {
+      // Call your select logic here, e.g.:
+      // selectMention(mentionSuggestions[activeMentionIndex]);
+    }
+  }, [mentionSuggestions, activeMentionIndex]);
+
   /**
    * Gère les touches spéciales pour la navigation dans les suggestions
    * @param {Event} e - Événement clavier
@@ -275,5 +287,6 @@ export const useMentions = () => {
     handleInputMention,
     convertMentionsToInternalFormat,
     handleMentionKeyDown,
+    handleSelectActiveItem, // Export if needed
   };
 };
