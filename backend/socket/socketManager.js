@@ -184,7 +184,10 @@ const socketManager = (io) => {
     // Améliorer le handler de message privé pour gérer les tempId et la déduplication
     socket.on(
       "privateMessage",
-      async ({ destinataireId, contenu, tempId, replyTo, replyToId }, callback) => {
+      async (
+        { destinataireId, contenu, tempId, replyTo, replyToId },
+        callback
+      ) => {
         try {
           console.log(
             `Socket.IO: Message privé reçu de ${
@@ -258,11 +261,14 @@ const socketManager = (io) => {
                 message.reply_data = {
                   reply_to: parentMessage.id_message_prive,
                   reply_content: parentMessage.contenu,
-                  reply_user_id: parentMessage.fk_expediteur
+                  reply_user_id: parentMessage.fk_expediteur,
                 };
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du message parent:", err);
+              console.error(
+                "Erreur lors de la récupération du message parent:",
+                err
+              );
             }
           }
 
@@ -608,7 +614,20 @@ const socketManager = (io) => {
         }
 
         // Vérifier si le message mentionne @mistral
-        if (content.toLowerCase().startsWith("@mistral")) {
+        const mistralMentionFormats = [
+          /\@mistral/i, // Format simple : @mistral
+          /\@Mistral AI/i, // Format avec nom complet : @Mistral AI
+          /\@\[Mistral AI\]/i, // Format avec crochets : @[Mistral AI]
+          /00000000-0000-0000-0000-000000000001/, // Format avec ID
+        ];
+
+        // Vérifier si au moins un des formats est présent dans le message
+        const isMistralMentioned = mistralMentionFormats.some((format) =>
+          format.test(content)
+        );
+
+        if (isMistralMentioned) {
+          // Traiter la mention à Mistral...
           if (!MISTRAL_API_KEY) {
             console.error("Clé API Mistral non configurée.");            // Envoyer un message d'erreur dans le chat si la clé n'est pas configurée
             // Récupérer le workspace_id associé au canal
@@ -673,8 +692,8 @@ const socketManager = (io) => {
               body: JSON.stringify({
                 model: "mistral-large-latest", // Ou un autre modèle Mistral
                 messages: [{ role: "user", content: question }],
-                // temperature: 0.7,
-                // max_tokens: 1000 // Augmenter si nécessaire, mais attention aux coûts/limites
+                temperature: 0.7,
+                max_tokens: 800,
               }),
               signal: controller.signal, // Associer l'AbortController
             });
@@ -685,22 +704,75 @@ const socketManager = (io) => {
             io.to(`${canal_id}`).emit("stopTyping", {
               userId: MISTRAL_USER_ID,
             });
-
             if (!mistralResponse.ok) {
               const errorBody = await mistralResponse.text();
+              let errorDetails = "Erreur inconnue";
+
+              try {
+                // Tenter de parser la réponse d'erreur au format JSON
+                const errorJson = JSON.parse(errorBody);
+                errorDetails =
+                  errorJson.error?.message ||
+                  errorJson.detail ||
+                  errorJson.message ||
+                  errorBody;
+              } catch (e) {
+                // Si ce n'est pas du JSON, utiliser le texte brut
+                errorDetails = errorBody;
+              }
+
               console.error(
-                `Erreur API Mistral (${mistralResponse.status}): ${errorBody}`
+                `Erreur API Mistral (${mistralResponse.status}): ${errorDetails}`
               );
+
+              // Informer le client de l'erreur spécifique
+              socket.emit("mistralError", {
+                message: `Erreur API (${mistralResponse.status}): ${errorDetails}`,
+                status: mistralResponse.status,
+              });
+
               throw new Error(
-                `Erreur de l'API Mistral: ${mistralResponse.statusText}`
+                `Erreur de l'API Mistral: ${mistralResponse.statusText} - ${errorDetails}`
               );
             }
-
             const mistralData = await mistralResponse.json();
-            const mistralAnswer =
-              mistralData.choices && mistralData.choices[0]
-                ? mistralData.choices[0].message.content
-                : "Désolé, je n'ai pas pu générer de réponse.";
+            let mistralAnswer = "Désolé, je n'ai pas pu générer de réponse.";
+
+            // Vérification robuste de la structure de la réponse
+            if (
+              mistralData.choices &&
+              Array.isArray(mistralData.choices) &&
+              mistralData.choices.length > 0
+            ) {
+              // Format API v1: { choices: [{ message: { content: "..." } }] }
+              if (
+                mistralData.choices[0].message &&
+                mistralData.choices[0].message.content
+              ) {
+                mistralAnswer = mistralData.choices[0].message.content;
+              }
+              // Format alternatif: { choices: [{ content: "..." }] }
+              else if (mistralData.choices[0].content) {
+                mistralAnswer = mistralData.choices[0].content;
+              }
+              // Autres formats potentiels
+              else if (typeof mistralData.choices[0] === "string") {
+                mistralAnswer = mistralData.choices[0];
+              }
+            }
+            // Format alternatif: { response: "..." }
+            else if (mistralData.response) {
+              mistralAnswer = mistralData.response;
+            }
+            // Format alternatif: { output: "..." }
+            else if (mistralData.output) {
+              mistralAnswer = mistralData.output;
+            }
+
+            console.log(
+              "Réponse Mistral formatée:",
+              mistralAnswer.substring(0, 100) + "..."
+            );
 
             // *** Enregistrer la réponse de Mistral en base de données ***
             let savedMistralMessage;
@@ -979,7 +1051,7 @@ const socketManager = (io) => {
                 Authorization: `Bearer ${MISTRAL_API_KEY}`,
               },
               body: JSON.stringify({
-                model: "mistral-large-latest",
+                model: "mistral-large-latest", // Utilisation du dernier modèle large disponible
                 messages: [{ role: "user", content: question }],
                 temperature: 0.7,
                 max_tokens: 800,
@@ -988,15 +1060,76 @@ const socketManager = (io) => {
             });
 
             clearTimeout(timeoutId);
-
             if (!response.ok) {
+              const errorText = await response.text();
+              let errorDetails = "Erreur inconnue";
+
+              try {
+                // Tenter de parser la réponse d'erreur au format JSON
+                const errorJson = JSON.parse(errorText);
+                errorDetails =
+                  errorJson.error?.message ||
+                  errorJson.detail ||
+                  errorJson.message ||
+                  errorText;
+              } catch (e) {
+                // Si ce n'est pas du JSON, utiliser le texte brut
+                errorDetails = errorText;
+              }
+
+              console.error(
+                `Erreur API Mistral: ${response.status} ${response.statusText}`,
+                errorDetails
+              );
+
+              // Informer le client de l'erreur spécifique
+              socket.emit("mistralError", {
+                message: `Erreur API (${response.status}): ${errorDetails}`,
+                status: response.status,
+              });
+
               throw new Error(
-                `Erreur API Mistral: ${response.status} ${response.statusText}`
+                `Erreur API Mistral: ${response.status} ${response.statusText} - ${errorDetails}`
               );
             }
-
             const result = await response.json();
-            const answer = result.choices[0].message.content;
+            let answer = "Désolé, je n'ai pas pu générer de réponse.";
+
+            // Vérification robuste de la structure de la réponse
+            if (
+              result.choices &&
+              Array.isArray(result.choices) &&
+              result.choices.length > 0
+            ) {
+              // Format API v1: { choices: [{ message: { content: "..." } }] }
+              if (
+                result.choices[0].message &&
+                result.choices[0].message.content
+              ) {
+                answer = result.choices[0].message.content;
+              }
+              // Format alternatif: { choices: [{ content: "..." }] }
+              else if (result.choices[0].content) {
+                answer = result.choices[0].content;
+              }
+              // Autres formats potentiels
+              else if (typeof result.choices[0] === "string") {
+                answer = result.choices[0];
+              }
+            }
+            // Format alternatif: { response: "..." }
+            else if (result.response) {
+              answer = result.response;
+            }
+            // Format alternatif: { output: "..." }
+            else if (result.output) {
+              answer = result.output;
+            }
+
+            console.log(
+              "Réponse Mistral formatée:",
+              answer.substring(0, 100) + "..."
+            );
 
             // Créer un message de réponse de Mistral dans la base de données
             const botMessage = await MessageModel.create({
@@ -1170,7 +1303,11 @@ const socketManager = (io) => {
       try {
         console.log("Socket.IO: Réaction à message privé reçue", data);
         // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const {
+          id: messageId,
+          reaction: reactionFromMobile,
+          reaction_type,
+        } = data;
         const reaction_type_final = reactionFromMobile || reaction_type;
 
         if (!messageId || !reaction_type_final) {
@@ -1251,12 +1388,17 @@ const socketManager = (io) => {
     // Nouvel événement pour gérer la suppression des réactions aux messages privés
     socket.on("removePrivateMessageReaction", async (data) => {
       try {
-
-        console.log("Socket.IO: Suppression de réaction de message privé", data);
+        console.log(
+          "Socket.IO: Suppression de réaction de message privé",
+          data
+        );
         // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const { id: messageId, reaction: reactionFromMobile, reaction_type } = data;
+        const {
+          id: messageId,
+          reaction: reactionFromMobile,
+          reaction_type,
+        } = data;
         const reaction_type_final = reactionFromMobile || reaction_type;
-
 
         if (!messageId || !reaction_type_final) {
           console.error(
@@ -1274,7 +1416,11 @@ const socketManager = (io) => {
         }
 
         // Supprimer la réaction en base de données
-        await ReactionPrive.delete(messageId, socket.user.id, reaction_type_final);
+        await ReactionPrive.delete(
+          messageId,
+          socket.user.id,
+          reaction_type_final
+        );
 
         // Récupérer toutes les réactions mises à jour pour ce message
         const updatedReactions = await ReactionPrive.getByMessage(

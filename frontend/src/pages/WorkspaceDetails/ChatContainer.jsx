@@ -14,6 +14,9 @@ import {
   FaImage,
   FaCode,
   FaVoteYea,
+  FaUser,
+  FaUserCircle,
+  FaAt,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -48,6 +51,8 @@ function ChatContainer({
   mentionSuggestions,
   activeMentionIndex,
   handleSelectMention,
+  handleMentionNavigation,
+  handleSelectActiveItem,
   handleSendMessageWithMistralCheck,
   showToolbox,
   handleToggleToolbox,
@@ -60,7 +65,6 @@ function ChatContainer({
   handleAddReaction,
   renderTextWithLinks,
   isUuid,
-  handleSelectActiveItem,
   setShowVideoCallModal,
   handleOpenStrawpollVote,
   showChannelSuggestions,
@@ -101,7 +105,6 @@ function ChatContainer({
               </button>
             </div>
           </div>
-
           <div className="chat-messages" ref={chatContainerRef}>
             {loadingMessages ? (
               <div className="chat-loading">Chargement des messages...</div>
@@ -215,20 +218,43 @@ function ChatContainer({
                               </div>
                             </div>
                           );
-                        })()}
-
+                        })()}{" "}
                       {!systemMsg && (
                         <div className="message-header">
                           <span className="message-author">
                             {message.fk_utilisateur ===
                             "00000000-0000-0000-0000-000000000001" ? (
                               <>
-                                <span>{message.nom}</span>
+                                <strong
+                                  className="username-clickable"
+                                  onClick={() =>
+                                    handleSelectMention({
+                                      id: "00000000-0000-0000-0000-000000000001",
+                                      name: message.nom,
+                                      avatar:
+                                        "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
+                                    })
+                                  }
+                                  title="Cliquer pour envoyer un message privé"
+                                >
+                                  {message.nom}
+                                </strong>
                                 <span className="bot-icon-spacer"> </span>
                                 <FaRobot className="bot-icon" />
                               </>
                             ) : (
-                              message.nom
+                              <strong
+                                className="username-clickable"
+                                onClick={() =>
+                                  handleSelectMention({
+                                    id: message.fk_utilisateur,
+                                    name: message.nom,
+                                  })
+                                }
+                                title="Cliquer pour mentionner cet utilisateur"
+                              >
+                                {message.nom}
+                              </strong>
                             )}
                           </span>
                           <span className="message-time">
@@ -236,7 +262,6 @@ function ChatContainer({
                           </span>
                         </div>
                       )}
-
                       {(() => {
                         const fileData = parseFileContent(message.contenu);
                         if (fileData && !systemMsg) {
@@ -320,6 +345,7 @@ function ChatContainer({
                                 </div>
                               ) : (
                                 <p className="message-paragraph">
+                                  {" "}
                                   {renderTextWithLinks(message.contenu)}
                                 </p>
                               )}
@@ -327,7 +353,6 @@ function ChatContainer({
                           );
                         }
                       })()}
-
                       {!systemMsg &&
                         message.reactions &&
                         message.reactions.length > 0 && (
@@ -347,7 +372,6 @@ function ChatContainer({
                             ))}
                           </div>
                         )}
-
                       {!systemMsg &&
                         (() => {
                           const strawpollMatch =
@@ -401,9 +425,23 @@ function ChatContainer({
                   />
                 </div>
                 <div className="message-content">
+                  {" "}
                   <div className="message-header">
                     <span className="message-author">
-                      Mistral AI
+                      <strong
+                        className="username-clickable"
+                        onClick={() =>
+                          handleSelectMention({
+                            id: "00000000-0000-0000-0000-000000000001",
+                            name: "Mistral AI",
+                            avatar:
+                              "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp",
+                          })
+                        }
+                        title="Cliquer pour envoyer un message à Mistral AI"
+                      >
+                        Mistral AI
+                      </strong>
                       <span className="bot-icon-spacer"> </span>
                       <FaRobot className="bot-icon" />
                     </span>
@@ -418,9 +456,46 @@ function ChatContainer({
                 </div>
               </div>
             )}
-          </div>
-
+          </div>{" "}
           <div className="chat-input-area">
+            {showMentionSuggestions &&
+              mentionSuggestions &&
+              mentionSuggestions.length > 0 && (
+                <div id="supchat-mentions-dropdown">
+                  <div id="supchat-mentions-header">
+                    <span>
+                      <FaAt />
+                    </span>
+                    <span>Mentionner un utilisateur</span>
+                  </div>
+                  <div id="supchat-mentions-list">
+                    {mentionSuggestions.map((user, index) => (
+                      <button
+                        key={user.id}
+                        className={`supchat-mention-item ${
+                          index === activeMentionIndex ? "active" : ""
+                        }`}
+                        onClick={() => handleSelectMention(user)}
+                        type="button"
+                      >
+                        {user.avatar ? (
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="supchat-user-avatar"
+                          />
+                        ) : (
+                          <FaUserCircle style={{ marginRight: 6 }} />
+                        )}
+                        <span className="supchat-user-name">{user.name}</span>
+                        <span className="supchat-user-status">
+                          {user.isOnline ? "En ligne" : "Hors ligne"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             {showChannelSuggestions &&
               channelSuggestions &&
               channelSuggestions.length > 0 && (
@@ -516,13 +591,13 @@ function ChatContainer({
                     } else if (showMentionSuggestions) {
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
-                        handleMentionSuggestionNavigation("next");
+                        handleMentionNavigation("next");
                       } else if (e.key === "ArrowUp") {
                         e.preventDefault();
-                        handleMentionSuggestionNavigation("prev");
+                        handleMentionNavigation("prev");
                       } else if (e.key === "Enter") {
                         e.preventDefault();
-                        handleSelectActiveMention();
+                        handleSelectActiveItem();
                       }
                     } else {
                       handleChatInputKeyDown && handleChatInputKeyDown(e);
