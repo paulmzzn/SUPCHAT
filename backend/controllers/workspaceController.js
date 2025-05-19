@@ -1,6 +1,7 @@
 import pool from "../config/dbConnection.js";
 import Workspace from "../models/Workspace.js";
 import UserModel from "../models/User.js";
+import WorkspaceJoinRequest from "../models/WorkspaceJoinRequest.js";
 import sendInvitation from "../config/emailService.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
 import fs from "fs/promises";
@@ -614,6 +615,7 @@ export const requestJoinWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const userId = req.user.id;
+    const { message } = req.body;
 
     // Vérifier si l'utilisateur n'est pas déjà membre
     const checkMember = await pool.query(
@@ -643,23 +645,22 @@ export const requestJoinWorkspace = async (req, res) => {
       });
     }
 
-    // Vérifier si une demande existe déjà
-    const existingRequest = await pool.query(
-      "SELECT * FROM workspace_requests WHERE fk_workspace = $1 AND fk_utilisateur = $2",
-      [workspaceId, userId]
-    );
-
-    if (existingRequest.rows.length > 0) {
+    // Vérifier si une demande existe déjà avec la nouvelle table
+    const hasPendingRequest = await WorkspaceJoinRequest.hasPendingRequest(workspaceId, userId);
+    if (hasPendingRequest) {
       return res.status(400).json({ 
         message: "Vous avez déjà envoyé une demande pour rejoindre ce workspace" 
       });
     }
 
-    // Créer une nouvelle demande
-    await pool.query(
-      "INSERT INTO workspace_requests (fk_utilisateur, fk_workspace, is_invitation) VALUES ($1, $2, false)",
-      [userId, workspaceId]
-    );
+    // Créer une nouvelle demande avec la nouvelle table
+    const requestData = {
+      fk_workspace: workspaceId,
+      fk_utilisateur: userId,
+      message: message || null
+    };
+    
+    await WorkspaceJoinRequest.create(requestData);
 
     // Notifier les propriétaires/admins du workspace via websocket si possible
     if (req.app && req.app.get("io")) {
@@ -695,7 +696,7 @@ export const requestJoinWorkspace = async (req, res) => {
 export const respondToJoinRequest = async (req, res) => {
   try {
     const { workspaceId, requestId } = req.params;
-    const { accept } = req.body;
+    const { accept, rejectReason } = req.body;
     const adminId = req.user.id;
 
     // Vérifier si l'admin a les droits (owner ou admin)
@@ -711,37 +712,25 @@ export const respondToJoinRequest = async (req, res) => {
     }
 
     // Récupérer les informations de la demande
-    const requestInfo = await pool.query(
-      "SELECT * FROM workspace_requests WHERE id_request = $1 AND fk_workspace = $2",
-      [requestId, workspaceId]
-    );
+    const request = await WorkspaceJoinRequest.getById(requestId);
 
-    if (requestInfo.rows.length === 0) {
+    if (!request) {
       return res.status(404).json({ message: "Demande non trouvée" });
     }
 
-    const userId = requestInfo.rows[0].fk_utilisateur;
+    if (request.fk_workspace != workspaceId) {
+      return res.status(400).json({ message: "Cette demande n'appartient pas à ce workspace" });
+    }
+
+    if (request.statut !== 'en_attente') {
+      return res.status(400).json({ message: "Cette demande a déjà été traitée" });
+    }
+
+    const userId = request.fk_utilisateur;
 
     if (accept) {
-      // Mettre à jour le statut de la demande
-      await pool.query(
-        "UPDATE workspace_requests SET is_accepted = true, date_reponse = NOW() WHERE id_request = $1",
-        [requestId]
-      );
-
-      // Vérifier si l'utilisateur n'est pas déjà membre (au cas où)
-      const memberCheck = await pool.query(
-        "SELECT * FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
-        [workspaceId, userId]
-      );
-
-      if (memberCheck.rows.length === 0) {
-        // Ajouter l'utilisateur comme membre
-        await pool.query(
-          "INSERT INTO membre_workspace (fk_utilisateur, fk_workspace, fk_role) VALUES ($1, $2, 3)",
-          [userId, workspaceId]
-        );
-      }
+      // Accepter la demande
+      await WorkspaceJoinRequest.accept(requestId, adminId);
 
       // Notifier l'utilisateur si possible via websocket
       if (req.app && req.app.get("io")) {
@@ -754,16 +743,14 @@ export const respondToJoinRequest = async (req, res) => {
       res.status(200).json({ message: "Demande acceptée. L'utilisateur a été ajouté au workspace." });
     } else {
       // Rejeter la demande
-      await pool.query(
-        "UPDATE workspace_requests SET is_accepted = false, date_reponse = NOW() WHERE id_request = $1",
-        [requestId]
-      );
+      await WorkspaceJoinRequest.reject(requestId, adminId, rejectReason);
 
       // Notifier l'utilisateur si possible via websocket
       if (req.app && req.app.get("io")) {
         req.app.get("io").to(`user:${userId}`).emit("workspaceJoinRequestRejected", {
           workspaceId,
-          message: "Votre demande d'adhésion a été rejetée"
+          message: "Votre demande d'adhésion a été rejetée",
+          reason: rejectReason
         });
       }
 
@@ -792,21 +779,11 @@ export const getWorkspaceJoinRequests = async (req, res) => {
       });
     }
 
-    // Récupérer toutes les demandes non traitées
-    const requests = await pool.query(
-      `SELECT wr.id_request, wr.fk_utilisateur, wr.date_creation, 
-              u.nom as nom_utilisateur, u.email, u.photo_de_profil
-       FROM workspace_requests wr
-       JOIN utilisateur u ON wr.fk_utilisateur = u.id_utilisateur
-       WHERE wr.fk_workspace = $1 
-       AND wr.is_invitation = false
-       AND (wr.is_accepted IS NULL OR wr.date_reponse IS NULL)
-       ORDER BY wr.date_creation DESC`,
-      [workspaceId]
-    );
+    // Récupérer toutes les demandes en attente avec la nouvelle table
+    const pendingRequests = await WorkspaceJoinRequest.getPendingByWorkspace(workspaceId);
 
     // Formater les données
-    const formattedRequests = requests.rows.map(request => {
+    const formattedRequests = pendingRequests.map(request => {
       // Formatage de la photo de profil si nécessaire
       if (request.photo_de_profil && !request.photo_de_profil.startsWith('http')) {
         const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
@@ -825,6 +802,43 @@ export const getWorkspaceJoinRequests = async (req, res) => {
     res.status(200).json(formattedRequests);
   } catch (error) {
     console.error("Erreur getWorkspaceJoinRequests:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUserJoinRequests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer toutes les demandes de l'utilisateur
+    const requests = await WorkspaceJoinRequest.getByUser(userId);
+
+    // Formater les données pour les URLs
+    const formattedRequests = requests.map(request => {
+      if (request.banner_url && !request.banner_url.startsWith('http')) {
+        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
+        const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
+        request.banner_url_formatted = `${s3Endpoint}${bucketName}/${request.banner_url}`.replace(
+          /([^:])\/\/+/g,
+          "$1/"
+        );
+      }
+
+      if (request.icon_url && !request.icon_url.startsWith('http')) {
+        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
+        const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
+        request.icon_url_formatted = `${s3Endpoint}${bucketName}/${request.icon_url}`.replace(
+          /([^:])\/\/+/g,
+          "$1/"
+        );
+      }
+      
+      return request;
+    });
+
+    res.status(200).json(formattedRequests);
+  } catch (error) {
+    console.error("Erreur getUserJoinRequests:", error);
     res.status(500).json({ error: error.message });
   }
 };

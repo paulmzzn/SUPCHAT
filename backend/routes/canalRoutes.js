@@ -6,8 +6,17 @@ import {
   updateCanal,
   deleteCanal,
   getCanalFiles,
+  getPrivateCanals,
+  getMemberChannelAccess,
+  updateMemberChannelAccess
 } from "../controllers/canalController.js";
-import { verifyToken, checkWorkspaceMembership, checkWorkspaceAdmin } from "../middleware/authMiddleware.js";
+import { 
+  verifyToken, 
+  checkWorkspaceMembership, 
+  checkWorkspaceAdmin, 
+  checkCanalAccess,
+  checkCanalWriteAccess
+} from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 
 const router = express.Router();
@@ -16,17 +25,22 @@ const router = express.Router();
 // Toutes les routes nécessitent une authentification ET une appartenance au workspace
 router.post("/workspace/:workspaceId/canals", verifyToken, checkWorkspaceMembership, createCanal);
 router.get("/workspace/:workspaceId/canals", verifyToken, checkWorkspaceMembership, getCanals);
-router.get("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, getCanal);
-router.put("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, updateCanal);
+router.get("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, checkCanalAccess, getCanal);
+router.put("/workspace/:workspaceId/canals/:canalId", verifyToken, checkWorkspaceMembership, checkWorkspaceAdmin, updateCanal);
 router.delete(
   "/workspace/:workspaceId/canals/:canalId",
   verifyToken,
-  checkWorkspaceAdmin, // Nécessite des droits d'admin pour supprimer
+  checkWorkspaceAdmin,
   deleteCanal
 );
 
+// Routes pour les canaux privés et gestion des droits d'accès
+router.get("/workspaces/:workspaceId/canaux/private", verifyToken, checkWorkspaceMembership, getPrivateCanals);
+router.get("/workspaces/:workspaceId/members/:memberId/channel-access", verifyToken, checkWorkspaceMembership, checkWorkspaceAdmin, getMemberChannelAccess);
+router.put("/canaux/:canalId/members/:memberId/access", verifyToken, updateMemberChannelAccess);
+
 // Route pour récupérer tous les fichiers d'un canal
-router.get("/canals/:canalId/files", verifyToken, getCanalFiles);
+router.get("/canals/:canalId/files", verifyToken, checkCanalAccess, getCanalFiles);
 
 // Route pour récupérer tous les fichiers d'un workspace
 router.get("/workspaces/:workspaceId/files", verifyToken, checkWorkspaceMembership, async (req, res) => {

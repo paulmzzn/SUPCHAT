@@ -76,7 +76,9 @@ router.get(
   "/auth/google/callback",
 
   passport.authenticate("google", {
+
     failureRedirect: "http://REDACTED:3001/login",
+
   }),
 
   async (req, res) => {
@@ -103,7 +105,9 @@ router.get(
   "/auth/github/callback",
 
   passport.authenticate("github", {
+
     failureRedirect: "http://REDACTED:3001/login",
+
   }),
 
   async (req, res) => {

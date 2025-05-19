@@ -11,17 +11,19 @@ import EditChannelModal from "./EditChannelModal";
 import FileViewerModal from "./FileViewerModal";
 import StrawpollResultsModal from "./StrawpollResultsModal";
 import StrawpollModalWrapper from "./StrawpollModalWrapper";
-import VideoCallModal from "./VideoCallModal"; // Import du composant d'appel vidéo
-import StrawpollWebviewModal from "./StrawpollWebviewModal"; // Import du composant de webview pour voter
-import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
+import VideoCallModal from "./VideoCallModal";
+import StrawpollWebviewModal from "./StrawpollWebviewModal";
+import ChannelMembersModal from "./ChannelMembersModal"; // Importer la nouvelle modal
+import MemberAccessModal from "./MemberAccessModal"; // Importer notre nouvelle modale de droits d'accès
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
 import "./poll-styles.css"; // Import des styles pour les sondages
 import "./mentions-styles.css"; // Import des styles pour les mentions
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
-import { useNotifications } from "../../context/NotificationContext"; // Added NotificationContext
-import { API_URL } from "../../config/config"; // Ajout import pour API_URL
+import { useNotifications } from "../../context/NotificationContext";
+import { API_URL } from "../../config/config";
 import {
   formatMessageDate,
   parseFileContent,
@@ -39,42 +41,33 @@ import {
   FaRegSmile,
   FaPoll,
   FaVoteYea,
+  FaUsers,
 } from "react-icons/fa";
 
 function WorkspaceDetails() {
   const { workspaceId } = useParams();
-  const navigate = useNavigate(); // Ajout hook navigation
-  const { markChannelAsRead } = useNotifications(); // Récupérer markChannelAsRead depuis le contexte
+  const navigate = useNavigate();
+  const { markChannelAsRead } = useNotifications();
 
   const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
 
-  // Référence vers l'input de fichier caché
   const fileInputRef = useRef(null);
 
-  // État pour l'affichage du fichier en plein écran
   const [fullscreenFile, setFullscreenFile] = useState(null);
-
-  // Ajout de l'état pour la boîte à outils
   const [showToolbox, setShowToolbox] = useState(false);
   const [showStrawpollModal, setShowStrawpollModal] = useState(false);
-
-  // Ajout de l'état pour le modal de résultats Strawpoll
   const [showStrawpollResults, setShowStrawpollResults] = useState(false);
   const [strawpollResults, setStrawpollResults] = useState(null);
   const [loadingResults, setLoadingResults] = useState(false);
-
-  // Ajout de l'état pour le modal d'appel vidéo
   const [showVideoCallModal, setShowVideoCallModal] = useState(false);
-
-  // Nouvel état pour la webview de vote
   const [showStrawpollVote, setShowStrawpollVote] = useState(false);
   const [currentPollId, setCurrentPollId] = useState(null);
-
-  // État pour suivre si l'utilisateur est bien membre du workspace
   const [isMember, setIsMember] = useState(null);
   const [membershipChecking, setMembershipChecking] = useState(true);
+  const [showChannelMembersModal, setShowChannelMembersModal] = useState(false);
+  const [showMemberAccessModal, setShowMemberAccessModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
-  // Vérification si l'utilisateur est membre du workspace avant d'afficher la page
   useEffect(() => {
     async function checkWorkspaceMembership() {
       try {
@@ -85,7 +78,6 @@ function WorkspaceDetails() {
           return;
         }
 
-        // Récupérer l'ID de l'utilisateur connecté
         const userResponse = await fetch(`${API_URL}/api/users/verify-token`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -99,13 +91,11 @@ function WorkspaceDetails() {
         const userData = await userResponse.json();
         const userId = userData.user_id;
 
-        // Vérifier si l'utilisateur est membre du workspace
-        const membershipResponse = await fetch(
-          `${API_URL}/api/workspaces/${workspaceId}/members/${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        
+        const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+
           }
         );
 
@@ -116,21 +106,19 @@ function WorkspaceDetails() {
         const membershipData = await membershipResponse.json();
         setIsMember(membershipData.isMember);
 
-        // Rediriger si l'utilisateur n'est pas membre
+        
         if (!membershipData.isMember) {
-          // Vérifier si le workspace existe (pour afficher l'écran approprié)
-          const workspaceResponse = await fetch(
-            `${API_URL}/api/workspaces/${workspaceId}`
-          );
+          const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
+
           if (workspaceResponse.ok) {
-            // Le workspace existe, rediriger vers la page de demande d'adhésion
             navigate(`/join-workspace?id=${workspaceId}`);
           } else {
-            // Le workspace n'existe pas
-            navigate("/workspaces", {
-              state: {
-                error: "Ce workspace n'existe pas ou vous n'y avez pas accès.",
-              },
+
+            navigate('/workspaces', { 
+              state: { 
+                error: "Ce workspace n'existe pas ou vous n'y avez pas accès." 
+              } 
+
             });
           }
         }
@@ -155,7 +143,6 @@ function WorkspaceDetails() {
     }
   }, [workspaceId, navigate]);
 
-  // Handler pour ouvrir/fermer la boîte à outils
   const handleToggleToolbox = () => setShowToolbox((v) => !v);
   const handleOpenStrawpoll = () => {
     setShowToolbox(false);
@@ -163,7 +150,6 @@ function WorkspaceDetails() {
   };
   const handleCloseStrawpollModal = () => setShowStrawpollModal(false);
 
-  // Fonction pour ouvrir le modal de résultats
   const handleOpenStrawpollResults = async (pollId) => {
     setLoadingResults(true);
     setShowStrawpollResults(true);
@@ -184,19 +170,16 @@ function WorkspaceDetails() {
     setStrawpollResults(null);
   };
 
-  // Handler pour ouvrir la webview de vote
   const handleOpenStrawpollVote = (pollId) => {
     setCurrentPollId(pollId);
     setShowStrawpollVote(true);
   };
 
-  // Handler pour fermer la webview de vote
   const handleCloseStrawpollVote = () => {
     setShowStrawpollVote(false);
     setCurrentPollId(null);
   };
 
-  // Ajouter la fonction au contexte global pour être accessible depuis ChatContainer
   useEffect(() => {
     window.handleOpenStrawpollVote = handleOpenStrawpollVote;
     return () => {
@@ -204,7 +187,6 @@ function WorkspaceDetails() {
     };
   }, []);
 
-  // Ajout de la fonction pour créer un Strawpoll (appel backend sécurisé)
   const handleStrawpollSubmit = async ({ title, options }) => {
     try {
       const token = localStorage.getItem("token");
@@ -218,7 +200,6 @@ function WorkspaceDetails() {
       });
       if (!response.ok) throw new Error("Erreur Strawpoll: " + response.status);
       const data = await response.json();
-      // Extraire l'ID du sondage depuis l'URL (https://strawpoll.com/polls/{id} ou https://strawpoll.com/{id})
       let pollId = null;
       if (data.url) {
         const match = data.url.match(
@@ -229,7 +210,6 @@ function WorkspaceDetails() {
       if (socket && activeChannel) {
         socket.emit("message", {
           canal_id: activeChannel.id,
-          // On encode l'ID du sondage dans le message pour l'affichage des résultats
           content: `Sondage créé : [${title}](${data.url})${
             pollId ? ` [strawpoll:${pollId}]` : ""
           }`,
@@ -241,11 +221,9 @@ function WorkspaceDetails() {
     }
   };
 
-  // Fonction pour envoyer un message système pour les appels vidéo
   const sendVideoCallSystemMessage = () => {
     console.log("Envoi d'un message système pour l'appel vidéo");
     if (socket && activeChannel) {
-      // Créer un message système pour notifier l'appel vidéo
       socket.emit("message", {
         canal_id: activeChannel.id,
         content: `${currentUserName} a démarré un appel vidéo`,
@@ -257,13 +235,10 @@ function WorkspaceDetails() {
   };
 
   const handleStartVideoCall = () => {
-    // Envoyer un message système avant d'afficher la fenêtre d'appel
     sendVideoCallSystemMessage();
-    // Ouvrir la fenêtre d'appel vidéo
     setShowVideoCallModal(true);
   };
 
-  // Use the custom hook to get state and handlers
   const {
     workspace: rawWorkspace,
     loading,
@@ -296,22 +271,24 @@ function WorkspaceDetails() {
     updateChannelError,
     activeChannel,
     messages,
-    setMessages, // Ajout de setMessages ici
+    setMessages,
     newMessage,
-    displayMessage, // <-- Ajouté
-
+    displayMessage,
     loadingMessages,
     chatContainerRef,
     socket,
     currentUserId,
     currentUserName,
-    currentUserRole, // Assurez-vous que currentUserName est exposé par votre hook
+    currentUserRole,
     messageContextMenu,
     showEmojiPicker,
     replyingTo,
-    setReplyingTo, // Ajouter setReplyingTo ici
+    setReplyingTo,
     commonEmojis,
-
+    isMistralTyping,
+    showMentionSuggestions,
+    mentionSuggestions,
+    activeMentionIndex,
     isMistralTyping, // Get the typing state    // Mention state and handlers
     showMentionSuggestions,
     mentionSuggestions,
@@ -349,9 +326,10 @@ function WorkspaceDetails() {
     setShowEmojiPicker,
     setNewMessage,
     getEmojiForType,
-    // New handlers for mentions
     handleNewMessageChange,
     handleSelectMention,
+    handleMentionNavigation,
+    handleSelectActiveItem,
     handleMentionSuggestionNavigation,
     handleSelectActiveMention,
     // New handler for channel suggestions
@@ -360,27 +338,20 @@ function WorkspaceDetails() {
     handleSelectChannelSuggestion,
     // New handler for deleting messages
     handleDeleteMessage,
-    handleMistralMention, // Utilisez la version du hook plutôt que celle définie localement
+    handleMistralMention,
+    fetchActiveChannel,
   } = useWorkspaceDetails(workspaceId);
 
-  // Effect to mark channel as read when viewing it
   useEffect(() => {
-    // Only mark channel as read when we have a valid channel ID that's different from the last one
     if (activeChannel && activeChannel.id) {
       const lastChannelId = sessionStorage.getItem("lastActiveChannel");
-
-      // Only mark as read if this is a different channel from the last one
       if (lastChannelId !== activeChannel.id) {
-        // Store the current channel ID
         sessionStorage.setItem("lastActiveChannel", activeChannel.id);
-
-        // Mark the channel as read when it's selected (with less frequent updates)
         markChannelAsRead(activeChannel.id);
       }
     }
-  }, [activeChannel?.id, markChannelAsRead]); // Use activeChannel.id instead of the whole object
+  }, [activeChannel?.id, markChannelAsRead]);
 
-  // Correction: préfixer les URLs S3 si besoin
   const workspace = rawWorkspace
     ? {
         ...rawWorkspace,
@@ -395,24 +366,21 @@ function WorkspaceDetails() {
       }
     : null;
 
-  // Handler pour ouvrir la sélection de fichier
   const handleOpenFileUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Fonction pour ouvrir un fichier en plein écran
   const handleOpenFileViewer = (fileData) => {
     setFullscreenFile(fileData);
   };
 
-  // Fonction pour fermer la popup de fichier
   const handleCloseFileViewer = () => {
     setFullscreenFile(null);
   };
 
-  // Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
+// Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
   const handleFileUpload = async (e) => {
     console.log("🚀 Début de handleFileUpload");
     const file = e.target.files[0];
@@ -486,6 +454,7 @@ function WorkspaceDetails() {
         );
 
         // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
+        // Ce qui évite les problèmes de timeout avec Socket.IO
         // Ce qui évite les problèmes de timeout avec Socket.IO
         const response = await fetch(`${API_URL}/api/messages/upload`, {
           method: "POST",
@@ -572,16 +541,17 @@ function WorkspaceDetails() {
         e.preventDefault();
         handleMentionSuggestionNavigation("prev");
       } else if (e.key === "Enter") {
-        // Si la fenêtre de suggestions est ouverte, sélectionne l'élément actif
+        handleSelectActiveItem();
         handleSelectActiveMention();
         e.preventDefault();
       }
     }
   };
-  // Handler pour ouvrir la page de profil
+
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
   };
+
 
   // Handler pour gérer les clics sur les mentions de canaux
   const handleChannelClick = (channelName) => {
@@ -621,20 +591,13 @@ function WorkspaceDetails() {
   // Utiliser le handler original pour l'envoi normal
   const handleSendMessageWithMistralCheck = (e) => {
     if (e) e.preventDefault();
-
-    // Ne pas procéder si le message est vide
     if (!displayMessage.trim()) return;
-
-    // Vérifier si c'est une mention de Mistral et la traiter en priorité
     const isMistralMention = handleMistralMention(displayMessage);
-
-    // Si ce n'est pas une mention de Mistral, utiliser le handler original
     if (!isMistralMention) {
       handleSendMessage(e);
     }
   };
 
-  // Nouveau state pour le menu contextuel des membres
   const [memberContextMenu, setMemberContextMenu] = useState({
     visible: false,
     x: 0,
@@ -642,22 +605,17 @@ function WorkspaceDetails() {
     member: null,
   });
 
-  // Handler pour ouvrir le menu contextuel sur un membre (clic droit)
   const handleMemberContextMenu = (e, member) => {
     e.preventDefault();
-    // Owner : peut agir sur tout le monde sauf owner
-    // Admin : peut promouvoir un membre en admin, mais ne peut pas rétrograder un admin
     if (currentUserRole !== "owner" && currentUserRole !== "admin") return;
     if (member.role === "owner") return;
     if (currentUserRole === "admin" && member.role !== "member") return;
     setMemberContextMenu({ visible: true, x: e.pageX, y: e.pageY, member });
   };
 
-  // Handler pour fermer le menu contextuel
   const handleCloseMemberContextMenu = () =>
     setMemberContextMenu({ ...memberContextMenu, visible: false });
 
-  // Handler pour promouvoir/déclasser
   const handleChangeMemberRole = async (newRole) => {
     if (!memberContextMenu.member) return;
     try {
@@ -677,7 +635,6 @@ function WorkspaceDetails() {
         const err = await res.json();
         alert(err.message || "Erreur lors du changement de rôle");
       } else {
-        // Rafraîchir la liste des membres
         if (typeof fetchWorkspaceMembers === "function")
           fetchWorkspaceMembers();
       }
@@ -688,20 +645,16 @@ function WorkspaceDetails() {
     }
   };
 
-  // Fonction pour télécharger un fichier
   const handleDownloadFile = (fileUrl, fileName) => {
-    // Si l'URL est déjà complète, extraire le chemin du fichier
     const extractFilePath = (url) => {
       if (url.startsWith("http")) {
         try {
-          // Si l'URL contient le bucket S3, extraire le chemin
           if (url.includes("s3-supchat.s3.fr-par.scw.cloud")) {
             const parts = url.split("s3-supchat.s3.fr-par.scw.cloud/");
             if (parts.length > 1) {
               return parts[1];
             }
           }
-          // Sinon, retourner l'URL complète
           return url;
         } catch (error) {
           console.error(
@@ -711,27 +664,21 @@ function WorkspaceDetails() {
           return url;
         }
       }
-      // Si ce n'est pas une URL complète, c'est déjà un chemin relatif
       return fileUrl;
     };
 
-    // Extraire le chemin du fichier
     const filePath = extractFilePath(fileUrl);
 
-    // Construire l'URL de téléchargement via le backend
     const token = localStorage.getItem("token");
     const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
       filePath
     )}`;
 
-    // Créer un élément a temporaire pour déclencher le téléchargement
     const a = document.createElement("a");
     a.href = downloadUrl;
     a.download = fileName || "download";
-    // Ajouter le token d'authentification
     if (token) {
       a.setAttribute("data-token", token);
-      // Utiliser un hack pour envoyer le token dans l'en-tête
       fetch(downloadUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -758,8 +705,67 @@ function WorkspaceDetails() {
     }
   };
 
-  // Permet d'ouvrir la modal Strawpoll depuis n'importe quel bouton du chat
-  window.handleOpenStrawpollResults = handleOpenStrawpollResults;
+  const handleManageChannelMembers = () => {
+    setShowChannelMembersModal(true);
+  };
+
+  const handleCloseChannelMembersModal = () => {
+    setShowChannelMembersModal(false);
+  };
+
+  const handleChannelMembersUpdated = () => {
+    if (activeChannel) {
+      if (typeof fetchActiveChannel === 'function') {
+        fetchActiveChannel(activeChannel.id);
+      }
+    }
+  };
+
+  const handleOpenMemberAccessModal = (member) => {
+    setSelectedMember(member);
+    setShowMemberAccessModal(true);
+    handleCloseMemberContextMenu();
+  };
+
+  const handleCloseMemberAccessModal = () => {
+    setShowMemberAccessModal(false);
+    setSelectedMember(null);
+  };
+
+  // Fonction pour gérer les droits d'accès des membres aux canaux privés
+  const handleSetMemberChannelAccess = async (memberId, accessType) => {
+    if (!activeChannel || !activeChannel.isPrivate) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_URL}/api/canaux/${activeChannel.id}/members/${memberId}/access`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ accessType }),
+        }
+      );
+      
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || "Erreur lors de la modification des droits d'accès");
+      } else {
+        // Rafraîchir le canal actif pour mettre à jour les informations
+        if (typeof fetchActiveChannel === 'function') {
+          fetchActiveChannel(activeChannel.id);
+        }
+      }
+    } catch (e) {
+      console.error("Erreur lors de la modification des droits d'accès:", e);
+      alert("Une erreur est survenue lors de la modification des droits d'accès");
+    } finally {
+      handleCloseMemberContextMenu();
+    }
+  };
 
   if (membershipChecking) {
     return (
@@ -778,7 +784,7 @@ function WorkspaceDetails() {
   }
 
   if (!isMember) {
-    return null; // L'utilisateur sera redirigé
+    return null;
   }
 
   if (loading) {
@@ -813,7 +819,6 @@ function WorkspaceDetails() {
       <Sidebar />
 
       <div className="workspace-detail-layout">
-        {/* Workspace Sidebar */}
         <WorkspaceSidebar
           workspace={workspace}
           searchQuery={searchQuery}
@@ -828,15 +833,14 @@ function WorkspaceDetails() {
           handleChannelContextMenu={handleChannelContextMenu}
           currentUserRole={currentUserRole}
           handleCreateChannel={handleCreateChannel}
-          // Nouvelles props pour la recherche unifiée
           members={members}
           messages={messages}
           searchResults={searchResults}
           handleSelectSearchResult={handleSelectSearchResult}
           isSearching={isSearching}
+          currentUserId={currentUserId}
         />
 
-        {/* Main Content Area - Modified for chat */}
         <ChatContainer
           activeChannel={activeChannel}
           loadingMessages={loadingMessages}
@@ -882,19 +886,20 @@ function WorkspaceDetails() {
             renderTextWithLinks(text, handleChannelClick, handleUserClick)
           }
           isUuid={isUuid}
-          setShowVideoCallModal={handleStartVideoCall} // Ajout du handler pour démarrer l'appel vidéo
-          // Ajout des props pour les suggestions de canaux
-          showChannelSuggestions={showChannelSuggestions}
-          channelSuggestions={channelSuggestions}
-          activeChannelSuggestionIndex={activeChannelSuggestionIndex}
-          handleChannelSuggestionNavigation={handleChannelSuggestionNavigation}
-          handleSelectActiveChannelSuggestion={
-            handleSelectActiveChannelSuggestion
+
+          handleSelectActiveItem={handleSelectActiveItem}
+          setShowVideoCallModal={handleStartVideoCall}
+          handleManageChannelMembers={handleManageChannelMembers}
+          isChannelPrivate={activeChannel?.isPrivate}
+          canManageMembers={
+            currentUserRole === "owner" ||
+            currentUserRole === "admin" ||
+            (activeChannel?.isPrivate && activeChannel?.isCreator)
           }
-          handleSelectChannelSuggestion={handleSelectChannelSuggestion}
+          currentUserAccessRight={activeChannel?.memberAccess}
+
         />
 
-        {/* Details Sidebar - Replaced with WorkspaceDetailsSidebar */}
         <WorkspaceDetailsSidebar
           showMembers={showMembers}
           showOnlineMembers={showOnlineMembers}
@@ -921,9 +926,11 @@ function WorkspaceDetails() {
           S3_BASE_URL={S3_BASE_URL}
           handleOpenFileViewer={handleOpenFileViewer}
           workspace={workspace}
+          activeChannel={activeChannel}
+          handleSetMemberChannelAccess={handleSetMemberChannelAccess}
+          handleOpenMemberAccessModal={handleOpenMemberAccessModal}
         />
 
-        {/* Modal de création de canal - Structure améliorée */}
         {showCreateChannelModal && (
           <CreateChannelModal
             channelError={channelError}
@@ -936,32 +943,32 @@ function WorkspaceDetails() {
           />
         )}
 
-        {/* Menu contextuel pour les canaux */}
-        {contextMenu.visible && ( // Use state from hook
+        {contextMenu.visible && (
           <div
             className="channel-context-menu"
-            style={{ top: contextMenu.yPos, left: contextMenu.xPos }} // Use state from hook
+            style={{ top: contextMenu.yPos, left: contextMenu.xPos }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="context-menu-item" onClick={handleEditChannel}>
-              {" "}
-              {/* Use handler from hook */}
               <FaEdit className="context-menu-icon" />
               <span>Modifier le canal</span>
             </div>
+            {contextMenu.channel && contextMenu.channel.isPrivate && (
+              <div className="context-menu-item" onClick={handleManageChannelMembers}>
+                <FaUsers className="context-menu-icon" />
+                <span>Gérer les membres</span>
+              </div>
+            )}
             <div
               className="context-menu-item delete"
               onClick={handleDeleteChannel}
             >
-              {" "}
-              {/* Use handler from hook */}
               <FaTrashAlt className="context-menu-icon" />
               <span>Supprimer le canal</span>
             </div>
           </div>
         )}
 
-        {/* Modal d'édition de canal */}
         {showEditChannelModal && (
           <EditChannelModal
             updateChannelError={updateChannelError}
@@ -973,37 +980,42 @@ function WorkspaceDetails() {
           />
         )}
 
-        {/* Menu contextuel pour les messages */}
-        {messageContextMenu.visible && ( // Use state from hook
+        {showChannelMembersModal && contextMenu.channel && (
+          <ChannelMembersModal
+            show={showChannelMembersModal}
+            onClose={handleCloseChannelMembersModal}
+            channel={contextMenu.channel}
+            workspaceId={workspaceId}
+            workspaceMembers={members.online.concat(members.offline)}
+            currentUserRole={currentUserRole}
+            onMembersUpdated={handleChannelMembersUpdated}
+            onSetMemberAccess={handleSetMemberChannelAccess}
+          />
+        )}
+
+        {messageContextMenu.visible && (
           <div
             className="message-context-menu"
             style={{
               top: messageContextMenu.yPos,
               left: messageContextMenu.xPos,
-            }} // Use state from hook
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="context-menu-item" onClick={handleReplyMessage}>
-              {" "}
-              {/* Use handler from hook */}
               <FaReply className="context-menu-icon" />
               <span>Répondre</span>
             </div>
             <div className="context-menu-item" onClick={handleShowEmojiPicker}>
-              {" "}
-              {/* Use handler from hook */}
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
             </div>
-            {/* Ajouter l'option de suppression uniquement pour les messages de l'utilisateur actuel */}
             {messageContextMenu.message &&
               messageContextMenu.message.fk_utilisateur === currentUserId && (
                 <div
                   className="context-menu-item delete"
                   onClick={handleDeleteMessage}
                 >
-                  {" "}
-                  {/* Use new handler */}
                   <FaTrashAlt className="context-menu-icon" />
                   <span>Supprimer</span>
                 </div>
@@ -1011,7 +1023,6 @@ function WorkspaceDetails() {
           </div>
         )}
 
-        {/* Modal pour la sélection d'emoji */}
         {showEmojiPicker && (
           <EmojiPickerModal
             commonEmojis={commonEmojis}
@@ -1020,7 +1031,6 @@ function WorkspaceDetails() {
           />
         )}
 
-        {/* Modal pour afficher un fichier en plein écran */}
         {fullscreenFile && (
           <FileViewerModal
             fullscreenFile={fullscreenFile}
@@ -1029,7 +1039,6 @@ function WorkspaceDetails() {
           />
         )}
 
-        {/* Modal d'affichage des résultats Strawpoll */}
         <StrawpollResultsModal
           showStrawpollResults={showStrawpollResults}
           handleCloseStrawpollResults={handleCloseStrawpollResults}
@@ -1037,14 +1046,12 @@ function WorkspaceDetails() {
           strawpollResults={strawpollResults}
         />
 
-        {/* Modal Strawpoll */}
         <StrawpollModalWrapper
           show={showStrawpollModal}
           onClose={handleCloseStrawpollModal}
           onSubmit={handleStrawpollSubmit}
         />
 
-        {/* Modal d'appel vidéo */}
         <VideoCallModal
           show={showVideoCallModal}
           onClose={() => setShowVideoCallModal(false)}
@@ -1054,12 +1061,20 @@ function WorkspaceDetails() {
           socket={socket}
         />
 
-        {/* Ajouter le modal de webview pour voter */}
         <StrawpollWebviewModal
           show={showStrawpollVote}
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}
         />
+
+        {showMemberAccessModal && selectedMember && (
+          <MemberAccessModal
+            show={showMemberAccessModal}
+            onClose={handleCloseMemberAccessModal}
+            member={selectedMember}
+            workspaceId={workspaceId}
+          />
+        )}
       </div>
     </div>
   );
