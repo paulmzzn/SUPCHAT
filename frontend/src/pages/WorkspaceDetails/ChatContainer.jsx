@@ -417,7 +417,7 @@ function ChatContainer({
                                 {message.contenu || ""}
                               </ReactMarkdown>
 
-                              {message.file_url ? (
+                              {message.file_url && (
                                 // Affichage des fichiers
                                 <div className="message-file">
                                   {/* Code pour afficher les fichiers */}
@@ -436,11 +436,6 @@ function ChatContainer({
                                     </a>
                                   </div>
                                 </div>
-                              ) : (
-                                <p className="message-paragraph">
-                                  {" "}
-                                  {renderTextWithLinks(message.contenu)}
-                                </p>
                               )}
 
                             </div>

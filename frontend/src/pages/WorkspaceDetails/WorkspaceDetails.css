@@ -2075,6 +2075,81 @@
   margin-top: 8px;
 }
 
+/* Style pour la section de réponse à un message */
+.replying-to {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(147, 72, 183, 0.08);
+  border-left: 3px solid rgba(147, 72, 183, 0.6);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  max-width: 50%;
+}
+
+.reply-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.reply-info .reply-icon {
+  color: #9348b7;
+  font-size: 0.8rem;
+}
+
+.reply-info strong {
+  color: #b05fdf;
+  font-weight: 600;
+}
+
+.cancel-reply {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cancel-reply:hover {
+  color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.1);
+}
+
+/* Support du thème clair */
+.theme-light .replying-to {
+  background: rgba(147, 72, 183, 0.05);
+  border-left: 3px solid rgba(147, 72, 183, 0.4);
+}
+
+.theme-light .reply-info {
+  color: #333;
+}
+
+.theme-light .reply-info .reply-icon {
+  color: #9348b7;
+}
+
+.theme-light .reply-info strong {
+  color: #9348b7;
+}
+
+.theme-light .cancel-reply {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .cancel-reply:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
 .reaction-badge {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -2087,75 +2162,7 @@
   transition: all 0.2s ease;
 }
 
-.reaction-badge:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-.reaction-emoji {
-  display: inline-block;
-  font-size: 1.1rem;
-}
-
-.reaction-count {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-left: 2px;
-  font-weight: 500;
-}
-
-/* Styles pour les indicateurs de réponse */
-.message-reply-to {
-  background: rgba(255, 255, 255, 0.05);
-  border-left: 3px solid rgba(147, 72, 183, 0.6);
-  border-radius: 0 8px 8px 0;
-  padding: 6px 10px;
-  margin-bottom: 6px;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-}
-
-.message-reply-to:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-.reply-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.reply-icon {
-  color: rgba(147, 72, 183, 0.8);
-  font-size: 0.8rem;
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.reply-author {
-  color: #b05fdf;
-  font-weight: 500;
-  margin-bottom: 2px;
-  flex-shrink: 0;
-}
-
-.reply-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.8rem;
-}
-
-/* Style amélioré pour les réactions */
+/* Styles pour les réactions aux messages */
 .message-reactions {
   display: flex;
   gap: 6px;
