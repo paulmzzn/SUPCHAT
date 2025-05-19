@@ -18,6 +18,7 @@ import {
 import "./Profile.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
+import ActivitySection from "./ActivitySection";
 
 function Profile() {
   const { userId } = useParams();
@@ -27,6 +28,7 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [activityStats, setActivityStats] = useState(null);
 
   // Récupérer l'ID de l'utilisateur connecté
   useEffect(() => {
@@ -140,6 +142,31 @@ function Profile() {
     }
   };
 
+  // Fetch user activity stats (messages, replies, mentions, etc.)
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const apiUrl =
+          (process.env.REACT_APP_API_URL || "http://192.168.1.143:3001") +
+          `/api/users/${userId}/activity-stats`;
+        const res = await fetch(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+        });
+        if (!res.ok) {
+          setActivityStats(null);
+          return;
+        }
+        const stats = await res.json();
+        setActivityStats(stats);
+      } catch (e) {
+        setActivityStats(null);
+      }
+    };
+    fetchStats();
+  }, [userId]);
+
   // Fonction pour naviguer vers un workspace
   const navigateToWorkspace = (workspaceId) => {
     navigate(`/workspace/${workspaceId}`);
@@ -180,6 +207,32 @@ function Profile() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Helper to extract stats from user object and API stats
+  const getUserStats = () => {
+    return {
+      messages:
+        (activityStats && (activityStats.messageCount ?? activityStats.messages)) ??
+        user?.message_count ??
+        user?.messages ??
+        user?.stats?.messages ??
+        0,
+      replies:
+        (activityStats && (activityStats.replyCount ?? activityStats.replies)) ??
+        user?.reply_count ??
+        user?.replies ??
+        user?.stats?.replies ??
+        0,
+      mentions:
+        (activityStats && (activityStats.mentionCount ?? activityStats.mentions)) ??
+        user?.mention_count ??
+        user?.mentions ??
+        user?.stats?.mentions ??
+        0,
+      workspaces: userWorkspaces?.length || activityStats?.workspaceCount || 0,
+      activeChannels: activityStats?.activeChannelsCount ?? 0,
+    };
   };
 
   if (loading) {
@@ -313,31 +366,7 @@ function Profile() {
               )}
             </div>
 
-            {/* Section 2: Activité récente (à droite) */}
-            <div className="profile-section">
-              <h3 className="section-title">
-                <FaCalendarAlt />
-                Activité récente
-              </h3>
-              <div className="activity-statistique">
-                <div className="statistique-item">
-                  <span className="statistique-value">--</span>
-                  <span className="statistique-label">messages envoyés</span>
-                </div>
-                <div className="statistique-item">
-                  <span className="statistique-value">--</span>
-                  <span className="statistique-label">canaux actifs</span>
-                </div>
-                <div className="statistique-item">
-                  <span className="statistique-value">
-                    {userWorkspaces.length}
-                  </span>
-                  <span className="statistique-label">workspaces</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Workspaces (pleine largeur en dessous) */}
+            {/* Section 2: Workspaces (pleine largeur en dessous) */}
             <div className="profile-section full-width">
               <h3 className="section-title">
                 <FaServer />
@@ -378,6 +407,9 @@ function Profile() {
               </div>
             </div>
           </div>
+
+          {/* Add the Activity Section with real stats */}
+          <ActivitySection userStats={getUserStats()} />
         </div>
       </div>
     </div>
