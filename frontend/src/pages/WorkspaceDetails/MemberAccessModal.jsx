@@ -176,6 +176,14 @@ const MemberAccessModal = ({ show, onClose, member, workspaceId }) => {
                       <FaEye className="access-icon" />
                       <span>Lecture seule</span>
                     </button>
+                    <button
+                      className={`access-button danger ${!accessRights[channel.id_canal] ? "active" : ""}`}
+                      onClick={() => handleAccessChange(channel.id_canal, "remove")}
+                      disabled={updatingChannelId === channel.id_canal}
+                    >
+                      <FaTimes className="access-icon" />
+                      <span>Aucun accès</span>
+                    </button>
                   </div>
                 </div>
               ))}

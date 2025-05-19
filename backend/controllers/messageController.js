@@ -80,6 +80,7 @@ export const createMessage = async (req, res) => {
 export const getMessagesByChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
+    const userId = req.user.id; // L'ID de l'utilisateur connecté
     
     if (!channelId) {
       console.error("getMessagesByChannel: ID de canal manquant", { 
@@ -93,7 +94,7 @@ export const getMessagesByChannel = async (req, res) => {
       });
     }
     
-    console.log(`Récupération des messages pour canal ${channelId}`);
+    console.log(`Récupération des messages pour canal ${channelId} par utilisateur ${userId}`);
 
     // Vérifier que le canal existe
     const canal = await Canal.findById(channelId);
@@ -101,7 +102,18 @@ export const getMessagesByChannel = async (req, res) => {
       console.log("Canal non trouvé:", channelId);
       return res.status(404).json({ message: "Canal non trouvé" });
     }
-
+    
+    // NOUVELLE VERIFICATION: Vérifier que l'utilisateur a le droit de lecture sur ce canal
+    const accessCheck = await Canal.checkUserAccess(channelId, userId);
+    if (!accessCheck.hasAccess) {
+      console.log(`Utilisateur ${userId} n'a pas accès au canal ${channelId}`);
+      return res.status(403).json({ 
+        message: "Vous n'avez pas accès à ce canal",
+        error: "ACCESS_DENIED" 
+      });
+    }
+    
+    // Une fois que nous avons vérifié que l'utilisateur a accès, récupérer les messages
     const messages = await MessageModel.findByChannel(channelId);
     console.log(`${messages.length} messages trouvés`);
 

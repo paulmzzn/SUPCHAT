@@ -75,7 +75,7 @@ function ChatContainer({
   canManageMembers,
   currentUserAccessRight,
 }) {
-  const canWriteInChannel = !activeChannel?.isPrivate || currentUserAccessRight !== "read";
+  const canWriteInChannel = activeChannel?.isPrivate ? currentUserAccessRight === "lecture_ecriture" : true;
 
   return (
     <div className="workspace-content-area">
@@ -480,183 +480,196 @@ function ChatContainer({
             )}
           </div>
 
-          <div className="chat-input-area">
-            {showMentionSuggestions && (
-              <div id="supchat-mentions-dropdown">
-                <div id="supchat-mentions-header">
-                  <span>@</span>
-                  <span>Mentionner un utilisateur</span>
-                </div>
-                <div id="supchat-mentions-list">
-                  {mentionSuggestions.length > 0 ? (
-                    mentionSuggestions.map((user, index) => (
-                      <button
-                        key={user.id}
-                        className={`supchat-mention-item ${
-                          index === activeMentionIndex ? "active" : ""
-                        }`}
-                        onClick={() => handleSelectMention(user)}
-                      >
-                        <div className="supchat-mention-avatar-wrapper">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="supchat-mention-avatar"
-                            />
-                          ) : (
-                            <div className="supchat-mention-avatar">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          {user.isBot && (
-                            <div className="supchat-mention-bot-badge">
-                              <FaRobot style={{ fontSize: "8px" }} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="supchat-mention-details">
-                          <div className="supchat-mention-name">
-                            {user.name}
-                          </div>
-                          <div className="supchat-mention-info">
-                            {user.isBot ? (
-                              <>Assistant IA</>
+          {canWriteInChannel ? (
+            <div className="chat-input-area">
+              {showMentionSuggestions && (
+                <div id="supchat-mentions-dropdown">
+                  <div id="supchat-mentions-header">
+                    <span>@</span>
+                    <span>Mentionner un utilisateur</span>
+                  </div>
+                  <div id="supchat-mentions-list">
+                    {mentionSuggestions.length > 0 ? (
+                      mentionSuggestions.map((user, index) => (
+                        <button
+                          key={user.id}
+                          className={`supchat-mention-item ${
+                            index === activeMentionIndex ? "active" : ""
+                          }`}
+                          onClick={() => handleSelectMention(user)}
+                        >
+                          <div className="supchat-mention-avatar-wrapper">
+                            {user.avatar ? (
+                              <img
+                                src={user.avatar}
+                                alt={user.name}
+                                className="supchat-mention-avatar"
+                              />
                             ) : (
-                              <>
-                                <span
-                                  className={`supchat-mention-status ${
-                                    user.status || "offline"
-                                  }`}
-                                ></span>
-                                {user.status === "online"
-                                  ? "En ligne"
-                                  : "Hors ligne"}
-                              </>
+                              <div className="supchat-mention-avatar">
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            {user.isBot && (
+                              <div className="supchat-mention-bot-badge">
+                                <FaRobot style={{ fontSize: "8px" }} />
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="supchat-mention-no-results">
-                      Aucun utilisateur ne correspond à votre recherche
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <form
-              className="chat-input-container"
-              onSubmit={handleSendMessageWithMistralCheck}
-            >
-              {replyingTo && (
-                <div className="replying-to">
-                  <div className="reply-info">
-                    <FaReply className="reply-icon" />
-                    <span>
-                      Réponse à <strong>{replyingTo.nom}</strong>
-                    </span>
+                          <div className="supchat-mention-details">
+                            <div className="supchat-mention-name">
+                              {user.name}
+                            </div>
+                            <div className="supchat-mention-info">
+                              {user.isBot ? (
+                                <>Assistant IA</>
+                              ) : (
+                                <>
+                                  <span
+                                    className={`supchat-mention-status ${
+                                      user.status || "offline"
+                                    }`}
+                                  ></span>
+                                  {user.status === "online"
+                                    ? "En ligne"
+                                    : "Hors ligne"}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="supchat-mention-no-results">
+                        Aucun utilisateur ne correspond à votre recherche
+                      </div>
+                    )}
                   </div>
+                </div>
+              )}
+
+              <form
+                className="chat-input-container"
+                onSubmit={handleSendMessageWithMistralCheck}
+              >
+                {replyingTo && (
+                  <div className="replying-to">
+                    <div className="reply-info">
+                      <FaReply className="reply-icon" />
+                      <span>
+                        Réponse à <strong>{replyingTo.nom}</strong>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="cancel-reply"
+                      onClick={handleCancelReply}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  style={{ display: "none" }}
+                  id="file-upload-input"
+                />
+                <div className="chat-input-wrapper">
                   <button
                     type="button"
-                    className="cancel-reply"
-                    onClick={handleCancelReply}
+                    className="chat-attachment-btn"
+                    onClick={() =>
+                      fileInputRef.current && fileInputRef.current.click()
+                    }
+                    title="Ajouter un fichier"
                   >
-                    ×
+                    <FaPaperclip />
                   </button>
-                </div>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                style={{ display: "none" }}
-                id="file-upload-input"
-              />
-              <div className="chat-input-wrapper">
-                <button
-                  type="button"
-                  className="chat-attachment-btn"
-                  onClick={() =>
-                    fileInputRef.current && fileInputRef.current.click()
-                  }
-                  disabled={!canWriteInChannel}
-                  title={
-                    !canWriteInChannel
-                      ? "Vous êtes en lecture seule dans ce canal"
-                      : "Ajouter un fichier"
-                  }
-                >
-                  <FaPaperclip />
-                </button>
-                <input
-                  type="text"
-                  placeholder={
-                    canWriteInChannel
-                      ? activeChannel
+                  <input
+                    type="text"
+                    placeholder={
+                      activeChannel
                         ? `Message dans #${activeChannel.name}`
                         : "Message..."
-                      : "Ce canal est en lecture seule"
-                  }
-                  value={displayMessage}
-                  onChange={(e) => handleNewMessageChange(e.target.value)}
-                  onKeyDown={handleChatInputKeyDown}
-                  disabled={!canWriteInChannel}
-                />
-                <button
-                  type="button"
-                  className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
-                  title={
-                    !canWriteInChannel
-                      ? "Vous êtes en lecture seule dans ce canal"
-                      : "Outils"
-                  }
-                  onClick={handleToggleToolbox}
-                  disabled={!canWriteInChannel}
-                >
-                  <FaTools />
-                  <span className="toolbox-tooltip">Outils</span>
-                </button>
-                <button
-                  type="submit"
-                  className="chat-send-btn"
-                  disabled={!displayMessage.trim() || !canWriteInChannel}
-                  aria-label="Envoyer le message"
-                  title={
-                    !canWriteInChannel
-                      ? "Vous êtes en lecture seule dans ce canal"
-                      : "Envoyer"
-                  }
-                >
-                  <FaPaperPlane />
-                  <span className="send-btn-pulse"></span>
-                </button>
-              </div>
-              {showToolbox && canWriteInChannel && (
-                <div className="chat-toolbox-menu">
+                    }
+                    value={displayMessage}
+                    onChange={(e) => handleNewMessageChange(e.target.value)}
+                    onKeyDown={handleChatInputKeyDown}
+                  />
                   <button
-                    className="chat-toolbox-item"
-                    onClick={handleOpenStrawpoll}
+                    type="button"
+                    className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
+                    title="Outils"
+                    onClick={handleToggleToolbox}
                   >
-                    <FaPoll className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">Créer un sondage</span>
+                    <FaTools />
+                    <span className="toolbox-tooltip">Outils</span>
                   </button>
-                  <button className="chat-toolbox-item">
-                    <FaImage className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">
-                      Rechercher une image
-                    </span>
-                  </button>
-                  <button className="chat-toolbox-item">
-                    <FaCode className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">Formater du code</span>
+                  <button
+                    type="submit"
+                    className="chat-send-btn"
+                    disabled={!displayMessage.trim()}
+                    aria-label="Envoyer le message"
+                    title="Envoyer"
+                  >
+                    <FaPaperPlane />
+                    <span className="send-btn-pulse"></span>
                   </button>
                 </div>
-              )}
-            </form>
-          </div>
+                {showToolbox && (
+                  <div className="chat-toolbox-menu">
+                    <button
+                      className="chat-toolbox-item"
+                      onClick={handleOpenStrawpoll}
+                    >
+                      <FaPoll className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">Créer un sondage</span>
+                    </button>
+                    <button className="chat-toolbox-item">
+                      <FaImage className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">
+                        Rechercher une image
+                      </span>
+                    </button>
+                    <button className="chat-toolbox-item">
+                      <FaCode className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">Formater du code</span>
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+          ) : (
+            <div className="read-only-message" style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px 20px',
+              margin: '10px 20px',
+              background: 'linear-gradient(145deg, rgba(40, 40, 45, 0.4), rgba(50, 50, 55, 0.3))',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+              color: 'rgba(255, 255, 255, 0.7)',
+              textAlign: 'center'
+            }}>
+              <FaCommentSlash style={{
+                fontSize: '1.5rem',
+                color: '#ff4757',
+                marginRight: '10px',
+                filter: 'drop-shadow(0 1px 3px rgba(255, 71, 87, 0.4))'
+              }} />
+              <p style={{
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                letterSpacing: '0.02em',
+                margin: '0'
+              }}>Vous êtes en lecture seule dans ce canal</p>
+            </div>
+          )}
         </div>
       )}
     </div>

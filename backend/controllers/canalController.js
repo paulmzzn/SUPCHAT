@@ -355,31 +355,44 @@ export const updateMemberChannelAccess = async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé dans ce workspace" });
     }
     
-    // Valider le type d'accès
-    if (accessType !== 'lecture' && accessType !== 'lecture_ecriture') {
-      return res.status(400).json({ message: "Type d'accès invalide. Valeurs acceptées : lecture, lecture_ecriture" });
-    }
-    
-    // Vérifier si le membre a déjà un accès à ce canal
-    const existingAccess = await pool.query(
-      "SELECT 1 FROM membre_canal WHERE fk_canal = $1 AND fk_utilisateur = $2",
-      [canalId, memberId]
-    );
-    
     let result;
+    // Variable pour stocker le type d'accès final à renvoyer au client
+    let finalAccessType = accessType;
     
-    if (existingAccess.rows.length) {
-      // Mettre à jour l'accès existant
+    // Si accessType est "remove", supprimer l'entrée
+    if (accessType === "remove") {
       result = await pool.query(
-        "UPDATE membre_canal SET droit_acces = $1 WHERE fk_canal = $2 AND fk_utilisateur = $3 RETURNING *",
-        [accessType, canalId, memberId]
+        "DELETE FROM membre_canal WHERE fk_canal = $1 AND fk_utilisateur = $2 RETURNING *",
+        [canalId, memberId]
       );
+      
+      // Mettre à jour le type d'accès renvoyé dans la réponse
+      finalAccessType = null;
     } else {
-      // Créer un nouvel accès
-      result = await pool.query(
-        "INSERT INTO membre_canal (fk_canal, fk_utilisateur, droit_acces) VALUES ($1, $2, $3) RETURNING *",
-        [canalId, memberId, accessType]
+      // Valider le type d'accès
+      if (accessType !== 'lecture' && accessType !== 'lecture_ecriture') {
+        return res.status(400).json({ message: "Type d'accès invalide. Valeurs acceptées : lecture, lecture_ecriture" });
+      }
+      
+      // Vérifier si le membre a déjà un accès à ce canal
+      const existingAccess = await pool.query(
+        "SELECT 1 FROM membre_canal WHERE fk_canal = $1 AND fk_utilisateur = $2",
+        [canalId, memberId]
       );
+      
+      if (existingAccess.rows.length) {
+        // Mettre à jour l'accès existant
+        result = await pool.query(
+          "UPDATE membre_canal SET droit_acces = $1 WHERE fk_canal = $2 AND fk_utilisateur = $3 RETURNING *",
+          [accessType, canalId, memberId]
+        );
+      } else {
+        // Créer un nouvel accès
+        result = await pool.query(
+          "INSERT INTO membre_canal (fk_canal, fk_utilisateur, droit_acces) VALUES ($1, $2, $3) RETURNING *",
+          [canalId, memberId, accessType]
+        );
+      }
     }
     
     // Notifier via socket.io si disponible
@@ -388,15 +401,15 @@ export const updateMemberChannelAccess = async (req, res) => {
       io.to(canal.fk_workspace).emit('channel_access_updated', { 
         canalId, 
         userId: memberId, 
-        accessType 
+        accessType: finalAccessType 
       });
     }
     
     res.status(200).json({
       canalId,
       memberId,
-      accessType,
-      message: "Droits d'accès mis à jour avec succès"
+      accessType: finalAccessType,
+      message: finalAccessType ? "Droits d'accès mis à jour avec succès" : "Accès retiré avec succès"
     });
   } catch (error) {
     console.error("Erreur lors de la modification des droits d'accès:", error);
