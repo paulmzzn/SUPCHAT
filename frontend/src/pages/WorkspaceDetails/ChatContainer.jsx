@@ -640,7 +640,6 @@ function ChatContainer({
                     >
                       ×
                     </button>
-
                   </div>
                 )}
                 <input
@@ -661,84 +660,43 @@ function ChatContainer({
                   >
                     <FaPaperclip />
                   </button>
-
-                </div>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                style={{ display: "none" }}
-                id="file-upload-input"
-              />
-              <div className="chat-input-wrapper">
-                <button
-                  type="button"
-                  className="chat-attachment-btn"
-                  onClick={() =>
-                    fileInputRef.current && fileInputRef.current.click()
-                  }
-                >
-                  <FaPaperclip />
-                </button>
-                <input
-                  type="text"
-                  placeholder={
-                    activeChannel
-                      ? `Message dans #${activeChannel.name}`
-                      : "Message..."
-                  }
-                  value={displayMessage}
-                  onChange={(e) => handleNewMessageChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (showChannelSuggestions) {
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        handleChannelSuggestionNavigation("next");
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        handleChannelSuggestionNavigation("prev");
-                      } else if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSelectActiveChannelSuggestion();
-                      }
-                    } else if (showMentionSuggestions) {
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        handleMentionNavigation("next");
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        handleMentionNavigation("prev");
-                      } else if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSelectActiveItem();
-                      }
-                    } else {
-                      handleChatInputKeyDown && handleChatInputKeyDown(e);
+                  <input
+                    type="text"
+                    placeholder={
+                      activeChannel
+                        ? `Message dans #${activeChannel.name}`
+                        : "Message..."
                     }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
-                  title="Outils"
-                  onClick={handleToggleToolbox}
-                >
-                  <FaTools />
-                  <span className="toolbox-tooltip">Outils</span>
-                </button>
-                <button
-                  type="submit"
-                  className="chat-send-btn"
-                  disabled={!displayMessage.trim()}
-                  aria-label="Envoyer le message"
-                >
-                  <FaPaperPlane />
-                  <span className="send-btn-pulse"></span>
-                </button>
-              </div>
-              {showToolbox && (
-                <div className="chat-toolbox-menu">
+                    value={displayMessage}
+                    onChange={(e) => handleNewMessageChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (showChannelSuggestions) {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          handleChannelSuggestionNavigation("next");
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          handleChannelSuggestionNavigation("prev");
+                        } else if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSelectActiveChannelSuggestion();
+                        }
+                      } else if (showMentionSuggestions) {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          handleMentionNavigation("next");
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          handleMentionNavigation("prev");
+                        } else if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSelectActiveItem();
+                        }
+                      } else {
+                        handleChatInputKeyDown && handleChatInputKeyDown(e);
+                      }
+                    }}
+                  />
                   <button
                     type="button"
                     className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
@@ -753,12 +711,12 @@ function ChatContainer({
                     className="chat-send-btn"
                     disabled={!displayMessage.trim()}
                     aria-label="Envoyer le message"
-                    title="Envoyer"
                   >
                     <FaPaperPlane />
                     <span className="send-btn-pulse"></span>
                   </button>
                 </div>
+                
                 {showToolbox && (
                   <div className="chat-toolbox-menu">
                     <button
