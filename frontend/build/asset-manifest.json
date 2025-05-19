@@ -1,0 +1,18 @@
+{
+  "files": {
+    "main.css": "/static/css/main.07be0ac1.css",
+    "main.js": "/static/js/main.3b2bdceb.js",
+    "static/media/bell-notification.mp3": "/static/media/bell-notification.d3a40fc53b0abb5c6bba.mp3",
+    "static/media/baniere_default.png": "/static/media/baniere_default.d600a35fcd21dd247c12.png",
+    "static/media/logo_supchat.svg": "/static/media/logo_supchat.79d90e66dd57f236cb0b17f18bd311d2.svg",
+    "static/media/google-icon.svg": "/static/media/google-icon.7f60c477d730c79c0dad68c2944e8910.svg",
+    "static/media/facebook-icon.svg": "/static/media/facebook-icon.847ffdb57116d1eda6a66638b9fe12e7.svg",
+    "index.html": "/index.html",
+    "main.07be0ac1.css.map": "/static/css/main.07be0ac1.css.map",
+    "main.3b2bdceb.js.map": "/static/js/main.3b2bdceb.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.07be0ac1.css",
+    "static/js/main.3b2bdceb.js"
+  ]
+}

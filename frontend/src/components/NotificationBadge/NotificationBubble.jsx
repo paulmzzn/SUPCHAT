@@ -29,11 +29,13 @@ const NotificationBubble = ({
   onClose,
   userProfile
 }) => {
-  const navigate = useNavigate();
-  // Déterminer la véritable URL de la photo
+  const navigate = useNavigate();  // Déterminer la véritable URL de la photo
   console.log("[NotificationBubble] Props reçues:", {
     userId, 
-    senderName, 
+    senderName,
+    type,
+    channelId,
+    workspaceId,
     photoUrl, 
     userProfile: userProfile ? JSON.stringify(userProfile) : "undefined"
   });
@@ -67,14 +69,26 @@ const NotificationBubble = ({
     }
     
     return truncated + "...";
-  };
-  // Fonction pour naviguer vers la conversation
+  };  // Fonction pour naviguer vers la conversation avec meilleur debug
   const handleClick = () => {
-    if (type === "privateMessage" && userId) {
-      console.log("[NotificationBubble] Navigation vers conversation privée avec userId:", userId);
+    // Ajouter des logs détaillés pour le débogage
+    console.log("[NotificationBubble] Données complètes:", { userId, type, channelId, workspaceId });
+    
+    // Vérifier que l'ID utilisateur est bien défini et valide
+    if (type === "privateMessage") {
+      if (!userId) {
+        console.error("[NotificationBubble] ERREUR: userId manquant pour la navigation vers conversation privée");
+        return;
+      }
+      
+      console.log(`[NotificationBubble] Navigation vers conversation privée avec userId: ${userId}`);
+      // Utiliser la syntaxe correcte pour passer des paramètres d'URL
       navigate(`/direct-messages?userId=${userId}`);
     } else if (type === "channelMessage" && channelId) {
+      console.log(`[NotificationBubble] Navigation vers canal: ${channelId} dans workspace: ${workspaceId}`);
       navigate(`/workspace/${workspaceId}?channel=${channelId}`);
+    } else {
+      console.error("[NotificationBubble] Type de notification non reconnu ou données manquantes:", type);
     }
     
     // Fermer la notification après la navigation

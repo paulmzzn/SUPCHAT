@@ -27,7 +27,7 @@ import { useNotificationSettings } from "../../context/NotificationSettingsConte
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.167:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.143:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -230,16 +230,31 @@ function DirectMessages() {
     connecting: false,
     error: null,
     reconnectAttempts: 0,
-  });
-
-  // Connexion socket et joinPrivate - amélioration de la robustesse
-  useEffect(() => {
+  });  // Define initializeSocket function using the socket from SocketContext
+  const initializeSocket = () => {
     const token = localStorage.getItem("token");
     console.log("[DM] Initializing socket connection with token:", token);
     console.log("[DM] API_URL utilisé pour le socket:", API_URL);
 
+    // If we already have a socket from the context, use that
+    if (refreshUnreadDM && typeof refreshUnreadDM === 'function') {
+      console.log("[DM] Using socket from SocketContext");
+      refreshUnreadDM();
+      return;
+    }
+
+    // Otherwise, proceed with local socket initialization
+    console.log("[DM] Fallback: Initializing local socket");
+    
     // Définir l'état comme "en cours de connexion"
     setSocketStatus((prev) => ({ ...prev, connecting: true }));
+
+    // If a socket already exists, clean it up first
+    if (socket) {
+      console.log("[DM] Cleaning up existing socket before initializing a new one");
+      socket.off();
+      socket.disconnect();
+    }
 
     // Vérifier d'abord si l'API est accessible
     fetch(`${API_URL}/api/users/verify-token`, {
@@ -351,12 +366,6 @@ function DirectMessages() {
         });
 
         setSocket(newSocket);
-
-        return () => {
-          console.log("[DM] Cleanup: Déconnexion du socket");
-          newSocket.off();
-          newSocket.disconnect();
-        };
       })
       .catch((err) => {
         console.error("[DM] Backend API setup failed:", err);
@@ -366,6 +375,30 @@ function DirectMessages() {
           error: err.message,
         }));
       });
+  };  // Connexion socket et joinPrivate - amélioration de la robustesse
+  useEffect(() => {
+    try {
+      // Try to use the socket from context first
+      if (refreshUnreadDM && typeof refreshUnreadDM === 'function') {
+        console.log("[DM] Using socket from SocketContext for initial setup");
+        refreshUnreadDM();
+      } else {
+        // Fall back to local socket initialization
+        console.log("[DM] Falling back to local socket initialization");
+        initializeSocket();
+      }
+    } catch (error) {
+      console.error("[DM] Error during socket initialization:", error);
+    }
+    
+    return () => {
+      // Clean up socket connection when component unmounts
+      if (socket) {
+        console.log("[DM] Cleanup: Déconnexion du socket");
+        socket.off();
+        socket.disconnect();
+      }
+    };
   }, []);
 
   // Réception des nouveaux messages privés en temps réel
@@ -805,7 +838,6 @@ function DirectMessages() {
       setLoadingMessages(false);
     }
   };
-
   // Improve the markMessagesAsRead function to be more robust
   const markMessagesAsRead = (msgs) => {
     if (!socket || !msgs || !msgs.length || !selectedUser || !currentUserId)
@@ -817,6 +849,24 @@ function DirectMessages() {
 
     if (unreadMessages.length > 0) {
       console.log(`[DM] Marking ${unreadMessages.length} messages as read`);
+      
+      // Mettre à jour l'état local immédiatement pour une expérience utilisateur réactive
+      setMessages((prevMessages) => 
+        prevMessages.map(m => {
+          if (unreadMessages.some(um => um.id_message_prive === m.id_message_prive)) {
+            return { ...m, date_lecture: new Date().toISOString() };
+          }
+          return m;
+        })
+      );
+      
+      // Mettre à jour le compteur non lu localement
+      setUnreadMessageCounts(prev => ({
+        ...prev,
+        [selectedUser]: 0
+      }));
+      
+      // Envoyer les demandes de marquage au serveur
       unreadMessages.forEach((msg) => {
         socket.emit("readPrivateMessage", {
           id: msg.id_message_prive,
@@ -1416,9 +1466,7 @@ function DirectMessages() {
     };
 
     fetchUnreadCounts();
-  }, []);
-
-  // Vérifier le token au chargement du composant
+  }, []);  // Vérifier le token au chargement du composant
   useEffect(() => {
     // Vérifier si le token est valide
     const tokenStatus = checkTokenValidity();
@@ -1426,8 +1474,25 @@ function DirectMessages() {
 
     if (tokenStatus.valid && tokenStatus.details && tokenStatus.details.id) {
       // Définir l'ID utilisateur à partir du token JWT
-      setCurrentUserId(tokenStatus.details.id);
-      console.log("[DM] ID utilisateur défini:", tokenStatus.details.id);
+      const userId = tokenStatus.details.id;
+      setCurrentUserId(userId);
+      console.log("[DM] ID utilisateur défini:", userId);
+      
+      // Stocker l'ID dans le localStorage pour le rendre disponible à d'autres parties de l'application
+      localStorage.setItem("userId", userId);
+        // Initialiser le socket après avoir obtenu l'ID utilisateur
+      if (socket === null) {
+        console.log("[DM] Initialisation du socket avec l'ID utilisateur:", userId);
+        try {
+          initializeSocket();
+        } catch (error) {
+          console.error("[DM] Error initializing socket:", error);
+          // Use SocketContext's socket as fallback if initializeSocket fails
+          refreshUnreadDM && refreshUnreadDM();
+        }
+      } else {
+        console.log("[DM] Socket already initialized");
+      }
     } else {
       setError(
         `Erreur d'authentification: ${
@@ -1435,7 +1500,7 @@ function DirectMessages() {
         }. Veuillez vous reconnecter.`
       );
     }
-  }, []);
+  }, []); // Empty dependency array to run only once on mount
 
   // Fonction pour télécharger un fichier
   const handleDownloadFile = (fileUrl, fileName) => {
@@ -1504,9 +1569,9 @@ function DirectMessages() {
           alert("Impossible de télécharger le fichier. Veuillez réessayer.");
         });
     } else {
-      alert("Vous devez être connecté pour télécharger des fichiers.");
-    }
-  }; // Démarrage auto d'une conversation si userId passé en query ou en paramètre d'URL
+      alert("Vous devez être connecté pour télécharger des fichiers.");    }  };
+
+  // Démarrage auto d'une conversation si userId passé en query ou en paramètre d'URL
   useEffect(() => {
     // Vérifier d'abord les paramètres de recherche URL (query params)
     const params = new URLSearchParams(location.search);
@@ -1519,12 +1584,46 @@ function DirectMessages() {
     // Utiliser l'ID de la query ou du path, avec priorité à la query
     const userId = userIdFromQuery || userIdFromPath;
 
+    console.log(`[DM] Analyse des paramètres URL: userIdFromQuery=${userIdFromQuery}, userIdFromPath=${userIdFromPath}`);
+
     if (userId) {
       console.log(`[DM] ID utilisateur détecté dans l'URL: ${userId}`);
-      setSelectedUser(userId);
-      fetchMessages(userId);
+      console.log(`[DM] ID utilisateur courant: ${currentUserId}`);
+      console.log(`[DM] Liste des conversations actuelles:`, conversations);
+      
+      // Vérifier si l'utilisateur n'est pas déjà sélectionné pour éviter un rechargement inutile
+      if (userId !== selectedUser) {
+        console.log(`[DM] Changement de conversation vers userId: ${userId}`);
+        setSelectedUser(userId);
+        
+        // Si l'utilisateur n'est pas dans la liste des conversations, l'ajouter
+        if (!conversations.some(conv => String(conv) === String(userId))) {
+          console.log(`[DM] Ajout de l'utilisateur ${userId} à la liste des conversations`);
+          setConversations(prev => [...prev, userId]);
+        }
+        
+        // Marquer immédiatement les messages comme lus lorsqu'on navigue directement
+        // depuis une notification (on fera le vrai marquage une fois les messages chargés)
+        setUnreadMessageCounts(prev => ({
+          ...prev,
+          [userId]: 0
+        }));
+        
+        // Récupérer les messages avec cet utilisateur
+        fetchMessages(userId);
+        
+        // Marquer cette conversation comme vue (pour effacer les notifications)
+        if (socket && socket.connected) {
+          console.log(`[DM] Marquage de la conversation avec ${userId} comme lue via navigation de notification`);
+          
+          // Déclencher la mise à jour globale du compteur non lu
+          if (refreshUnreadDM) refreshUnreadDM();
+        }
+      } else {
+        console.log(`[DM] L'utilisateur ${userId} est déjà sélectionné, pas de changement nécessaire`);
+      }
     }
-  }, [location.search, location.pathname]);
+  }, [location, selectedUser, conversations, currentUserId, socket, refreshUnreadDM]);
 
   // Fonction pour rendre les mentions cliquables
   const renderTextWithMentions = (text) => {

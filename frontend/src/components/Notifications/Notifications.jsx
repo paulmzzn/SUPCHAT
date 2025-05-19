@@ -53,12 +53,12 @@ const Notifications = () => {
     }
     
     return truncated + "...";
-  };
-  // Fonction pour ajouter une nouvelle notification
+  };  // Fonction pour ajouter une nouvelle notification
   const addNotification = async (notification) => {
     const notificationId = Date.now();
 
     console.log("🔍 DEBUG - Notification reçue:", notification);
+    console.log("🔍 DEBUG - userId de la notification:", notification.userId);
     console.log("🔍 DEBUG - Photo URL brute:", notification.photoUrl);
     console.log("🔍 DEBUG - Nom brut:", notification.senderName);
 
@@ -91,8 +91,7 @@ const Notifications = () => {
     
     // Jouer le son de notification
     playNotificationSound(notificationSettings);
-  };
-  // Fonction pour naviguer vers la conversation
+  };  // Fonction pour naviguer vers la conversation - gardée pour compatibilité
   const navigateToConversation = (notification) => {
     if (notification.type === "privateMessage" && notification.userId) {
       // Naviguer vers la conversation privée
@@ -117,18 +116,39 @@ const Notifications = () => {
       if (msg.fk_destinataire === userId) {
         // Récupérer le profil de l'expéditeur pour avoir des informations complètes
         let expediteurProfile = null;
-        if (msg.fk_expediteur || msg.fk_utilisateur) {
-          const expediteurId = msg.fk_expediteur || msg.fk_utilisateur;
+        let expediteurId = null;
+        
+        // Déterminer l'ID de l'expéditeur
+        if (msg.fk_expediteur) {
+          expediteurId = msg.fk_expediteur;
+          console.log("🔍 DEBUG - Utilisation de fk_expediteur:", expediteurId);
+        } else if (msg.fk_utilisateur) {
+          expediteurId = msg.fk_utilisateur;
+          console.log("🔍 DEBUG - Utilisation de fk_utilisateur:", expediteurId);
+        }
+        
+        // Vérifier qu'on a bien un ID d'expéditeur
+        if (!expediteurId) {
+          console.error("⚠️ ERREUR - Impossible de déterminer l'ID de l'expéditeur:", msg);
+          return;
+        }
+        
+        try {
+          // Récupérer le profil de l'expéditeur
           expediteurProfile = await getUserProfile(expediteurId);
           console.log("👤 DEBUG - Profil de l'expéditeur récupéré pour message privé:", expediteurProfile);
+        } catch (error) {
+          console.error("⚠️ ERREUR - Échec de la récupération du profil de l'expéditeur:", error);
         }
         
         // Utiliser les données du profil si disponibles, sinon se rabattre sur les données du message
+        console.log("🔍 DEBUG - ID de l'expéditeur utilisé pour la notification:", expediteurId);
+        
         addNotification({
           type: "privateMessage",
           title: "Nouveau message",
           content: msg.contenu,
-          userId: msg.fk_expediteur || msg.fk_utilisateur,
+          userId: expediteurId, // Utilisation explicite de l'ID que nous avons extrait
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
           senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur")
         });
@@ -146,17 +166,28 @@ const Notifications = () => {
       if (msg.fk_utilisateur !== userId) {
         // Récupérer le profil de l'expéditeur pour avoir des informations complètes
         let expediteurProfile = null;
-        if (msg.fk_utilisateur) {
-          expediteurProfile = await getUserProfile(msg.fk_utilisateur);
+        let expediteurId = msg.fk_utilisateur;
+        
+        if (!expediteurId) {
+          console.error("⚠️ ERREUR - Impossible de déterminer l'ID de l'expéditeur pour le message de canal:", msg);
+          return;
+        }
+        
+        try {
+          expediteurProfile = await getUserProfile(expediteurId);
           console.log("👤 DEBUG - Profil de l'expéditeur récupéré pour message canal:", expediteurProfile);
+        } catch (error) {
+          console.error("⚠️ ERREUR - Échec de la récupération du profil de l'expéditeur:", error);
         }
         
         // Utiliser les données du profil si disponibles, sinon se rabattre sur les données du message
+        console.log("🔍 DEBUG - ID de l'expéditeur utilisé pour la notification:", expediteurId);
+        
         addNotification({
           type: "channelMessage",
           title: `Nouveau message dans ${msg.nom_canal || "canal"}`,
           content: msg.contenu,
-          userId: msg.fk_utilisateur,
+          userId: expediteurId,
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
           senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur"),
           channelId: msg.fk_canal,
@@ -211,8 +242,9 @@ const Notifications = () => {
         
         console.log("🖼️ DEBUG - Avatar URL finale:", avatarUrl);
         console.log("👤 DEBUG - Nom final:", senderName);
+          // Utiliser le composant NotificationBubble pour un affichage cohérent
+        console.log("🚀 DEBUG - Création d'une notification avec userId:", notification.userId);
         
-        // Utiliser le composant NotificationBubble pour un affichage cohérent
         return (
           <NotificationBubble 
             key={notification.id}
