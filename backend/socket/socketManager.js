@@ -5,6 +5,7 @@ import Reaction from "../models/Reaction.js";
 import MessagePrive from "../models/MessagePrive.js";
 import ReactionPrive from "../models/ReactionPrive.js";
 import Fichier from "../models/Fichier.js";
+import Canal from "../models/Canal.js"; // Importation directe du modèle Canal
 import { deleteFromS3 } from "../config/s3Config.js";
 import pool from "../config/dbConnection.js";
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
@@ -498,6 +499,22 @@ const socketManager = (io) => {
 
             io.to(`${canal_id}`).emit("message", fallbackSystemMessage);
           }
+          return;
+        }
+
+        // NOUVELLE VERIFICATION: Vérifier si l'utilisateur a les droits d'écriture sur ce canal
+        const accessCheck = await Canal.checkUserAccess(canal_id, socket.user.id);
+        
+        if (!accessCheck.hasAccess) {
+          console.error(`Socket.IO: Utilisateur ${socket.user.id} n'a pas accès au canal ${canal_id}`);
+          socket.emit("error", { message: "Vous n'avez pas accès à ce canal" });
+          return;
+        }
+        
+        // Vérifier si l'utilisateur a des droits d'écriture
+        if (accessCheck.accessType !== 'lecture_ecriture') {
+          console.error(`Socket.IO: Utilisateur ${socket.user.id} n'a pas les droits d'écriture sur le canal ${canal_id} (${accessCheck.accessType})`);
+          socket.emit("error", { message: "Vous avez un accès en lecture seule à ce canal. Vous ne pouvez pas y envoyer de messages." });
           return;
         }
 

@@ -248,6 +248,20 @@
   color: var(--workspace-details-text-bright, #ffffff);
 }
 
+.access-button.danger {
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+.access-button.danger:hover {
+  background-color: rgba(255, 107, 107, 0.2);
+}
+
+.access-button.danger.active {
+  background-color: rgba(255, 107, 107, 0.3);
+  border-color: rgba(255, 107, 107, 0.6);
+  color: #ff6b6b;
+}
+
 .access-icon {
   font-size: 0.85rem;
 }

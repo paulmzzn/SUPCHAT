@@ -1,5 +1,5 @@
 import React from "react";
-import { FaHashtag, FaLock, FaEye, FaEdit } from "react-icons/fa";
+import { FaHashtag, FaLock } from "react-icons/fa";
 import NotificationBadge from "../../components/NotificationBadge/NotificationBadge";
 import { useNotifications } from "../../context/NotificationContext";
 
@@ -45,10 +45,6 @@ function ChannelList({
         // Get unread count from the notification context
         const channelUnreadCount = unreadCounts?.channels?.[channel.id]?.count || 0;
         
-        // Déterminer le niveau d'accès pour les canaux privés
-        const accessLevel = channel.isPrivate ? (channel.memberAccess || "read") : "write";
-        const isReadOnly = accessLevel === "read";
-          
         return (
           <li
             key={channel.id}
@@ -74,14 +70,6 @@ function ChannelList({
                 </div>
               )}
             </div>
-            
-            {/* Indicateur de droits d'accès pour les canaux privés */}
-            {channel.isPrivate && (
-              <div className={`channel-access-indicator ${isReadOnly ? 'read-only' : 'read-write'}`}
-                   title={isReadOnly ? 'Lecture seule' : 'Lecture et écriture'}>
-                {isReadOnly ? <FaEye className="access-icon" /> : <FaEdit className="access-icon" />}
-              </div>
-            )}
             
             {/* Display notification badge if there are unread messages */}
             {channelUnreadCount > 0 && (
