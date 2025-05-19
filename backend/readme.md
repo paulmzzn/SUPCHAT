@@ -20,7 +20,7 @@ services:
 
 
 
-    hostname: 192.168.1.167
+    hostname: REDACTED
 
 
 ports:
@@ -63,7 +63,7 @@ docker-compose up -d
 ```
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.167:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://REDACTED:5050
 
 
     2.	Connectez-vous avec les identifiants définis dans le docker-compose.yml :
@@ -71,7 +71,7 @@ docker-compose up -d
     •	Mot de passe : root
 
 
-📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://192.168.1.167:5050
+📊 Accéder à pgAdmin 1. Ouvrez votre navigateur et accédez à : http://REDACTED:5050
 
 
     2.	Connectez-vous avec les identifiants définis dans le docker-compose.yml :
