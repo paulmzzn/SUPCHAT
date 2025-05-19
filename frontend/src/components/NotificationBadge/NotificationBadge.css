@@ -73,3 +73,170 @@
     transform: scale(1);
   }
 }
+
+/* Styles pour les bulles de notification */
+.notification-bubble {
+  display: flex;
+  max-width: 350px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  animation: slide-in 0.3s ease;
+}
+
+/* Apparition par la droite */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Variation selon le type de notification */
+.notification-bubble.privateMessage {
+  background-color: rgba(147, 72, 183, 0.1);
+  border-left: 4px solid #9348B7;
+}
+
+.notification-bubble.channelMessage {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 4px solid #3B82F6;
+}
+
+/* En mode sombre */
+[data-theme="dark"] .notification-bubble,
+.theme-dark .notification-bubble {
+  background-color: rgba(32, 33, 36, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .notification-bubble.privateMessage,
+.theme-dark .notification-bubble.privateMessage {
+  border-left: 4px solid #9348B7;
+}
+
+[data-theme="dark"] .notification-bubble.channelMessage,
+.theme-dark .notification-bubble.channelMessage {
+  border-left: 4px solid #3B82F6;
+}
+
+/* Avatar */
+.notification-avatar {
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  position: relative;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #9348B7;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Contenu de la notification */
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.notification-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #777;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.close-btn:hover {
+  opacity: 1;
+}
+
+.notification-message {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: #444;
+}
+
+.notification-time {
+  display: block;
+  font-size: 11px;
+  color: #666;
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* Adaptations pour le mode sombre */
+[data-theme="dark"] .notification-header h4,
+.theme-dark .notification-header h4 {
+  color: #e8eaed;
+}
+
+[data-theme="dark"] .close-btn,
+.theme-dark .close-btn {
+  color: #aaa;
+}
+
+[data-theme="dark"] .notification-message,
+.theme-dark .notification-message {
+  color: #ccc;
+}
+
+[data-theme="dark"] .notification-time,
+.theme-dark .notification-time {
+  color: #999;
+}
+
+/* Hover effect */
+.notification-bubble:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
