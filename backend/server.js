@@ -3,6 +3,7 @@ import pool from "./config/dbConnection.js"; // Importation du pool configuré
 import userRoutes from "./routes/userRoutes.js";
 import workspaceRoutes from "./routes/workspaceRoutes.js";
 import canalRoutes from "./routes/canalRoutes.js";
+import canalMemberRoutes from "./routes/canalMemberRoutes.js"; // Import des routes pour les membres des canaux privés
 import passport from "passport";
 import session from "express-session";
 import cors from "cors"; // Import CORS
@@ -134,6 +135,7 @@ passport.use(githubStrategy);
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api", canalRoutes);
+app.use("/api", canalMemberRoutes); // Ajout des routes pour la gestion des membres des canaux privés
 app.use("/api/messages", messageRoutes);
 app.use("/api", reactionRoutes);
 app.use("/api/private-messages", privateMessageRoutes);

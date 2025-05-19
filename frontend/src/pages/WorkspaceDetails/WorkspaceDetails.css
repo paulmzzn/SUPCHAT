@@ -244,9 +244,25 @@
   color: var(--workspace-details-channel-icon);
 }
 
+.channel-info-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .channel-name {
   color: var(--workspace-details-channel-name);
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-description {
+  font-size: 0.8rem;
+  color: var(--workspace-details-channel-icon);
+  opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3013,4 +3029,137 @@ span.channel-mention:hover,
 
 .chat-input-container {
   position: relative;
+}
+
+/* Indicateurs de droits d'accès pour les canaux privés */
+.channel-access-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 3px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.channel-access-indicator.read-only {
+  background-color: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.channel-access-indicator.read-write {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.channel-item:hover .channel-access-indicator {
+  transform: scale(1.1);
+}
+
+.access-icon {
+  font-size: 0.7rem;
+}
+
+/* Style pour le modal de gestion des membres du canal */
+.channel-members-modal {
+  width: 90%;
+  max-width: 600px;
+}
+
+.channel-members-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.channel-members-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+}
+
+.channel-member-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.channel-member-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.channel-member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+
+.channel-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-member-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: white;
+  margin: 0 0 2px;
+}
+
+.channel-member-role {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.access-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.access-radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.access-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.access-radio-option input[type="radio"] {
+  margin: 0;
+}
+
+.remove-member-btn {
+  background: rgba(244, 67, 54, 0.1);
+  border: none;
+  color: #f44336;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.remove-member-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
 }

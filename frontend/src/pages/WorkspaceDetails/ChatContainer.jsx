@@ -14,9 +14,16 @@ import {
   FaImage,
   FaCode,
   FaVoteYea,
-  FaUser,
-  FaUserCircle,
+
+  FaUsers,
+  FaEye,
+  FaCommentSlash,
+  FaTimes,
+  FaRegSmile,
+  FaPlus,
   FaAt,
+  FaUser,
+
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -66,6 +73,10 @@ function ChatContainer({
   renderTextWithLinks,
   isUuid,
   setShowVideoCallModal,
+  handleManageChannelMembers,
+  isChannelPrivate,
+  canManageMembers,
+  currentUserAccessRight,
   handleOpenStrawpollVote,
   showChannelSuggestions,
   channelSuggestions,
@@ -73,7 +84,10 @@ function ChatContainer({
   handleChannelSuggestionNavigation,
   handleSelectActiveChannelSuggestion,
   handleSelectChannelSuggestion,
+
 }) {
+  const canWriteInChannel = activeChannel?.isPrivate ? currentUserAccessRight === "lecture_ecriture" : true;
+
   return (
     <div className="workspace-content-area">
       <div className="glow-circle-right top-right"></div>
@@ -103,6 +117,11 @@ function ChatContainer({
                 <FaVideo />
                 <span>Appel vidéo</span>
               </button>
+              {isChannelPrivate && currentUserAccessRight === "read" && (
+                <div className="read-only-indicator" title="Canal en lecture seule">
+                  <FaEye /> Lecture seule
+                </div>
+              )}
             </div>
           </div>
           <div className="chat-messages" ref={chatContainerRef}>
@@ -324,6 +343,80 @@ function ChatContainer({
                         } else {
                           return (
                             <div className="message-text">
+
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ node, ...props }) => (
+                                    <p
+                                      {...props}
+                                      className="message-paragraph"
+                                    />
+                                  ),
+                                  a: ({ node, href, children, ...props }) => {
+                                    const mentionMatch =
+                                      Array.isArray(children) &&
+                                      children[0]?.props?.children &&
+                                      typeof children[0].props.children ===
+                                        "string" &&
+                                      children[0].props.children.match(
+                                        /^@(.+)$/
+                                      );
+
+                                    if (mentionMatch && isUuid(href)) {
+                                      const mentionName = mentionMatch[1];
+                                      const isCurrentUser =
+                                        href === currentUserId;
+                                      return (
+                                        <span
+                                          className={`mention-highlight ${
+                                            isCurrentUser
+                                              ? "current-user-mention"
+                                              : ""
+                                          }`}
+                                          data-userid={href}
+                                        >
+                                          @{mentionName}
+                                        </span>
+                                      );
+                                    }
+
+                                    if (
+                                      systemMsg &&
+                                      href &&
+                                      href.includes("strawpoll.com")
+                                    ) {
+                                      return (
+                                        <a
+                                          href={href}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="message-link"
+                                        >
+                                          {children}
+                                        </a>
+                                      );
+                                    }
+                                    return (
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="message-link"
+                                      >
+                                        {children}
+                                      </a>
+                                    );
+                                  },
+                                  text: ({ node, ...props }) => (
+                                    <>{renderTextWithLinks(node.value)}</>
+                                  ),
+                                }}
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                              >
+                                {message.contenu || ""}
+                              </ReactMarkdown>
+
                               {message.file_url ? (
                                 // Affichage des fichiers
                                 <div className="message-file">
@@ -349,6 +442,7 @@ function ChatContainer({
                                   {renderTextWithLinks(message.contenu)}
                                 </p>
                               )}
+
                             </div>
                           );
                         }
@@ -456,98 +550,118 @@ function ChatContainer({
                 </div>
               </div>
             )}
-          </div>{" "}
-          <div className="chat-input-area">
-            {showMentionSuggestions &&
-              mentionSuggestions &&
-              mentionSuggestions.length > 0 && (
+
+          </div>
+
+          {canWriteInChannel ? (
+            <div className="chat-input-area">
+              {showMentionSuggestions && (
                 <div id="supchat-mentions-dropdown">
                   <div id="supchat-mentions-header">
-                    <span>
-                      <FaAt />
-                    </span>
+                    <span>@</span>
                     <span>Mentionner un utilisateur</span>
                   </div>
                   <div id="supchat-mentions-list">
-                    {mentionSuggestions.map((user, index) => (
-                      <button
-                        key={user.id}
-                        className={`supchat-mention-item ${
-                          index === activeMentionIndex ? "active" : ""
-                        }`}
-                        onClick={() => handleSelectMention(user)}
-                        type="button"
-                      >
-                        {user.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={user.name}
-                            className="supchat-user-avatar"
-                          />
-                        ) : (
-                          <FaUserCircle style={{ marginRight: 6 }} />
-                        )}
-                        <span className="supchat-user-name">{user.name}</span>
-                        <span className="supchat-user-status">
-                          {user.isOnline ? "En ligne" : "Hors ligne"}
-                        </span>
-                      </button>
-                    ))}
+                    {mentionSuggestions.length > 0 ? (
+                      mentionSuggestions.map((user, index) => (
+                        <button
+                          key={user.id}
+                          className={`supchat-mention-item ${
+                            index === activeMentionIndex ? "active" : ""
+                          }`}
+                          onClick={() => handleSelectMention(user)}
+                        >
+                          <div className="supchat-mention-avatar-wrapper">
+                            {user.avatar ? (
+                              <img
+                                src={user.avatar}
+                                alt={user.name}
+                                className="supchat-mention-avatar"
+                              />
+                            ) : (
+                              <div className="supchat-mention-avatar">
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            {user.isBot && (
+                              <div className="supchat-mention-bot-badge">
+                                <FaRobot style={{ fontSize: "8px" }} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="supchat-mention-details">
+                            <div className="supchat-mention-name">
+                              {user.name}
+                            </div>
+                            <div className="supchat-mention-info">
+                              {user.isBot ? (
+                                <>Assistant IA</>
+                              ) : (
+                                <>
+                                  <span
+                                    className={`supchat-mention-status ${
+                                      user.status || "offline"
+                                    }`}
+                                  ></span>
+                                  {user.status === "online"
+                                    ? "En ligne"
+                                    : "Hors ligne"}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="supchat-mention-no-results">
+                        Aucun utilisateur ne correspond à votre recherche
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
-            {showChannelSuggestions &&
-              channelSuggestions &&
-              channelSuggestions.length > 0 && (
-                <div id="supchat-channels-dropdown">
-                  <div id="supchat-channels-header">
-                    <span>#</span>
-                    <span>Mentionner un canal</span>
+
+              <form
+                className="chat-input-container"
+                onSubmit={handleSendMessageWithMistralCheck}
+              >
+                {replyingTo && (
+                  <div className="replying-to">
+                    <div className="reply-info">
+                      <FaReply className="reply-icon" />
+                      <span>
+                        Réponse à <strong>{replyingTo.nom}</strong>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="cancel-reply"
+                      onClick={handleCancelReply}
+                    >
+                      ×
+                    </button>
+
                   </div>
-                  <div id="supchat-channels-list">
-                    {channelSuggestions.map((canal, index) => (
-                      <button
-                        key={canal.id}
-                        className={`supchat-channel-item ${
-                          index === activeChannelSuggestionIndex ? "active" : ""
-                        }`}
-                        onClick={() => handleSelectChannelSuggestion(canal)}
-                        type="button"
-                      >
-                        <FaHashtag style={{ marginRight: 6 }} />
-                        <span className="supchat-channel-name">
-                          {canal.name}
-                        </span>
-                        {canal.isPrivate && (
-                          <FaLock style={{ marginLeft: 6, fontSize: 10 }} />
-                        )}
-                        <span className="supchat-channel-desc">
-                          {canal.description}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            <form
-              className="chat-input-container"
-              onSubmit={handleSendMessageWithMistralCheck}
-            >
-              {replyingTo && (
-                <div className="replying-to">
-                  <div className="reply-info">
-                    <FaReply className="reply-icon" />
-                    <span>
-                      Réponse à <strong>{replyingTo.nom}</strong>
-                    </span>
-                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  style={{ display: "none" }}
+                  id="file-upload-input"
+                />
+                <div className="chat-input-wrapper">
                   <button
                     type="button"
-                    className="cancel-reply"
-                    onClick={handleCancelReply}
+                    className="chat-attachment-btn"
+                    onClick={() =>
+                      fileInputRef.current && fileInputRef.current.click()
+                    }
+                    title="Ajouter un fichier"
                   >
-                    ×
+                    <FaPaperclip />
                   </button>
+
                 </div>
               )}
               <input
@@ -626,26 +740,77 @@ function ChatContainer({
               {showToolbox && (
                 <div className="chat-toolbox-menu">
                   <button
-                    className="chat-toolbox-item"
-                    onClick={handleOpenStrawpoll}
+                    type="button"
+                    className={`chat-toolbox-btn ${showToolbox ? "active" : ""}`}
+                    title="Outils"
+                    onClick={handleToggleToolbox}
                   >
-                    <FaPoll className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">Créer un sondage</span>
+                    <FaTools />
+                    <span className="toolbox-tooltip">Outils</span>
                   </button>
-                  <button className="chat-toolbox-item">
-                    <FaImage className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">
-                      Rechercher une image
-                    </span>
-                  </button>
-                  <button className="chat-toolbox-item">
-                    <FaCode className="toolbox-item-icon" />
-                    <span className="toolbox-item-text">Formater du code</span>
+                  <button
+                    type="submit"
+                    className="chat-send-btn"
+                    disabled={!displayMessage.trim()}
+                    aria-label="Envoyer le message"
+                    title="Envoyer"
+                  >
+                    <FaPaperPlane />
+                    <span className="send-btn-pulse"></span>
                   </button>
                 </div>
-              )}
-            </form>
-          </div>
+                {showToolbox && (
+                  <div className="chat-toolbox-menu">
+                    <button
+                      className="chat-toolbox-item"
+                      onClick={handleOpenStrawpoll}
+                    >
+                      <FaPoll className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">Créer un sondage</span>
+                    </button>
+                    <button className="chat-toolbox-item">
+                      <FaImage className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">
+                        Rechercher une image
+                      </span>
+                    </button>
+                    <button className="chat-toolbox-item">
+                      <FaCode className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">Formater du code</span>
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+          ) : (
+            <div className="read-only-message" style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px 20px',
+              margin: '10px 20px',
+              background: 'linear-gradient(145deg, rgba(40, 40, 45, 0.4), rgba(50, 50, 55, 0.3))',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+              color: 'rgba(255, 255, 255, 0.7)',
+              textAlign: 'center'
+            }}>
+              <FaCommentSlash style={{
+                fontSize: '1.5rem',
+                color: '#ff4757',
+                marginRight: '10px',
+                filter: 'drop-shadow(0 1px 3px rgba(255, 71, 87, 0.4))'
+              }} />
+              <p style={{
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                letterSpacing: '0.02em',
+                margin: '0'
+              }}>Vous êtes en lecture seule dans ce canal</p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import pool from "../config/dbConnection.js";  // Ajout de l'import pour pool
+import Canal from "../models/Canal.js"; // Import du modèle Canal pour vérifier l'accès
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -183,6 +184,103 @@ export const checkWorkspaceAdmin = async (req, res, next) => {
     console.error("Erreur lors de la vérification des permissions:", error);
     return res.status(500).json({ 
       message: "Erreur lors de la vérification des permissions.", 
+      error: error.message 
+    });
+  }
+};
+
+// Middleware pour vérifier l'accès à un canal selon les droits
+export const checkCanalAccess = async (req, res, next) => {
+  try {
+    // Vérifier que l'utilisateur est authentifié
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Authentification requise." });
+    }
+    
+    // Récupérer l'ID du canal depuis les paramètres de route
+    const canalId = req.params.canalId || req.params.channelId;
+    
+    if (!canalId) {
+      console.error("checkCanalAccess: ID de canal manquant dans les paramètres", { 
+        params: req.params, 
+        url: req.originalUrl 
+      });
+      return res.status(400).json({ 
+        message: "ID de canal non fourni.",
+        error: "canal_id_missing",
+        params: req.params
+      });
+    }
+    
+    // Utiliser la méthode du modèle Canal pour vérifier l'accès
+    const accessCheck = await Canal.checkUserAccess(canalId, req.user.id);
+    
+    if (!accessCheck.hasAccess) {
+      return res.status(403).json({ 
+        message: accessCheck.message || "Accès refusé à ce canal privé.",
+        error: "canal_access_denied"
+      });
+    }
+    
+    // Ajouter le type d'accès à la requête pour y accéder dans le contrôleur
+    req.canalAccessType = accessCheck.accessType;
+    req.isAdmin = accessCheck.isAdmin || false;
+    
+    // Si l'accès est autorisé, poursuivre
+    next();
+  } catch (error) {
+    console.error("Erreur lors de la vérification d'accès au canal:", error);
+    return res.status(500).json({ 
+      message: "Erreur lors de la vérification d'accès au canal.", 
+      error: error.message 
+    });
+  }
+};
+
+// Middleware pour vérifier les droits d'écriture dans un canal
+export const checkCanalWriteAccess = async (req, res, next) => {
+  try {
+    // Vérifier que l'utilisateur est authentifié
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Authentification requise." });
+    }
+    
+    // Récupérer l'ID du canal depuis les paramètres de route
+    const canalId = req.params.canalId;
+    
+    if (!canalId) {
+      return res.status(400).json({ message: "ID de canal non fourni." });
+    }
+    
+    // Utiliser la méthode du modèle Canal pour vérifier l'accès
+    const accessCheck = await Canal.checkUserAccess(canalId, req.user.id);
+    
+    if (!accessCheck.hasAccess) {
+      return res.status(403).json({ 
+        message: accessCheck.message || "Accès refusé à ce canal privé.",
+        error: "canal_access_denied"
+      });
+    }
+    
+    // Vérifier que l'utilisateur a des droits d'écriture (lecture_ecriture)
+    if (accessCheck.accessType !== 'lecture_ecriture') {
+      return res.status(403).json({ 
+        message: "Vous n'avez pas les droits d'écriture dans ce canal.",
+        error: "canal_write_access_denied",
+        accessType: accessCheck.accessType
+      });
+    }
+    
+    // Ajouter le type d'accès à la requête pour y accéder dans le contrôleur
+    req.canalAccessType = accessCheck.accessType;
+    req.isAdmin = accessCheck.isAdmin || false;
+    
+    // Si l'utilisateur a des droits d'écriture, poursuivre
+    next();
+  } catch (error) {
+    console.error("Erreur lors de la vérification des droits d'écriture au canal:", error);
+    return res.status(500).json({ 
+      message: "Erreur lors de la vérification des droits d'écriture au canal.", 
       error: error.message 
     });
   }
