@@ -14,6 +14,7 @@ import StrawpollModalWrapper from "./StrawpollModalWrapper";
 import VideoCallModal from "./VideoCallModal";
 import StrawpollWebviewModal from "./StrawpollWebviewModal";
 import ChannelMembersModal from "./ChannelMembersModal"; // Importer la nouvelle modal
+import MemberAccessModal from "./MemberAccessModal"; // Importer notre nouvelle modale de droits d'accès
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -62,6 +63,8 @@ function WorkspaceDetails() {
   const [isMember, setIsMember] = useState(null);
   const [membershipChecking, setMembershipChecking] = useState(true);
   const [showChannelMembersModal, setShowChannelMembersModal] = useState(false);
+  const [showMemberAccessModal, setShowMemberAccessModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   useEffect(() => {
     async function checkWorkspaceMembership() {
@@ -422,6 +425,7 @@ function WorkspaceDetails() {
 
         // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
         // Ce qui évite les problèmes de timeout avec Socket.IO
+        // Ce qui évite les problèmes de timeout avec Socket.IO
         const response = await fetch(`${API_URL}/api/messages/upload`, {
           method: "POST",
           headers: {
@@ -653,6 +657,52 @@ function WorkspaceDetails() {
     }
   };
 
+  const handleOpenMemberAccessModal = (member) => {
+    setSelectedMember(member);
+    setShowMemberAccessModal(true);
+    handleCloseMemberContextMenu();
+  };
+
+  const handleCloseMemberAccessModal = () => {
+    setShowMemberAccessModal(false);
+    setSelectedMember(null);
+  };
+
+  // Fonction pour gérer les droits d'accès des membres aux canaux privés
+  const handleSetMemberChannelAccess = async (memberId, accessType) => {
+    if (!activeChannel || !activeChannel.isPrivate) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_URL}/api/canaux/${activeChannel.id}/members/${memberId}/access`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ accessType }),
+        }
+      );
+      
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || "Erreur lors de la modification des droits d'accès");
+      } else {
+        // Rafraîchir le canal actif pour mettre à jour les informations
+        if (typeof fetchActiveChannel === 'function') {
+          fetchActiveChannel(activeChannel.id);
+        }
+      }
+    } catch (e) {
+      console.error("Erreur lors de la modification des droits d'accès:", e);
+      alert("Une erreur est survenue lors de la modification des droits d'accès");
+    } finally {
+      handleCloseMemberContextMenu();
+    }
+  };
+
   if (membershipChecking) {
     return (
       <div className="app-layout">
@@ -806,6 +856,9 @@ function WorkspaceDetails() {
           S3_BASE_URL={S3_BASE_URL}
           handleOpenFileViewer={handleOpenFileViewer}
           workspace={workspace}
+          activeChannel={activeChannel}
+          handleSetMemberChannelAccess={handleSetMemberChannelAccess}
+          handleOpenMemberAccessModal={handleOpenMemberAccessModal}
         />
 
         {showCreateChannelModal && (
@@ -866,6 +919,7 @@ function WorkspaceDetails() {
             workspaceMembers={members.online.concat(members.offline)}
             currentUserRole={currentUserRole}
             onMembersUpdated={handleChannelMembersUpdated}
+            onSetMemberAccess={handleSetMemberChannelAccess}
           />
         )}
 
@@ -942,6 +996,15 @@ function WorkspaceDetails() {
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}
         />
+
+        {showMemberAccessModal && selectedMember && (
+          <MemberAccessModal
+            show={showMemberAccessModal}
+            onClose={handleCloseMemberAccessModal}
+            member={selectedMember}
+            workspaceId={workspaceId}
+          />
+        )}
       </div>
     </div>
   );

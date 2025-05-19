@@ -6,6 +6,9 @@ import {
   updateCanal,
   deleteCanal,
   getCanalFiles,
+  getPrivateCanals,
+  getMemberChannelAccess,
+  updateMemberChannelAccess
 } from "../controllers/canalController.js";
 import { 
   verifyToken, 
@@ -30,6 +33,11 @@ router.delete(
   checkWorkspaceAdmin,
   deleteCanal
 );
+
+// Routes pour les canaux privés et gestion des droits d'accès
+router.get("/workspaces/:workspaceId/canaux/private", verifyToken, checkWorkspaceMembership, getPrivateCanals);
+router.get("/workspaces/:workspaceId/members/:memberId/channel-access", verifyToken, checkWorkspaceMembership, checkWorkspaceAdmin, getMemberChannelAccess);
+router.put("/canaux/:canalId/members/:memberId/access", verifyToken, updateMemberChannelAccess);
 
 // Route pour récupérer tous les fichiers d'un canal
 router.get("/canals/:canalId/files", verifyToken, checkCanalAccess, getCanalFiles);

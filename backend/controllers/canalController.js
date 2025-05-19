@@ -214,3 +214,192 @@ export const getCanalFiles = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Récupérer tous les canaux privés d'un workspace
+export const getPrivateCanals = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+    
+    // Vérifier que l'utilisateur est membre du workspace
+    const membershipCheck = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, userId]
+    );
+    
+    if (!membershipCheck.rows.length) {
+      return res.status(403).json({ message: "Vous n'êtes pas membre de ce workspace" });
+    }
+    
+    // Vérifier si l'utilisateur est admin ou propriétaire
+    const isAdminOrOwner = membershipCheck.rows[0].fk_role === 1 || membershipCheck.rows[0].fk_role === 2;
+    
+    // Si non admin, on vérifie que l'utilisateur a accès à ces canaux
+    let query;
+    let params;
+    
+    if (isAdminOrOwner) {
+      // Pour les admins/owners, on récupère tous les canaux privés
+      query = `
+        SELECT c.* FROM canal c 
+        WHERE c.fk_workspace = $1 AND c.is_private = true
+        ORDER BY c.nom ASC
+      `;
+      params = [workspaceId];
+    } else {
+      // Pour les membres standards, on récupère uniquement les canaux privés auxquels ils ont accès
+      query = `
+        SELECT c.* FROM canal c
+        LEFT JOIN membre_canal mc ON c.id_canal = mc.fk_canal
+        WHERE c.fk_workspace = $1 
+        AND c.is_private = true
+        AND mc.fk_utilisateur = $2
+        ORDER BY c.nom ASC
+      `;
+      params = [workspaceId, userId];
+    }
+    
+    const result = await pool.query(query, params);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des canaux privés:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Récupérer les droits d'accès d'un membre pour tous les canaux privés
+export const getMemberChannelAccess = async (req, res) => {
+  try {
+    const { workspaceId, memberId } = req.params;
+    const userId = req.user.id;
+    
+    // Vérifier que l'utilisateur qui fait la requête est admin ou owner
+    const currentUserRole = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, userId]
+    );
+    
+    if (!currentUserRole.rows.length || (currentUserRole.rows[0].fk_role !== 1 && currentUserRole.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ message: "Seuls les admins ou propriétaires peuvent consulter les droits d'accès" });
+    }
+    
+    // Vérifier que le membre ciblé fait partie du workspace
+    const memberCheck = await pool.query(
+      "SELECT 1 FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [workspaceId, memberId]
+    );
+    
+    if (!memberCheck.rows.length) {
+      return res.status(404).json({ message: "Utilisateur non trouvé dans ce workspace" });
+    }
+    
+    // Récupérer tous les accès aux canaux privés pour ce membre
+    const query = `
+      SELECT mc.fk_canal as "canalId", mc.droit_acces as "accessType" 
+      FROM membre_canal mc
+      JOIN canal c ON mc.fk_canal = c.id_canal
+      WHERE c.fk_workspace = $1 
+      AND mc.fk_utilisateur = $2
+      AND c.is_private = true
+    `;
+    
+    const result = await pool.query(query, [workspaceId, memberId]);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des droits d'accès:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Modifier les droits d'accès d'un membre pour un canal spécifique
+export const updateMemberChannelAccess = async (req, res) => {
+  try {
+    const { canalId, memberId } = req.params;
+    const { accessType } = req.body;
+    const userId = req.user.id;
+    
+    // Vérifier que le canal existe
+    const canalCheck = await pool.query(
+      "SELECT fk_workspace, is_private FROM canal WHERE id_canal = $1",
+      [canalId]
+    );
+    
+    if (!canalCheck.rows.length) {
+      return res.status(404).json({ message: "Canal non trouvé" });
+    }
+    
+    const canal = canalCheck.rows[0];
+    
+    // Vérifier que le canal est privé
+    if (!canal.is_private) {
+      return res.status(400).json({ message: "Ce canal n'est pas privé, pas besoin de gérer les droits d'accès" });
+    }
+    
+    // Vérifier que l'utilisateur qui fait la requête est admin ou owner du workspace
+    const currentUserRole = await pool.query(
+      "SELECT fk_role FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [canal.fk_workspace, userId]
+    );
+    
+    if (!currentUserRole.rows.length || (currentUserRole.rows[0].fk_role !== 1 && currentUserRole.rows[0].fk_role !== 2)) {
+      return res.status(403).json({ message: "Seuls les admins ou propriétaires peuvent modifier les droits d'accès" });
+    }
+    
+    // Vérifier que le membre ciblé fait partie du workspace
+    const memberCheck = await pool.query(
+      "SELECT 1 FROM membre_workspace WHERE fk_workspace = $1 AND fk_utilisateur = $2",
+      [canal.fk_workspace, memberId]
+    );
+    
+    if (!memberCheck.rows.length) {
+      return res.status(404).json({ message: "Utilisateur non trouvé dans ce workspace" });
+    }
+    
+    // Valider le type d'accès
+    if (accessType !== 'lecture' && accessType !== 'lecture_ecriture') {
+      return res.status(400).json({ message: "Type d'accès invalide. Valeurs acceptées : lecture, lecture_ecriture" });
+    }
+    
+    // Vérifier si le membre a déjà un accès à ce canal
+    const existingAccess = await pool.query(
+      "SELECT 1 FROM membre_canal WHERE fk_canal = $1 AND fk_utilisateur = $2",
+      [canalId, memberId]
+    );
+    
+    let result;
+    
+    if (existingAccess.rows.length) {
+      // Mettre à jour l'accès existant
+      result = await pool.query(
+        "UPDATE membre_canal SET droit_acces = $1 WHERE fk_canal = $2 AND fk_utilisateur = $3 RETURNING *",
+        [accessType, canalId, memberId]
+      );
+    } else {
+      // Créer un nouvel accès
+      result = await pool.query(
+        "INSERT INTO membre_canal (fk_canal, fk_utilisateur, droit_acces) VALUES ($1, $2, $3) RETURNING *",
+        [canalId, memberId, accessType]
+      );
+    }
+    
+    // Notifier via socket.io si disponible
+    const io = req.app.get('io');
+    if (io) {
+      io.to(canal.fk_workspace).emit('channel_access_updated', { 
+        canalId, 
+        userId: memberId, 
+        accessType 
+      });
+    }
+    
+    res.status(200).json({
+      canalId,
+      memberId,
+      accessType,
+      message: "Droits d'accès mis à jour avec succès"
+    });
+  } catch (error) {
+    console.error("Erreur lors de la modification des droits d'accès:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

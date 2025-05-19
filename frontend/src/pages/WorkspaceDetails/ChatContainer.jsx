@@ -106,15 +106,6 @@ function ChatContainer({
                 <FaVideo />
                 <span>Appel vidéo</span>
               </button>
-              {isChannelPrivate && canManageMembers && (
-                <button
-                  className="manage-members-button"
-                  onClick={handleManageChannelMembers}
-                  title="Gérer les membres"
-                >
-                  <FaUsers />
-                </button>
-              )}
               {isChannelPrivate && currentUserAccessRight === "read" && (
                 <div className="read-only-indicator" title="Canal en lecture seule">
                   <FaEye /> Lecture seule

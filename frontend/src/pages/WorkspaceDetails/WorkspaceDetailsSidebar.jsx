@@ -18,6 +18,9 @@ import {
   FaBell,
   FaCheck,
   FaTimes,
+  FaEdit,
+  FaEye,
+  FaUserCog,
 } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
@@ -60,6 +63,9 @@ function WorkspaceDetailsSidebar({
   S3_BASE_URL,
   handleOpenFileViewer,
   workspace,
+  activeChannel,
+  handleSetMemberChannelAccess,
+  handleOpenMemberAccessModal,
 }) {
   const { userStatuses, setUserStatus } = useSocket();
 
@@ -491,9 +497,9 @@ function WorkspaceDetailsSidebar({
       case "online":
         return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z";
       case "away":
-        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z";
+        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200-200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z";
       case "dnd":
-        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm101.8-262.2L295.6 256l62.2 62.2c4.7 4.7 4.7 12.3 0 17l-22.6 22.6c-4.7 4.7-12.3 4.7-17 0L256 295.6l-62.2 62.2c-4.7 4.7-12.3 4.7-17 0l-22.6-22.6c-4.7-4.7-4.7-12.3 0-17l62.2-62.2-62.2-62.2c-4.7-4.7-4.7-12.3 0-17l22.6-22.6c4.7-4.7 12.3-4.7 17 0l62.2 62.2 62.2-62.2c4.7-4.7 12.3-4.7 17 0l22.6 22.6c4.7 4.7 4.7 12.3 0 17z";
+        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200-200-89.5 200-200 200zm101.8-262.2L295.6 256l62.2 62.2c4.7 4.7 4.7 12.3 0 17l-22.6 22.6c-4.7 4.7-12.3 4.7-17 0L256 295.6l-62.2 62.2c-4.7 4.7-12.3 4.7-17 0l-22.6-22.6c-4.7-4.7-4.7-12.3 0-17l62.2-62.2-62.2-62.2c-4.7-4.7-4.7-12.3 0-17l22.6-22.6c4.7-4.7 12.3-4.7 17 0l62.2 62.2 62.2-62.2c4.7-4.7 12.3-4.7 17 0l22.6 22.6c4.7 4.7 4.7 12.3 0 17z";
       case "invisible":
       default:
         return "M248 12.8c-137 0-248 111-248 248s111 248 248 248 248-111 248-248-111-248-248-248zm0 48c110.5 0 200 89.5 200 200s-89.5 200-200 200-200-89.5-200-200 89.5-200 200-200zm0 304c-57.9 0-105.9-43.1-113.8-99.2 9.1 1.2 18.4 1.9 27.8 1.9 105.8 0 192-86.2 192-192 0-9.4-.7-18.7-1.9-27.8 56.2 7.9 99.2 55.9 99.2 113.8 0 62.8-51.2 114-114.3 114z";
@@ -781,7 +787,6 @@ function WorkspaceDetailsSidebar({
               className="context-menu-item"
               onClick={() => handleChangeMemberRole("admin")}
             >
-              {" "}
               <FaArrowUp className="context-menu-icon" />
               Promouvoir en admin
             </div>
@@ -792,11 +797,19 @@ function WorkspaceDetailsSidebar({
                 className="context-menu-item"
                 onClick={() => handleChangeMemberRole("member")}
               >
-                {" "}
                 <FaArrowDown className="context-menu-icon" />
                 Rétrograder en membre
               </div>
-            )}
+          )}
+          {(currentUserRole === "owner" || currentUserRole === "admin") && (
+            <div
+              className="context-menu-item"
+              onClick={() => handleOpenMemberAccessModal(memberContextMenu.member)}
+            >
+              <FaUserCog className="context-menu-icon" />
+              Gérer les droits d'accès
+            </div>
+          )}
         </div>
       )}
       {files.length > 0 && (
