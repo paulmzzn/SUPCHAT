@@ -24,6 +24,8 @@ import { NotificationSettingsProvider } from "./context/NotificationSettingsCont
 import SoundTest from "./pages/SoundTest/SoundTest";
 import { AuthProvider } from "./context/AuthContext";
 import Notifications from "./components/Notifications/Notifications";
+// Importer le ToastProvider pour l'utiliser au niveau de l'app
+import ToastProvider from "./components/Toast/ToastProvider";
 
 // Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
 if (process.env.NODE_ENV === "development") {

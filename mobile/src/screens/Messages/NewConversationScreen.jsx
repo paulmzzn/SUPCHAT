@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -15,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStyles } from "./NewConversationScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.167:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.172:3000";
 
 const NewConversationScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();

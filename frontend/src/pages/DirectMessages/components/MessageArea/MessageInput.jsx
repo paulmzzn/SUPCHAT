@@ -1,5 +1,5 @@
 // Composant pour la saisie de messages
-import React from "react";
+import React, { useEffect } from "react";
 import { FaPaperPlane, FaPaperclip, FaTimes } from "react-icons/fa";
 import MentionSuggestions from "./MentionSuggestions";
 
@@ -27,6 +27,26 @@ const MessageInput = ({
   activeMentionIndex,
   onMentionSelect,
 }) => {
+  // Dans un useEffect de MessageInput
+  useEffect(() => {
+    const handleForceReply = () => {
+      try {
+        const replyData = localStorage.getItem("dm_reply_to");
+        if (replyData) {
+          const message = JSON.parse(replyData);
+          // Simuler l'affichage de la réponse localement
+          setLocalReplyingTo(message);
+          localStorage.removeItem("dm_reply_to");
+        }
+      } catch (e) {
+        console.error("Erreur lors du forçage de la réponse:", e);
+      }
+    };
+
+    window.addEventListener("dm_force_reply", handleForceReply);
+    return () => window.removeEventListener("dm_force_reply", handleForceReply);
+  }, []);
+
   return (
     <form className="dm-input-form" onSubmit={onSubmit}>
       {/* Zone de réponse */}

@@ -4,7 +4,21 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 const NotificationSettingsContext = createContext();
 
 export function useNotificationSettings() {
-  return useContext(NotificationSettingsContext);
+  const context = useContext(NotificationSettingsContext);
+  // Retourner un objet par défaut si le contexte est null
+  return (
+    context || {
+      notificationSettings: {
+        messages: true,
+        mentions: true,
+        sounds: true,
+        email: false,
+        desktop: true,
+      },
+      updateNotificationSettings: () => {},
+      getNotificationSetting: () => true,
+    }
+  );
 }
 
 export function NotificationSettingsProvider({ children }) {
