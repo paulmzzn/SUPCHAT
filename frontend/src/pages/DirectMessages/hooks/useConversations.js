@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.181:3000";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs
