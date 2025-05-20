@@ -786,12 +786,9 @@ export const exportRgpdData = async (req, res) => {
     );
     const invitations = invitationsResult.rows;
 
-    // 13. Demandes d’accès workspaces
-    const demandesResult = await pool.query(
-      "SELECT fk_workspace, is_accepted, is_invitation, date_creation, date_reponse FROM workspace_requests WHERE fk_utilisateur = $1",
-      [userId]
-    );
-    const demandes = demandesResult.rows;
+
+    // 13. Demandes d’accès workspaces (désactivé, table supprimée)
+    const demandes = [];
 
     // 14. Push subscriptions
     const pushResult = await pool.query(
@@ -814,7 +811,7 @@ export const exportRgpdData = async (req, res) => {
       reactions,
       reactions_prive,
       invitations,
-      demandes,
+      demandes, // sera toujours []
       push_subscriptions,
     };
 
