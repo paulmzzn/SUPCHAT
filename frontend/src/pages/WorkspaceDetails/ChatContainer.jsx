@@ -745,18 +745,7 @@ function ChatContainer({
                         Créer un sondage
                       </span>
                     </button>
-                    <button className="chat-toolbox-item">
-                      <FaImage className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">
-                        Rechercher une image
-                      </span>
-                    </button>
-                    <button className="chat-toolbox-item">
-                      <FaCode className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">
-                        Formater du code
-                      </span>
-                    </button>
+                    {/* Les boutons "Rechercher une image" et "Formater du code" ont été supprimés */}
                   </div>
                 )}
               </form>
