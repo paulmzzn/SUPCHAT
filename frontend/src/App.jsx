@@ -25,6 +25,8 @@ import SoundTest from "./pages/SoundTest/SoundTest";
 import { AuthProvider } from "./context/AuthContext";
 import Notifications from "./components/Notifications/Notifications";
 
+import CGUPage from "./pages/CGUPage";
+
 // Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
 if (process.env.NODE_ENV === "development") {
   window.addEventListener("userStatusChanged", (event) => {

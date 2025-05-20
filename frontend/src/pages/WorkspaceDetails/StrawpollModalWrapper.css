@@ -1,5 +1,5 @@
 /* Styles pour le modal de création de sondage Strawpoll */
-.modal-overlay {
+.strawpoll-modal-wrapper .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -14,7 +14,7 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-.modal-content {
+.strawpoll-modal-wrapper .modal-content {
   background-color: var(--modal-bg, #1e1e2e);
   border-radius: 12px;
   width: 90%;
@@ -29,12 +29,12 @@
 }
 
 /* Styles spécifiques pour le contenu du modal de sondage */
-.strawpoll-modal {
+.strawpoll-modal-wrapper .strawpoll-modal {
   padding: 24px;
   color: var(--text-color, #fff);
 }
 
-.strawpoll-modal h2 {
+.strawpoll-modal-wrapper .strawpoll-modal h2 {
   margin-top: 0;
   margin-bottom: 20px;
   font-size: 1.4rem;
@@ -45,22 +45,22 @@
   gap: 10px;
 }
 
-.strawpoll-modal h2 svg {
+.strawpoll-modal-wrapper .strawpoll-modal h2 svg {
   color: var(--primary-color, #8a56ac);
 }
 
-.form-group {
+.strawpoll-modal-wrapper .form-group {
   margin-bottom: 20px;
 }
 
-.form-group label {
+.strawpoll-modal-wrapper .form-group label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
   color: var(--label-color, rgba(255, 255, 255, 0.9));
 }
 
-.form-group input[type="text"] {
+.strawpoll-modal-wrapper .form-group input[type="text"] {
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
@@ -70,14 +70,14 @@
   transition: all 0.2s;
 }
 
-.form-group input[type="text"]:focus {
+.strawpoll-modal-wrapper .form-group input[type="text"]:focus {
   outline: none;
   border-color: var(--primary-color, #8a56ac);
   background-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 0 0 2px rgba(138, 86, 172, 0.25);
 }
 
-.form-group button {
+.strawpoll-modal-wrapper .form-group button {
   background-color: rgba(255, 255, 255, 0.08);
   color: var(--button-text, rgba(255, 255, 255, 0.85));
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -88,25 +88,25 @@
   transition: all 0.2s;
 }
 
-.form-group button:hover {
+.strawpoll-modal-wrapper .form-group button:hover {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-.form-group button[type="button"] {
+.strawpoll-modal-wrapper .form-group button[type="button"] {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
 }
 
-.modal-actions {
+.strawpoll-modal-wrapper .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
 }
 
-.cancel-btn {
+.strawpoll-modal-wrapper .cancel-btn {
   background-color: transparent;
   color: var(--text-color, rgba(255, 255, 255, 0.85));
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -117,11 +117,11 @@
   transition: all 0.2s;
 }
 
-.cancel-btn:hover {
+.strawpoll-modal-wrapper .cancel-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.create-btn {
+.strawpoll-modal-wrapper .create-btn {
   background: linear-gradient(
     135deg,
     var(--primary-color, #8a56ac),
@@ -140,18 +140,18 @@
   gap: 8px;
 }
 
-.create-btn:hover {
+.strawpoll-modal-wrapper .create-btn:hover {
   background: linear-gradient(135deg, #9760bb, #774792);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(138, 86, 172, 0.35);
 }
 
-.create-btn:active {
+.strawpoll-modal-wrapper .create-btn:active {
   transform: translateY(1px);
   box-shadow: 0 2px 8px rgba(138, 86, 172, 0.25);
 }
 
-.error-message {
+.strawpoll-modal-wrapper .error-message {
   color: var(--error-color, #ff6b6b);
   background-color: rgba(255, 107, 107, 0.1);
   padding: 10px 14px;
@@ -161,18 +161,18 @@
 }
 
 /* Animation pour les options */
-.option-item {
+.strawpoll-modal-wrapper .option-item {
   display: flex;
   align-items: center;
   margin-bottom: 8px;
   animation: slideIn 0.3s ease-out;
 }
 
-.option-item input {
+.strawpoll-modal-wrapper .option-item input {
   flex: 1;
 }
 
-.option-item button {
+.strawpoll-modal-wrapper .option-item button {
   margin-left: 8px;
   width: 30px;
   height: 30px;
@@ -185,7 +185,7 @@
   transition: all 0.2s;
 }
 
-.option-item button:hover {
+.strawpoll-modal-wrapper .option-item button:hover {
   background-color: rgba(255, 107, 107, 0.2);
   color: var(--error-color, #ff6b6b);
 }
@@ -224,15 +224,15 @@
 
 /* Responsive styles */
 @media (max-width: 600px) {
-  .modal-content {
+  .strawpoll-modal-wrapper .modal-content {
     width: 95%;
   }
 
-  .strawpoll-modal {
+  .strawpoll-modal-wrapper .strawpoll-modal {
     padding: 20px 16px;
   }
 
-  .strawpoll-modal h2 {
+  .strawpoll-modal-wrapper .strawpoll-modal h2 {
     font-size: 1.2rem;
   }
 }

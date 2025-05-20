@@ -673,45 +673,6 @@ const Settings = () => {
                     <div className="setting-info">
                       <h3>Sons de notification</h3>
                       <p>Jouer un son lorsque vous recevez une notification</p>
-                      {notifications.sounds && (
-                        <button
-                          onClick={() => {
-                            // Tester le son directement                            // Utiliser notre utilitaire pour tester le son
-                            import("../../assets/sounds/soundUtils")
-                              .then((module) => {
-                                module
-                                  .testNotificationSound()
-                                  .then((success) => {
-                                    if (success) {
-                                      console.log(
-                                        "Test de son réussi via l'utilitaire"
-                                      );
-                                    } else {
-                                      console.warn("Le test de son a échoué");
-                                    }
-                                  });
-                              })
-                              .catch((error) =>
-                                console.error(
-                                  "Erreur lors de l'import de l'utilitaire de son:",
-                                  error
-                                )
-                              );
-                          }}
-                          style={{
-                            marginTop: "5px",
-                            padding: "3px 10px",
-                            fontSize: "12px",
-                            background: "#333",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Tester le son
-                        </button>
-                      )}
                     </div>
                     <div className="setting-control">
                       <label className="switch">
