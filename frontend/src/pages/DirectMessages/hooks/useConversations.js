@@ -1,14 +1,18 @@
-// Hook personnalisé pour gérer les conversations
+﻿// Hook personnalisé pour gérer les conversations
 import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
+// import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs
+ * @param {Object} options - Options du hook
+ * @param {Object} options.socket - Instance socket.io à utiliser pour l'écoute temps réel (optionnel)
  * @returns {Object} - Les états et fonctions liés aux conversations
  */
-export const useConversations = () => {
+export const useConversations = (options = {}) => {
+  // Déclaration de tous les hooks d'état
   const [conversations, setConversations] = useState([]);
   const [usersInfo, setUsersInfo] = useState({});
   const [loading, setLoading] = useState(false);
@@ -22,12 +26,23 @@ export const useConversations = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [conversationContextMenu, setConversationContextMenu] = useState({
     visible: false,
     xPos: 0,
     yPos: 0,
     userId: null,
   });
+  const { socket } = options;
+
+  /**
+   * Sélectionne un utilisateur pour la conversation
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleSelectUser = useCallback((userId) => {
+    setSelectedUser(userId);
+  }, []);
 
   /**
    * Calcule le nombre total de messages non lus
@@ -78,7 +93,6 @@ export const useConversations = () => {
       return null;
     }
   }, []);
-
   /**
    * Récupère la liste des conversations
    */
@@ -87,8 +101,14 @@ export const useConversations = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-
       console.log("[useConversations] Récupération des conversations...");
+
+      if (!token) {
+        console.error("[useConversations] Pas de token d'authentification");
+        setError("Vous n'êtes pas connecté");
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch(
         `${API_URL}/api/private-messages/conversations`,
@@ -121,18 +141,34 @@ export const useConversations = () => {
         `[useConversations] ${convList.length} conversations récupérées:`,
         convList
       );
-      setConversations(convList);
+
+      // Vérifier si la liste a changé pour éviter de déclencher des rendus inutiles
+      setConversations((prev) => {
+        // Tri des tableaux pour garantir une comparaison correcte
+        const sortedPrev = [...prev].sort();
+        const sortedNew = [...convList].sort();
+
+        if (JSON.stringify(sortedPrev) === JSON.stringify(sortedNew)) {
+          console.log(
+            "[useConversations] Aucun changement dans les conversations"
+          );
+          return prev;
+        }
+        return convList;
+      });
 
       // Charger les infos utilisateurs pour chaque conversation
       await Promise.all(convList.map((userId) => fetchUserInfo(userId)));
     } catch (error) {
       console.error("[useConversations] Erreur:", error);
       setError("Impossible de charger les conversations");
-      setConversations([]);
+      // Ne pas effacer les conversations existantes en cas d'erreur
+      // pour éviter de perdre des données UI déjà affichées
     } finally {
       setLoading(false);
     }
-  }, [fetchUserInfo]);
+  }, [fetchUserInfo, API_URL]);
+
   /**
    * Récupère la liste des utilisateurs disponibles
    */
@@ -161,6 +197,7 @@ export const useConversations = () => {
       setLoadingUsers(false);
     }
   }, []);
+
   /**
    * Met à jour les compteurs de messages non lus
    * @param {Object} newCounts - Nouveaux compteurs
@@ -201,7 +238,6 @@ export const useConversations = () => {
    * @param {string} userId - ID de l'utilisateur
    * @returns {string} - ID de l'utilisateur ajouté
    */
-
   const startConversationWith = useCallback(
     (userId) => {
       if (!userId) return null;
@@ -263,6 +299,172 @@ export const useConversations = () => {
     [unreadMessageCounts, updateUnreadCounts]
   );
 
+  /**
+   * Ferme le menu contextuel des conversations
+   */
+  const handleCloseConversationContextMenu = useCallback(() => {
+    setConversationContextMenu({
+      visible: false,
+      xPos: 0,
+      yPos: 0,
+      userId: null,
+    });
+  }, []);
+
+  /**
+   * Gère le menu contextuel des conversations
+   * @param {Event} e - Événement
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleConversationContextMenu = useCallback((e, userId) => {
+    e.preventDefault();
+    setConversationContextMenu({
+      visible: true,
+      xPos: e.pageX,
+      yPos: e.pageY,
+      userId,
+    });
+  }, []);
+
+  /**
+   * Ferme le modal de nouvelle conversation
+   */
+  const handleCloseNewConversationModal = useCallback(() => {
+    setShowNewConversationModal(false);
+    setSearchUserQuery("");
+  }, []);
+
+  /**
+   * Ouvre une conversation avec un utilisateur
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleOpenConversation = useCallback(
+    (userId) => {
+      handleSelectUser(userId);
+      handleCloseConversationContextMenu();
+    },
+    [handleSelectUser, handleCloseConversationContextMenu]
+  );
+
+  /**
+   * Démarre une conversation avec un utilisateur depuis le modal
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleStartConversation = useCallback(
+    (userId) => {
+      startConversationWith(userId);
+      handleSelectUser(userId);
+      handleCloseNewConversationModal();
+    },
+    [startConversationWith, handleSelectUser, handleCloseNewConversationModal]
+  );
+
+  /**
+   * Supprime une conversation et ferme le menu contextuel
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleDeleteConversation = useCallback(
+    async (userId) => {
+      const success = await deleteConversation(userId);
+      if (success && userId === selectedUser) {
+        setSelectedUser(null);
+      }
+      handleCloseConversationContextMenu();
+    },
+    [deleteConversation, selectedUser, handleCloseConversationContextMenu]
+  );
+  /**
+   * Remet à zéro le compteur de non lus pour un utilisateur (à appeler lors de l'ouverture d'une conversation)
+   * @param {string} userId
+   */
+  const resetUnreadCountForUser = useCallback(
+    (userId) => {
+      setUnreadMessageCounts((prev) => {
+        const newCounts = { ...prev, [userId]: 0 };
+        setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+        localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
+        return newCounts;
+      });
+    },
+    [calculateTotalUnreadCount]
+  );
+  // Effet pour initialiser l'application et charger les conversations
+  useEffect(() => {
+    // Récupérer d'abord l'ID utilisateur
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error(
+          "[useConversations] Pas de token, impossible de récupérer l'ID utilisateur"
+        );
+        return;
+      }
+
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+
+      const payload = JSON.parse(jsonPayload);
+      if (payload && payload.id) {
+        console.log("[useConversations] ID utilisateur récupéré:", payload.id);
+        setCurrentUserId(payload.id);
+
+        // Une fois l'ID utilisateur défini, charger les conversations
+        fetchConversations();
+
+        // Actualiser les conversations périodiquement (toutes les 30 secondes)
+        const intervalId = setInterval(() => {
+          console.log("[useConversations] Actualisation des conversations...");
+          fetchConversations();
+        }, 30000);
+
+        return () => clearInterval(intervalId);
+      }
+    } catch (error) {
+      console.error(
+        "[useConversations] Erreur lors de la récupération de l'ID utilisateur:",
+        error
+      );
+    }
+  }, [fetchConversations]);
+
+  // Effet pour charger l'utilisateur courant au démarrage
+  useEffect(() => {
+    // Récupérer l'ID de l'utilisateur courant depuis le localStorage
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map(function (c) {
+              return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join("")
+        );
+
+        const payload = JSON.parse(jsonPayload);
+        if (payload && payload.id) {
+          setCurrentUserId(payload.id);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération de l'ID utilisateur:",
+        error
+      );
+    }
+  }, []);
+
   // Effet pour filtrer les utilisateurs selon la recherche
   useEffect(() => {
     if (availableUsers.length === 0) return;
@@ -292,6 +494,37 @@ export const useConversations = () => {
     setTotalUnreadCount(total);
   }, [calculateTotalUnreadCount]);
 
+  // --- Gestion des messages non lus en temps réel ---
+  useEffect(() => {
+    if (!socket) return;
+    const handlePrivateMessage = (msg) => {
+      // Ne rien faire si pas d'utilisateur courant
+      if (!currentUserId) return;
+      // Si le message vient d'un autre utilisateur et que la conversation n'est pas ouverte
+      if (
+        msg.fk_expediteur !== currentUserId &&
+        (!selectedUser || msg.fk_expediteur !== selectedUser)
+      ) {
+        // Incrémenter le compteur pour l'expéditeur
+        setUnreadMessageCounts((prev) => {
+          const senderId = msg.fk_expediteur;
+          const newCounts = {
+            ...prev,
+            [senderId]: (prev[senderId] || 0) + 1,
+          };
+          // Mettre à jour le total et le localStorage
+          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
+          return newCounts;
+        });
+      }
+    };
+    socket.on("privateMessage", handlePrivateMessage);
+    return () => {
+      socket.off("privateMessage", handlePrivateMessage);
+    };
+  }, [socket, currentUserId, selectedUser, calculateTotalUnreadCount]);
+
   return {
     conversations,
     usersInfo,
@@ -319,5 +552,15 @@ export const useConversations = () => {
     handleOpenNewConversation,
     startConversationWith,
     deleteConversation,
+    selectedUser,
+    currentUserId,
+    handleSelectUser,
+    handleConversationContextMenu,
+    handleCloseConversationContextMenu,
+    handleOpenConversation,
+    handleCloseNewConversationModal,
+    handleStartConversation,
+    handleDeleteConversation,
+    resetUnreadCountForUser,
   };
 };

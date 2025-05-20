@@ -1,17 +1,13 @@
 // Composant principal pour la zone des messages
-import React from "react";
+import React, { useState } from "react";
 import { FaUserCircle } from "react-icons/fa";
 import MessageContainer from "./MessageContainer";
 import MessageInput from "./MessageInput";
 import MessageContextMenu from "./MessageContextMenu";
 import EmojiPicker from "./EmojiPicker";
 import MessageEditor from "./MessageEditor";
+import FileViewerModal from "../../../WorkspaceDetails/FileViewerModal.jsx";
 
-/**
- * Zone principale d'affichage et interaction avec les messages
- * @param {Object} props - Propriétés du composant
- * @returns {JSX.Element}
- */
 const MessageArea = ({
   selectedUser,
   selectedUserInfo,
@@ -59,6 +55,7 @@ const MessageArea = ({
   getCompleteFileUrl,
   formatFileSize,
 }) => {
+  const [fullscreenFile, setFullscreenFile] = useState(null);
   if (!selectedUser) {
     return (
       <div className="dm-main">
@@ -71,6 +68,9 @@ const MessageArea = ({
       </div>
     );
   }
+
+  // Fallback si messages est undefined (ne devrait pas arriver)
+  const safeMessages = Array.isArray(messages) ? messages : [];
 
   return (
     <div className="dm-main">
@@ -105,22 +105,24 @@ const MessageArea = ({
             </span>
           </div>
         </div>
-      </div>
+      </div>{" "}
       {/* Messages */}
       <MessageContainer
-        messages={messages}
-        loadingMessages={loadingMessages}
-        currentUserId={currentUserId}
-        selectedUserInfo={selectedUserInfo}
-        usersInfo={usersInfo}
+        messages={safeMessages}
+        loadingMessages={loadingMessages || false}
+        currentUserId={currentUserId || ""}
+        selectedUserInfo={selectedUserInfo || {}}
+        usersInfo={usersInfo || {}}
         messagesContainerRef={messagesContainerRef}
-        onMessageContextMenu={onMessageContextMenu}
-        renderTextWithMentions={renderTextWithMentions}
-        formatMessageDate={formatMessageDate}
-        getFileIcon={getFileIcon}
-        getCompleteFileUrl={getCompleteFileUrl}
-        formatFileSize={formatFileSize}
-        onDownloadFile={onDownloadFile}
+        onMessageContextMenu={onMessageContextMenu || (() => {})}
+        renderTextWithMentions={renderTextWithMentions || ((text) => text)}
+        formatMessageDate={formatMessageDate || ((date) => date)}
+        getFileIcon={getFileIcon || (() => null)}
+        getCompleteFileUrl={getCompleteFileUrl || ((url) => url)}
+        formatFileSize={formatFileSize || ((size) => size)}
+        onDownloadFile={onDownloadFile || (() => {})}
+        onImageClick={(file) => setFullscreenFile(file)}
+        onReplyMessage={onReplyMessage || (() => {})}
       />
       {/* Éditeur de message (si un message est en cours d'édition) */}
       {editingMessage && (
@@ -131,46 +133,63 @@ const MessageArea = ({
           onCancel={handleCancelEdit}
         />
       )}{" "}
-      {/* Input de nouveau message (si aucun message n'est en cours d'édition) */}
+      {/* Input de nouveau message (si aucun message n'est en cours d'édition) */}{" "}
       {!editingMessage && (
         <MessageInput
-          newMessage={newMessage}
-          setNewMessage={setNewMessage}
+          newMessage={newMessage || ""}
+          setNewMessage={setNewMessage || (() => {})}
           replyingTo={replyingTo}
-          onCancelReply={handleCancelReply}
-          attachments={attachments}
-          removeAttachment={removeAttachment}
-          uploadingFile={uploadingFile}
+          onCancelReply={handleCancelReply || (() => {})}
+          attachments={attachments || []}
+          removeAttachment={removeAttachment || (() => {})}
+          uploadingFile={uploadingFile || false}
           fileInputRef={fileInputRef}
-          handleFileSelect={handleFileSelect}
-          onAttachmentClick={handleAttachmentClick}
-          onSubmit={handleSendMessage}
-          handleInputChange={handleInputChange}
-          usersInfo={usersInfo}
-          showMentionSuggestions={showMentionSuggestions}
-          mentionSuggestions={mentionSuggestions}
-          activeMentionIndex={activeMentionIndex}
-          onMentionSelect={onMentionSelect}
+          handleFileSelect={handleFileSelect || (() => {})}
+          onAttachmentClick={handleAttachmentClick || (() => {})}
+          onSubmit={handleSendMessage || (() => {})}
+          handleInputChange={handleInputChange || (() => {})}
+          usersInfo={usersInfo || {}}
+          showMentionSuggestions={showMentionSuggestions || false}
+          mentionSuggestions={mentionSuggestions || []}
+          activeMentionIndex={activeMentionIndex || 0}
+          onMentionSelect={onMentionSelect || (() => {})}
         />
-      )}
+      )}{" "}
       {/* Menu contextuel pour les messages */}
       <MessageContextMenu
-        visible={messageContextMenu.visible}
-        xPos={messageContextMenu.xPos}
-        yPos={messageContextMenu.yPos}
-        isOwnMessage={messageContextMenu.isOwnMessage}
-        onReply={onReplyMessage}
-        onEdit={onEditMessage}
-        onDelete={onDeleteMessage}
-        onAddReaction={onAddReaction}
-        onClose={onCloseMessageContextMenu}
+        visible={messageContextMenu?.visible || false}
+        xPos={messageContextMenu?.xPos || 0}
+        yPos={messageContextMenu?.yPos || 0}
+        isOwnMessage={messageContextMenu?.isOwnMessage || false}
+        onReply={() => {
+          console.log(
+            "[DM] Click sur Répondre dans le menu contextuel",
+            messageContextMenu?.message
+          );
+          if (messageContextMenu?.message) {
+            onReplyMessage(messageContextMenu.message);
+            onCloseMessageContextMenu();
+            console.log("[DM] onReplyMessage appelé, menu contextuel fermé");
+          } else {
+            console.log("[DM] Pas de message dans le menu contextuel");
+          }
+        }}
+        onEdit={onEditMessage || (() => {})}
+        onDelete={onDeleteMessage || (() => {})}
+        onAddReaction={onAddReaction || (() => {})}
+        onClose={onCloseMessageContextMenu || (() => {})}
       />
       {/* Sélecteur d'emoji */}
       <EmojiPicker
-        show={showEmojiPicker}
-        position={emojiPickerPosition}
-        onSelect={onEmojiSelect}
+        show={showEmojiPicker || false}
+        position={emojiPickerPosition || { top: 0, left: 0 }}
+        onSelect={onEmojiSelect || (() => {})}
         pickerRef={emojiPickerRef}
+      />
+      <FileViewerModal
+        fullscreenFile={fullscreenFile}
+        handleCloseFileViewer={() => setFullscreenFile(null)}
+        handleDownloadFile={onDownloadFile}
       />
     </div>
   );

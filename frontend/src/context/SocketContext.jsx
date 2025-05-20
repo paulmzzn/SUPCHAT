@@ -11,7 +11,17 @@ import { setupSocketDebugger } from "../utils/socketDebug";
 const SocketContext = createContext(null);
 
 export function useSocket() {
-  return useContext(SocketContext);
+  const context = useContext(SocketContext);
+  // Retourner un objet vide par défaut pour éviter les erreurs
+  return (
+    context || {
+      socket: null,
+      refreshUnreadDM: () => {},
+      refreshUnreadChannels: () => {},
+      globalNotifications: { private: 0, workspace: 0 },
+      userStatuses: {},
+    }
+  );
 }
 
 export function SocketProvider({ children }) {

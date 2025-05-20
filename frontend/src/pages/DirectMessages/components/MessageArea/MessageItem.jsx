@@ -20,6 +20,8 @@ const MessageItem = ({
   formatFileSize,
   onMessageContextMenu,
   onDownloadFile,
+  onImageClick,
+  onReply, // <-- nouvelle prop
 }) => {
   // Get the sender info, with strong fallbacks if missing
   const senderId = message.fk_expediteur;
@@ -94,6 +96,7 @@ const MessageItem = ({
             <span className="dm-msg-date">
               {formatMessageDate(message.date_creation || message.date_envoi)}
             </span>
+            {/* Le bouton Répondre a été supprimé, la réponse se fait via le menu contextuel (clic droit) */}
           </div>
 
           <div className="dm-msg-bubble">
@@ -143,21 +146,26 @@ const MessageItem = ({
                         <div
                           key={attachment.id_fichier || `temp-${Date.now()}`}
                           className="dm-msg-image-attachment"
+                          onClick={() =>
+                            onImageClick &&
+                            onImageClick({
+                              fileUrl,
+                              fileName: attachment.nom_fichier,
+                              fileType: attachment.type,
+                              isImage: true,
+                              fullFileUrl: fileUrl,
+                            })
+                          }
+                          style={{ cursor: "pointer" }}
                         >
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <img
-                              src={fileUrl}
-                              alt={attachment.nom_fichier}
-                              className="dm-msg-image"
-                              onError={(e) => {
-                                e.target.src = "/images/broken-image.png";
-                              }}
-                            />
-                          </a>
+                          <img
+                            src={fileUrl}
+                            alt={attachment.nom_fichier}
+                            className="dm-msg-image"
+                            onError={(e) => {
+                              e.target.src = "/images/broken-image.png";
+                            }}
+                          />
                           <div className="dm-msg-image-filename">
                             {attachment.nom_fichier}
                           </div>
