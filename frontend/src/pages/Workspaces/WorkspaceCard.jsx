@@ -3,7 +3,6 @@ import NotificationBadge from "../../components/NotificationBadge/NotificationBa
 import {
   FaLock,
   FaUsers,
-  FaCircle,
   FaEllipsisV,
   FaStar,
   FaSignOutAlt,
@@ -318,10 +317,13 @@ function WorkspaceCard({
               <FaUsers className="stat-icon" />
               <span className="stat-value">{workspace.totalMembers}</span>
             </div>
+            {/* Suppression du bloc online */}
+            {/* 
             <div className="workspace-stat">
               <FaCircle className="online-icon" />
               <span className="stat-value">{workspace.onlineUsers} online</span>
             </div>
+            */}
           </div>
 
           {/* Bouton rejoindre si nécessaire, avec l'état hasJoined */}
