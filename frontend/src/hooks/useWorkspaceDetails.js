@@ -1322,14 +1322,17 @@ export const useWorkspaceDetails = (workspaceId) => {
 
     if (!displayMessage.trim() || !socket || !activeChannel) return;
 
+    // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
+    const messageToSend = convertMentionsForSending(displayMessage);
+
     console.log(
-      `Envoi du message: "${displayMessage}" dans le canal ${activeChannel.id}`
+      `Envoi du message: "${messageToSend}" dans le canal ${activeChannel.id}`
     );
 
     // Envoyer via socket.io
     socket.emit("message", {
       canal_id: activeChannel.id,
-      content: displayMessage,
+      content: messageToSend,
       workspace_id: workspaceId,
       parent_id: replyingTo ? replyingTo.id_message : null,
     });
@@ -1614,9 +1617,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       const textAfterCursor = currentDisplay.substring(cursorPos);
-      // Format the mention to include the user's ID in a markdown link format
-      // Using the formatMention helper function to create the properly formatted mention
-      const mentionText = `${formatMention(user.name, user.id)} `;
+      // Afficher seulement @Nom dans le champ de saisie
+      const mentionText = `@${user.name} `;
       const newDisplayValue =
         currentDisplay.substring(0, lastAtIndex) +
         mentionText +
@@ -1678,6 +1680,15 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
 
     return false;
+  };
+
+  // Add a handler to select the active item in either mention or channel suggestions
+  const handleSelectActiveItem = () => {
+    if (showMentionSuggestions) {
+      handleSelectActiveMention();
+    } else if (showChannelSuggestions) {
+      handleSelectActiveChannelSuggestion();
+    }
   };
 
   // Return all state and handlers needed by the component
@@ -1780,6 +1791,7 @@ export const useWorkspaceDetails = (workspaceId) => {
     setReplyingTo, // Ensure setReplyingTo is returned
     userStatuses, // Expose userStatuses
     fetchActiveChannel, // Exposer la fonction fetchActiveChannel
+    handleSelectActiveItem, // <-- Export the new handler
   };
 };
 
