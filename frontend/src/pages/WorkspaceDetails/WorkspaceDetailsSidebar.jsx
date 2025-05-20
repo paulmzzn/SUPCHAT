@@ -659,54 +659,31 @@ function WorkspaceDetailsSidebar({
                 )}
                 <h4>En ligne ({members.online.length})</h4>
               </div>
-              {showOnlineMembers && (
-                <ul className="members-list">
-                  {members.online.map((member) => {
-                    const isCurrentUser = member.id === currentUserId;
-                    return (
-                      <li
-                        key={member.id}
-                        className={`member-item online ${
-                          isCurrentUser ? "current-user" : ""
-                        }`}
-                        onClick={() => handleOpenProfile(member)}
-                        onContextMenu={(e) =>
-                          handleCurrentUserContextMenu(e, member, isCurrentUser)
-                        }
-                        style={{
-                          cursor: isCurrentUser
-                            ? "context-menu"
-                            : currentUserRole === "owner" &&
-                              member.role !== "owner"
-                            ? "context-menu"
-                            : "pointer",
-                          backgroundColor: isCurrentUser
-                            ? "rgba(147, 72, 183, 0.1)"
-                            : "transparent",
-                        }}
-                      >
-                        {member.avatar || member.photo_de_profil ? (
-                          <img
-                            src={member.avatar || member.photo_de_profil}
-                            alt={member.name}
-                            className="member-avatar"
-                          />
-                        ) : (
-                          <FaUserCircle className="member-avatar-placeholder" />
-                        )}
-                        <div className="member-info">
-                          {getRoleIcon(member.role)}
-                          <span className="member-name">
-                            {member.name}
-                            {isCurrentUser ? " (vous)" : ""}
-                          </span>
-                        </div>
-                        {renderStatusIndicator(member)}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              {showOnlineMembers && members.online.map((member, index) => (
+                <div 
+                  key={`online-${member.id || member.user_id}-${index}`} 
+                  className="sidebar-member-item"
+                  onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                >
+                  {member.avatar || member.photo_de_profil ? (
+                    <img
+                      src={member.avatar || member.photo_de_profil}
+                      alt={member.name}
+                      className="member-avatar"
+                    />
+                  ) : (
+                    <FaUserCircle className="member-avatar-placeholder" />
+                  )}
+                  <div className="member-info">
+                    {getRoleIcon(member.role)}
+                    <span className="member-name">
+                      {member.name}
+                      {member.id === currentUserId ? " (vous)" : ""}
+                    </span>
+                  </div>
+                  {renderStatusIndicator(member)}
+                </div>
+              ))}
             </div>
             <div className="members-subsection">
               <div className="subsection-header" onClick={toggleOfflineMembers}>
@@ -717,54 +694,31 @@ function WorkspaceDetailsSidebar({
                 )}
                 <h4>Hors ligne ({members.offline.length})</h4>
               </div>
-              {showOfflineMembers && (
-                <ul className="members-list">
-                  {members.offline.map((member) => {
-                    const isCurrentUser = member.id === currentUserId;
-                    return (
-                      <li
-                        key={member.id}
-                        className={`member-item offline ${
-                          isCurrentUser ? "current-user" : ""
-                        }`}
-                        onClick={() => handleOpenProfile(member)}
-                        onContextMenu={(e) =>
-                          handleCurrentUserContextMenu(e, member, isCurrentUser)
-                        }
-                        style={{
-                          cursor: isCurrentUser
-                            ? "context-menu"
-                            : currentUserRole === "owner" &&
-                              member.role !== "owner"
-                            ? "context-menu"
-                            : "pointer",
-                          backgroundColor: isCurrentUser
-                            ? "rgba(147, 72, 183, 0.1)"
-                            : "transparent",
-                        }}
-                      >
-                        {member.avatar || member.photo_de_profil ? (
-                          <img
-                            src={member.avatar || member.photo_de_profil}
-                            alt={member.name}
-                            className="member-avatar"
-                          />
-                        ) : (
-                          <FaUserCircle className="member-avatar-placeholder" />
-                        )}
-                        <div className="member-info">
-                          {getRoleIcon(member.role)}
-                          <span className="member-name">
-                            {member.name}
-                            {isCurrentUser ? " (vous)" : ""}
-                          </span>
-                        </div>
-                        {renderStatusIndicator(member)}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              {showOfflineMembers && members.offline.map((member, index) => (
+                <div 
+                  key={`offline-${member.id || member.user_id}-${index}`} 
+                  className="sidebar-member-item offline"
+                  onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                >
+                  {member.avatar || member.photo_de_profil ? (
+                    <img
+                      src={member.avatar || member.photo_de_profil}
+                      alt={member.name}
+                      className="member-avatar"
+                    />
+                  ) : (
+                    <FaUserCircle className="member-avatar-placeholder" />
+                  )}
+                  <div className="member-info">
+                    {getRoleIcon(member.role)}
+                    <span className="member-name">
+                      {member.name}
+                      {member.id === currentUserId ? " (vous)" : ""}
+                    </span>
+                  </div>
+                  {renderStatusIndicator(member)}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -830,8 +784,8 @@ function WorkspaceDetailsSidebar({
                 overflowY: files.length > 5 ? "auto" : "visible",
               }}
             >
-              {files.slice(0, 5).map((file) => (
-                <li key={file.id} className="file-item">
+              {files.slice(0, 5).map((file, index) => (
+                <li key={`file-${file.id || file.file_id || index}-${Date.now()}`} className="file-item">
                   <div className="file-icon">
                     {(() => {
                       switch (file.type) {
@@ -886,8 +840,11 @@ function WorkspaceDetailsSidebar({
                 overflowY: images.length > 5 ? "auto" : "visible",
               }}
             >
-              {images.slice(0, 5).map((image) => (
-                <div key={image.id} className="image-item">
+              {images.slice(0, 5).map((image, index) => (
+                <div 
+                  key={`image-${image.id || image.file_id || index}-${Math.random().toString(36).substr(2, 9)}`} 
+                  className="sidebar-image-item"
+                >
                   <img
                     src={S3_BASE_URL + image.url}
                     alt={image.name}

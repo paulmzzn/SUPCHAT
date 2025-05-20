@@ -67,6 +67,7 @@ function WorkspaceDetails() {
   const [showChannelMembersModal, setShowChannelMembersModal] = useState(false);
   const [showMemberAccessModal, setShowMemberAccessModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [isPrependingMessages, setIsPrependingMessages] = useState(false); // Nouvel état pour gérer le préchargement des messages
 
   useEffect(() => {
     async function checkWorkspaceMembership() {
@@ -333,7 +334,19 @@ function WorkspaceDetails() {
     handleDeleteMessage,
     handleMistralMention,
     fetchActiveChannel,
+    hasMoreMessages,
+    loadingMoreMessages,
+    loadMoreMessages,
   } = useWorkspaceDetails(workspaceId);
+
+  // Ajouter cette fonction ou modifier la fonction existante pour gérer le scroll correctement
+  const enhancedLoadMoreMessages = useCallback(() => {
+    // Définir isPrependingMessages à true avant d'appeler loadMoreMessages
+    setIsPrependingMessages(true);
+    
+    // Appeler la fonction originale de chargement
+    loadMoreMessages();
+  }, [loadMoreMessages]);
 
   useEffect(() => {
     if (activeChannel && activeChannel.id) {
@@ -890,7 +903,12 @@ function WorkspaceDetails() {
             (activeChannel?.isPrivate && activeChannel?.isCreator)
           }
           currentUserAccessRight={activeChannel?.memberAccess}
-
+          // Pagination props
+          hasMoreMessages={hasMoreMessages}
+          loadingMoreMessages={loadingMoreMessages}
+          loadMoreMessages={enhancedLoadMoreMessages}  // Utiliser la fonction améliorée
+          isPrependingMessages={isPrependingMessages}
+          setIsPrependingMessages={setIsPrependingMessages}
         />
 
         <WorkspaceDetailsSidebar
