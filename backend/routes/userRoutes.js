@@ -78,7 +78,7 @@ router.get(
 
   passport.authenticate("google", {
 
-    failureRedirect: "http://192.168.1.181:3001/login",
+    failureRedirect: "http://REDACTED:3001/login",
 
   }),
 
@@ -92,7 +92,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://192.168.1.181:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -107,7 +107,7 @@ router.get(
 
   passport.authenticate("github", {
 
-    failureRedirect: "http://192.168.1.181:3001/login",
+    failureRedirect: "http://REDACTED:3001/login",
 
   }),
 
@@ -119,7 +119,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-      `http://192.168.1.181:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://REDACTED:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
