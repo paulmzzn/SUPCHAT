@@ -27,7 +27,7 @@ import { useNotificationSettings } from "../../context/NotificationSettingsConte
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
@@ -405,20 +405,16 @@ function DirectMessages() {
         msg.fk_expediteur !== currentUserId &&
         (!selectedUser || msg.fk_expediteur !== selectedUser)
       ) {
-        // Jouer le son de notification
-        console.log("[DM] Message privé reçu, tentative de lecture du son");
-        playNotificationSound(notificationSettings);
-
-        // Update the unread count for this sender
         setUnreadMessageCounts((prev) => {
-          const senderId = msg.fk_expediteur;
           const newCounts = {
             ...prev,
-            [senderId]: (prev[senderId] || 0) + 1,
+            [msg.fk_expediteur]: (prev[msg.fk_expediteur] || 0) + 1,
           };
-
-          // Update total count
-          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          setTotalUnreadCount(
+            Object.values(newCounts).reduce((sum, c) => sum + c, 0)
+          );
+          // Persister dans localStorage pour la sidebar
+          localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
           return newCounts;
         });
       }

@@ -17,7 +17,6 @@ import MessageArea from "./components/MessageArea/MessageArea";
 import { useConversations } from "./hooks/useConversations";
 import { useMessages } from "./hooks/useMessages";
 import { useAttachments } from "./hooks/useAttachments";
-import useDirectMessageNotifications from "./hooks/useDirectMessageNotifications";
 
 // Utilitaires
 import {
@@ -35,17 +34,26 @@ function DirectMessages() {
   // Utiliser les hooks avec des valeurs par défaut solides
   const notifContext = useNotificationSettings();
   const { notificationSettings } = notifContext;
-  const conv = useConversations();
-  const selectedUser = conv?.selectedUser;
-  const currentUserId = conv?.currentUserId;
   const socketContext = useSocket();
   const { socket } = socketContext;
-  const msg = useMessages(selectedUser, socket, currentUserId);
+  const conv = useConversations({ socket });
 
-  // Ajout du hook useAttachments pour la gestion des fichiers (DM)
-  const {
+  const selectedUser = conv?.selectedUser;
+  const currentUserId = conv?.currentUserId;
+
+  // État local pour les attachments, qui sera partagé entre les hooks
+  const [attachments, setAttachments] = useState([]);
+
+  // Initialiser d'abord le hook des messages
+  const msg = useMessages(
+    selectedUser,
+    socket,
+    currentUserId,
     attachments,
-    setAttachments,
+    setAttachments
+  );
+  // Ensuite le hook des attachments
+  const {
     uploadingFile,
     fileInputRef,
     handleFileSelect,
@@ -54,22 +62,15 @@ function DirectMessages() {
     handleAddReaction,
     handleEmojiSelect,
     handleDeleteMessage,
-    // On peut ajouter d'autres méthodes si besoin (handleDownloadFile, etc.)
+    handleDownloadFile, // S'assurer que cette fonction est récupérée du hook
   } = useAttachments({
     mode: "dm",
     recipientId: selectedUser,
     socket: socket,
-    setMessages: msg.setMessages, // 👈
-    setNewMessage: msg.setNewMessage, // 👈
+    setMessages: msg.setMessages,
+    setNewMessage: msg.setNewMessage,
+    setReplyingTo: msg.setReplyingTo,
   });
-
-  // Utilisation du hook de notifications DM
-  const { unreadMessageCounts, totalUnreadCount } =
-    useDirectMessageNotifications({
-      socket,
-      currentUserId,
-      selectedUser,
-    });
 
   // Effet pour charger les conversations si la liste est vide
   React.useEffect(() => {
@@ -82,49 +83,115 @@ function DirectMessages() {
       conv.fetchConversations();
     }
   }, [conv]);
+
   // Valeurs par défaut si les hooks retournent null/undefined
   const convWithDefaults = conv || {};
 
-  // Debug: Afficher l'état des messages
-  console.log("[DirectMessages] État des messages:", {
-    messages: (msg || {}).messages,
-    loadingMessages: (msg || {}).loadingMessages,
-    error: (msg || {}).error,
-  });
+  // Debug logs déplacés dans useEffect pour éviter les rendus en boucle
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      // Log uniquement si les données ont changé significativement
+      console.log("[DirectMessages] État des messages:", {
+        messages: (msg || {}).messages?.length,
+        loadingMessages: (msg || {}).loadingMessages,
+        error: (msg || {}).error,
+      });
 
-  // Debug: Afficher l'état des conversations
-  console.log("[DirectMessages] État des conversations:", {
-    conversations:
-      (conv &&
-        conv.getFilteredConversations &&
-        conv.getFilteredConversations()) ||
-      [],
+      console.log("[DirectMessages] État des conversations:", {
+        conversations: (conv?.getFilteredConversations?.() || []).length,
+        selectedUser,
+        currentUserId,
+      });
+    }
+  }, [
+    msg?.messages?.length,
+    msg?.loadingMessages,
+    msg?.error,
     selectedUser,
     currentUserId,
-  });
-
-  // Debug: Afficher les props du composant MessageArea
-  console.log("[DirectMessages] Props de MessageArea:", {
-    selectedUser,
-    messages: (msg || {}).messages,
-    currentUserId,
-    usersInfo: convWithDefaults.usersInfo,
-    newMessage: (msg || {}).newMessage,
-    replyingTo: (msg || {}).replyingTo,
-    editingMessage: (msg || {}).editingMessage,
-    attachments,
-    uploadingFile,
-  });
+  ]);
 
   // Dans DirectMessages.jsx, juste avant le return
-  console.log("[DirectMessages] État final avant render:", {
-    replyingTo: msg?.replyingTo,
-    handleReplyMessage: !!msg?.handleReplyMessage,
-  });
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[DirectMessages] État final avant render:", {
+        replyingTo: msg?.replyingTo,
+        handleReplyMessage: !!msg?.handleReplyMessage,
+      });
+    }
+  }, [msg?.replyingTo, !!msg?.handleReplyMessage]); // Effet pour nettoyer les ressources et prévenir les fuites de mémoire
+  useEffect(() => {
+    return () => {
+      // Nettoyer les ressources en fin de vie du composant
+      if (typeof window !== "undefined") {
+        // Une approche plus sûre pour purger les animations en attente
+        try {
+          // Utiliser l'API existante sans essayer de la redéfinir
+          const cancelAnimationFrame =
+            window.cancelAnimationFrame ||
+            window.webkitCancelAnimationFrame ||
+            function (id) {
+              clearTimeout(id);
+            };
+
+          // Annuler quelques frames récentes sans boucle while
+          const id = window.requestAnimationFrame(() => {});
+          // Annuler seulement quelques frames récentes (pas toutes)
+          for (let i = id; i > id - 10; i--) {
+            if (i > 0) cancelAnimationFrame(i);
+          }
+        } catch (e) {
+          console.error("Erreur lors du nettoyage des animations:", e);
+        }
+      }
+    };
+  }, []);
+  // Synchronise le compteur global dans le localStorage et notifie la Sidebar
+  useEffect(() => {
+    if (typeof conv?.totalUnreadCount === "number") {
+      localStorage.setItem("unreadPrivateMessages", conv.totalUnreadCount);
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("unreadMessagesUpdated", {
+            detail: {
+              count: conv.totalUnreadCount,
+              counts: conv.unreadMessageCounts || {},
+            },
+          })
+        );
+      }, 0);
+    }
+  }, [conv?.totalUnreadCount, conv?.unreadMessageCounts]);
+  // Effet pour synchroniser les compteurs lorsqu'ils sont mis à jour ailleurs dans l'application
+  useEffect(() => {
+    const syncUnreadCounts = async () => {
+      setTimeout(() => {
+        if (typeof conv?.refreshUnreadCounts === "function") {
+          conv.refreshUnreadCounts();
+        }
+      }, 300);
+    };
+    window.addEventListener("unreadMessagesUpdated", syncUnreadCounts);
+    return () => {
+      window.removeEventListener("unreadMessagesUpdated", syncUnreadCounts);
+    };
+  }, [conv]);
+  // Effet pour réinitialiser le compteur quand on sélectionne une conversation
+  useEffect(() => {
+    if (selectedUser && conv?.resetUnreadCountForUser) {
+      // Réinitialiser le compteur pour cet utilisateur
+      conv.resetUnreadCountForUser(selectedUser);
+      console.log(
+        "[DirectMessages] Réinitialisation compteur pour:",
+        selectedUser
+      );
+    }
+  }, [selectedUser, conv?.resetUnreadCountForUser]);
+
   // Rendu UI : le composant principal ne fait qu'orchestrer
   return (
     <div className="app-layout">
-      <Sidebar unreadMessageCount={totalUnreadCount} />
+      <Sidebar />
       <div className="dm-layout">
         <ConversationList
           conversations={
@@ -136,7 +203,7 @@ function DirectMessages() {
           selectedUser={selectedUser}
           loading={convWithDefaults.loading || false}
           error={convWithDefaults.error || null}
-          unreadMessageCounts={unreadMessageCounts}
+          unreadMessageCounts={conv.unreadMessageCounts}
           searchQuery={convWithDefaults.searchQuery || ""}
           setSearchQuery={convWithDefaults.setSearchQuery || (() => {})}
           onUserSelect={convWithDefaults.handleSelectUser || (() => {})}
@@ -198,7 +265,7 @@ function DirectMessages() {
           onDeleteMessage={(msg || {}).handleDeleteMessage || (() => {})}
           onAddReaction={(msg || {}).handleAddReaction || (() => {})}
           onEmojiSelect={(msg || {}).handleEmojiSelect || (() => {})}
-          onDownloadFile={(msg || {}).downloadFile || (() => {})}
+          onDownloadFile={handleDownloadFile || (() => {})}
           showMentionSuggestions={(msg || {}).showMentionSuggestions || false}
           mentionSuggestions={(msg || {}).mentionSuggestions || []}
           activeMentionIndex={(msg || {}).activeMentionIndex || 0}

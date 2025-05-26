@@ -158,10 +158,28 @@ const MessageItem = ({
                           }
                           style={{ cursor: "pointer" }}
                         >
+                          {" "}
                           <img
                             src={fileUrl}
                             alt={attachment.nom_fichier}
                             className="dm-msg-image"
+                            loading="lazy"
+                            onLoad={(e) => {
+                              // Ajouter un attribut de dimension explicite après le chargement
+                              if (
+                                e.target.naturalWidth &&
+                                e.target.naturalHeight
+                              ) {
+                                e.target.setAttribute(
+                                  "width",
+                                  e.target.naturalWidth
+                                );
+                                e.target.setAttribute(
+                                  "height",
+                                  e.target.naturalHeight
+                                );
+                              }
+                            }}
                             onError={(e) => {
                               e.target.src = "/images/broken-image.png";
                             }}

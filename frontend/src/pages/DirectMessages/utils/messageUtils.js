@@ -11,7 +11,7 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
 
 /**
  * Formate une date de message
@@ -100,7 +100,7 @@ export const getCompleteFileUrl = (url) => {
   if (url.startsWith("http")) return url;
 
   // Sinon, préfixer avec l'URL de l'API
-  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
   return `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 

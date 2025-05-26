@@ -132,7 +132,7 @@ const MessageArea = ({
           onSave={handleSaveEdit}
           onCancel={handleCancelEdit}
         />
-      )}{" "}
+      )}
       {/* Input de nouveau message (si aucun message n'est en cours d'édition) */}{" "}
       {!editingMessage && (
         <MessageInput

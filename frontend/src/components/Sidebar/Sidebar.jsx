@@ -8,19 +8,90 @@ import { useSocket } from "../../context/SocketContext";
 // Import logo
 import logoSupchat from "../../assets/icons/logo_supchat.svg";
 
-function Sidebar({ unreadMessageCount }) {
+function Sidebar() {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
-  const [localUnreadCount, setLocalUnreadCount] = useState(0);
   const { globalNotifications, refreshUnreadDM } = useSocket() || {
     globalNotifications: { private: 0, workspace: 0 },
     refreshUnreadDM: () => {},
   };
+  const [localNotifications, setLocalNotifications] = useState({
+    private: 0,
+    workspace: 0,
+  });
 
   // Check if the current path matches the given path
   const isActive = (path) => {
     return location.pathname.startsWith(path);
-  };
+  }; // Écouteur d'événements pour les mises à jour des messages non lus
+  useEffect(() => {
+    const handleUnreadMessagesUpdate = (event) => {
+      if (event.detail && typeof event.detail.count === "number") {
+        setLocalNotifications((prev) => ({
+          ...prev,
+          private: event.detail.count,
+        }));
+      }
+    };
+
+    const handleUnreadChannelMessagesUpdate = (event) => {
+      if (event.detail && typeof event.detail.total === "number") {
+        console.log(
+          "[Sidebar] Mise à jour des messages de canal non lus:",
+          event.detail
+        );
+        setLocalNotifications((prev) => ({
+          ...prev,
+          workspace: event.detail.total,
+        }));
+      }
+    };
+
+    // Ajouter les écouteurs d'événements
+    window.addEventListener(
+      "unreadMessagesUpdated",
+      handleUnreadMessagesUpdate
+    );
+    window.addEventListener(
+      "unreadChannelMessagesUpdated",
+      handleUnreadChannelMessagesUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "unreadMessagesUpdated",
+        handleUnreadMessagesUpdate
+      );
+      window.removeEventListener(
+        "unreadChannelMessagesUpdated",
+        handleUnreadChannelMessagesUpdate
+      );
+    };
+  }, []); // Effet séparé pour charger les valeurs initiales
+  useEffect(() => {
+    // Rafraîchir les compteurs au montage d'abord
+    refreshUnreadDM();
+
+    // On utilise un timeout pour s'assurer que refreshUnreadDM a le temps de mettre à jour localStorage
+    const timeoutId = setTimeout(() => {
+      // Récupérer les valeurs initiales depuis localStorage
+      const unreadPrivate = parseInt(
+        localStorage.getItem("unreadPrivateMessages") || "0",
+        10
+      );
+      const unreadWorkspace = parseInt(
+        localStorage.getItem("unreadChannelMessages") || "0",
+        10
+      );
+
+      setLocalNotifications({
+        private: unreadPrivate,
+        workspace: unreadWorkspace,
+      });
+    }, 300); // Délai augmenté pour s'assurer que les valeurs sont à jour
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -31,75 +102,21 @@ function Sidebar({ unreadMessageCount }) {
     window.addEventListener("resize", checkIfMobile);
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
-  // Effet pour gérer les mises à jour des messages non lus
-  useEffect(() => {
-    // Fonction pour gérer la mise à jour du compteur de messages non lus
-    const handleUnreadMessagesUpdate = (event) => {
-      setLocalUnreadCount(event.detail.count);
-    };
 
-    // Récupérer le compteur initial depuis localStorage
-    const storedCount = parseInt(
-      localStorage.getItem("unreadPrivateMessages") || "0",
-      10
-    );
-    setLocalUnreadCount(storedCount);
-
-    // Écouter les événements de mise à jour
-    window.addEventListener(
-      "unreadMessagesUpdated",
-      handleUnreadMessagesUpdate
-    );
-
-    // Rafraîchir les compteurs au montage du composant
-    try {
-      refreshUnreadDM();
-    } catch (error) {
-      console.warn(
-        "Erreur lors du premier rafraîchissement des messages non lus:",
-        error
-      );
-    }
-
-    // Rafraîchir périodiquement les compteurs (toutes les 60 secondes)
-    // Augmenter l'intervalle à 2 minutes pour réduire la charge sur le serveur
-    const intervalId = setInterval(() => {
-      try {
-        refreshUnreadDM();
-      } catch (error) {
-        console.warn(
-          "Erreur lors du rafraîchissement périodique des messages non lus:",
-          error
-        );
-        // Ne pas interrompre l'intervalle en cas d'erreur
-      }
-    }, 120000); // 2 minutes au lieu de 60 secondes
-
-    return () => {
-      window.removeEventListener(
-        "unreadMessagesUpdated",
-        handleUnreadMessagesUpdate
-      );
-      clearInterval(intervalId);
-    };
-  }, [refreshUnreadDM]);
+  // Utiliser les notifications globales du contexte OU les notifications locales (des événements)
+  const displayPrivateCount = Math.max(
+    globalNotifications?.private || 0,
+    localNotifications.private || 0
+  );
+  const displayWorkspaceCount = Math.max(
+    globalNotifications?.workspace || 0,
+    localNotifications.workspace || 0
+  );
 
   // Fonction pour déterminer la classe CSS basée sur le statut actif
   const getIconClasses = (path) => {
     return `sidebar-icon ${isActive(path) ? "active" : ""}`;
   };
-
-  // Logique de priorité pour déterminer le compteur à afficher
-  // 1. Utiliser unreadMessageCount si fourni et sur la page DirectMessages
-  // 2. Utiliser globalNotifications.private du contexte Socket
-  // 3. En dernier recours, utiliser localUnreadCount depuis localStorage
-  const displayCount =
-    isActive("/direct-messages") && unreadMessageCount !== undefined
-      ? unreadMessageCount
-      : globalNotifications?.private !== undefined &&
-        globalNotifications.private > 0
-      ? globalNotifications.private
-      : localUnreadCount;
 
   return (
     <div className="sidebar">
@@ -115,8 +132,8 @@ function Sidebar({ unreadMessageCount }) {
             }`}
           >
             <FaComment className={getIconClasses("/direct-messages")} />
-            {displayCount > 0 && (
-              <span className="nav-badge">{displayCount}</span>
+            {displayPrivateCount > 0 && (
+              <span className="nav-badge">{displayPrivateCount}</span>
             )}
           </Link>
           <Link
@@ -125,8 +142,8 @@ function Sidebar({ unreadMessageCount }) {
           >
             <MdWorkspacesFilled className={getIconClasses("/workspaces")} />
             {/* Ensure we're using a consistent class for the workspace badge */}
-            {globalNotifications?.workspace > 0 && (
-              <span className="nav-badge">{globalNotifications.workspace}</span>
+            {displayWorkspaceCount > 0 && (
+              <span className="nav-badge">{displayWorkspaceCount}</span>
             )}
           </Link>
           <Link

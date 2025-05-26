@@ -309,13 +309,50 @@ export function SocketProvider({ children }) {
       }
     }, 0); // Fermé avec un délai de 0
   }, [API_URL]);
-
   // Initialisation des compteurs de messages non lus au montage
   useEffect(() => {
+    // Charger les compteurs au démarrage
     refreshUnreadDM();
     refreshUnreadChannels();
-  }, []);
 
+    // Configurer un intervalle pour rafraîchir périodiquement les compteurs
+    // Cela garantit que les compteurs restent synchronisés même si des événements sont manqués
+    const refreshInterval = setInterval(() => {
+      refreshUnreadDM();
+      refreshUnreadChannels();
+    }, 30000); // Rafraîchir toutes les 30 secondes
+
+    // Écouter les événements de storage pour la synchronisation entre onglets
+    const handleStorageChange = (e) => {
+      if (
+        e.key === "unreadPrivateMessages" ||
+        e.key === "unreadChannelMessages"
+      ) {
+        try {
+          const count = parseInt(e.newValue, 10);
+          if (!isNaN(count)) {
+            if (e.key === "unreadPrivateMessages") {
+              setGlobalNotifications((prev) => ({ ...prev, private: count }));
+            } else if (e.key === "unreadChannelMessages") {
+              setGlobalNotifications((prev) => ({ ...prev, workspace: count }));
+            }
+          }
+        } catch (err) {
+          console.error(
+            "[Socket] Erreur lors du traitement des données du stockage:",
+            err
+          );
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
   // Gestion des notifications pour les messages privés
   useEffect(() => {
     if (!socket) return;
@@ -349,25 +386,26 @@ export function SocketProvider({ children }) {
         msg.fk_expediteur !== userId
       ) {
         // Mise à jour immédiate du compteur global
-        setGlobalNotifications((prev) => ({
-          ...prev,
-          private: prev.private + 1,
-        }));
+        setGlobalNotifications((prev) => {
+          const newPrivateCount = prev.private + 1;
+          return {
+            ...prev,
+            private: newPrivateCount,
+          };
+        });
 
         // Mettre à jour localStorage pour assurer la cohérence entre les pages
         const currentCount = parseInt(
           localStorage.getItem("unreadPrivateMessages") || "0",
           10
         );
-        localStorage.setItem(
-          "unreadPrivateMessages",
-          (currentCount + 1).toString()
-        );
+        const newCount = currentCount + 1;
+        localStorage.setItem("unreadPrivateMessages", newCount.toString());
 
         // Émettre un événement pour notifier les autres composants
         window.dispatchEvent(
           new CustomEvent("unreadMessagesUpdated", {
-            detail: { count: currentCount + 1 },
+            detail: { count: newCount },
           })
         );
       }
@@ -378,9 +416,16 @@ export function SocketProvider({ children }) {
       refreshUnreadDM();
     });
 
+    // Écouter l'événement de réinitialisation des compteurs
+    socket.on("privateMessagesMarkedAsRead", (data) => {
+      console.log("[Socket] Messages privés marqués comme lus:", data);
+      refreshUnreadDM();
+    });
+
     return () => {
       socket.off("privateMessage");
       socket.off("privateMessageRead");
+      socket.off("privateMessagesMarkedAsRead");
     };
   }, [socket]);
 
@@ -396,9 +441,7 @@ export function SocketProvider({ children }) {
         // Rafraîchir le compteur pour tous les canaux
         refreshUnreadChannels();
       }
-    });
-
-    // Mise à jour quand un canal est marqué comme lu
+    }); // Mise à jour quand un canal est marqué comme lu
     socket.on("unreadChannelMessagesUpdated", (data) => {
       // Mettre à jour les compteurs globaux
       setGlobalNotifications((prev) => ({
@@ -414,14 +457,16 @@ export function SocketProvider({ children }) {
         JSON.stringify(data.channels)
       );
 
-      // Émettre un événement
-      const event = new CustomEvent("unreadChannelMessagesUpdated", {
-        detail: {
-          total: data.total,
-          channels: data.channels,
-        },
-      });
-      window.dispatchEvent(event);
+      // Émettre un événement de manière asynchrone pour éviter les problèmes de rendu React
+      setTimeout(() => {
+        const event = new CustomEvent("unreadChannelMessagesUpdated", {
+          detail: {
+            total: data.total,
+            channels: data.channels,
+          },
+        });
+        window.dispatchEvent(event);
+      }, 0);
     });
 
     // Confirmation qu'un canal a été marqué comme lu
