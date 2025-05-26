@@ -211,6 +211,24 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.textSecondary,
     lineHeight: 18,
   },
+
+  // Badge de notification pour les canaux
+  channelBadge: {
+    backgroundColor: theme.accentPrimary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    paddingHorizontal: 6,
+  },
+
+  channelBadgeText: {
+    color: theme.textOnAccent,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   
   emptyState: {
     alignItems: 'center',

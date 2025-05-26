@@ -21,7 +21,7 @@ import { getStyles } from './WorkspaceDetailScreen.styles';
 
 const WorkspaceDetailScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
-  const { socket } = useSocket();
+  const { socket, markChannelAsRead } = useSocket();
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
   
@@ -50,19 +50,78 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     getCurrentUser();
   }, [workspaceId, channelId]);
 
+  // Marquer le canal comme lu quand l'utilisateur consulte les messages
+  useEffect(() => {
+    if (workspaceId && channelId && currentUserId && messages.length > 0) {
+      // Marquer comme lu après un court délai pour s'assurer que les messages sont chargés
+      const timer = setTimeout(() => {
+        markChannelAsRead(workspaceId, channelId);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [workspaceId, channelId, currentUserId, messages, markChannelAsRead]);
+
+  // Rejoindre le canal et workspace pour les notifications temps réel
   useEffect(() => {
     if (socket && workspaceId && channelId && currentUserId) {
-      socket.emit('joinWorkspace', { workspaceId, userId: currentUserId });
-      socket.emit('joinCanal', { canalId: channelId, workspaceId });
+      console.log("🏢 WorkspaceDetail: Joining workspace and channel", { 
+        workspaceId, 
+        channelId, 
+        currentUserId,
+        socketId: socket.id 
+      });
       
-      socket.on('message', handleNewMessage);
+      // Rejoindre le workspace et le canal avec debug
+      socket.emit('joinWorkspace', { workspaceId, userId: currentUserId });
+      console.log("📡 WorkspaceDetail: Emitted joinWorkspace", { workspaceId, userId: currentUserId });
+      
+      socket.emit('joinCanal', { canalId: channelId, workspaceId });
+      console.log("📡 WorkspaceDetail: Emitted joinCanal", { canalId: channelId, workspaceId });
+      
+      // Test de connectivité spécifique au canal
+      socket.emit('testChannelConnection', { 
+        channelId, 
+        workspaceId, 
+        userId: currentUserId,
+        message: 'Testing from WorkspaceDetail mobile' 
+      });
+      
+      // Écouter les événements de ce canal spécifiquement
+      const handleMessage = (data) => {
+        console.log("📨 WorkspaceDetail: Message received in channel", channelId, data);
+        handleNewMessage(data);
+      };
+
+      const handleTyping = (data) => {
+        console.log("⌨️ WorkspaceDetail: Typing event", data);
+        if (data.canalId === channelId && data.userId !== currentUserId) {
+          setTypingUsers(prev => {
+            if (!prev.includes(data.userName)) {
+              return [...prev, data.userName];
+            }
+            return prev;
+          });
+        }
+      };
+
+      const handleStopTyping = (data) => {
+        console.log("⌨️ WorkspaceDetail: Stop typing event", data);
+        if (data.canalId === channelId) {
+          setTypingUsers(prev => prev.filter(user => user !== data.userName));
+        }
+      };
+
+      socket.on('message', handleMessage);
       socket.on('typing', handleTyping);
       socket.on('stopTyping', handleStopTyping);
       socket.on('connect', handleReconnect);
       socket.on('disconnect', handleDisconnect);
       
       return () => {
-        socket.off('message', handleNewMessage);
+        console.log("🚪 WorkspaceDetail: Leaving channel", channelId);
+        socket.emit('leaveCanal', { canalId: channelId, workspaceId });
+        socket.off('message', handleMessage);
         socket.off('typing', handleTyping);
         socket.off('stopTyping', handleStopTyping);
         socket.off('connect', handleReconnect);
@@ -118,23 +177,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     setConnectionError(true);
   }, []);
 
-  const handleTyping = useCallback((data) => {
-    if (data.canalId === channelId && data.userId !== currentUserId) {
-      setTypingUsers(prev => {
-        if (!prev.includes(data.userName)) {
-          return [...prev, data.userName];
-        }
-        return prev;
-      });
-    }
-  }, [channelId, currentUserId]);
-
-  const handleStopTyping = useCallback((data) => {
-    if (data.canalId === channelId) {
-      setTypingUsers(prev => prev.filter(user => user !== data.userName));
-    }
-  }, [channelId]);
-
   const fetchChannelMessages = useCallback(async (isInitial = false, retryAttempt = 0) => {
     if (!isInitial && (loadingMore || !hasMoreMessages)) return;
     
@@ -159,7 +201,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           return;
         }
 
-        // Tri par date de création, du plus récent au plus ancien pour l'affichage inversé
         const sortedData = data.sort((a, b) => 
           new Date(b.date_creation) - new Date(a.date_creation)
         );
@@ -321,7 +362,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   }, [messages, currentUserId]);
 
   const renderMessageGroup = useCallback(({ item: group }) => {
-    // Tableau des messages par ordre chronologique (plus ancien au plus récent)
     const chronologicalMessages = [...group.messages].reverse();
     
     return (
@@ -330,8 +370,8 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         group.isOwn ? styles.ownMessageGroup : styles.otherMessageGroup
       ]}>
         {chronologicalMessages.map((message, index) => {
-          const isFirstMessage = index === 0; // Premier message chronologique (le plus ancien)
-          const isLastMessage = index === chronologicalMessages.length - 1; // Dernier message chronologique (le plus récent)
+          const isFirstMessage = index === 0;
+          const isLastMessage = index === chronologicalMessages.length - 1;
           
           return (
             <View
@@ -344,7 +384,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                 { marginVertical: 2 }
               ]}
             >
-              {/* Header avec avatar, nom et heure seulement pour le premier message chronologique (le plus ancien) */}
               {!group.isOwn && isFirstMessage && (
                 <View style={styles.messageHeaderInBubble}>
                   {renderAvatarInBubble({ 
@@ -372,7 +411,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                 {message.contenu}
               </Text>
               
-              {/* Heure pour les messages propres, seulement sur le dernier message chronologique (le plus récent) */}
               {group.isOwn && isLastMessage && (
                 <Text style={styles.ownMessageTime}>
                   {new Date(message.date_creation).toLocaleTimeString('fr-FR', {

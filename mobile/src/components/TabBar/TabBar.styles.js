@@ -47,10 +47,10 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: theme.badgeBorder,
+    borderColor: theme.cardBackground, // Utiliser la couleur de fond de la carte au lieu de badgeBorder
   },
   badgeText: {
-    color: theme.textOnAccent, // Updated
+    color: theme.textOnAccent,
     fontSize: 10,
     fontWeight: 'bold',
     textAlign: 'center',

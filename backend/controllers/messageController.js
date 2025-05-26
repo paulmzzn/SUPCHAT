@@ -445,3 +445,86 @@ export const markChannelAsRead = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// NOUVEAU: Obtenir les messages non lus organisés par workspace
+export const getUnreadMessagesByWorkspace = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "ID utilisateur requis" });
+    }
+
+    console.log(`🏢 Récupération des messages non lus par workspace pour l'utilisateur ${userId}`);
+
+    // Récupérer tous les workspaces de l'utilisateur avec leurs canaux non lus
+    const query = `
+      WITH user_workspaces AS (
+        SELECT DISTINCT w.id_workspace, w.nom as workspace_name
+        FROM workspace w
+        JOIN membre_workspace mw ON w.id_workspace = mw.fk_workspace
+        WHERE mw.fk_utilisateur = $1
+      ),
+      unread_by_channel AS (
+        SELECT 
+          c.id_canal,
+          c.nom as channel_name,
+          c.fk_workspace,
+          COUNT(m.id_message) as unread_count
+        FROM canal c
+        JOIN message m ON c.id_canal = m.fk_canal
+        LEFT JOIN canal_lecture cl ON c.id_canal = cl.fk_canal AND cl.fk_utilisateur = $1
+        WHERE c.fk_workspace IN (SELECT id_workspace FROM user_workspaces)
+          AND (cl.derniere_lecture IS NULL OR m.created_at > cl.derniere_lecture)
+          AND m.fk_utilisateur != $1
+        GROUP BY c.id_canal, c.nom, c.fk_workspace
+        HAVING COUNT(m.id_message) > 0
+      )
+      SELECT 
+        uw.id_workspace,
+        uw.workspace_name,
+        COALESCE(
+          json_object_agg(
+            ubc.id_canal, 
+            json_build_object(
+              'count', ubc.unread_count,
+              'name', ubc.channel_name
+            )
+          ) FILTER (WHERE ubc.id_canal IS NOT NULL), 
+          '{}'::json
+        ) as channels,
+        COALESCE(SUM(ubc.unread_count), 0) as total_unread
+      FROM user_workspaces uw
+      LEFT JOIN unread_by_channel ubc ON uw.id_workspace = ubc.fk_workspace
+      GROUP BY uw.id_workspace, uw.workspace_name
+      ORDER BY uw.workspace_name;
+    `;
+
+    const { rows } = await pool.query(query, [userId]);
+
+    // Organiser les résultats par workspace
+    const workspaces = {};
+    rows.forEach(row => {
+      workspaces[row.id_workspace] = {
+        name: row.workspace_name,
+        totalUnread: parseInt(row.total_unread),
+        channels: row.channels || {}
+      };
+    });
+
+    const response = {
+      workspaces,
+      total: Object.values(workspaces).reduce((sum, ws) => sum + ws.totalUnread, 0)
+    };
+
+    console.log(`🏢 Réponse workspace unread:`, {
+      workspaceCount: Object.keys(workspaces).length,
+      totalUnread: response.total
+    });
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Erreur dans getUnreadMessagesByWorkspace:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

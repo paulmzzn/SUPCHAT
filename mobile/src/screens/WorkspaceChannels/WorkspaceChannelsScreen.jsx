@@ -15,11 +15,13 @@ import env from '../../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
+import { useSocket } from '../../context/SocketContext'; // Importer useSocket
 import { getStyles } from './WorkspaceChannelsScreen.styles';
 
 const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const { workspaceId } = route.params;
   const { colors: themeColors } = useTheme();
+  const { socket, unreadChannelMessages, refreshUnreadCounts } = useSocket(); // Accès aux messages non lus par canal
   const styles = getStyles(themeColors);
   
   const [workspace, setWorkspace] = useState(null);
@@ -31,6 +33,47 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
   useEffect(() => {
     loadWorkspaceData();
   }, [workspaceId]);
+
+  useEffect(() => {
+    fetchChannels();
+    refreshUnreadCounts();
+  }, [refreshUnreadCounts]);
+
+  // Se connecter au workspace pour les notifications
+  useEffect(() => {
+    if (socket && workspaceId) {
+      socket.emit('joinWorkspace', { 
+        workspaceId, 
+        userId: socket.userId 
+      });
+
+      return () => {
+        socket.emit('leaveWorkspace', { 
+          workspaceId, 
+          userId: socket.userId 
+        });
+      };
+    }
+  }, [socket, workspaceId]);
+
+  // Mettre à jour les canaux quand les compteurs changent
+  useEffect(() => {
+    if (channels.length > 0) {
+      const updatedChannels = channels.map(channel => ({
+        ...channel,
+        unreadCount: unreadChannelMessages[channel.id]?.count || 0
+      }));
+      
+      // Ne mettre à jour que si les compteurs ont changé
+      const hasCountChanges = updatedChannels.some((channel, index) => 
+        channel.unreadCount !== channels[index]?.unreadCount
+      );
+      
+      if (hasCountChanges) {
+        setChannels(updatedChannels);
+      }
+    }
+  }, [unreadChannelMessages]);
 
   const loadWorkspaceData = async () => {
     try {
@@ -94,22 +137,16 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
         console.log('Données des canaux reçues:', JSON.stringify(data));
         
         if (Array.isArray(data)) {
-          console.log(`${data.length} canaux trouvés`);
           const formattedChannels = data.map(canal => ({
             id: canal.id_canal,
             name: canal.nom,
             isPrivate: canal.is_private || false,
             description: canal.description || '',
-            memberCount: canal.member_count || 0
+            memberCount: canal.member_count || 0,
+            unreadCount: unreadChannelMessages[canal.id_canal]?.count || 0,
+            workspaceId: workspaceId // Inclure le workspaceId
           }));
           setChannels(formattedChannels);
-        } else {
-          console.error('Les données reçues ne sont pas un tableau:', data);
-          Toast.show({
-            type: 'error',
-            text1: 'Format de données incorrect',
-            text2: 'Les canaux n\'ont pas pu être affichés'
-          });
         }
       } else {
         // Essayons une URL alternative
@@ -127,13 +164,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
           console.log('Données des canaux reçues (alternative):', JSON.stringify(data));
           
           if (Array.isArray(data)) {
-            console.log(`${data.length} canaux trouvés (alternative)`);
             const formattedChannels = data.map(canal => ({
               id: canal.id_canal,
               name: canal.nom,
               isPrivate: canal.is_private || false,
               description: canal.description || '',
-              memberCount: canal.member_count || 0
+              memberCount: canal.member_count || 0,
+              unreadCount: unreadChannelMessages[canal.id_canal]?.count || 0,
+              workspaceId: workspaceId // Inclure le workspaceId
             }));
             setChannels(formattedChannels);
           }
@@ -145,11 +183,6 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des canaux:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: 'Impossible de récupérer les canaux'
-      });
     }
   };
 
@@ -181,44 +214,42 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const renderChannel = ({ item }) => (
     <TouchableOpacity
       style={styles.channelItem}
-      onPress={() => navigateToChannel(item)}
+      onPress={() => navigation.navigate('Workspace', {
+        workspaceId: workspaceId,
+        channelId: item.id,
+        channelName: item.name
+      })}
     >
       <View style={styles.channelIcon}>
-        {item.isPrivate ? (
-          <Ionicons
-            name="lock-closed"
-            size={20}
-            color={themeColors.accentPrimary}
-          />
-        ) : (
-          <Text style={{
-            fontSize: 20, 
-            fontWeight: 'bold',
-            color: themeColors.accentPrimary
-          }}>
-            #
-          </Text>
-        )}
+        <Ionicons
+          name={item.isPrivate ? "lock-closed" : "hashtag"}
+          size={20}
+          color={themeColors.textSecondary}
+        />
       </View>
       
       <View style={styles.channelContent}>
         <View style={styles.channelHeader}>
           <Text style={styles.channelName}>{item.name}</Text>
-          {item.memberCount > 0 && (
-            <Text style={styles.channelMemberCount}>
-              {item.memberCount} {item.memberCount === 1 ? 'membre' : 'membres'}
-            </Text>
-          )}
+          <Text style={styles.channelMemberCount}>
+            {item.memberCount} membre{item.memberCount > 1 ? 's' : ''}
+          </Text>
         </View>
-        
-        {item.description && (
+        {item.description ? (
           <Text style={styles.channelDescription} numberOfLines={2}>
             {item.description}
           </Text>
-        )}
+        ) : null}
       </View>
-      
-      <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
+
+      {/* Badge de notification */}
+      {item.unreadCount > 0 && (
+        <View style={styles.channelBadge}>
+          <Text style={styles.channelBadgeText}>
+            {item.unreadCount > 99 ? '99+' : item.unreadCount}
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 

@@ -103,6 +103,10 @@ const socketManager = (io) => {
       // Mettre à jour le statut dans la BD (1 = en ligne)
       updateUserStatus(userId, 1);
 
+      // *** NOUVEAU : Rejoindre la room personnelle pour recevoir les mises à jour de compteurs ***
+      socket.join(`user:${userId}`);
+      console.log(`🔔 Socket.IO: Utilisateur ${userId} rejoint sa room personnelle user:${userId}`);
+
       // Informer tous les workspaces de l'utilisateur qu'il est en ligne
       socket.on("userJoinedWorkspaces", ({ workspaces }) => {
         if (Array.isArray(workspaces)) {
@@ -624,6 +628,55 @@ const socketManager = (io) => {
             formattedUserMessage
           );
           io.to(`${canal_id}`).emit("message", formattedUserMessage); // Émettre le message de l'utilisateur
+
+          // *** NOUVELLE FONCTIONNALITÉ : Mise à jour des compteurs non lus ***
+          // Récupérer tous les membres du workspace SAUF l'expéditeur du message
+          try {
+            if (finalWorkspaceId) {
+              console.log(`🔔 Socket.IO: Mise à jour des compteurs pour workspace ${finalWorkspaceId}, canal ${canal_id}`);
+              
+              const workspaceMembersQuery = await pool.query(
+                `SELECT mw.fk_utilisateur as user_id 
+                 FROM membre_workspace mw 
+                 WHERE mw.fk_workspace = $1 AND mw.fk_utilisateur != $2`,
+                [finalWorkspaceId, socket.user.id]
+              );
+
+              const workspaceMembers = workspaceMembersQuery.rows;
+              console.log(`🔔 Socket.IO: ${workspaceMembers.length} membres à notifier dans le workspace ${finalWorkspaceId}`);
+
+              // Pour chaque membre du workspace (sauf l'expéditeur)
+              for (const member of workspaceMembers) {
+                const memberId = member.user_id;
+                
+                try {
+                  // Récupérer les compteurs mis à jour pour ce membre
+                  const updatedCounts = await MessageModel.getUnreadCountByChannel(memberId);
+                  
+                  // Calculer le total des messages non lus
+                  let total = 0;
+                  if (updatedCounts && updatedCounts.channels) {
+                    Object.values(updatedCounts.channels).forEach((channel) => {
+                      total += channel.count || 0;
+                    });
+                  }
+
+                  // Émettre la mise à jour des compteurs vers ce membre spécifique
+                  // Utiliser l'ID utilisateur comme room pour cibler précisément chaque membre
+                  io.to(`user:${memberId}`).emit("unreadChannelMessagesUpdated", {
+                    channels: updatedCounts.channels || {},
+                    total: total,
+                  });
+
+                  console.log(`🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total}`);
+                } catch (memberError) {
+                  console.error(`🔔 Socket.IO: Erreur mise à jour compteurs pour membre ${memberId}:`, memberError);
+                }
+              }
+            }
+          } catch (workspaceError) {
+            console.error("🔔 Socket.IO: Erreur lors de la mise à jour des compteurs workspace:", workspaceError);
+          }
         } else {
           console.warn(
             "Socket.IO: Message utilisateur enregistré mais non émis (non trouvé)"
