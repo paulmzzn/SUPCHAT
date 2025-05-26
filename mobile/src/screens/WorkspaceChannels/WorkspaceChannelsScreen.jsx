@@ -248,7 +248,13 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
           </Text>
         </View>
         
-        <TouchableOpacity style={styles.headerAction}>
+        <TouchableOpacity 
+          style={styles.headerAction}
+          onPress={() => navigation.navigate('WorkspaceSettings', { 
+            workspaceId, 
+            workspaceName: workspace?.nom || 'Workspace' 
+          })}
+        >
           <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
         </TouchableOpacity>
       </View>

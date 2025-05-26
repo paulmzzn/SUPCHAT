@@ -17,6 +17,11 @@ export const UserPreferencesProvider = ({ children }) => {
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Filtrer les enfants pour s'assurer qu'aucun texte brut n'est rendu
+  const filteredChildren = React.Children.toArray(children).filter(
+    child => React.isValidElement(child)
+  );
+
   // Chargement des préférences depuis le stockage local
   useEffect(() => {
     const loadPreferences = async () => {
@@ -71,7 +76,7 @@ export const UserPreferencesProvider = ({ children }) => {
 
   return (
     <UserPreferencesContext.Provider value={value}>
-      {children}
+      {filteredChildren}
     </UserPreferencesContext.Provider>
   );
 };
