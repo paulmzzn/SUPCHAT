@@ -14,7 +14,7 @@ export const googleStrategy = new GoogleStrategy(
     clientSecret: "REDACTED",
 
 
-    callbackURL: "http://REDACTED:3000/api/users/auth/google/callback",
+    callbackURL: "http://192.168.1.95:3000/api/users/auth/google/callback",
 
   },
   async (accessToken, refreshToken, profile, done) => {
@@ -54,7 +54,7 @@ export const githubStrategy = new GitHubStrategy(
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
 
 
-    callbackURL: "http://REDACTED:3000/api/users/auth/github/callback",
+    callbackURL: "http://192.168.1.95:3000/api/users/auth/github/callback",
 
   },
   async (accessToken, refreshToken, profile, done) => {
