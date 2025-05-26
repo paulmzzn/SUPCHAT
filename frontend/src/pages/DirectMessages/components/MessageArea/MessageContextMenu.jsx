@@ -59,11 +59,24 @@ const MessageContextMenu = ({
         </div>
         {isOwnMessage && (
           <>
-            <div className="dm-context-menu-item" onClick={onEdit}>
-              Modifier
+            <div
+              className="dm-context-menu-item"
+              onClick={() => {
+                onEdit && onEdit(messageContextMenu.message);
+                onClose();
+              }}
+            >
+              ✏️ Modifier
             </div>
-            <div className="dm-context-menu-item" onClick={onDelete}>
-              Supprimer
+            <div
+              className="dm-context-menu-item"
+              onClick={() => {
+                onDelete && onDelete(messageContextMenu.message);
+                onClose();
+              }}
+              style={{ color: "red" }}
+            >
+              🗑️ Supprimer
             </div>
           </>
         )}

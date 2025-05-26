@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
 // import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs
@@ -37,14 +37,6 @@ export const useConversations = (options = {}) => {
   const { socket } = options;
 
   /**
-   * Sélectionne un utilisateur pour la conversation
-   * @param {string} userId - ID de l'utilisateur
-   */
-  const handleSelectUser = useCallback((userId) => {
-    setSelectedUser(userId);
-  }, []);
-
-  /**
    * Calcule le nombre total de messages non lus
    * @param {Object} countsObj - Objet avec les compteurs par conversation
    * @returns {number} - Total des messages non lus
@@ -53,6 +45,72 @@ export const useConversations = (options = {}) => {
     if (!countsObj) return 0;
     return Object.values(countsObj).reduce((sum, count) => sum + count, 0);
   }, []);
+  /**
+   * Remet à zéro le compteur de non lus pour un utilisateur
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const resetUnreadCountForUser = useCallback(
+    (userId) => {
+      if (!userId) return;
+
+      console.log(
+        "[useConversations] Réinitialisation du compteur pour",
+        userId
+      );
+
+      setUnreadMessageCounts((prev) => {
+        // Si le compteur est déjà à 0 ou n'existe pas, ne rien faire
+        if (!prev[userId] || prev[userId] === 0) return prev;
+
+        // Créer de nouveaux compteurs en mettant à zéro le compteur de l'utilisateur
+        const newCounts = { ...prev, [userId]: 0 };
+        const newTotal = calculateTotalUnreadCount(newCounts);
+
+        console.log("[useConversations] Nouveau total après reset:", newTotal);
+
+        // Mettre à jour le total
+        setTotalUnreadCount(newTotal);
+
+        // Sauvegarder dans localStorage
+        localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
+        localStorage.setItem("unreadPrivateMessages", newTotal.toString());
+
+        // Nous utiliserons un setTimeout pour déplacer la distribution d'événement
+        // hors du cycle de rendu de React, évitant ainsi l'erreur
+        setTimeout(() => {
+          // Émettre un événement pour notifier les autres composants
+          window.dispatchEvent(
+            new CustomEvent("unreadMessagesUpdated", {
+              detail: { count: newTotal, counts: newCounts },
+            })
+          );
+        }, 0);
+
+        return newCounts;
+      });
+    },
+    [calculateTotalUnreadCount]
+  );
+  /**
+   * Sélectionne un utilisateur pour la conversation et réinitialise son compteur de messages non lus
+   * @param {string} userId - ID de l'utilisateur
+   */ const handleSelectUser = useCallback(
+    (userId) => {
+      setSelectedUser(userId);
+      // Réinitialiser le compteur de messages non lus pour cet utilisateur
+      resetUnreadCountForUser(userId); // Notifier le serveur que les messages de cet utilisateur ont été lus
+      if (socket && socket.connected && userId) {
+        console.log(
+          `[useConversations] Marquage des messages de ${userId} comme lus`
+        );
+        socket.emit("readAllPrivateMessages", {
+          senderId: userId,
+          recipientId: currentUserId,
+        });
+      }
+    },
+    [resetUnreadCountForUser, socket]
+  );
 
   /**
    * Récupère les informations d'un utilisateur
@@ -211,6 +269,36 @@ export const useConversations = (options = {}) => {
     },
     [calculateTotalUnreadCount]
   );
+
+  /**
+   * Rafraîchit les compteurs de messages non lus depuis le localStorage
+   */
+  const refreshUnreadCounts = useCallback(() => {
+    const unreadCountsFromStorage = safeJSONParse(
+      localStorage.getItem("unreadDMCounts"),
+      {}
+    );
+
+    // Nettoyer les compteurs potentiellement invalides
+    const cleanCounts = {};
+    Object.keys(unreadCountsFromStorage).forEach((key) => {
+      const count = parseInt(unreadCountsFromStorage[key]);
+      if (!isNaN(count) && count > 0) {
+        cleanCounts[key] = count;
+      }
+    });
+
+    // Si l'utilisateur sélectionné a déjà un compteur, le réinitialiser
+    if (selectedUser && cleanCounts[selectedUser]) {
+      cleanCounts[selectedUser] = 0;
+    }
+
+    setUnreadMessageCounts(cleanCounts);
+    const total = calculateTotalUnreadCount(cleanCounts);
+    setTotalUnreadCount(total);
+
+    return { counts: cleanCounts, total };
+  }, [calculateTotalUnreadCount, selectedUser]);
 
   /**
    * Filtre les conversations en fonction de la recherche
@@ -373,21 +461,7 @@ export const useConversations = (options = {}) => {
     },
     [deleteConversation, selectedUser, handleCloseConversationContextMenu]
   );
-  /**
-   * Remet à zéro le compteur de non lus pour un utilisateur (à appeler lors de l'ouverture d'une conversation)
-   * @param {string} userId
-   */
-  const resetUnreadCountForUser = useCallback(
-    (userId) => {
-      setUnreadMessageCounts((prev) => {
-        const newCounts = { ...prev, [userId]: 0 };
-        setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
-        localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
-        return newCounts;
-      });
-    },
-    [calculateTotalUnreadCount]
-  );
+
   // Effet pour initialiser l'application et charger les conversations
   useEffect(() => {
     // Récupérer d'abord l'ID utilisateur
@@ -410,22 +484,16 @@ export const useConversations = (options = {}) => {
           })
           .join("")
       );
-
       const payload = JSON.parse(jsonPayload);
       if (payload && payload.id) {
         console.log("[useConversations] ID utilisateur récupéré:", payload.id);
         setCurrentUserId(payload.id);
 
-        // Une fois l'ID utilisateur défini, charger les conversations
+        // Une fois l'ID utilisateur défini, charger les conversations une seule fois
         fetchConversations();
 
-        // Actualiser les conversations périodiquement (toutes les 30 secondes)
-        const intervalId = setInterval(() => {
-          console.log("[useConversations] Actualisation des conversations...");
-          fetchConversations();
-        }, 30000);
-
-        return () => clearInterval(intervalId);
+        // Nous ne mettons plus à jour périodiquement car nous utilisons les WebSockets
+        // pour les mises à jour en temps réel
       }
     } catch (error) {
       console.error(
@@ -433,7 +501,8 @@ export const useConversations = (options = {}) => {
         error
       );
     }
-  }, [fetchConversations]);
+    // Note: fetchConversations est omis intentionnellement pour éviter les appels en boucle
+  }, []);
 
   // Effet pour charger l'utilisateur courant au démarrage
   useEffect(() => {
@@ -480,7 +549,30 @@ export const useConversations = (options = {}) => {
     });
 
     setFilteredUsers(filtered);
-  }, [searchUserQuery, availableUsers]);
+  }, [searchUserQuery, availableUsers]); // Écouter l'événement allMessagesRead
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleAllMessagesRead = (data) => {
+      console.log("[useConversations] Tous les messages ont été lus:", data);
+
+      // Si ce sont mes messages qui ont été lus par quelqu'un d'autre, ne rien faire
+      if (data.readBy !== currentUserId) return;
+
+      // Mettre à jour le compteur pour l'expéditeur concerné
+      if (data.count > 0) {
+        const senderId =
+          data.readBy === currentUserId ? selectedUser : data.readBy;
+        resetUnreadCountForUser(senderId);
+      }
+    };
+
+    socket.on("allMessagesRead", handleAllMessagesRead);
+
+    return () => {
+      socket.off("allMessagesRead", handleAllMessagesRead);
+    };
+  }, [socket, currentUserId, selectedUser, resetUnreadCountForUser]);
 
   // Effet pour charger les compteurs de messages non lus au démarrage
   useEffect(() => {
@@ -488,18 +580,54 @@ export const useConversations = (options = {}) => {
       localStorage.getItem("unreadDMCounts"),
       {}
     );
-    setUnreadMessageCounts(unreadCountsFromStorage);
 
-    const total = calculateTotalUnreadCount(unreadCountsFromStorage);
+    // Nettoyer les compteurs potentiellement invalides (négatifs ou NaN)
+    const cleanCounts = {};
+    Object.keys(unreadCountsFromStorage).forEach((key) => {
+      const count = parseInt(unreadCountsFromStorage[key]);
+      if (!isNaN(count) && count > 0) {
+        cleanCounts[key] = count;
+      }
+    });
+
+    // Si l'utilisateur sélectionné a déjà un compteur, le réinitialiser
+    if (selectedUser && cleanCounts[selectedUser]) {
+      cleanCounts[selectedUser] = 0;
+    }
+
+    setUnreadMessageCounts(cleanCounts);
+    const total = calculateTotalUnreadCount(cleanCounts);
     setTotalUnreadCount(total);
-  }, [calculateTotalUnreadCount]);
-
-  // --- Gestion des messages non lus en temps réel ---
+    // Mettre à jour localStorage avec les valeurs nettoyées
+    localStorage.setItem("unreadDMCounts", JSON.stringify(cleanCounts));
+    localStorage.setItem("unreadPrivateMessages", total.toString());
+  }, [calculateTotalUnreadCount, selectedUser]); // --- Gestion des messages non lus en temps réel ---
   useEffect(() => {
     if (!socket) return;
     const handlePrivateMessage = (msg) => {
       // Ne rien faire si pas d'utilisateur courant
       if (!currentUserId) return;
+
+      // Si c'est un nouvel expéditeur, ajouter à la liste des conversations
+      if (msg.fk_expediteur !== currentUserId) {
+        const senderId = msg.fk_expediteur;
+        setConversations((prev) => {
+          // Vérifier si l'expéditeur est déjà dans les conversations
+          if (!prev.includes(senderId)) {
+            console.log(
+              "[useConversations] Nouvelle conversation avec:",
+              senderId
+            );
+            // Récupérer les informations de l'utilisateur
+            fetchUserInfo(senderId);
+            // Ajouter à la liste des conversations
+            return [senderId, ...prev]; // Placer le nouveau contact en premier
+          }
+          // Sinon, on déplace cette conversation au début de la liste
+          return [senderId, ...prev.filter((id) => id !== senderId)];
+        });
+      }
+
       // Si le message vient d'un autre utilisateur et que la conversation n'est pas ouverte
       if (
         msg.fk_expediteur !== currentUserId &&
@@ -512,9 +640,32 @@ export const useConversations = (options = {}) => {
             ...prev,
             [senderId]: (prev[senderId] || 0) + 1,
           };
-          // Mettre à jour le total et le localStorage
-          setTotalUnreadCount(calculateTotalUnreadCount(newCounts));
+          console.log(
+            "[useConversations] Nouveau message non lu de",
+            senderId,
+            "total:",
+            newCounts[senderId],
+            "tous compteurs:",
+            JSON.stringify(newCounts)
+          ); // Mettre à jour le total
+          const newTotal = calculateTotalUnreadCount(newCounts);
+          setTotalUnreadCount(newTotal);
+
+          // Sauvegarder dans localStorage
           localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
+
+          // Utiliser un setTimeout pour éviter les mises à jour d'état pendant le rendu
+          setTimeout(() => {
+            // Mettre à jour localStorage et émettre un événement personnalisé en dehors du cycle de rendu
+            localStorage.setItem("unreadPrivateMessages", newTotal.toString());
+
+            window.dispatchEvent(
+              new CustomEvent("unreadMessagesUpdated", {
+                detail: { count: newTotal, counts: newCounts },
+              })
+            );
+          }, 0);
+
           return newCounts;
         });
       }
@@ -562,5 +713,6 @@ export const useConversations = (options = {}) => {
     handleStartConversation,
     handleDeleteConversation,
     resetUnreadCountForUser,
+    refreshUnreadCounts,
   };
 };

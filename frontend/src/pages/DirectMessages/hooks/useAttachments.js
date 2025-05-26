@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
@@ -19,9 +19,9 @@ export const useAttachments = (options = {}) => {
     workspaceId,
     recipientId,
     socket,
-    setMessages,
-    setNewMessage,
-    setReplyingTo,
+    setMessages = () => {},
+    setNewMessage = () => {},
+    setReplyingTo = () => {},
   } = options;
 
   /**
@@ -182,34 +182,96 @@ export const useAttachments = (options = {}) => {
       fileInputRef.current.click();
     }
   }, []);
-
   /**
    * Télécharge un fichier (via l'API sécurisée backend)
    * @param {string} fileUrl - URL du fichier (S3 ou relative)
    * @param {string} fileName - Nom du fichier
-   */
-  const handleDownloadFile = useCallback(async (fileUrl, fileName) => {
-    if (!fileUrl) return;
-    // Extraction du chemin S3 ou relatif
+   */ const handleDownloadFile = useCallback(async (fileUrl, fileName) => {
+    if (!fileUrl) {
+      console.error("[useAttachments] Erreur: URL de fichier manquante");
+      alert("Erreur: URL de fichier manquante");
+      return;
+    }
+
+    // Log pour debug
+    console.log("[useAttachments] Téléchargement de fichier demandé:", {
+      fileUrl,
+      fileName,
+    }); // Gestion spéciale pour les chemins de fichiers des messages privés
     let filePath = fileUrl;
-    if (fileUrl.startsWith("http")) {
-      // S3 complet : extraire le chemin après le bucket
-      const s3Match = fileUrl.match(
+
+    // Détection et extraction du chemin pour les messages privés
+    if (fileUrl && fileUrl.includes("private-messages/files/")) {
+      const privateMessageMatch = fileUrl.match(
+        /private-messages\/files\/([^\/]+)$/
+      );
+      if (privateMessageMatch) {
+        filePath = `private-messages/files/${privateMessageMatch[1]}`;
+        console.log("[useAttachments] Chemin message privé extrait:", filePath);
+      }
+    }
+    // Extraction pour les URLs S3 standard
+    else if (fileUrl && fileUrl.includes("s3-supchat")) {
+      // Plusieurs tentatives d'extraction de chemins S3
+      const s3CloudMatch = fileUrl.match(
         /s3-supchat\.s3\.fr-par\.scw\.cloud\/(.+)$/
       );
-      if (s3Match) filePath = s3Match[1];
+      const s3Match = fileUrl.match(/s3-supchat\/(.+)$/);
+
+      if (s3CloudMatch) {
+        filePath = s3CloudMatch[1];
+        console.log("[useAttachments] Chemin S3 cloud extrait:", filePath);
+      } else if (s3Match) {
+        filePath = s3Match[1];
+        console.log("[useAttachments] Chemin S3 simple extrait:", filePath);
+      } else {
+        // Si aucun pattern ne correspond, utiliser simplement "s3-supchat/" + le nom du fichier
+        filePath = `s3-supchat/private-messages/files/${fileName}`;
+        console.log(
+          "[useAttachments] Utilisation du chemin construit:",
+          filePath
+        );
+      }
     }
-    // Appel API backend sécurisé
+
+    console.log("[useAttachments] URL originale:", fileUrl);
+    console.log("[useAttachments] URL transformée:", filePath);
+
+    // Appel API backend sécurisé avec la méthode de WorkspaceDetails
     const token = localStorage.getItem("token");
+    if (!token) {
+      console.error(
+        "[useAttachments] Erreur: Token d'authentification manquant"
+      );
+      alert("Erreur: Vous devez être connecté pour télécharger des fichiers");
+      return;
+    }
     const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
       filePath
     )}`;
+    console.log("[useAttachments] URL de téléchargement:", downloadUrl);
+
     try {
       const response = await fetch(downloadUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (!response.ok) throw new Error("Erreur de téléchargement");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[useAttachments] Erreur HTTP ${response.status}:`,
+          errorText
+        );
+        throw new Error(
+          `Erreur de téléchargement (${response.status}): ${errorText}`
+        );
+      }
+
       const blob = await response.blob();
+      console.log("[useAttachments] Blob reçu:", blob.type, blob.size);
+
       const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objectUrl;
@@ -218,8 +280,14 @@ export const useAttachments = (options = {}) => {
       a.click();
       window.URL.revokeObjectURL(objectUrl);
       document.body.removeChild(a);
-    } catch (err) {
-      alert("Erreur lors du téléchargement du fichier");
+
+      console.log("[useAttachments] Téléchargement initié avec succès");
+    } catch (error) {
+      console.error("[useAttachments] Erreur lors du téléchargement:", error);
+      alert(
+        "Impossible de télécharger le fichier. Veuillez réessayer: " +
+          error.message
+      );
     }
   }, []);
 
@@ -267,7 +335,6 @@ export const useAttachments = (options = {}) => {
   const resetAttachments = useCallback(() => {
     setAttachments([]);
   }, []);
-
   return {
     attachments,
     setAttachments,

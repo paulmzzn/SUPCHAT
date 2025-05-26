@@ -1,7 +1,7 @@
 // Hook pour la gestion de la liste des messages (chargement, suppression, édition, reply, etc.)
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.90:3000";
 
 export function useMessageList({ selectedUser, socket, currentUserId }) {
   const [messages, setMessages] = useState([]);
@@ -41,10 +41,10 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
       );
       if (unreadMessages.length === 0) return;
       socket.emit(
-        "markPrivateMessagesAsRead",
+        "readAllPrivateMessages",
         {
-          messages: unreadMessages.map((msg) => msg.id_message_prive),
-          sender: selectedUser,
+          senderId: selectedUser,
+          recipientId: currentUserId,
         },
         (response) => {
           if (!response.success) {

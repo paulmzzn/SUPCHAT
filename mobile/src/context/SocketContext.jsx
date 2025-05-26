@@ -9,7 +9,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.172:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.90:3000";
 
 const SocketContext = createContext(null);
 

@@ -27,8 +27,7 @@ services:
       - backend
 
     environment:
-      - REACT_APP_API_URL=http://192.168.1.172:8888
-      - REACT_APP_API_URL=http://192.168.1.172:8888
+      - REACT_APP_API_URL=http://192.168.1.90:8888
 #   portainer:
 #     image: portainer/portainer-ce
 #     container_name: portainer
