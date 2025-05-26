@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Création du contexte
@@ -55,6 +56,10 @@ export const UserPreferencesProvider = ({ children }) => {
   const toggleNotificationSound = async () => {
     await updatePreference('notificationSoundEnabled', !preferences.notificationSoundEnabled);
   };
+
+  if (isLoading) {
+    return <Text>Loading preferences...</Text>;
+  }
 
   // Valeurs exposées par le contexte
   const value = {

@@ -27,7 +27,7 @@ import { useNotificationSettings } from "../../context/NotificationSettingsConte
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import "./DirectMessages.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.49:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.83:3000";
 
 // Helper pour formater la date
 const formatMessageDate = (dateString) => {
