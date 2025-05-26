@@ -21,6 +21,13 @@ const WorkspacesScreen = () => {
 
   const S3_BASE_URL = env.S3_BASE_URL || "https://s3-supchat.s3.fr-par.scw.cloud/";
 
+  const navigateToWorkspace = (workspace) => {
+    // Modification pour utiliser le nom d'écran dans la pile WorkspacesStack
+    navigation.navigate('WorkspaceChannels', {
+      workspaceId: workspace.id,
+    });
+  };
+
   // Récupérer les workspaces de l'utilisateur
   useEffect(() => {
     const fetchWorkspaces = async () => {
@@ -108,10 +115,7 @@ const WorkspacesScreen = () => {
 
   // Gérer le clic sur un workspace
   const handleWorkspacePress = (workspace) => {
-    navigation.navigate('Workspace', { 
-      workspaceId: workspace.id,
-      workspaceName: workspace.name 
-    });
+    navigateToWorkspace(workspace);
   };
 
   // Afficher/masquer le champ de recherche

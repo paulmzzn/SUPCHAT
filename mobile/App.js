@@ -19,6 +19,7 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
 import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
+import WorkspaceChannelsScreen from './src/screens/WorkspaceChannels/WorkspaceChannelsScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
 import NewConversationScreen from './src/screens/Messages/NewConversationScreen';
@@ -34,6 +35,7 @@ const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const MessagesStack = createNativeStackNavigator(); // Create a stack for messages
+const WorkspacesStack = createNativeStackNavigator(); // Create a stack for workspaces
 
 // Messages Stack Navigator
 function MessagesNavigator() {
@@ -43,6 +45,17 @@ function MessagesNavigator() {
       <MessagesStack.Screen name="Conversation" component={MessagesScreen} />
       <MessagesStack.Screen name="NewConversation" component={NewConversationScreen} />
     </MessagesStack.Navigator>
+  );
+}
+
+// Workspaces Stack Navigator
+function WorkspacesNavigator() {
+  return (
+    <WorkspacesStack.Navigator screenOptions={{ headerShown: false }}>
+      <WorkspacesStack.Screen name="WorkspacesList" component={WorkspacesScreen} />
+      <WorkspacesStack.Screen name="WorkspaceChannels" component={WorkspaceChannelsScreen} />
+      <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
+    </WorkspacesStack.Navigator>
   );
 }
 
@@ -63,7 +76,7 @@ function AppTabs() {
   
   return (
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
-      <Tab.Screen name="Workspaces" component={WorkspacesScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Workspaces" component={WorkspacesNavigator} options={{ headerShown: false }} />
       <Tab.Screen 
         name="Messages" 
         component={MessagesNavigator} 
@@ -93,7 +106,6 @@ function MainAppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="HomeTabs" component={AppTabs} />
       <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-      <AppStack.Screen name="Workspace" component={WorkspaceScreen} />
     </AppStack.Navigator>
   );
 }
