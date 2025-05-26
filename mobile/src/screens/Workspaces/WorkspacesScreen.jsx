@@ -6,11 +6,22 @@ import { useTheme } from '../../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from '../../config/env';
 import { useNavigation } from '@react-navigation/native';
+import { useSocket } from '../../context/SocketContext';
 
 const WorkspacesScreen = () => {
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
   const navigation = useNavigation();
+  
+  const { 
+    socket, 
+    workspaceUnreadCounts,
+    getWorkspaceUnreadCount,
+    refreshUnreadCounts, 
+    testSocketConnection, 
+    forceRefreshCounts, 
+    currentUserId 
+  } = useSocket();
 
   const [workspaces, setWorkspaces] = useState([]);
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
@@ -18,17 +29,35 @@ const WorkspacesScreen = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   const S3_BASE_URL = env.S3_BASE_URL || "https://s3-supchat.s3.fr-par.scw.cloud/";
 
   const navigateToWorkspace = (workspace) => {
-    // Modification pour utiliser le nom d'écran dans la pile WorkspacesStack
     navigation.navigate('WorkspaceChannels', {
       workspaceId: workspace.id,
     });
   };
 
-  // Récupérer les workspaces de l'utilisateur
+  const debugWebSocket = () => {
+    console.log("=== WEBSOCKET DEBUG ===");
+    console.log("Socket connected:", !!socket);
+    console.log("Socket ID:", socket?.id);
+    console.log("Current user ID:", currentUserId);
+    console.log("Workspaces:", workspaces.length);
+    console.log("Workspace unread counts:", workspaceUnreadCounts);
+    
+    testSocketConnection();
+    forceRefreshCounts();
+  };
+
+  // Écouter les changements des compteurs de notifications
+  useEffect(() => {
+    console.log("📱 WorkspacesScreen: Workspace unread counts updated", workspaceUnreadCounts);
+    // Forcer un re-render quand les compteurs changent
+    setForceUpdate(prev => prev + 1);
+  }, [workspaceUnreadCounts]);
+
   useEffect(() => {
     const fetchWorkspaces = async () => {
       try {
@@ -39,7 +68,6 @@ const WorkspacesScreen = () => {
           throw new Error("Vous devez être connecté pour accéder à vos workspaces");
         }
 
-        // Récupérer l'ID utilisateur depuis le token JWT
         let userId = null;
         try {
           const parts = token.split('.');
@@ -68,7 +96,6 @@ const WorkspacesScreen = () => {
 
         const data = await response.json();
 
-        // Transformer les données pour correspondre au format attendu
         const transformedWorkspaces = data.map(workspace => ({
           id: workspace.id_workspace,
           name: workspace.nom,
@@ -81,7 +108,6 @@ const WorkspacesScreen = () => {
             : workspace.icon_url || null,
           onlineUsers: workspace.online_users || 0,
           totalMembers: workspace.total_members || 0,
-          unread: 0, // À remplacer par un vrai décompte de messages non lus si disponible
           userRole: workspace.user_role || 'member'
         }));
 
@@ -96,9 +122,14 @@ const WorkspacesScreen = () => {
     };
 
     fetchWorkspaces();
-  }, []);
+    
+    // Rafraîchir les compteurs après avoir chargé les workspaces
+    setTimeout(() => {
+      refreshUnreadCounts();
+      debugWebSocket();
+    }, 1000);
+  }, [refreshUnreadCounts]);
 
-  // Filtrer les workspaces sur la base de la recherche
   useEffect(() => {
     if (!searchQuery) {
       setFilteredWorkspaces(workspaces);
@@ -113,12 +144,10 @@ const WorkspacesScreen = () => {
     setFilteredWorkspaces(filtered);
   }, [searchQuery, workspaces]);
 
-  // Gérer le clic sur un workspace
   const handleWorkspacePress = (workspace) => {
     navigateToWorkspace(workspace);
   };
 
-  // Afficher/masquer le champ de recherche
   const toggleSearch = () => {
     setShowSearch(!showSearch);
     if (!showSearch) {
@@ -192,36 +221,40 @@ const WorkspacesScreen = () => {
             )}
             
             {filteredWorkspaces.length > 0 ? (
-              filteredWorkspaces.map((workspace) => (
-                <TouchableOpacity 
-                  key={workspace.id} 
-                  style={styles.workspaceItem}
-                  onPress={() => handleWorkspacePress(workspace)}
-                  activeOpacity={0.7}
-                >
-                  {/* Icône du workspace */}
-                  <View style={styles.suggestionIcon}>
-                    {workspace.icon ? (
-                      <Image source={{ uri: workspace.icon }} style={styles.suggestionImage} />
-                    ) : (
-                      <Text style={styles.suggestionInitial}>{workspace.name.charAt(0).toUpperCase()}</Text>
-                    )}
-                  </View>
-                  
-                  {/* Informations du workspace */}
-                  <View style={styles.suggestionInfo}>
-                    <Text style={styles.suggestionName}>{workspace.name}</Text>
-                    <Text style={styles.suggestionMembers}>{workspace.totalMembers} membres</Text>
-                  </View>
-                  
-                  {/* Badge pour les messages non lus */}
-                  {workspace.unread > 0 && (
-                    <View style={styles.workspaceBadge}>
-                      <Text style={styles.workspaceBadgeText}>{workspace.unread}</Text>
+              filteredWorkspaces.map((workspace) => {
+                const unreadCount = getWorkspaceUnreadCount(workspace.id);
+                console.log(`📱 WorkspacesScreen: Workspace ${workspace.name} (${workspace.id}) - Unread: ${unreadCount}`);
+                
+                return (
+                  <TouchableOpacity 
+                    key={`${workspace.id}-${forceUpdate}`} // Ajouter forceUpdate pour forcer le re-render
+                    style={styles.workspaceItem}
+                    onPress={() => handleWorkspacePress(workspace)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.suggestionIcon}>
+                      {workspace.icon ? (
+                        <Image source={{ uri: workspace.icon }} style={styles.suggestionImage} />
+                      ) : (
+                        <Text style={styles.suggestionInitial}>{workspace.name.charAt(0).toUpperCase()}</Text>
+                      )}
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))
+                    
+                    <View style={styles.suggestionInfo}>
+                      <Text style={styles.suggestionName}>{workspace.name}</Text>
+                      <Text style={styles.suggestionMembers}>{workspace.totalMembers} membres</Text>
+                    </View>
+                    
+                    {unreadCount > 0 && (
+                      <View style={styles.workspaceBadge}>
+                        <Text style={styles.workspaceBadgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })
             ) : (
               <View style={styles.noResultsContainer}>
                 <FontAwesome name="search" size={50} color={themeColors.textMuted} />

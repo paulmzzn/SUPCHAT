@@ -23,6 +23,7 @@ router.get("/canal/:channelId", verifyToken, checkCanalAccess, messageController
 // Routes pour les notifications - placer AVANT les routes avec paramètres dynamiques
 router.get("/unread/counts", verifyToken, messageController.getUnreadCounts);
 router.get("/unread", verifyToken, messageController.getUnreadMessages);
+router.get("/unread-by-workspace", verifyToken, messageController.getUnreadMessagesByWorkspace);
 router.post("/channel/:channelId/read", verifyToken, checkCanalAccess, messageController.markChannelAsRead);
 
 // Routes avec paramètres dynamiques - placer APRÈS les routes spécifiques

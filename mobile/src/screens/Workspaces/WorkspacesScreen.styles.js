@@ -138,16 +138,17 @@ export const getStyles = (theme) => StyleSheet.create({
   workspaceBadge: {
     backgroundColor: theme.danger,
     borderRadius: 12,
-    minWidth: 22,
-    height: 22,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 6,
+    minWidth: 24,
+    marginLeft: 8,
   },
   workspaceBadgeText: {
     color: theme.textOnAccent,
-    fontSize: 12,
     fontWeight: 'bold',
+    fontSize: 12,
   },
   
   // États de chargement et d'erreur

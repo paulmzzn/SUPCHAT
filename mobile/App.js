@@ -77,16 +77,19 @@ function AppTabs() {
   }, [refreshUnreadCounts]);
   
   return (
-    <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
-      <Tab.Screen name="Workspaces" component={WorkspacesNavigator} options={{ headerShown: false }} />
-      <Tab.Screen 
-        name="Messages" 
-        component={MessagesNavigator} 
-        options={{ headerShown: false }}
-      />
-      <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
-    </Tab.Navigator>
+    <>
+
+      <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
+        <Tab.Screen name="Workspaces" component={WorkspacesNavigator} options={{ headerShown: false }} />
+        <Tab.Screen 
+          name="Messages" 
+          component={MessagesNavigator} 
+          options={{ headerShown: false }}
+        />
+        <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
+        <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      </Tab.Navigator>
+    </>
   );
 }
 
