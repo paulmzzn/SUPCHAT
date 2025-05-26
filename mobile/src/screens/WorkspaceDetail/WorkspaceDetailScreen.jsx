@@ -486,8 +486,11 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
             {workspaceName}
           </Text>
         </View>
-        <TouchableOpacity style={styles.headerAction}>
-          <Ionicons name="information-circle-outline" size={24} color={themeColors.textPrimary} />
+        <TouchableOpacity 
+          style={styles.headerAction}
+          onPress={() => navigation.navigate('WorkspaceSettings', { workspaceId, workspaceName })}
+        >
+          <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
         </TouchableOpacity>
       </View>
 

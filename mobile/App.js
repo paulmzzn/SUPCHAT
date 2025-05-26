@@ -26,6 +26,7 @@ import NewConversationScreen from './src/screens/Messages/NewConversationScreen'
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
+import WorkspaceSettingsScreen from './src/screens/WorkspaceSettings/WorkspaceSettingsScreen'; // Import du nouvel écran
 
 // Custom TabBar
 import TabBar from './src/components/TabBar/TabBar'; 
@@ -55,6 +56,7 @@ function WorkspacesNavigator() {
       <WorkspacesStack.Screen name="WorkspacesList" component={WorkspacesScreen} />
       <WorkspacesStack.Screen name="WorkspaceChannels" component={WorkspaceChannelsScreen} />
       <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
+      <WorkspacesStack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
     </WorkspacesStack.Navigator>
   );
 }
