@@ -22,6 +22,7 @@ import {
   FaPlus,
   FaAt,
   FaUser,
+  FaEdit,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -89,6 +90,10 @@ function ChatContainer({
   loadMoreMessages,
   isPrependingMessages,
   setIsPrependingMessages,
+  handleEditMessage,
+  handleCancelEdit,
+  handleUpdateMessage,
+  editingMessage,
 }) {
   const navigate = useNavigate();
   const canWriteInChannel = activeChannel?.isPrivate
@@ -223,6 +228,50 @@ function ChatContainer({
       height: calc(100% - 60px);
       padding: 10px;
       scroll-behavior: auto !important;
+    }
+
+    .editing-message {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(30, 144, 255, 0.1);
+      border-left: 3px solid #1e90ff;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    
+    .edit-info {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .edit-icon {
+      margin-right: 8px;
+      color: #1e90ff;
+    }
+    
+    .cancel-edit {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.2s;
+    }
+    
+    .cancel-edit:hover {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .message-edited {
+      font-size: 0.8rem;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.5);
+      margin-left: 4px;
     }
   `;
 
@@ -434,10 +483,14 @@ function ChatContainer({
                               >
                                 {message.nom}
                               </strong>
-                            )}
-                          </span>
+                            )}                          </span>
                           <span className="message-time">
                             {formatMessageDate(message.date_creation)}
+                            {message.updated_at && message.created_at !== message.updated_at && (
+                              <span className="message-edited" title={`Modifié le ${formatMessageDate(message.updated_at)}`}>
+                                {" "}(modifié)
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -793,9 +846,29 @@ function ChatContainer({
 
               <form
                 className="chat-input-container"
-                onSubmit={handleSendMessageWithMistralCheck}
+                onSubmit={editingMessage ? (e) => {
+                  e.preventDefault();
+                  handleUpdateMessage();
+                } : handleSendMessageWithMistralCheck}
               >
-                {replyingTo && (
+                {editingMessage && (
+                  <div className="editing-message">
+                    <div className="edit-info">
+                      <FaEdit className="edit-icon" />
+                      <span>
+                        Modification d'un message
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="cancel-edit"
+                      onClick={handleCancelEdit}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                {replyingTo && !editingMessage && (
                   <div className="replying-to">
                     <div className="reply-info">
                       <FaReply className="reply-icon" />
@@ -838,8 +911,7 @@ function ChatContainer({
                         : "Message..."
                     }
                     value={displayMessage}
-                    onChange={(e) => handleNewMessageChange(e.target.value)}
-                    onKeyDown={(e) => {
+                    onChange={(e) => handleNewMessageChange(e.target.value)}                    onKeyDown={(e) => {
                       if (showChannelSuggestions) {
                         if (e.key === "ArrowDown") {
                           e.preventDefault();
@@ -862,6 +934,14 @@ function ChatContainer({
                           e.preventDefault();
                           handleSelectActiveItem();
                         }
+                      } else if (editingMessage) {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          handleCancelEdit();
+                        } else if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleUpdateMessage();
+                        }
                       } else {
                         handleChatInputKeyDown && handleChatInputKeyDown(e);
                       }
@@ -882,10 +962,19 @@ function ChatContainer({
                     type="submit"
                     className="chat-send-btn"
                     disabled={!displayMessage.trim()}
-                    aria-label="Envoyer le message"
+                    aria-label={editingMessage ? "Modifier le message" : "Envoyer le message"}
                   >
-                    <FaPaperPlane />
-                    <span className="send-btn-pulse"></span>
+                    {editingMessage ? (
+                      <>
+                        <FaEdit />
+                        <span className="send-btn-pulse"></span>
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane />
+                        <span className="send-btn-pulse"></span>
+                      </>
+                    )}
                   </button>
                 </div>
 

@@ -19,6 +19,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
+import "./edit-message-styles.css";
 import "./poll-styles.css"; // Import des styles pour les sondages
 import "./mentions-styles.css"; // Import des styles pour les mentions
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
@@ -329,11 +330,15 @@ function WorkspaceDetails() {
     // New handler for channel suggestions
     handleChannelSuggestionNavigation,
     handleSelectActiveChannelSuggestion,
-    handleSelectChannelSuggestion,
-    // New handler for deleting messages
+    handleSelectChannelSuggestion,    // New handler for deleting messages
     handleDeleteMessage,
     handleMistralMention,
     fetchActiveChannel,
+    // Message editing handlers
+    handleEditMessage,
+    handleCancelEdit,
+    handleUpdateMessage,
+    editingMessage,
     hasMoreMessages,
     loadingMoreMessages,
     loadMoreMessages,
@@ -539,6 +544,19 @@ function WorkspaceDetails() {
     console.log("🏁 Fin de handleFileUpload");
   }; // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
   const handleChatInputKeyDown = (e) => {
+    // Si le mode édition est actif, gérer les touches Enter et Escape
+    if (editingMessage) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleUpdateMessage();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancelEdit();
+      }
+      return;
+    }
+
+    // Gérer les suggestions de mentions
     if (showMentionSuggestions && mentionSuggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -874,11 +892,14 @@ function WorkspaceDetails() {
           setShowEmojiPicker={setShowEmojiPicker}
           showMentionSuggestions={showMentionSuggestions}
           mentionSuggestions={mentionSuggestions}
-          activeMentionIndex={activeMentionIndex}
-          handleSelectMention={handleSelectMention}
+          activeMentionIndex={activeMentionIndex}          handleSelectMention={handleSelectMention}
           handleMentionNavigation={handleMentionSuggestionNavigation}
           handleSelectActiveItem={handleSelectActiveMention}
           handleSendMessageWithMistralCheck={handleSendMessageWithMistralCheck}
+          handleEditMessage={handleEditMessage}
+          handleCancelEdit={handleCancelEdit}
+          handleUpdateMessage={handleUpdateMessage}
+          editingMessage={editingMessage}
           showToolbox={showToolbox}
           handleToggleToolbox={handleToggleToolbox}
           handleOpenStrawpoll={handleOpenStrawpoll}
@@ -1020,16 +1041,24 @@ function WorkspaceDetails() {
             <div className="context-menu-item" onClick={handleShowEmojiPicker}>
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
-            </div>
-            {messageContextMenu.message &&
+            </div>            {messageContextMenu.message &&
               messageContextMenu.message.fk_utilisateur === currentUserId && (
-                <div
-                  className="context-menu-item delete"
-                  onClick={handleDeleteMessage}
-                >
-                  <FaTrashAlt className="context-menu-icon" />
-                  <span>Supprimer</span>
-                </div>
+                <>
+                  <div
+                    className="context-menu-item edit"
+                    onClick={handleEditMessage}
+                  >
+                    <FaEdit className="context-menu-icon" />
+                    <span>Modifier</span>
+                  </div>
+                  <div
+                    className="context-menu-item delete"
+                    onClick={handleDeleteMessage}
+                  >
+                    <FaTrashAlt className="context-menu-icon" />
+                    <span>Supprimer</span>
+                  </div>
+                </>
               )}
           </div>
         )}
