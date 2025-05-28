@@ -21,7 +21,7 @@ import { getStyles } from './WorkspaceChannelsScreen.styles';
 const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const { workspaceId } = route.params;
   const { colors: themeColors } = useTheme();
-  const { socket, channelUnreadCounts, getChannelUnreadCount, refreshUnreadCounts } = useSocket(); // Utiliser les bonnes propriétés
+  const { socket, channelUnreadCounts, getChannelUnreadCount, refreshUnreadCounts, markChannelAsRead } = useSocket(); // Ajouter markChannelAsRead
   const styles = getStyles(themeColors);
   
   const [workspace, setWorkspace] = useState(null);
@@ -143,10 +143,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
             isPrivate: canal.is_private || false,
             description: canal.description || '',
             memberCount: canal.member_count || 0,
-            unreadCount: getChannelUnreadCount ? getChannelUnreadCount(canal.id_canal) : 0,
+            unreadCount: 0, // Sera mis à jour par l'useEffect
             workspaceId: workspaceId // Inclure le workspaceId
           }));
           setChannels(formattedChannels);
+          // Rafraîchir les compteurs après avoir chargé les canaux
+          setTimeout(() => {
+            refreshUnreadCounts();
+          }, 500);
         }
       } else {
         // Essayons une URL alternative
@@ -170,10 +174,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
               isPrivate: canal.is_private || false,
               description: canal.description || '',
               memberCount: canal.member_count || 0,
-              unreadCount: getChannelUnreadCount ? getChannelUnreadCount(canal.id_canal) : 0,
+              unreadCount: 0, // Sera mis à jour par l'useEffect
               workspaceId: workspaceId // Inclure le workspaceId
             }));
             setChannels(formattedChannels);
+            // Rafraîchir les compteurs après avoir chargé les canaux
+            setTimeout(() => {
+              refreshUnreadCounts();
+            }, 500);
           }
         } else {
           console.error('Échec de la requête alternative:', alternativeResponse.status);

@@ -52,15 +52,23 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
 
   // Marquer le canal comme lu quand l'utilisateur consulte les messages
   useEffect(() => {
-    if (workspaceId && channelId && currentUserId && messages.length > 0) {
-      // Marquer comme lu après un court délai pour s'assurer que les messages sont chargés
+    if (workspaceId && channelId && currentUserId) {
+      console.log(`🔔 Marquage du canal ${channelId} comme lu dans le workspace ${workspaceId}`);
+      
+      // Marquer immédiatement lors de l'ouverture
+      markChannelAsRead(workspaceId, channelId);
+      
+      // Marquer aussi après un délai pour s'assurer que les messages sont chargés
       const timer = setTimeout(() => {
         markChannelAsRead(workspaceId, channelId);
-      }, 1000);
+      }, 1500);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     }
-  }, [workspaceId, channelId, currentUserId, messages, markChannelAsRead]);
+    // SUPPRESSION de markChannelAsRead des dépendances pour éviter la boucle infinie
+  }, [workspaceId, channelId, currentUserId]); // Retirer markChannelAsRead d'ici
 
   // Rejoindre le canal et workspace pour les notifications temps réel
   useEffect(() => {
