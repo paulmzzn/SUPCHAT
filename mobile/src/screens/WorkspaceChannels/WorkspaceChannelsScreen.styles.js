@@ -184,6 +184,12 @@ export const getStyles = (theme) => StyleSheet.create({
     marginRight: 12,
   },
   
+  hashtagIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  
   channelContent: {
     flex: 1,
   },

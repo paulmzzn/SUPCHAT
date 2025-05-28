@@ -21,7 +21,7 @@ import { getStyles } from './WorkspaceChannelsScreen.styles';
 const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const { workspaceId } = route.params;
   const { colors: themeColors } = useTheme();
-  const { socket, unreadChannelMessages, refreshUnreadCounts } = useSocket(); // Accès aux messages non lus par canal
+  const { socket, channelUnreadCounts, getChannelUnreadCount, refreshUnreadCounts } = useSocket(); // Utiliser les bonnes propriétés
   const styles = getStyles(themeColors);
   
   const [workspace, setWorkspace] = useState(null);
@@ -58,10 +58,10 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
 
   // Mettre à jour les canaux quand les compteurs changent
   useEffect(() => {
-    if (channels.length > 0) {
+    if (channels.length > 0 && getChannelUnreadCount) {
       const updatedChannels = channels.map(channel => ({
         ...channel,
-        unreadCount: unreadChannelMessages[channel.id]?.count || 0
+        unreadCount: getChannelUnreadCount(channel.id) || 0
       }));
       
       // Ne mettre à jour que si les compteurs ont changé
@@ -73,7 +73,7 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
         setChannels(updatedChannels);
       }
     }
-  }, [unreadChannelMessages]);
+  }, [channelUnreadCounts, getChannelUnreadCount]);
 
   const loadWorkspaceData = async () => {
     try {
@@ -143,7 +143,7 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
             isPrivate: canal.is_private || false,
             description: canal.description || '',
             memberCount: canal.member_count || 0,
-            unreadCount: unreadChannelMessages[canal.id_canal]?.count || 0,
+            unreadCount: getChannelUnreadCount ? getChannelUnreadCount(canal.id_canal) : 0,
             workspaceId: workspaceId // Inclure le workspaceId
           }));
           setChannels(formattedChannels);
@@ -170,7 +170,7 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
               isPrivate: canal.is_private || false,
               description: canal.description || '',
               memberCount: canal.member_count || 0,
-              unreadCount: unreadChannelMessages[canal.id_canal]?.count || 0,
+              unreadCount: getChannelUnreadCount ? getChannelUnreadCount(canal.id_canal) : 0,
               workspaceId: workspaceId // Inclure le workspaceId
             }));
             setChannels(formattedChannels);
@@ -221,19 +221,22 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
       })}
     >
       <View style={styles.channelIcon}>
-        <Ionicons
-          name={item.isPrivate ? "lock-closed" : "hashtag"}
-          size={20}
-          color={themeColors.textSecondary}
-        />
+        {item.isPrivate ? (
+          <Ionicons
+            name="lock-closed"
+            size={20}
+            color={themeColors.textSecondary}
+          />
+        ) : (
+          <Text style={[styles.hashtagIcon, { color: themeColors.textSecondary }]}>
+            #
+          </Text>
+        )}
       </View>
       
       <View style={styles.channelContent}>
         <View style={styles.channelHeader}>
           <Text style={styles.channelName}>{item.name}</Text>
-          <Text style={styles.channelMemberCount}>
-            {item.memberCount} membre{item.memberCount > 1 ? 's' : ''}
-          </Text>
         </View>
         {item.description ? (
           <Text style={styles.channelDescription} numberOfLines={2}>
