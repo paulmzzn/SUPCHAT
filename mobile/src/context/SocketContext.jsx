@@ -33,6 +33,7 @@ export const SocketProvider = ({ children }) => {
   const debounceTimer = useRef(null);
   const initialFetchDone = useRef(false);
   const socketRef = useRef(null); // Ajout d'une ref pour le socket
+  const [forceUpdate, setForceUpdate] = useState(0); // Ajout pour forcer les re-renders
 
   // Fonction pour récupérer les compteurs de messages privés - GARDÉE INTACTE
   const fetchUnreadCounts = useCallback(async () => {
@@ -108,31 +109,52 @@ export const SocketProvider = ({ children }) => {
   // Fonction pour marquer un canal comme lu
   const markChannelAsRead = useCallback(async (workspaceId, channelId) => {
     try {
+      // D'abord, récupérer le nombre de messages non lus de ce canal AVANT de faire l'appel API
+      const channelUnreadCount = channelUnreadCounts[channelId] || 0;
+      console.log(`🔔 Marquage canal ${channelId} comme lu. Compteur actuel: ${channelUnreadCount}`);
+
       const token = await AsyncStorage.getItem("token");
       if (token) {
-        await fetch(`${API_URL}/api/messages/channels/${channelId}/read`, {
+        // Appel API pour marquer comme lu côté serveur
+        const response = await fetch(`${API_URL}/api/messages/channel/${channelId}/read`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
+        
+        if (!response.ok) {
+          console.error('Erreur lors du marquage du canal comme lu:', response.status);
+          return; // Ne pas mettre à jour les compteurs locaux si l'API échoue
+        }
       }
 
-      // Mettre à jour les compteurs localement
+      // Mettre à jour les compteurs localement SEULEMENT si l'API a réussi
       setChannelUnreadCounts(prev => {
         const newCounts = { ...prev };
-        delete newCounts[channelId];
+        if (newCounts[channelId]) {
+          delete newCounts[channelId]; // Supprimer complètement le canal des non lus
+        }
         return newCounts;
       });
 
       setWorkspaceUnreadCounts(prev => {
         const newWorkspaceCounts = { ...prev };
-        if (newWorkspaceCounts[workspaceId]) {
-          const channelCount = newWorkspaceCounts[workspaceId].channels?.[channelId] || 0;
+        if (newWorkspaceCounts[workspaceId] && channelUnreadCount > 0) {
+          // Créer une copie des canaux du workspace
+          const updatedChannels = { ...newWorkspaceCounts[workspaceId].channels };
+          
+          // Supprimer le canal des non lus
+          if (updatedChannels[channelId]) {
+            delete updatedChannels[channelId];
+          }
+          
+          // Mettre à jour le workspace avec le nouveau total et la liste des canaux
           newWorkspaceCounts[workspaceId] = {
             ...newWorkspaceCounts[workspaceId],
-            totalUnread: Math.max(0, (newWorkspaceCounts[workspaceId].totalUnread || 0) - channelCount),
-            channels: { ...newWorkspaceCounts[workspaceId].channels }
+            totalUnread: Math.max(0, (newWorkspaceCounts[workspaceId].totalUnread || 0) - channelUnreadCount),
+            channels: updatedChannels
           };
-          delete newWorkspaceCounts[workspaceId].channels[channelId];
+          
+          console.log(`📊 Workspace ${workspaceId} mis à jour. Nouveau total: ${newWorkspaceCounts[workspaceId].totalUnread}`);
         }
         return newWorkspaceCounts;
       });
@@ -140,7 +162,7 @@ export const SocketProvider = ({ children }) => {
     } catch (error) {
       console.error("Socket: Erreur markChannelAsRead:", error);
     }
-  }, []);
+  }, [channelUnreadCounts, API_URL]); // Ajouter channelUnreadCounts comme dépendance
 
   // Fonction combinée pour rafraîchir tous les compteurs
   const refreshUnreadCounts = useCallback(async () => {
@@ -390,8 +412,33 @@ export const SocketProvider = ({ children }) => {
 
   // NOUVEAU: Fonction pour obtenir le compteur d'un canal
   const getChannelUnreadCount = useCallback((channelId) => {
-    return channelUnreadCounts[channelId] || 0;
+    const channelData = channelUnreadCounts[channelId];
+    if (channelData && typeof channelData === 'object') {
+      return channelData.count || 0;
+    }
+    return channelData || 0;
   }, [channelUnreadCounts]);
+
+  // NOUVEAU: Fonction pour forcer un refresh complet des compteurs
+  const forceFullRefresh = useCallback(async () => {
+    console.log("🔄 SocketContext: Refresh complet forcé");
+    initialFetchDone.current = false;
+    await refreshUnreadCounts();
+    
+    // Forcer une mise à jour des états pour déclencher les re-renders
+    setForceUpdate(prev => prev + 1);
+    
+    // Émettre un événement global pour notifier tous les composants
+    const event = new CustomEvent('forceUnreadCountsUpdate', {
+      detail: { 
+        timestamp: Date.now(),
+        workspaceUnreadCounts,
+        channelUnreadCounts,
+        unreadMessages 
+      }
+    });
+    window.dispatchEvent(event);
+  }, [refreshUnreadCounts, workspaceUnreadCounts, channelUnreadCounts, unreadMessages]);
 
   // Debug function pour vérifier l'état
   const getDebugInfo = useCallback(() => {
@@ -404,7 +451,9 @@ export const SocketProvider = ({ children }) => {
       privateMessageCount: Object.keys(unreadMessages).length,
       totalWorkspaceUnread: Object.values(workspaceUnreadCounts).reduce(
         (sum, workspace) => sum + (workspace.totalUnread || 0), 0
-      )
+      ),
+      totalPrivateUnread: Object.values(unreadMessages).reduce((sum, count) => sum + count, 0),
+      lastUpdate: new Date().toLocaleTimeString()
     };
   }, [isConnected, socket, currentUserId, workspaceUnreadCounts, channelUnreadCounts, unreadMessages]);
 
@@ -450,6 +499,7 @@ export const SocketProvider = ({ children }) => {
     markChannelAsRead,
     subscribeToNotifications,
     forceRefreshCounts,
+    forceFullRefresh, // Nouvelle fonction de refresh complet
     testSocketConnection,
     getDebugInfo, // Nouvelle fonction de debug
   };

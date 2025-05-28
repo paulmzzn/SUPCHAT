@@ -12,6 +12,9 @@ const TabBar = ({ state, descriptors, navigation }) => {
   const styles = getStyles(themeColors);
   const insets = useSafeAreaInsets();
   
+  // State pour forcer le re-render
+  const [forceUpdate, setForceUpdate] = React.useState(0);
+  
   // Animation pour l'indicateur actif
   const activeTabAnimation = React.useRef(new Animated.Value(state.index)).current;
   
@@ -21,6 +24,25 @@ const TabBar = ({ state, descriptors, navigation }) => {
       useNativeDriver: false,
     }).start();
   }, [state.index]);
+
+  // Forcer le re-render quand les compteurs changent - AMÉLIORÉ
+  React.useEffect(() => {
+    console.log("🏷️ TabBar: Mise à jour des compteurs", { 
+      workspaceUnreadCounts: Object.keys(workspaceUnreadCounts || {}).length,
+      unreadMessages: Object.keys(unreadMessages || {}).length,
+      totalUnreadCount 
+    });
+    setForceUpdate(prev => prev + 1);
+  }, [workspaceUnreadCounts, unreadMessages, totalUnreadCount]);
+
+  // NOUVEAU: Forcer une mise à jour périodique pour s'assurer de la synchronisation
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 5000); // Toutes les 5 secondes
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getTabIcon = (routeName, focused) => {
     const iconColor = focused ? themeColors.accentPrimary : themeColors.textSecondary;
@@ -46,12 +68,16 @@ const TabBar = ({ state, descriptors, navigation }) => {
     switch (routeName) {
       case 'Messages':
         // Calculer le total des messages privés
-        return Object.values(unreadMessages || {}).reduce((sum, count) => sum + count, 0);
+        const privateCount = Object.values(unreadMessages || {}).reduce((sum, count) => sum + count, 0);
+        console.log("🏷️ TabBar Messages badge:", privateCount);
+        return privateCount;
       case 'Workspaces':
-        // Calculer le total des messages de workspace
-        return Object.values(workspaceUnreadCounts || {}).reduce(
+        // Calculer le total des messages de workspace - AMÉLIORÉ
+        const workspaceCount = Object.values(workspaceUnreadCounts || {}).reduce(
           (sum, workspace) => sum + (workspace.totalUnread || 0), 0
         );
+        console.log("🏷️ TabBar Workspaces badge:", workspaceCount, "from", Object.keys(workspaceUnreadCounts || {}));
+        return workspaceCount;
       default:
         return 0;
     }

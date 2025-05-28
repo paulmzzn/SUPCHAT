@@ -5,7 +5,7 @@ import { getStyles } from './WorkspacesScreen.styles';
 import { useTheme } from '../../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from '../../config/env';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSocket } from '../../context/SocketContext';
 
 const WorkspacesScreen = () => {
@@ -19,7 +19,9 @@ const WorkspacesScreen = () => {
     getWorkspaceUnreadCount,
     refreshUnreadCounts, 
     testSocketConnection, 
-    forceRefreshCounts, 
+    forceRefreshCounts,
+    forceFullRefresh, // NOUVEAU
+    getDebugInfo, // NOUVEAU
     currentUserId 
   } = useSocket();
 
@@ -45,15 +47,35 @@ const WorkspacesScreen = () => {
     console.log("Socket ID:", socket?.id);
     console.log("Current user ID:", currentUserId);
     console.log("Workspaces:", workspaces.length);
+    console.log("Workspace unread counts:", workspaceUnreadCounts);
     
     testSocketConnection();
     forceRefreshCounts();
   };
 
-  // Écouter les changements des compteurs de notifications
+  // Écouter les changements des compteurs de notifications ET forcer le refresh
   useEffect(() => {
+    console.log("📊 WorkspacesScreen: Compteurs mis à jour", workspaceUnreadCounts);
     setForceUpdate(prev => prev + 1);
   }, [workspaceUnreadCounts]);
+
+  // Rafraîchir les compteurs quand l'écran devient actif - AMÉLIORÉ
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("👁️ WorkspacesScreen: Écran focalisé, refresh des compteurs");
+      
+      // Utiliser la nouvelle fonction de refresh complet pour s'assurer de la synchronisation
+      const timer = setTimeout(() => {
+        forceFullRefresh(); // Utiliser forceFullRefresh au lieu de refreshUnreadCounts
+        setForceUpdate(prev => prev + 1);
+        
+        // Debug info pour vérifier l'état
+        console.log("🔍 WorkspacesScreen Debug:", getDebugInfo());
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }, [forceFullRefresh, getDebugInfo]) // Mise à jour des dépendances
+  );
 
   useEffect(() => {
     const fetchWorkspaces = async () => {
