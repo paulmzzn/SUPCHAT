@@ -45,7 +45,6 @@ const WorkspacesScreen = () => {
     console.log("Socket ID:", socket?.id);
     console.log("Current user ID:", currentUserId);
     console.log("Workspaces:", workspaces.length);
-    console.log("Workspace unread counts:", workspaceUnreadCounts);
     
     testSocketConnection();
     forceRefreshCounts();
@@ -53,8 +52,6 @@ const WorkspacesScreen = () => {
 
   // Écouter les changements des compteurs de notifications
   useEffect(() => {
-    console.log("📱 WorkspacesScreen: Workspace unread counts updated", workspaceUnreadCounts);
-    // Forcer un re-render quand les compteurs changent
     setForceUpdate(prev => prev + 1);
   }, [workspaceUnreadCounts]);
 
@@ -223,7 +220,6 @@ const WorkspacesScreen = () => {
             {filteredWorkspaces.length > 0 ? (
               filteredWorkspaces.map((workspace) => {
                 const unreadCount = getWorkspaceUnreadCount(workspace.id);
-                console.log(`📱 WorkspacesScreen: Workspace ${workspace.name} (${workspace.id}) - Unread: ${unreadCount}`);
                 
                 return (
                   <TouchableOpacity 
