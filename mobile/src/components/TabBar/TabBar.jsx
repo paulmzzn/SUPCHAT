@@ -12,23 +12,6 @@ const TabBar = ({ state, descriptors, navigation }) => {
   const styles = getStyles(themeColors);
   const insets = useSafeAreaInsets();
   
-  // DEBUG TEMPORAIRE - À RETIRER APRÈS DIAGNOSTIC
-  console.log("🏷️ TabBar DEBUG:", {
-    unreadMessagesCount: Object.keys(unreadMessages || {}).length,
-    unreadMessagesTotal: Object.values(unreadMessages || {}).reduce((sum, count) => sum + count, 0),
-    workspaceUnreadCountsCount: Object.keys(workspaceUnreadCounts || {}).length,
-    workspaceTotal: Object.values(workspaceUnreadCounts || {}).reduce(
-      (sum, workspace) => {
-        // S'assurer que workspace est un objet et a une propriété totalUnread numérique
-        if (workspace && typeof workspace === 'object' && typeof workspace.totalUnread === 'number') {
-          return sum + workspace.totalUnread;
-        }
-        return sum;
-      }, 0
-    ),
-    totalUnreadCount
-  });
-  
   // Animation pour l'indicateur actif
   const activeTabAnimation = React.useRef(new Animated.Value(state.index)).current;
   

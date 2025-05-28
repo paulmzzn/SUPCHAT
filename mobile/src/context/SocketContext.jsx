@@ -10,7 +10,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.83:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.49:3000';
 
 const SocketContext = createContext(null);
 
@@ -39,11 +39,8 @@ export const SocketProvider = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
-        console.log("Socket: Pas de token, impossible de récupérer les compteurs privés");
         return;
       }
-
-      console.log("Socket: Fetching private message unread counts");
 
       const response = await fetch(
         `${API_URL}/api/private-messages/unread-counts`,
@@ -54,20 +51,16 @@ export const SocketProvider = ({ children }) => {
 
       if (response.ok) {
         const counts = await response.json();
-        console.log("Socket: Private unread counts received:", Object.keys(counts).length);
 
         setUnreadMessages((prevCounts) => {
           const prevTotal = Object.values(prevCounts).reduce((sum, val) => sum + val, 0);
           const newTotal = Object.values(counts).reduce((sum, val) => sum + val, 0);
 
           if (prevTotal !== newTotal || JSON.stringify(prevCounts) !== JSON.stringify(counts)) {
-            console.log(`Socket: Total messages privés non lus: ${prevTotal} → ${newTotal}`);
             return counts;
           }
           return prevCounts;
         });
-      } else {
-        console.error("Socket: Erreur lors de la récupération des compteurs privés:", response.status);
       }
     } catch (error) {
       console.error("Socket: Erreur fetchUnreadCounts:", error);
@@ -79,11 +72,8 @@ export const SocketProvider = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
-        console.log("Socket: Pas de token pour les compteurs workspace");
         return;
       }
-
-      console.log("🏢 Socket: Fetching workspace/channel unread counts");
 
       const response = await fetch(
         `${API_URL}/api/messages/unread-by-workspace`,
@@ -94,12 +84,10 @@ export const SocketProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🏢 Socket: Workspace unread data received:", data);
 
         // Structure attendue: { workspaceId: { totalUnread: number, channels: { channelId: count } } }
         setWorkspaceUnreadCounts(prevCounts => {
           const newCounts = data.workspaces || {};
-          // Force un re-render même si les données sont similaires
           return { ...newCounts };
         });
         
@@ -109,12 +97,8 @@ export const SocketProvider = ({ children }) => {
           Object.assign(flatChannelCounts, workspace.channels || {});
         });
         setChannelUnreadCounts(prevCounts => {
-          // Force un re-render même si les données sont similaires
           return { ...flatChannelCounts };
         });
-        
-        console.log("🏢 Socket: Workspace counts updated:", Object.keys(data.workspaces || {}).length, "workspaces");
-        console.log("🏢 Socket: Channel counts updated:", Object.keys(flatChannelCounts).length, "channels");
       }
     } catch (error) {
       console.error("Socket: Erreur fetchWorkspaceUnreadCounts:", error);
@@ -124,8 +108,6 @@ export const SocketProvider = ({ children }) => {
   // Fonction pour marquer un canal comme lu
   const markChannelAsRead = useCallback(async (workspaceId, channelId) => {
     try {
-      console.log(`🏢 Socket: Marking channel ${channelId} in workspace ${workspaceId} as read`);
-      
       const token = await AsyncStorage.getItem("token");
       if (token) {
         await fetch(`${API_URL}/api/messages/channels/${channelId}/read`, {
@@ -162,7 +144,6 @@ export const SocketProvider = ({ children }) => {
 
   // Fonction combinée pour rafraîchir tous les compteurs
   const refreshUnreadCounts = useCallback(async () => {
-    console.log("🔄 Socket: Refreshing all unread counts");
     await Promise.all([
       fetchUnreadCounts(),      // Messages privés
       fetchWorkspaceUnreadCounts() // Workspaces/canaux
@@ -174,7 +155,6 @@ export const SocketProvider = ({ children }) => {
     const connectSocket = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        console.log("[DEBUG] Token récupéré pour connexion socket:", !!token);
         if (!token) return;
 
         // Extraire l'ID utilisateur du token AVANT la connexion
@@ -184,14 +164,11 @@ export const SocketProvider = ({ children }) => {
             const payload = JSON.parse(atob(parts[1]));
             if (payload.id) {
               setCurrentUserId(payload.id);
-              console.log("🔑 Socket: Current user ID set:", payload.id);
             }
           }
         } catch (e) {
           console.error("Error parsing token:", e);
         }
-
-        console.log("Socket: Connecting to", API_URL);
 
         const newSocket = io(API_URL, {
           auth: { token },
@@ -205,8 +182,9 @@ export const SocketProvider = ({ children }) => {
         socketRef.current = newSocket;
 
         newSocket.on("connect", () => {
-          console.log("[DEBUG] Socket connecté! ID:", newSocket.id);
           setConnected(true);
+          
+          // Rejoindre automatiquement la room privée
           newSocket.emit("joinPrivate");
           
           // Délai court pour s'assurer que la connexion est stable
@@ -216,18 +194,16 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on("connect_error", (err) => {
-          console.error("[DEBUG] Erreur de connexion socket:", err, err?.message, err?.data);
+          console.error("Erreur de connexion socket:", err);
           setConnected(false);
         });
 
         newSocket.on("disconnect", (reason) => {
-          console.log("Socket: Disconnected", reason);
           setConnected(false);
         });
 
         // Event pour forcer un refresh des compteurs
         newSocket.on("refreshUnreadCounts", () => {
-          console.log("📢 Socket: Server requested unread counts refresh");
           refreshUnreadCounts();
         });
 
@@ -235,7 +211,6 @@ export const SocketProvider = ({ children }) => {
 
         return () => {
           if (newSocket) {
-            console.log("Socket: Cleaning up connection");
             newSocket.disconnect();
             socketRef.current = null;
           }
@@ -251,29 +226,15 @@ export const SocketProvider = ({ children }) => {
   // NOUVEAU système d'écoute des messages pour les canaux - AMÉLIORÉ
   useEffect(() => {
     if (!socket || !currentUserId) {
-      console.log("🔌 Socket: Waiting for socket and currentUserId", { 
-        hasSocket: !!socket, 
-        currentUserId 
-      });
       return;
     }
 
-    console.log("🔌 Socket: Setting up channel notification listeners");
-
     // Handler pour les messages privés - GARDÉ INTACT
     const handlePrivateMessage = (data) => {
-      console.log("💬 Socket: PRIVATE MESSAGE RECEIVED");
-      console.log("   📊 Raw data:", JSON.stringify(data, null, 2));
-      console.log("   👤 Current user ID:", currentUserId);
-      console.log("   📤 From user:", data.fk_expediteur);
-      
       if (data && data.fk_expediteur !== currentUserId) {
-        console.log("✅ Socket: Processing private message (not from current user)");
-        
         setUnreadMessages(prev => {
           const newCounts = { ...prev };
           newCounts[data.fk_expediteur] = (newCounts[data.fk_expediteur] || 0) + 1;
-          console.log("📱 Socket: Updated private message counts:", newCounts);
           return newCounts;
         });
       }
@@ -281,25 +242,15 @@ export const SocketProvider = ({ children }) => {
 
     // NOUVEAU handler pour les messages de canal - AMÉLIORÉ
     const handleChannelMessage = (data) => {
-      console.log("🏢 Socket: CHANNEL MESSAGE RECEIVED");
-      console.log("   📊 Raw data:", JSON.stringify(data, null, 2));
-      console.log("   👤 Current user ID:", currentUserId);
-      console.log("   📝 Message from user:", data.fk_utilisateur || data.user_id);
-      console.log("   🏷️ Channel ID:", data.fk_canal || data.canal_id);
-      console.log("   🏢 Workspace ID:", data.fk_workspace || data.workspace_id);
-      
       const messageUserId = data.fk_utilisateur || data.user_id;
       const channelId = data.fk_canal || data.canal_id;
       const workspaceId = data.fk_workspace || data.workspace_id;
       
       if (data && messageUserId !== currentUserId && channelId && workspaceId) {
-        console.log("✅ Socket: Processing channel message (not from current user)");
-        
         // Incrémenter le compteur du canal
         setChannelUnreadCounts(prev => {
           const newCounts = { ...prev };
           newCounts[channelId] = (newCounts[channelId] || 0) + 1;
-          console.log(`📈 Socket: Channel ${channelId} count: ${newCounts[channelId]}`);
           return newCounts;
         });
 
@@ -319,44 +270,25 @@ export const SocketProvider = ({ children }) => {
             }
           };
           
-          console.log(`🏢 Socket: Workspace ${workspaceId} total: ${newCounts[workspaceId].totalUnread}`);
-          console.log("📱 Socket: Updated workspace counts:", Object.keys(newCounts).length, "workspaces");
           return newCounts;
         });
 
         // Force un refresh après un court délai pour synchroniser avec le serveur
         setTimeout(() => {
-          console.log("🔄 Socket: Auto-refreshing counts after new message");
           fetchWorkspaceUnreadCounts();
         }, 1000);
-        
-      } else {
-        console.log("❌ Socket: Ignoring channel message - Reason:", {
-          isOwnMessage: messageUserId === currentUserId,
-          missingChannelId: !channelId,
-          missingWorkspaceId: !workspaceId,
-          missingData: !data,
-          currentUserId,
-          messageUserId
-        });
       }
     };
 
     // *** NOUVEAU handler pour la mise à jour directe des compteurs depuis le serveur ***
     const handleUnreadChannelMessagesUpdated = (data) => {
-      console.log("🔔 Socket: UNREAD CHANNEL MESSAGES UPDATED from server");
-      console.log("   📊 Raw data:", JSON.stringify(data, null, 2));
-      
       if (data && data.channels) {
-        console.log("✅ Socket: Updating channel counts from server");
-        
         // Mettre à jour les compteurs de canaux directement
         setChannelUnreadCounts(prev => {
           const newCounts = {};
           Object.keys(data.channels).forEach(channelId => {
             newCounts[channelId] = data.channels[channelId].count || 0;
           });
-          console.log("📱 Socket: Channel counts updated from server:", Object.keys(newCounts).length, "channels");
           return newCounts;
         });
 
@@ -396,15 +328,8 @@ export const SocketProvider = ({ children }) => {
             }
           });
           
-          console.log("🏢 Socket: Workspace counts recalculated from server data");
-          Object.keys(newWorkspaceCounts).forEach(wsId => {
-            console.log(`🏢 Socket: Workspace ${wsId} - Total: ${newWorkspaceCounts[wsId].totalUnread}, Channels: ${Object.keys(newWorkspaceCounts[wsId].channels).length}`);
-          });
-          
           return newWorkspaceCounts;
         });
-        
-        console.log(`🔔 Socket: Total unread from server: ${data.total || 0}`);
       }
     };
 
@@ -418,7 +343,6 @@ export const SocketProvider = ({ children }) => {
 
     // Récupérer les compteurs initialement
     if (!initialFetchDone.current) {
-      console.log("🔄 Socket: Initial fetch of unread counts");
       setTimeout(() => {
         refreshUnreadCounts();
         initialFetchDone.current = true;
@@ -426,7 +350,6 @@ export const SocketProvider = ({ children }) => {
     }
 
     return () => {
-      console.log("🧹 Socket: Cleaning up notification listeners");
       socket.off('privateMessage', handlePrivateMessage);
       socket.off('message', handleChannelMessage);
       socket.off('newMessage', handleChannelMessage);
@@ -439,27 +362,24 @@ export const SocketProvider = ({ children }) => {
   // Fonction de test pour vérifier la connectivité
   const testSocketConnection = useCallback(() => {
     if (socket) {
-      console.log("Socket: Testing connection...");
       socket.emit('ping', { timestamp: Date.now() });
       
       socket.on('pong', (data) => {
-        console.log("Socket: Pong received", data);
+        // Réponse reçue
       });
     }
   }, [socket]);
 
   // Fonction pour forcer le refresh des compteurs
   const forceRefreshCounts = useCallback(() => {
-    console.log("Socket: Force refreshing counts...");
     initialFetchDone.current = false;
     refreshUnreadCounts();
   }, [refreshUnreadCounts]);
 
   // Fonction pour s'abonner aux notifications
   const subscribeToNotifications = useCallback(() => {
-    console.log("Socket: subscribeToNotifications called");
     return () => {
-      console.log("Socket: unsubscribe called");
+      // Cleanup
     };
   }, []);
 
@@ -505,7 +425,6 @@ export const SocketProvider = ({ children }) => {
       return sum;
     }, 0);
     
-    console.log(`🔢 Socket: Total calculation - Private: ${privateTotal}, Workspace: ${workspaceTotal}, Total: ${privateTotal + workspaceTotal}`);
     return privateTotal + workspaceTotal;
   }, [unreadMessages, workspaceUnreadCounts]);
 

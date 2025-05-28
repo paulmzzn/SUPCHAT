@@ -14,7 +14,6 @@ const NotificationHandler = () => {
     const initSound = async () => {
       try {
         await SoundService.initializeSound();
-        console.log('Service de son initialisé dans NotificationHandler');
       } catch (error) {
         console.error('Erreur lors de l\'initialisation du son:', error);
       }
@@ -23,7 +22,6 @@ const NotificationHandler = () => {
 
     // Handler pour jouer le son à la réception d'un message
     const handleNewMessage = async (data) => {
-      console.log('📣 [NotificationHandler] Message reçu, déclenchement du son...', data);
       try {
         await SoundService.playNotificationSound();
       } catch (error) {
@@ -32,7 +30,6 @@ const NotificationHandler = () => {
     };
 
     if (socket) {
-      console.log('NotificationHandler: Configuration des écouteurs de socket pour les notifications');
       // Écouter tous les événements pertinents
       socket.on('message', handleNewMessage);
       socket.on('newMessage', handleNewMessage);
@@ -43,7 +40,6 @@ const NotificationHandler = () => {
 
       // Cleanup: supprimer les écouteurs lorsque le composant est démonté
       return () => {
-        console.log('NotificationHandler: Nettoyage des écouteurs de socket');
         socket.off('message', handleNewMessage);
         socket.off('newMessage', handleNewMessage);
         socket.off('channelMessage', handleNewMessage);
@@ -51,8 +47,6 @@ const NotificationHandler = () => {
         socket.off('newPrivateMessage', handleNewMessage);
         socket.off('notification', handleNewMessage);
       };
-    } else {
-      console.log('NotificationHandler: Socket non disponible, impossible de configurer les écouteurs de notifications');
     }
   }, [socket]);
 
