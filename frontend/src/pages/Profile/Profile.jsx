@@ -52,7 +52,7 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.106:3001") +
+      (process.env.REACT_APP_API_URL || "http://192.168.1.32:3001") +
 
       `/api/users/${userId}`;
 
@@ -112,7 +112,7 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
       const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://192.168.1.106:3001") +
+        (process.env.REACT_APP_API_URL || "http://192.168.1.32:3001") +
 
         `/api/users/${userId}/workspaces`;
 
@@ -147,7 +147,7 @@ function Profile() {
     const fetchStats = async () => {
       try {
         const apiUrl =
-          (process.env.REACT_APP_API_URL || "http://192.168.1.106:3001") +
+          (process.env.REACT_APP_API_URL || "http://192.168.1.32:3001") +
           `/api/users/${userId}/activity-stats`;
         const res = await fetch(apiUrl, {
           headers: {

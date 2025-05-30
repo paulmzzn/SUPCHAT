@@ -20,7 +20,7 @@ import { useTheme } from "../../theme/ThemeContext";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.106:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.32:3000";
 
 
 const ConversationsListScreen = ({ navigation }) => {

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.106:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.32:3000";
 
 /**
  * Hook pour gérer les mentions d'utilisateurs dans les messages
