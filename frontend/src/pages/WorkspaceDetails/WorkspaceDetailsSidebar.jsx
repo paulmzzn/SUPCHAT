@@ -1122,9 +1122,8 @@ function WorkspaceDetailsSidebar({
           ) : (
             <FaChevronRight className="toggle-icon" />
           )}
-          <h3>Rappels ({reminders.length})</h3>
-            <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>            <button
-              className="reminder-create-btn"
+          <h3>Rappels ({reminders.length})</h3>            <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>            <button
+              className={`reminder-create-btn ${activeChannel ? 'channel-active' : ''}`}
               onClick={() => {
                 console.log("Bouton rappel cliqué!");
                 setEditingReminder(null); // Reset editing state for new reminder
