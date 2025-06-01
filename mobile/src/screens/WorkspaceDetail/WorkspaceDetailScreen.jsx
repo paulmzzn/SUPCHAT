@@ -50,10 +50,13 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     getCurrentUser();
   }, [workspaceId, channelId]);
 
-  // Marquer le canal comme lu quand l'utilisateur consulte les messages
+  // Marquer le canal comme lu quand l'utilisateur consulte les messages - COMPATIBLE REACT NATIVE
   useEffect(() => {
     if (workspaceId && channelId && currentUserId) {
       console.log(`🔔 Marquage du canal ${channelId} comme lu dans le workspace ${workspaceId}`);
+      
+      // Variable pour suivre si on a déjà émis un événement
+      let hasEmittedEvent = false;
       
       // Marquer immédiatement lors de l'ouverture
       markChannelAsRead(workspaceId, channelId);
@@ -61,14 +64,30 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
       // Marquer aussi après un délai pour s'assurer que les messages sont chargés
       const timer = setTimeout(() => {
         markChannelAsRead(workspaceId, channelId);
+        
+        // Émettre un événement global UNE SEULE FOIS
+        if (!hasEmittedEvent) {
+          hasEmittedEvent = true;
+          
+          // Utiliser notre émetteur d'événements personnalisé au lieu de window.dispatchEvent
+          if (global.AppEvents) {
+            global.AppEvents.emit('forceUnreadCountsUpdate', { 
+              timestamp: Date.now(),
+              source: 'WorkspaceDetailScreen',
+              channelId,
+              workspaceId
+            });
+            
+            console.log("🔔 Événement global émis pour mise à jour TabBar");
+          }
+        }
       }, 1500);
 
       return () => {
         clearTimeout(timer);
       };
     }
-    // SUPPRESSION de markChannelAsRead des dépendances pour éviter la boucle infinie
-  }, [workspaceId, channelId, currentUserId]); // Retirer markChannelAsRead d'ici
+  }, [workspaceId, channelId, currentUserId]);
 
   // Rejoindre le canal et workspace pour les notifications temps réel
   useEffect(() => {

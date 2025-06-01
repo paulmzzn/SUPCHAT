@@ -59,22 +59,52 @@ const WorkspacesScreen = () => {
     setForceUpdate(prev => prev + 1);
   }, [workspaceUnreadCounts]);
 
-  // Rafraîchir les compteurs quand l'écran devient actif - AMÉLIORÉ
+  // Rafraîchir les compteurs quand l'écran devient actif - ÉVITE LA BOUCLE INFINIE
   useFocusEffect(
     React.useCallback(() => {
       console.log("👁️ WorkspacesScreen: Écran focalisé, refresh des compteurs");
       
-      // Utiliser la nouvelle fonction de refresh complet pour s'assurer de la synchronisation
-      const timer = setTimeout(() => {
-        forceFullRefresh(); // Utiliser forceFullRefresh au lieu de refreshUnreadCounts
-        setForceUpdate(prev => prev + 1);
-        
-        // Debug info pour vérifier l'état
-        console.log("🔍 WorkspacesScreen Debug:", getDebugInfo());
-      }, 300);
+      // Variable pour éviter les doubles appels dans le même cycle de focus
+      let isFocused = true;
+      let hasRefreshed = false;
+      
+      // Utiliser un lastRefreshTime pour limiter la fréquence des rafraîchissements
+      const currentTime = Date.now();
+      const lastRefreshTime = global._lastWorkspaceRefreshTime || 0;
+      const minimumInterval = 3000; // Au moins 3 secondes entre les rafraîchissements
+      
+      // Ne rafraîchir que si assez de temps s'est écoulé depuis le dernier rafraîchissement
+      if (currentTime - lastRefreshTime > minimumInterval) {
+        const timer = setTimeout(() => {
+          if (isFocused && !hasRefreshed) {
+            console.log("🔄 WorkspacesScreen: Rafraîchissement programmé exécuté");
+            forceFullRefresh();
+            setForceUpdate(prev => prev + 1);
+            hasRefreshed = true;
+            
+            // Enregistrer l'heure du dernier rafraîchissement
+            global._lastWorkspaceRefreshTime = Date.now();
+            
+            // Limiter les logs de debug
+            if (__DEV__) {
+              console.log("🔍 WorkspacesScreen Debug:", getDebugInfo());
+            }
+          }
+        }, 500);
 
-      return () => clearTimeout(timer);
-    }, [forceFullRefresh, getDebugInfo]) // Mise à jour des dépendances
+        return () => {
+          isFocused = false;
+          clearTimeout(timer);
+        };
+      } else {
+        console.log("⏱️ WorkspacesScreen: Rafraîchissement ignoré, trop récent (" + 
+                    (currentTime - lastRefreshTime) + "ms < " + minimumInterval + "ms)");
+      }
+      
+      return () => {
+        isFocused = false;
+      };
+    }, []) // Supprimer les dépendances pour éviter les déclenchements en cascade
   );
 
   useEffect(() => {
