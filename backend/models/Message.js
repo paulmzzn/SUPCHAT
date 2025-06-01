@@ -101,15 +101,22 @@ class Message {
   // Récupérer tous les messages d'un canal avec les informations des utilisateurs
   static async findByChannel(canalId) {
     try {
-      console.log("Message.findByChannel - canalId:", canalId);
+      // Ajout pagination : limit et offset
+      let limit = 20;
+      let offset = 0;
+      if (arguments.length > 1 && typeof arguments[1] === 'number') limit = arguments[1];
+      if (arguments.length > 2 && typeof arguments[2] === 'number') offset = arguments[2];
+
+      console.log("Message.findByChannel - canalId:", canalId, "limit:", limit, "offset:", offset);
 
       const result = await pool.query(
         `SELECT m.*, u.nom, u.photo_de_profil 
          FROM message m
          JOIN utilisateur u ON m.fk_utilisateur = u.id_utilisateur
          WHERE m.fk_canal = $1
-         ORDER BY m.created_at ASC`,
-        [canalId]
+         ORDER BY m.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [canalId, limit, offset]
       );
 
       const messages = result.rows;

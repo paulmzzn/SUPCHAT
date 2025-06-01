@@ -303,9 +303,7 @@ const socketManager = (io) => {
             });
         }
       }
-    );
-
-    // Edition d'un message privé (seul l'expéditeur)
+    );    // Edition d'un message privé (seul l'expéditeur)
     socket.on("editPrivateMessage", async ({ id, contenu }) => {
       try {
         const userId = socket.user.id;
@@ -320,6 +318,42 @@ const socketManager = (io) => {
       } catch (error) {
         socket.emit("error", {
           message: "Erreur lors de la modification du message privé",
+        });
+      }
+    });
+    
+    // Edition d'un message dans un canal (seul l'auteur)
+    socket.on("editChannelMessage", async ({ messageId, contenu, canalId }) => {
+      try {
+        const userId = socket.user.id;
+        
+        // Vérifier que le message existe et appartient à l'utilisateur
+        const message = await MessageModel.getById(messageId);
+        if (!message) {
+          socket.emit("error", { message: "Message non trouvé" });
+          return;
+        }
+        
+        if (message.fk_utilisateur !== userId) {
+          socket.emit("error", { message: "Vous ne pouvez pas modifier ce message" });
+          return;
+        }
+        
+        // Mettre à jour le message
+        const updatedMessage = await MessageModel.update(messageId, { contenu });
+        
+        if (!updatedMessage) {
+          socket.emit("error", { message: "Erreur lors de la mise à jour du message" });
+          return;
+        }
+        
+        // Émettre l'événement de mise à jour aux membres du canal
+        io.to(`${canalId}`).emit("updateMessage", updatedMessage);
+        
+      } catch (error) {
+        console.error("Erreur lors de la modification du message dans le canal:", error);
+        socket.emit("error", {
+          message: "Erreur lors de la modification du message dans le canal",
         });
       }
     }); // Suppression d'un message privé (seul l'expéditeur)
@@ -579,7 +613,8 @@ const socketManager = (io) => {
         // Récupérer le message complet avec infos utilisateur
         const fullUserMessage = await MessageModel.getById(
           userMessage.id_message
-        );        // Récupérer les informations du canal pour le message
+        );
+        // Récupérer les informations du canal pour le message
         const canalInfo = await pool.query(
           "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
           [canal_id]
@@ -619,11 +654,46 @@ const socketManager = (io) => {
               fullUserMessage.created_at ||
               new Date().toISOString(),
           };
-          console.log(
-            `Socket.IO: Émission du message utilisateur formaté:`,
-            formattedUserMessage
-          );
           io.to(`${canal_id}`).emit("message", formattedUserMessage); // Émettre le message de l'utilisateur
+
+          // --- AJOUT: Détection des mentions et notification ---
+          // Chercher toutes les mentions au format @[username](userId) ou @username
+          // On va supporter les deux formats pour compatibilité
+          const mentionRegex = /@\[([^\]]+)\]\(([\w-]+)\)|@([a-zA-Z0-9_\-\.]+)/g;
+          let match;
+          const mentionedUserIds = new Set();
+
+          while ((match = mentionRegex.exec(content)) !== null) {
+            if (match[2]) {
+              // Format markdown: @[username](userId)
+              mentionedUserIds.add(match[2]);
+            } else if (match[3]) {
+              // Format simple: @username (optionnel, si vous voulez supporter)
+              // Il faudrait alors retrouver l'id utilisateur à partir du nom
+              // (optionnel, à activer si besoin)
+            }
+          }
+
+          // Pour chaque utilisateur mentionné, envoyer une notification socket
+          for (const mentionedUserId of mentionedUserIds) {
+            // Ne pas notifier l'auteur du message
+            if (mentionedUserId === socket.user.id) continue;
+
+            // Envoyer la notification sur la room privée de l'utilisateur
+            io.to(`dm:${mentionedUserId}`).emit("mentionNotification", {
+              type: "mention",
+              title: "Vous avez été mentionné",
+              content: content,
+              userId: socket.user.id,
+              senderName: socket.user.nom || socket.user.username || "Utilisateur",
+              photoUrl: socket.user.photo_de_profil || null,
+              channelId: canal_id,
+              workspaceId: finalWorkspaceId,
+              nom_canal: canalData.nom_canal,
+              messageId: fullUserMessage.id_message,
+            });
+          }
+          // --- FIN AJOUT ---
         } else {
           console.warn(
             "Socket.IO: Message utilisateur enregistré mais non émis (non trouvé)"

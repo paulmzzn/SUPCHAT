@@ -37,6 +37,7 @@ export function SocketProvider({ children }) {
 
   // Permettre l'utilisation de la variable d'environnement ou une valeur de secours
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = async () => {
     const token = localStorage.getItem("token");

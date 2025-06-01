@@ -85,6 +85,13 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   const [activeChannel, setActiveChannel] = useState(null); // doit être AVANT tout useEffect qui utilise activeChannel
   const [messages, setMessages] = useState([]); // doit être AVANT tout useEffect qui utilise messages
+  // Pagination messages
+  const [messageOffset, setMessageOffset] = useState(0);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const [isPrependingMessages, setIsPrependingMessages] = useState(false); // Ajouté pour sécuriser le scroll
+  const [lastChannelId, setLastChannelId] = useState(null); // Pour détecter le changement de canal
+  const MESSAGE_LIMIT = 20;
 
   // Files and Images (sidebar) : extraire les fichiers à partir des messages du canal actif
   const [files, setFiles] = useState([]);
@@ -114,7 +121,7 @@ export const useWorkspaceDetails = (workspaceId) => {
           return null;
         }
         if (parsed && parsed.type === "file") {
-          return {
+return {
             id: msg.id_message,
             name: parsed.fileName || "Fichier",
             type: parsed.fileType || "file",
@@ -196,9 +203,11 @@ export const useWorkspaceDetails = (workspaceId) => {
 
   // Emoji Picker state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
   // Replying state
   const [replyingTo, setReplyingTo] = useState(null);
+  
+  // Editing state
+  const [editingMessage, setEditingMessage] = useState(null);
 
   // Common Emojis for reactions
   const commonEmojis = [
@@ -350,34 +359,24 @@ export const useWorkspaceDetails = (workspaceId) => {
       console.error("fetchActiveChannel: ID de canal non fourni");
       return;
     }
-
     try {
       setLoadingMessages(true);
+      setMessageOffset(0);
+      setHasMoreMessages(true);
+      setLastChannelId(canalId); // Mémorise l'id du canal courant
       const token = localStorage.getItem("token");
-      console.log(`Chargement des détails pour le canal ${canalId}...`);
-      
-      // 1. Récupérer les détails du canal actif (pour obtenir les droits d'accès)
+      // 1. Récupérer les détails du canal actif
       const canalDetailsResponse = await fetch(
         `${API_URL}/api/workspace/${workspaceId}/canals/${canalId}`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       if (!canalDetailsResponse.ok) {
         const errorData = await canalDetailsResponse.json();
-        console.error("Erreur API lors de la récupération des détails du canal:", errorData);
-        throw new Error(
-          errorData.message || "Erreur lors du chargement des détails du canal"
-        );
+        throw new Error(errorData.message || "Erreur lors du chargement des détails du canal");
       }
-      
       const canalDetails = await canalDetailsResponse.json();
-      console.log("Détails du canal récupérés:", canalDetails);
-      
-      // Mettre à jour le canal actif avec les informations de droits d'accès
       setActiveChannel({
         id: canalDetails.id_canal,
         name: canalDetails.nom,
@@ -387,41 +386,20 @@ export const useWorkspaceDetails = (workspaceId) => {
         isCreator: canalDetails.isCreator || false,
         memberAccess: canalDetails.droitAcces || null
       });
-
-      // 2. Charger les messages du canal
-      console.log(`Chargement des messages pour le canal ${canalId}...`);
+      // 2. Charger les messages du canal (premier lot)
       const response = await fetch(
-        `${API_URL}/api/messages/canal/${canalId}`,
+        `${API_URL}/api/messages/canal/${canalId}?limit=${MESSAGE_LIMIT}&offset=0`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Erreur API lors du chargement des messages:", errorData);
-        throw new Error(
-          errorData.message || "Erreur lors du chargement des messages"
-        );
+        throw new Error(errorData.message || "Erreur lors du chargement des messages");
       }
-
       const data = await response.json();
-      console.log("Messages récupérés:", data);
-
-      // Vérifier et logger les messages avec parent_id mais sans parent_message
-      const messagesWithParentId = data.filter(
-        (msg) => msg.parent_id && !msg.parent_message
-      );
-      if (messagesWithParentId.length > 0) {
-        console.log(
-          `${messagesWithParentId.length} messages ont un parent_id sans parent_message dans ce canal`
-        );
-      }
-
       // Ajout du mapping des emojis sur les réactions (pour affichage correct)
-      const messagesWithEmojis = data.map((msg) => {
+      let messagesWithEmojis = data.map((msg) => {
         if (msg.reactions && Array.isArray(msg.reactions)) {
           msg.reactions = msg.reactions.map((r) => ({
             ...r,
@@ -430,15 +408,16 @@ export const useWorkspaceDetails = (workspaceId) => {
         }
         return msg;
       });
-
+      // Inverser pour afficher du plus ancien au plus récent
+      messagesWithEmojis = messagesWithEmojis.reverse();
       setMessages(messagesWithEmojis);
-
-      // Marquer le canal comme lu une fois que les messages sont chargés
+      setIsPrependingMessages(false); // Reset le flag prepend lors d'un changement de canal
+      setMessageOffset(data.length);
+      setHasMoreMessages(data.length === MESSAGE_LIMIT);
+      // Marquer le canal comme lu
       if (socket && socket.connected) {
-        console.log(`Marquage du canal ${canalId} comme lu via socket.io`);
         socket.emit("markChannelAsRead", { channelId: canalId });
       } else {
-        // Appel API de secours si le socket n'est pas connecté
         try {
           await markChannelAsReadViaAPI(canalId);
         } catch (markReadError) {
@@ -446,15 +425,61 @@ export const useWorkspaceDetails = (workspaceId) => {
         }
       }
     } catch (error) {
-      console.error("Erreur:", error);
       setMessages([]);
-      // En cas d'erreur, ne pas mettre le canal à null pour éviter une boucle
-      // mais informer l'utilisateur
       alert("Erreur lors du chargement des messages: " + error.message);
     } finally {
       setLoadingMessages(false);
     }
-  }, [workspaceId, socket, setActiveChannel, setMessages, setLoadingMessages]);
+  }, [workspaceId, socket, setActiveChannel, setMessages, setLoadingMessages]);  // Fonction pour signaler à ChatContainer que le scroll a été correctement restauré
+  const resetPrependingState = useCallback(() => {
+    setIsPrependingMessages(false);
+  }, []);
+
+  // Fonction pour charger plus de messages (pagination)
+  const loadMoreMessages = useCallback(async () => {
+    if (!activeChannel || loadingMoreMessages || !hasMoreMessages) return;
+    setLoadingMoreMessages(true);
+    setIsPrependingMessages(true); // On va faire un prepend
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/messages/canal/${activeChannel.id}?limit=${MESSAGE_LIMIT}&offset=${messageOffset}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors du chargement des messages");
+      }
+      const data = await response.json();
+      let messagesWithEmojis = data.map((msg) => {
+        if (msg.reactions && Array.isArray(msg.reactions)) {
+          msg.reactions = msg.reactions.map((r) => ({
+            ...r,
+            emoji: r.emoji || getEmojiForType(r.reaction_type),
+          }));
+        }
+        return msg;
+      });
+      // Inverser pour afficher du plus ancien au plus récent
+      messagesWithEmojis = messagesWithEmojis.reverse();
+      
+      // Préfixer les nouveaux messages (plus anciens) au début du tableau
+      // C'est ce qui va déclencher le mécanisme de restauration du scroll dans ChatContainer
+      setMessages((prev) => [...messagesWithEmojis, ...prev]);
+      setMessageOffset((prev) => prev + data.length);
+      setHasMoreMessages(data.length === MESSAGE_LIMIT);
+      
+      // Ne pas désactiver l'état de prepend ici - ChatContainer s'en occupe désormais
+      // via son propre effet qui réinitialise automatiquement isPaginatingRef.current à false
+    } catch (error) {
+      alert("Erreur lors du chargement des messages: " + error.message);
+      setIsPrependingMessages(false); // Réinitialisation en cas d'erreur
+    } finally {
+      setLoadingMoreMessages(false);
+    }
+  }, [activeChannel, loadingMoreMessages, hasMoreMessages, messageOffset]);
 
   // Fetch workspace details effect
   useEffect(() => {
@@ -717,6 +742,18 @@ export const useWorkspaceDetails = (workspaceId) => {
       );
     });
 
+    // Écouteur pour les messages mis à jour
+    socket.on("updateMessage", (updatedMessage) => {
+      console.log(`Message mis à jour reçu:`, updatedMessage);
+      setMessages((prevMessages) =>
+        prevMessages.map((message) =>
+          message.id_message === updatedMessage.id_message
+            ? updatedMessage
+            : message
+        )
+      );
+    });
+
     // *** Listen for typing events ***
     socket.on("typing", (data) => {
       console.log("Événement typing reçu:", data);
@@ -742,11 +779,11 @@ export const useWorkspaceDetails = (workspaceId) => {
     // *** End typing event listeners ***
 
     // Nettoyage lors du démontage du composant
-    return () => {
-      socket.off("message", handleNewMessage);
+    return () => {      socket.off("message", handleNewMessage);
       socket.off("messageReaction");
       socket.off("messageDeleted"); // Remove the listener
       socket.off("deleteMessage"); // Make sure to remove both listeners
+      socket.off("updateMessage"); // Remove the update message listener
       socket.off("typing"); // Clean up listeners
       socket.off("stopTyping"); // Clean up listeners
       socket.off("botTyping"); // N'oubliez pas de supprimer aussi cet écouteur
@@ -798,22 +835,30 @@ export const useWorkspaceDetails = (workspaceId) => {
       fetchWorkspaceMembers();
     }
   }, [userStatuses, fetchWorkspaceMembers, workspaceId]);
-  // Scroll to bottom effect
+  // Scroll to bottom effect OU restauration du scroll lors d'un prepend
+  // Correction : NE PAS scroller en bas si on vient de faire un prepend (pagination)
   useEffect(() => {
-    // Ajout d'une vérification supplémentaire pour s'assurer que la référence existe
-    // et attendre que le DOM soit complètement rendu
-    if (chatContainerRef && chatContainerRef.current) {
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
-        }
-      }, 100);
+    if (!chatContainerRef || !chatContainerRef.current) return;
+    // Si on vient de faire un prepend (pagination), NE PAS toucher au scroll ici (la gestion est dans ChatContainer)
+    if (isPrependingMessages) {
+      // On ne touche pas au scroll ici, ChatContainer s'en occupe
+      return;
     }
-  }, [messages]);
+    // Sinon, scroll en bas (nouveau message ou changement de canal)
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  }, [messages, isPrependingMessages, activeChannel, lastChannelId]);
 
   // Scroll to bottom when channel changes (chargement des messages)
+  // Correction : NE PAS scroller en bas si on vient de faire un prepend (pagination)
   useEffect(() => {
+    if (isPrependingMessages) {
+      // Ne rien faire, la gestion du scroll est dans ChatContainer
+      return;
+    }
     if (activeChannel && !loadingMessages) {
       setTimeout(() => {
         if (chatContainerRef && chatContainerRef.current) {
@@ -822,7 +867,7 @@ export const useWorkspaceDetails = (workspaceId) => {
         }
       }, 200); // augmentation du délai pour s'assurer que le DOM est bien rendu
     }
-  }, [activeChannel, loadingMessages, messages.length]);
+  }, [activeChannel, loadingMessages, messages.length, isPrependingMessages]);
 
   // Get current user ID effect
   useEffect(() => {
@@ -1322,14 +1367,17 @@ export const useWorkspaceDetails = (workspaceId) => {
 
     if (!displayMessage.trim() || !socket || !activeChannel) return;
 
+    // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
+    const messageToSend = convertMentionsForSending(displayMessage);
+
     console.log(
-      `Envoi du message: "${displayMessage}" dans le canal ${activeChannel.id}`
+      `Envoi du message: "${messageToSend}" dans le canal ${activeChannel.id}`
     );
 
     // Envoyer via socket.io
     socket.emit("message", {
       canal_id: activeChannel.id,
-      content: displayMessage,
+      content: messageToSend,
       workspace_id: workspaceId,
       parent_id: replyingTo ? replyingTo.id_message : null,
     });
@@ -1360,6 +1408,61 @@ export const useWorkspaceDetails = (workspaceId) => {
     handleCloseMessageContextMenu();
     const messageInput = document.querySelector(".chat-input-wrapper input");
     if (messageInput) messageInput.focus();
+  };
+
+  const handleEditMessage = () => {
+    setEditingMessage(messageContextMenu.message);
+    setNewMessage(messageContextMenu.message.contenu);
+    setDisplayMessage(messageContextMenu.message.contenu);
+    handleCloseMessageContextMenu();
+    const messageInput = document.querySelector(".chat-input-wrapper input");
+    if (messageInput) {
+      messageInput.focus();
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setNewMessage("");
+    setDisplayMessage("");
+  };
+  const handleUpdateMessage = async () => {
+    try {
+      if (!editingMessage || !newMessage.trim()) return;
+
+      // Vérifier si le socket est disponible
+      if (socket && socket.connected) {
+        // Utiliser le socket pour mettre à jour le message
+        socket.emit("editChannelMessage", {
+          messageId: editingMessage.id_message,
+          contenu: newMessage.trim(),
+          canalId: activeChannel.id
+        });
+      } else {
+        // Fallback: utiliser l'API REST si le socket n'est pas disponible
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/messages/${editingMessage.id_message}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ contenu: newMessage.trim() }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la mise à jour du message");
+        }
+      }
+
+      // Réinitialiser l'état d'édition
+      setEditingMessage(null);
+      setNewMessage("");
+      setDisplayMessage("");
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du message:", error);
+      // Optionnel: afficher une notification d'erreur
+    }
   };
 
   const handleShowEmojiPicker = () => {
@@ -1614,9 +1717,8 @@ export const useWorkspaceDetails = (workspaceId) => {
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       const textAfterCursor = currentDisplay.substring(cursorPos);
-      // Format the mention to include the user's ID in a markdown link format
-      // Using the formatMention helper function to create the properly formatted mention
-      const mentionText = `${formatMention(user.name, user.id)} `;
+      // Afficher seulement @Nom dans le champ de saisie
+      const mentionText = `@${user.name} `;
       const newDisplayValue =
         currentDisplay.substring(0, lastAtIndex) +
         mentionText +
@@ -1678,6 +1780,15 @@ export const useWorkspaceDetails = (workspaceId) => {
     }
 
     return false;
+  };
+
+  // Add a handler to select the active item in either mention or channel suggestions
+  const handleSelectActiveItem = () => {
+    if (showMentionSuggestions) {
+      handleSelectActiveMention();
+    } else if (showChannelSuggestions) {
+      handleSelectActiveChannelSuggestion();
+    }
   };
 
   // Return all state and handlers needed by the component
@@ -1780,6 +1891,17 @@ export const useWorkspaceDetails = (workspaceId) => {
     setReplyingTo, // Ensure setReplyingTo is returned
     userStatuses, // Expose userStatuses
     fetchActiveChannel, // Exposer la fonction fetchActiveChannel
+    handleSelectActiveItem, // <-- Export the new handler
+    // Édition de message
+    handleEditMessage,
+    handleCancelEdit,
+    handleUpdateMessage,
+    editingMessage,
+    // Pagination messages
+    messageOffset,
+    hasMoreMessages,
+    loadingMoreMessages,
+    loadMoreMessages,
   };
 };
 

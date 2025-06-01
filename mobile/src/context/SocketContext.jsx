@@ -11,6 +11,7 @@ import io from "socket.io-client";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
 
+
 const SocketContext = createContext(null);
 
 export const useSocket = () => useContext(SocketContext);

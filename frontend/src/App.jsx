@@ -27,6 +27,8 @@ import Notifications from "./components/Notifications/Notifications";
 // Importer le ToastProvider pour l'utiliser au niveau de l'app
 import ToastProvider from "./components/Toast/ToastProvider";
 
+import CGUPage from "./pages/CGUPage";
+
 // Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
 if (process.env.NODE_ENV === "development") {
   window.addEventListener("userStatusChanged", (event) => {

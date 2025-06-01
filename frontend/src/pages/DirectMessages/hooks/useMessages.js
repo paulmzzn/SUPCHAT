@@ -6,25 +6,18 @@ import { useMessageContextMenu } from "./useMessageContextMenu";
 import { useMessageReactions } from "./useMessageReactions";
 import { useRef, useState, useCallback, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.141:3000";
 
-export const useMessages = (
-  selectedUser,
-  socket,
-  currentUserId,
-  attachments = [],
-  setAttachments = () => {}
-) => {
-  // Liste des messages et actions principales
-  const messageList = useMessageList({
-    selectedUser,
-    socket,
-    currentUserId,
-  });
-
-  const { setMessages, ...rest } = messageList;
-
-  // State pour le champ de saisie du message
+/**
+ * Hook pour gérer les messages entre utilisateurs
+ * @param {string} selectedUser - ID de l'utilisateur sélectionné
+ * @param {Object} socket - Instance socket.io
+ * @param {string} currentUserId - ID de l'utilisateur courant
+ * @returns {Object} - États et fonctions liés aux messages
+ */
+export const useMessages = (selectedUser, socket, currentUserId) => {
+  const [messages, setMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessage, setNewMessage] = useState("");
 
   // Saisie et envoi de message

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaLock,
   FaHashtag,
@@ -22,6 +22,7 @@ import {
   FaPlus,
   FaAt,
   FaUser,
+  FaEdit,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -83,14 +84,202 @@ function ChatContainer({
   handleChannelSuggestionNavigation,
   handleSelectActiveChannelSuggestion,
   handleSelectChannelSuggestion,
+  // Pagination props
+  hasMoreMessages,
+  loadingMoreMessages,
+  loadMoreMessages,
+  isPrependingMessages,
+  setIsPrependingMessages,
+  handleEditMessage,
+  handleCancelEdit,
+  handleUpdateMessage,
+  editingMessage,
 }) {
   const navigate = useNavigate();
   const canWriteInChannel = activeChannel?.isPrivate
     ? currentUserAccessRight === "lecture_ecriture"
     : true;
 
+  // --- Solution améliorée pour le chargement avec maintien de position ---
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  
+  // Détecter le scroll vers le haut de façon simple
+  useEffect(() => {
+    if (!chatContainerRef?.current || !hasMoreMessages) return;
+    
+    const container = chatContainerRef.current;
+    let scrollThreshold = 150; // Augmenter légèrement le seuil pour une meilleure détection
+    let debounceTimer = null;
+    
+    const handleScroll = () => {
+      clearTimeout(debounceTimer);
+      
+      debounceTimer = setTimeout(() => {
+        // Détection du scroll vers le haut et proche du haut
+        if (container.scrollTop < scrollThreshold && 
+            !isLoadingOlderMessages && 
+            !loadingMoreMessages && 
+            hasMoreMessages) {
+            
+          // Stocker les informations sur le deuxième message visible comme point de référence
+          // (pas le premier qui pourrait disparaître)
+          const messages = container.querySelectorAll('.chat-message');
+          // Utiliser le second message si disponible, sinon le premier
+          const targetMessageIndex = messages.length > 1 ? 1 : 0;
+          const targetMessage = messages[targetMessageIndex];
+          
+          if (!targetMessage) return;
+          
+          // Stocker l'ID du message et sa position relative par rapport au viewport
+          const targetId = targetMessage.dataset.messageId;
+          const targetTop = targetMessage.getBoundingClientRect().top;
+          const viewportTop = container.getBoundingClientRect().top;
+          const targetOffset = targetTop - viewportTop; // Position relative dans le viewport
+          
+          console.log(`📜 Chargement déclenché, message de référence: ${targetId}`);
+          console.log(`Position relative du message: ${targetOffset}px`);
+          
+          // Préparer pour le chargement
+          setIsLoadingOlderMessages(true);
+          if (typeof setIsPrependingMessages === 'function') {
+            setIsPrependingMessages(true);
+          }
+          
+          // Charger les messages
+          loadMoreMessages();
+          
+          // Après chargement, restaurer la position
+          setTimeout(() => {
+            if (!chatContainerRef.current) return;
+            
+            // Retrouver le même élément après chargement
+            const sameMessageElement = document.querySelector(`[data-message-id="${targetId}"]`);
+            if (sameMessageElement) {
+              // Calculer la nouvelle position et réappliquer le même offset
+              const newTop = sameMessageElement.getBoundingClientRect().top;
+              const newViewportTop = container.getBoundingClientRect().top;
+              const newOffset = newTop - newViewportTop;
+              const adjustment = newOffset - targetOffset;
+              
+              console.log(`Ajustement de scroll: ${adjustment}px`);
+              container.scrollTop += adjustment;
+              
+              console.log(`Position maintenue pour le message ${targetId}`);
+            }
+            
+            // Réinitialiser les états après un court délai
+            setTimeout(() => {
+              setIsLoadingOlderMessages(false);
+              if (typeof setIsPrependingMessages === 'function') {
+                setIsPrependingMessages(false);
+              }
+            }, 200);
+          }, 300); // Délai plus long pour s'assurer que le DOM est mis à jour
+        }
+      }, 50); // Court debounce pour une réponse rapide
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      clearTimeout(debounceTimer);
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [chatContainerRef, hasMoreMessages, isLoadingOlderMessages, loadingMoreMessages, loadMoreMessages, setIsPrependingMessages]);
+
+  // Styles CSS pour l'indicateur de chargement
+  const cssStyles = `
+    .infinite-scroll-loader {
+      padding: 10px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.8);
+      background: rgba(30, 30, 35, 0.8);
+      border-radius: 8px;
+      margin: 10px auto;
+      width: 90%;
+      max-width: 400px;
+      position: sticky;
+      top: 5px;
+      z-index: 20;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .loading-dots {
+      display: inline-block;
+      margin-left: 5px;
+    }
+    
+    .loading-dots:after {
+      content: '.';
+      animation: dots 1.5s steps(5, end) infinite;
+    }
+    
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60% { content: '...'; }
+      80%, 100% { content: ''; }
+    }
+    
+    .chat-messages {
+      position: relative;
+      overflow-y: auto;
+      height: calc(100% - 60px);
+      padding: 10px;
+      scroll-behavior: auto !important;
+    }
+
+    .editing-message {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(30, 144, 255, 0.1);
+      border-left: 3px solid #1e90ff;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    
+    .edit-info {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .edit-icon {
+      margin-right: 8px;
+      color: #1e90ff;
+    }
+    
+    .cancel-edit {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.2s;
+    }
+    
+    .cancel-edit:hover {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .message-edited {
+      font-size: 0.8rem;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.5);
+      margin-left: 4px;
+    }
+  `;
+
   return (
     <div className="workspace-content-area">
+      {/* Injecter les styles CSS */}
+      <style>{cssStyles}</style>
+      
       <div className="glow-circle-right top-right"></div>
       <div className="glow-circle-left bottom-left"></div>
       {!activeChannel ? (
@@ -129,18 +318,33 @@ function ChatContainer({
             </div>
           </div>
           <div className="chat-messages" ref={chatContainerRef}>
+            {/* Indicateur de chargement simple */}
+            {(loadingMoreMessages || isLoadingOlderMessages) && hasMoreMessages && (
+              <div className="infinite-scroll-loader">
+                Chargement des messages anciens<span className="loading-dots"></span>
+              </div>
+            )}
+            
+            {/* Le div invisible pour déclencher le chargement est ajouté dynamiquement */}
+            
             {loadingMessages ? (
               <div className="chat-loading">Chargement des messages...</div>
             ) : messages.length > 0 ? (
-              messages.map((message) => {
+              messages.map((message, index) => {
+                // Générer une clé vraiment unique en combinant l'id du message avec son index
+                const messageKey = `${message.id_message}-${index}`;
+                
                 const systemMsg =
                   message.is_system_message ||
-                  message.fk_utilisateur ===
-                    "00000000-0000-0000-0000-000000000003";
+                  message.fk_utilisateur === "00000000-0000-0000-0000-000000000003";
+                
                 return (
                   <div
-                    key={message.id_message}
+                    key={messageKey} // Utiliser notre nouvelle clé unique
                     id={`msg-${message.id_message}`}
+                    data-message-id={message.id_message}
+                    data-message-index={message.index}
+                    data-message-timestamp={message.date_creation}
                     className={`chat-message ${
                       systemMsg
                         ? "system-message"
@@ -279,10 +483,14 @@ function ChatContainer({
                               >
                                 {message.nom}
                               </strong>
-                            )}
-                          </span>
+                            )}                          </span>
                           <span className="message-time">
                             {formatMessageDate(message.date_creation)}
+                            {message.updated_at && message.created_at !== message.updated_at && (
+                              <span className="message-edited" title={`Modifié le ${formatMessageDate(message.updated_at)}`}>
+                                {" "}(modifié)
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -638,9 +846,29 @@ function ChatContainer({
 
               <form
                 className="chat-input-container"
-                onSubmit={handleSendMessageWithMistralCheck}
+                onSubmit={editingMessage ? (e) => {
+                  e.preventDefault();
+                  handleUpdateMessage();
+                } : handleSendMessageWithMistralCheck}
               >
-                {replyingTo && (
+                {editingMessage && (
+                  <div className="editing-message">
+                    <div className="edit-info">
+                      <FaEdit className="edit-icon" />
+                      <span>
+                        Modification d'un message
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="cancel-edit"
+                      onClick={handleCancelEdit}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                {replyingTo && !editingMessage && (
                   <div className="replying-to">
                     <div className="reply-info">
                       <FaReply className="reply-icon" />
@@ -683,8 +911,7 @@ function ChatContainer({
                         : "Message..."
                     }
                     value={displayMessage}
-                    onChange={(e) => handleNewMessageChange(e.target.value)}
-                    onKeyDown={(e) => {
+                    onChange={(e) => handleNewMessageChange(e.target.value)}                    onKeyDown={(e) => {
                       if (showChannelSuggestions) {
                         if (e.key === "ArrowDown") {
                           e.preventDefault();
@@ -707,6 +934,14 @@ function ChatContainer({
                           e.preventDefault();
                           handleSelectActiveItem();
                         }
+                      } else if (editingMessage) {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          handleCancelEdit();
+                        } else if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleUpdateMessage();
+                        }
                       } else {
                         handleChatInputKeyDown && handleChatInputKeyDown(e);
                       }
@@ -727,10 +962,19 @@ function ChatContainer({
                     type="submit"
                     className="chat-send-btn"
                     disabled={!displayMessage.trim()}
-                    aria-label="Envoyer le message"
+                    aria-label={editingMessage ? "Modifier le message" : "Envoyer le message"}
                   >
-                    <FaPaperPlane />
-                    <span className="send-btn-pulse"></span>
+                    {editingMessage ? (
+                      <>
+                        <FaEdit />
+                        <span className="send-btn-pulse"></span>
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane />
+                        <span className="send-btn-pulse"></span>
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -745,18 +989,7 @@ function ChatContainer({
                         Créer un sondage
                       </span>
                     </button>
-                    <button className="chat-toolbox-item">
-                      <FaImage className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">
-                        Rechercher une image
-                      </span>
-                    </button>
-                    <button className="chat-toolbox-item">
-                      <FaCode className="toolbox-item-icon" />
-                      <span className="toolbox-item-text">
-                        Formater du code
-                      </span>
-                    </button>
+                    {/* Les boutons "Rechercher une image" et "Formater du code" ont été supprimés */}
                   </div>
                 )}
               </form>
