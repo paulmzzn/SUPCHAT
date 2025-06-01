@@ -54,10 +54,8 @@ router.post(
       }
 
       const file = req.file;
-      const fileExt = path.extname(file.originalname).substring(1); // Extension sans le point
-
-      // Uploader le fichier vers Scaleway S3
-      const fileUrl = await uploadToS3(
+      const fileExt = path.extname(file.originalname).substring(1); // Extension sans le point      // Uploader le fichier vers Scaleway S3
+      const s3Result = await uploadToS3(
         {
           buffer: fs.readFileSync(file.path),
           originalname: file.originalname,
@@ -76,7 +74,7 @@ router.post(
       // Enregistrer le fichier dans la base de données
       const fichierData = {
         nom_fichier: file.originalname,
-        url: fileUrl,
+        url: s3Result.url, // URL complète S3
         type: file.mimetype,
         taille_fichier: file.size,
         extension: fileExt,

@@ -76,11 +76,9 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
         "Erreur lors de la vérification de la structure de la table fichier:",
         dbError
       );
-    }
-
-    // Upload vers S3
-    const fileKey = await uploadToS3(req.file, "private-messages/files");
-    console.log("Fichier uploadé sur S3:", fileKey);
+    } // Upload vers S3
+    const s3Result = await uploadToS3(req.file, "private-messages/files");
+    console.log("Fichier uploadé sur S3:", s3Result);
 
     const fileName = req.file.originalname;
     const fileSize = req.file.size;
@@ -89,10 +87,10 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
     // Extraire l'extension du fichier
     const fileExtension = fileName.split(".").pop();
 
-    // Créer l'entrée fichier en BDD
+    // Créer l'entrée fichier en BDD - utiliser l'URL complète au lieu de seulement la clé
     const fichierData = {
       nom_fichier: fileName,
-      url: fileKey,
+      url: s3Result.url, // URL complète S3 au lieu de seulement la clé
       type: fileType,
       taille_fichier: fileSize,
       extension: fileExtension,
@@ -184,7 +182,9 @@ router.get("/conversations", verifyToken, async (req, res) => {
 router.get("/conversations-extended", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const conversations = await MessagePrive.getUserConversationsExtended(userId);
+    const conversations = await MessagePrive.getUserConversationsExtended(
+      userId
+    );
     res.json(conversations);
   } catch (error) {
     console.error("Error in conversations-extended:", error);

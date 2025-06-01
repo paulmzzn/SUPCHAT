@@ -16,7 +16,7 @@ import Discover from "./pages/Discover/Discover";
 import WorkspaceDetails from "./pages/WorkspaceDetails/WorkspaceDetails";
 import Settings from "./pages/Settings/Settings";
 import Profile from "./pages/Profile/Profile";
-import DirectMessages from "./pages/DirectMessages/DirectMessages";
+import DirectMessages from "./pages/DirectMessages"; // Utilisation du composant refactorisé via l'index.js
 import JoinWorkspace from "./pages/JoinWorkspace/JoinWorkspace";
 import { SocketProvider } from "./context/SocketContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -27,6 +27,8 @@ import Notifications from "./components/Notifications/Notifications";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import NotificationPermissionRequest from "./components/NotificationPermissionRequest/NotificationPermissionRequest"; // Nouveau composant
+// Importer le ToastProvider pour l'utiliser au niveau de l'app
+import ToastProvider from "./components/Toast/ToastProvider";
 
 import CGUPage from "./pages/CGUPage";
 
@@ -103,7 +105,7 @@ function App() {
     console.log("[App.jsx] isFullyAuthenticated() appelé");
     console.log("- Token présent:", token ? "Oui" : "Non");
     console.log("- Code validé:", isValidated ? "Oui" : "Non");
-    return (token !== null && token !== undefined) && isValidated;
+    return token !== null && token !== undefined && isValidated;
   };
 
   // Composant amélioré pour les routes protégées
