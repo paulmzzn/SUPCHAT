@@ -29,6 +29,8 @@ import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import NotificationPermissionRequest from "./components/NotificationPermissionRequest/NotificationPermissionRequest"; // Nouveau composant
 // Importer le ToastProvider pour l'utiliser au niveau de l'app
 import ToastProvider from "./components/Toast/ToastProvider";
+import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
+import { isMobileDevice } from "./utils/deviceDetection";
 
 import CGUPage from "./pages/CGUPage";
 
@@ -55,14 +57,19 @@ if (process.env.NODE_ENV === "development") {
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Vérifier l'état de l'authentification au chargement de l'application
+  // Vérifier l'état de l'authentification et la détection mobile au chargement de l'application
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log(
       "[App.jsx] useEffect - Token dans localStorage:",
       token ? token.substring(0, 15) + "..." : "non trouvé"
     );
+    
+    // Détecter si c'est un appareil mobile
+    setIsMobile(isMobileDevice());
+    
     setAuthChecked(true);
   }, []);
 
@@ -143,11 +150,16 @@ function App() {
     );
     return children;
   };
-
   // Ne rien afficher jusqu'à ce que l'état de l'authentification soit vérifié
   if (!authChecked) {
     console.log("[App.jsx] Rendu global - authChecked pas encore prêt");
     return <div>Chargement...</div>; // Ou un spinner de chargement
+  }
+
+  // Redirection mobile
+  if (isMobile) {
+    console.log("[App.jsx] Appareil mobile détecté - affichage de la page de redirection");
+    return <MobileRedirect />;
   }
 
   console.log("[App.jsx] Rendu global - authChecked prêt, rendu des routes");
