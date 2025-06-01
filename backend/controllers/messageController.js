@@ -81,7 +81,12 @@ export const getMessagesByChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
     const userId = req.user.id; // L'ID de l'utilisateur connecté
-    
+    // Pagination : limit et offset (par défaut 20, 0)
+    let limit = parseInt(req.query.limit, 10);
+    let offset = parseInt(req.query.offset, 10);
+    if (isNaN(limit) || limit <= 0) limit = 20;
+    if (isNaN(offset) || offset < 0) offset = 0;
+
     if (!channelId) {
       console.error("getMessagesByChannel: ID de canal manquant", { 
         params: req.params, 
@@ -93,8 +98,8 @@ export const getMessagesByChannel = async (req, res) => {
         params: req.params
       });
     }
-    
-    console.log(`Récupération des messages pour canal ${channelId} par utilisateur ${userId}`);
+
+    console.log(`Récupération des messages pour canal ${channelId} par utilisateur ${userId} (limit=${limit}, offset=${offset})`);
 
     // Vérifier que le canal existe
     const canal = await Canal.findById(channelId);
@@ -102,7 +107,7 @@ export const getMessagesByChannel = async (req, res) => {
       console.log("Canal non trouvé:", channelId);
       return res.status(404).json({ message: "Canal non trouvé" });
     }
-    
+
     // NOUVELLE VERIFICATION: Vérifier que l'utilisateur a le droit de lecture sur ce canal
     const accessCheck = await Canal.checkUserAccess(channelId, userId);
     if (!accessCheck.hasAccess) {
@@ -112,10 +117,10 @@ export const getMessagesByChannel = async (req, res) => {
         error: "ACCESS_DENIED" 
       });
     }
-    
-    // Une fois que nous avons vérifié que l'utilisateur a accès, récupérer les messages
-    const messages = await MessageModel.findByChannel(channelId);
-    console.log(`${messages.length} messages trouvés`);
+
+    // Une fois que nous avons vérifié que l'utilisateur a accès, récupérer les messages paginés
+    const messages = await MessageModel.findByChannel(channelId, limit, offset);
+    console.log(`${messages.length} messages trouvés (limit=${limit}, offset=${offset})`);
 
     // Normaliser les dates pour assurer la compatibilité avec le front-end
     const transformedMessages = messages.map((msg) => {
