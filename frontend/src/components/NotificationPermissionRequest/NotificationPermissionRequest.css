@@ -1,0 +1,132 @@
+.notification-permission-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #6A0DAD, #8A2BE2);
+  color: white;
+  padding: 12px 20px;
+  z-index: 9999;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.notification-permission-content {
+  display: flex;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 15px;
+}
+
+.notification-permission-icon {
+  font-size: 24px;
+  color: #FFD700;
+}
+
+.notification-permission-text {
+  flex: 1;
+}
+
+.notification-permission-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.notification-permission-text p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.notification-permission-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-permission-allow {
+  background: white;
+  color: #6A0DAD;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-permission-allow:hover:not(:disabled) {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.btn-permission-allow:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-permission-dismiss {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.btn-permission-dismiss:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-permission-dismiss:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notification-permission-banner {
+    padding: 10px 15px;
+  }
+  
+  .notification-permission-content {
+    gap: 10px;
+  }
+  
+  .notification-permission-text h4 {
+    font-size: 14px;
+  }
+  
+  .notification-permission-text p {
+    font-size: 12px;
+  }
+  
+  .btn-permission-allow {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .btn-permission-dismiss {
+    width: 32px;
+    height: 32px;
+  }
+}
