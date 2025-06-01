@@ -95,33 +95,20 @@ export const formatFileSize = (bytes) => {
  */
 export const getCompleteFileUrl = (url) => {
   if (!url) {
-    console.warn("[messageUtils] getCompleteFileUrl: URL vide ou null");
     return "";
   }
-
-  console.log("[messageUtils] getCompleteFileUrl - URL originale:", url);
 
   // Nettoyer les URLs dupliquées (cas où l'URL contient déjà le domaine S3 en double)
   let cleanUrl = url;
   if (url.includes("https://s3.fr-par.scw.cloud/s3-supchat/https://")) {
     // Extraire la partie après la deuxième occurrence du protocole
     cleanUrl = url.substring(url.lastIndexOf("https://"));
-    console.log(
-      "[messageUtils] URL nettoyée (duplication détectée):",
-      cleanUrl
-    );
   } else if (url.includes("https://s3-supchat.s3.fr-par.scw.cloud/https://")) {
     // Extraire la partie après la deuxième occurrence du protocole
     cleanUrl = url.substring(url.lastIndexOf("https://"));
-    console.log(
-      "[messageUtils] URL nettoyée (duplication détectée):",
-      cleanUrl
-    );
   }
-
   // Si l'URL est déjà complète (HTTP/HTTPS), la retourner telle quelle
   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
-    console.log("[messageUtils] URL déjà complète:", cleanUrl);
     return cleanUrl;
   }
 
@@ -135,7 +122,6 @@ export const getCompleteFileUrl = (url) => {
     const fullS3Url = cleanUrl.startsWith("/")
       ? `${s3BaseUrl}${cleanUrl}`
       : `${s3BaseUrl}/${cleanUrl}`;
-    console.log("[messageUtils] URL S3 construite:", fullS3Url);
     return fullS3Url;
   }
 
@@ -144,7 +130,6 @@ export const getCompleteFileUrl = (url) => {
   const apiUrl = `${API_URL}${
     cleanUrl.startsWith("/") ? "" : "/api/files/"
   }${cleanUrl}`;
-  console.log("[messageUtils] URL API construite:", apiUrl);
   return apiUrl;
 };
 

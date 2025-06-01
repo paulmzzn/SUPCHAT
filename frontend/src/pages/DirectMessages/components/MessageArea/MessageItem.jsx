@@ -137,16 +137,6 @@ const MessageItem = ({
                       attachment.presignedUrl || attachment.url
                     );
 
-                    // Debug logs pour identifier le problème
-                    console.log("[MessageItem] Attachment debug:", {
-                      id: attachment.id_fichier,
-                      originalUrl: attachment.url,
-                      presignedUrl: attachment.presignedUrl,
-                      finalUrl: fileUrl,
-                      type: attachment.type,
-                      name: attachment.nom_fichier,
-                    });
-
                     if (
                       attachment.type &&
                       attachment.type.startsWith("image/")
@@ -207,15 +197,6 @@ const MessageItem = ({
                               cursor: "pointer",
                             }}
                             onLoad={(e) => {
-                              console.log(
-                                "[MessageItem] ✅ Image chargée avec succès:",
-                                fileUrl,
-                                "Dimensions:",
-                                e.target.naturalWidth +
-                                  "x" +
-                                  e.target.naturalHeight
-                              );
-
                               // Calculer les dimensions optimales pour afficher l'image entière
                               const naturalWidth = e.target.naturalWidth;
                               const naturalHeight = e.target.naturalHeight;
@@ -271,28 +252,9 @@ const MessageItem = ({
                               // Marquer comme chargée
                               e.target.classList.add("loaded");
                               e.target.parentElement.classList.add("loaded");
-
-                              console.log(
-                                `[MessageItem] Dimensions optimales appliquées: ${optimalWidth}x${optimalHeight}`
-                              );
                             }}
                             onError={(e) => {
-                              console.error(
-                                "[MessageItem] ❌ Erreur de chargement d'image:",
-                                {
-                                  url: fileUrl,
-                                  originalUrl: attachment.url,
-                                  presignedUrl: attachment.presignedUrl,
-                                  networkState: e.target.networkState,
-                                  readyState: e.target.readyState,
-                                  error: e,
-                                }
-                              );
-
                               // Essayer de charger l'image via proxy/backend au lieu de S3 direct
-                              console.log(
-                                "[MessageItem] Tentative de chargement via backend..."
-                              );
                               const backendUrl = `${
                                 process.env.REACT_APP_API_URL ||
                                 "http://192.168.1.29:3000"
@@ -303,16 +265,10 @@ const MessageItem = ({
                               // Créer une nouvelle image avec l'URL du backend
                               const fallbackImg = new Image();
                               fallbackImg.onload = () => {
-                                console.log(
-                                  "[MessageItem] ✅ Image chargée via backend proxy"
-                                );
                                 e.target.src = backendUrl;
                                 e.target.style.display = "block";
                               };
                               fallbackImg.onerror = () => {
-                                console.error(
-                                  "[MessageItem] ❌ Échec du chargement via backend aussi"
-                                );
                                 // Afficher un message d'erreur à la place
                                 e.target.style.display = "none";
                                 if (
