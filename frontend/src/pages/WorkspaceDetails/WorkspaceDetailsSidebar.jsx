@@ -21,9 +21,12 @@ import {
   FaEdit,
   FaEye,
   FaUserCog,
+  FaPlus,
 } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
+import ReminderModal from "../../components/ReminderModal/ReminderModal";
+import ReminderList from "../../components/ReminderList/ReminderList";
 import "./WorkspaceDetailsSidebar.css";
 
 // Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
@@ -74,13 +77,20 @@ function WorkspaceDetailsSidebar({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState({ status: "", message: "" });
   const [isInviting, setIsInviting] = useState(false);
-
   // States for join requests management
   const [joinRequests, setJoinRequests] = useState([]);
   const [showJoinRequests, setShowJoinRequests] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [requestError, setRequestError] = useState(null);
   const [processingRequestId, setProcessingRequestId] = useState(null);
+  // States for reminders management
+  const [reminders, setReminders] = useState([]);
+  const [showReminders, setShowReminders] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+  const [reminderError, setReminderError] = useState(null);
+  const [creatingReminder, setCreatingReminder] = useState(false);
+  const [editingReminder, setEditingReminder] = useState(null); // New state for editing
 
   // Référence pour le panneau des demandes d'adhésion
   const joinRequestsPanelRef = useRef(null);
@@ -345,8 +355,206 @@ function WorkspaceDetailsSidebar({
       });
     } finally {
       setIsInviting(false);
+    }  };
+
+  // Reminder management functions
+  const loadReminders = async () => {
+    if (!activeChannel || !activeChannel.id) return;
+
+    setLoadingReminders(true);
+    setReminderError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/reminders/channel/${activeChannel.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("DEBUG: Loaded reminders from API:", data);
+        console.log("DEBUG: First reminder structure:", data.length > 0 ? data[0] : "No reminders");
+        setReminders(data);
+      } else {
+        const errorData = await response.json();
+        setReminderError(
+          errorData.message || "Erreur lors du chargement des rappels"
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des rappels:", error);
+      setReminderError("Erreur de connexion au serveur");
+    } finally {
+      setLoadingReminders(false);
+    }
+  };  const handleCreateReminder = async (reminderData) => {
+    if (!activeChannel || !activeChannel.id) return;
+
+    setCreatingReminder(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (editingReminder) {
+        // Mode édition - mettre à jour le rappel existant
+        const response = await fetch(`${API_URL}/api/reminders/${editingReminder.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: reminderData.title,
+            description: reminderData.description,
+            reminder_date: reminderData.reminder_date,
+          }),
+        });
+
+        if (response.ok) {
+          console.log("Rappel modifié avec succès");
+          // Recharger les rappels pour assurer la cohérence
+          await loadReminders();
+          setShowReminderModal(false);
+          setEditingReminder(null);
+          return true;
+        } else {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Erreur lors de la modification du rappel"
+          );
+        }
+      } else {
+        // Mode création - créer un nouveau rappel
+        const response = await fetch(`${API_URL}/api/reminders`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...reminderData,
+            channel_id: activeChannel.id,
+          }),
+        });
+
+        if (response.ok) {
+          const newReminder = await response.json();
+          console.log("Nouveau rappel créé:", newReminder);
+          
+          // Instead of adding to the state, reload all reminders to ensure consistency
+          // This prevents any display issues from data structure mismatches
+          await loadReminders();
+          setShowReminderModal(false);
+          return true;
+        } else {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Erreur lors de la création du rappel"
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la gestion du rappel:", error);
+      throw error;
+    } finally {
+      setCreatingReminder(false);
+    }
+  };const handleEditReminder = async (reminderOrId, reminderData) => {
+    try {
+      // Si le premier paramètre est un objet (rappel complet), nous sommes appelés depuis ReminderList
+      // Si c'est un ID, nous sommes appelés avec des données séparées
+      let reminderId, dataToSend;
+      
+      if (typeof reminderOrId === 'object' && reminderOrId.id) {
+        // Appelé depuis ReminderList avec l'objet rappel complet - ouvrir la modal d'édition
+        setEditingReminder(reminderOrId);
+        setShowReminderModal(true);
+        return;
+      } else {
+        // Appelé avec ID et données séparées - effectuer la mise à jour
+        reminderId = reminderOrId;
+        dataToSend = reminderData;
+      }
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/reminders/${reminderId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (response.ok) {
+        const updatedReminder = await response.json();
+        setReminders((prev) =>
+          prev.map((reminder) =>
+            reminder.id === reminderId ? updatedReminder : reminder
+          )
+        );
+        return true;
+      } else {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Erreur lors de la modification du rappel"
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la modification du rappel:", error);
+      throw error;
     }
   };
+
+  const handleDeleteReminder = async (reminderId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rappel ?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/reminders/${reminderId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setReminders((prev) =>
+          prev.filter((reminder) => reminder.id !== reminderId)
+        );
+        return true;
+      } else {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Erreur lors de la suppression du rappel"
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression du rappel:", error);
+      alert(error.message);
+    }
+  };
+
+  const toggleReminders = () => {
+    setShowReminders(!showReminders);
+  };
+  // Load reminders when channel changes
+  useEffect(() => {
+    console.log("WorkspaceDetailsSidebar - activeChannel changed:", activeChannel);
+    if (activeChannel && activeChannel.id) {
+      console.log("Loading reminders for channel:", activeChannel.id);
+      loadReminders();
+    } else {
+      console.log("No active channel or channel ID");
+    }
+  }, [activeChannel?.id]);
 
   // Log pour le débogage - s'exécute à chaque rendu mais uniquement si DEBUG_LOGGING est activé
   useEffect(() => {
@@ -885,8 +1093,7 @@ function WorkspaceDetailsSidebar({
                 maxHeight: "220px",
                 overflowY: images.length > 5 ? "auto" : "visible",
               }}
-            >
-              {images.slice(0, 5).map((image) => (
+            >              {images.slice(0, 5).map((image) => (
                 <div key={image.id} className="image-item">
                   <img
                     src={S3_BASE_URL + image.url}
@@ -906,6 +1113,73 @@ function WorkspaceDetailsSidebar({
           )}
         </div>
       )}
+      
+      {/* Reminders Section - Always visible */}
+      <div className="details-section">
+        <div className="section-header" onClick={toggleReminders}>
+          {showReminders ? (
+            <FaChevronDown className="toggle-icon" />
+          ) : (
+            <FaChevronRight className="toggle-icon" />
+          )}
+          <h3>Rappels ({reminders.length})</h3>            <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>            <button
+              className={`reminder-create-btn ${activeChannel ? 'channel-active' : ''}`}
+              onClick={() => {
+                console.log("Bouton rappel cliqué!");
+                setEditingReminder(null); // Reset editing state for new reminder
+                setShowReminderModal(true);
+              }}
+              title="Créer un rappel"
+            >
+              <FaPlus />
+              <span style={{ marginLeft: '4px' }}>Nouveau</span>
+            </button>
+          </div>
+        </div>
+        
+        {showReminders && (
+          <div className="reminders-content">
+            {!activeChannel ? (
+              <div className="reminders-info">
+                <p>Sélectionnez un canal pour voir les rappels ou créer un nouveau rappel.</p>
+              </div>
+            ) : loadingReminders ? (
+              <div className="reminders-loading">Chargement des rappels...</div>
+            ) : reminderError ? (
+              <div className="reminders-error">
+                {reminderError}
+                <button 
+                  onClick={loadReminders}
+                  className="retry-btn"
+                >
+                  Réessayer
+                </button>
+              </div>            ) : (
+              <ReminderList
+                reminders={reminders}
+                onEditReminder={handleEditReminder}
+                onDeleteReminder={handleDeleteReminder}
+                currentUserId={currentUserId}
+              />
+            )}
+          </div>
+        )}
+      </div>
+        {/* Reminder Modal */}
+      {showReminderModal && (        <ReminderModal
+          show={showReminderModal}
+          onClose={() => {
+            setShowReminderModal(false);
+            setEditingReminder(null); // Reset editing state when modal closes
+          }}
+          onSubmit={handleCreateReminder}
+          loading={creatingReminder}
+          canalId={activeChannel?.id}
+          workspaceId={workspace?.id}
+          editingReminder={editingReminder} // Pass editing reminder to modal
+        />
+      )}
+      
       {/* Invitation Modal */}
       {showInviteModal && (
         <div className="modal-overlay" onClick={handleCloseInviteModal}>
