@@ -7,9 +7,13 @@
 
 .dm-layout {
   display: flex;
-  width: calc(100% - 80px); /* Ajuster la largeur en fonction de la sidebar */
+  width: 100vw; /* Prend toute la largeur de l'écran */
+  min-width: 0;
+  margin: 0;
+  padding: 0;
   height: 100vh;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Sidebar pour la liste des conversations */
@@ -243,6 +247,7 @@
 .dm-messages {
   flex: 1;
   padding: 20px;
+  padding-right: 15px; /* Corrige uniquement le padding droit, garde le padding général */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
