@@ -88,18 +88,20 @@ export const getMessagesByChannel = async (req, res) => {
     if (isNaN(offset) || offset < 0) offset = 0;
 
     if (!channelId) {
-      console.error("getMessagesByChannel: ID de canal manquant", { 
-        params: req.params, 
-        url: req.originalUrl 
+      console.error("getMessagesByChannel: ID de canal manquant", {
+        params: req.params,
+        url: req.originalUrl,
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "ID de canal non fourni.",
         error: "CHANNEL_ID_MISSING",
-        params: req.params
+        params: req.params,
       });
     }
 
-    console.log(`Récupération des messages pour canal ${channelId} par utilisateur ${userId} (limit=${limit}, offset=${offset})`);
+    console.log(
+      `Récupération des messages pour canal ${channelId} par utilisateur ${userId} (limit=${limit}, offset=${offset})`
+    );
 
     // Vérifier que le canal existe
     const canal = await Canal.findById(channelId);
@@ -112,15 +114,17 @@ export const getMessagesByChannel = async (req, res) => {
     const accessCheck = await Canal.checkUserAccess(channelId, userId);
     if (!accessCheck.hasAccess) {
       console.log(`Utilisateur ${userId} n'a pas accès au canal ${channelId}`);
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: "Vous n'avez pas accès à ce canal",
-        error: "ACCESS_DENIED" 
+        error: "ACCESS_DENIED",
       });
     }
 
     // Une fois que nous avons vérifié que l'utilisateur a accès, récupérer les messages paginés
     const messages = await MessageModel.findByChannel(channelId, limit, offset);
-    console.log(`${messages.length} messages trouvés (limit=${limit}, offset=${offset})`);
+    console.log(
+      `${messages.length} messages trouvés (limit=${limit}, offset=${offset})`
+    );
 
     // Normaliser les dates pour assurer la compatibilité avec le front-end
     const transformedMessages = messages.map((msg) => {
@@ -264,27 +268,22 @@ export const uploadFile = async (req, res) => {
     console.log("🧪 Vérification de la requête multer:", {
       fileBuffer: req.file.buffer ? "Présent" : "Absent",
       fileBufferSize: req.file.buffer ? req.file.buffer.length : 0,
-    });
-
-    // Upload du fichier vers S3
+    }); // Upload du fichier vers S3
     try {
       console.log("☁️ Tentative d'upload vers S3...");
-      const fileKey = await uploadToS3(req.file, "messages/files");
-      console.log("✅ Fichier uploadé avec succès vers S3:", fileKey);
+      const s3Result = await uploadToS3(req.file, "messages/files");
+      console.log("✅ Fichier uploadé avec succès vers S3:", s3Result);
 
       // Construction de l'URL complète du fichier
       const s3Endpoint =
         process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
       const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
-      const fullFileUrl = `${s3Endpoint}${bucketName}/${fileKey}`.replace(
-        /([^:])\/\/+/g,
-        "$1/"
-      );
+      const fullFileUrl = s3Result.url; // Utiliser l'URL complète retournée par uploadToS3
 
       console.log("🔗 URL complète du fichier:", fullFileUrl);
 
       // Créer le message avec le lien vers le fichier
-      const fileUrl = fileKey;
+      const fileUrl = s3Result.fileKey; // Clé pour les opérations S3
       const fileName = req.file.originalname;
       const fileSize = req.file.size;
       const fileType = req.file.mimetype;
@@ -384,16 +383,22 @@ export const uploadFile = async (req, res) => {
 export const getUnreadCounts = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(`Récupération des messages non lus pour l'utilisateur ${userId}`);
-    
+    console.log(
+      `Récupération des messages non lus pour l'utilisateur ${userId}`
+    );
+
     const unreadData = await MessageModel.getUnreadCountByChannel(userId);
-    
+
     // Pas besoin de recalculer le total, il est déjà fourni par le modèle
     res.status(200).json(unreadData);
   } catch (error) {
-    console.error("Erreur lors de la récupération des messages non lus:", error);
-    res.status(500).json({ 
-      message: error.message || "Erreur lors de la récupération des messages non lus" 
+    console.error(
+      "Erreur lors de la récupération des messages non lus:",
+      error
+    );
+    res.status(500).json({
+      message:
+        error.message || "Erreur lors de la récupération des messages non lus",
     });
   }
 };
@@ -402,13 +407,13 @@ export const getUnreadCounts = async (req, res) => {
 export const getUnreadMessages = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     if (!userId) {
       return res.status(400).json({ message: "ID utilisateur requis" });
     }
 
     const unreadData = await MessageModel.getUnreadCountByChannel(userId);
-    
+
     // Pas besoin de recalculer le total, il est déjà fourni par le modèle
     res.status(200).json(unreadData);
   } catch (error) {
@@ -422,23 +427,25 @@ export const markChannelAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
     const { channelId } = req.params;
-    
+
     if (!userId || !channelId) {
-      return res.status(400).json({ message: "ID utilisateur et ID canal requis" });
+      return res
+        .status(400)
+        .json({ message: "ID utilisateur et ID canal requis" });
     }
 
     const result = await MessageModel.markChannelAsRead(userId, channelId);
-    
+
     // Diffuser l'événement à l'utilisateur pour mettre à jour son UI
     const io = req.app.get("io");
     if (io) {
       io.to(`user:${userId}`).emit("channelRead", { channelId });
     }
-    
-    res.status(200).json({ 
-      message: "Canal marqué comme lu", 
+
+    res.status(200).json({
+      message: "Canal marqué comme lu",
       channel: channelId,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   } catch (error) {
     console.error("Erreur dans markChannelAsRead:", error);
