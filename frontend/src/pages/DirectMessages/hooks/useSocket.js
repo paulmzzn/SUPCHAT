@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import io from "socket.io-client";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.32:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
 
 /**
  * Hook pour gérer la connexion socket et les événements associés
