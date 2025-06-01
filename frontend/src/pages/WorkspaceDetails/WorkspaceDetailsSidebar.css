@@ -29,7 +29,71 @@
 .context-menu-divider {
   height: 1px;
   background-color: rgba(255, 255, 255, 0.1);
-  margin: 6px 0;
+}
+
+/* Reminder Section Styles */
+.reminder-actions {
+  display: flex !important;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+  opacity: 1;
+  visibility: visible;
+}
+
+.reminder-create-btn {
+  background: rgba(147, 72, 183, 0.8) !important;
+  border: 1px solid rgba(147, 72, 183, 0.6) !important;
+  color: #ffffff !important;
+  font-size: 14px;
+  cursor: pointer;
+  display: none !important; /* Masqué par défaut */
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  min-width: auto;
+  min-height: 32px;
+  gap: 4px;
+  opacity: 0 !important; /* Invisible par défaut */
+  visibility: hidden !important; /* Caché par défaut */
+  position: relative;
+  z-index: 10;
+}
+
+/* N'afficher le bouton que lorsqu'un canal est actif */
+.reminder-create-btn.channel-active {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.reminder-create-btn.channel-active:hover {
+  background: rgba(147, 72, 183, 1) !important;
+  border-color: rgba(147, 72, 183, 0.8) !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(147, 72, 183, 0.3);
+}
+
+.reminder-create-btn.channel-active:active {
+  transform: scale(0.98);
+}
+
+.reminder-create-btn svg {
+  font-size: 14px;
+  color: #ffffff !important;
+}
+
+.reminder-create-btn span {
+  font-weight: 500;
+  white-space: nowrap;
+  color: #ffffff !important;
+}
+
+/* Pour forcer l'affichage si masqué par d'autres styles */
+.reminder-actions .reminder-create-btn {
+  display: flex !important;
 }
 
 .context-menu-section {
