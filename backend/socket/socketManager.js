@@ -679,17 +679,53 @@ const socketManager = (io) => {
             // Ne pas notifier l'auteur du message
             if (mentionedUserId === socket.user.id) continue;
 
+            // Récupérer le nom du workspace
+            let workspaceName = "Workspace";
+            try {
+              const workspaceQuery = await pool.query(
+                "SELECT nom FROM workspace WHERE id_workspace = $1",
+                [finalWorkspaceId]
+              );
+              
+              if (workspaceQuery.rows.length > 0) {
+                workspaceName = workspaceQuery.rows[0].nom;
+              }
+            } catch (err) {
+              console.error("Erreur lors de la récupération du nom du workspace pour mention:", err);
+            }
+
+            // Récupérer les informations de l'utilisateur qui fait la mention
+            let senderProfile = null;
+            let photoUrl = null;
+            let senderName = "Utilisateur";
+            
+            try {
+              const userQuery = await pool.query(
+                "SELECT nom, username, photo_de_profil FROM utilisateur WHERE id_utilisateur = $1",
+                [socket.user.id]
+              );
+              
+              if (userQuery.rows.length > 0) {
+                senderProfile = userQuery.rows[0];
+                photoUrl = senderProfile.photo_de_profil;
+                senderName = senderProfile.nom || senderProfile.username || "Utilisateur";
+              }
+            } catch (err) {
+              console.error("Erreur lors de la récupération du profil pour mention:", err);
+            }
+
             // Envoyer la notification sur la room privée de l'utilisateur
             io.to(`dm:${mentionedUserId}`).emit("mentionNotification", {
               type: "mention",
               title: "Vous avez été mentionné",
               content: content,
               userId: socket.user.id,
-              senderName: socket.user.nom || socket.user.username || "Utilisateur",
-              photoUrl: socket.user.photo_de_profil || null,
+              senderName: senderName,
+              photoUrl: photoUrl,
               channelId: canal_id,
               workspaceId: finalWorkspaceId,
               nom_canal: canalData.nom_canal,
+              workspaceName: workspaceName,
               messageId: fullUserMessage.id_message,
             });
           }

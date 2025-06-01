@@ -26,10 +26,18 @@ const NotificationBubble = ({
   type,
   channelId,
   workspaceId,
+  nom_canal,
+  workspaceName,
   onClose,
   userProfile
 }) => {
   const navigate = useNavigate();
+  
+  // Debug logs pour les mentions
+  console.log("[NotificationBubble] workspaceName reçu:", workspaceName);
+  console.log("[NotificationBubble] nom_canal reçu:", nom_canal);
+  console.log("[NotificationBubble] type:", type);
+  
   // Déterminer la véritable URL de la photo
   console.log("[NotificationBubble] Props reçues:", {
     userId, 
@@ -42,18 +50,29 @@ const NotificationBubble = ({
                    (userProfile && (userProfile.photo_de_profil || userProfile.avatar || userProfile.photo_url));
                    
   console.log("[NotificationBubble] avatarUrl déterminée:", avatarUrl);
+  
+  // Nettoie les mentions markdown pour n'afficher que le nom
+  const cleanMentions = (content) => {
+    if (!content) return content;
+    // Remplace @[nom](uuid) par @nom
+    return content.replace(/@\[(.+?)\]\([^)]+\)/g, '@$1');
+  };
+  
   // Fonction pour formater l'aperçu du message
   const getMessagePreview = (text) => {
     if (!text) return "Nouveau message";
     
+    // Nettoyer les mentions d'abord
+    let cleanContent = cleanMentions(text);
+    
     // Supprimer les balises HTML si présentes
-    const cleanContent = text.replace(/<[^>]*>/gm, '');
+    cleanContent = cleanContent.replace(/<[^>]*>/gm, '');
     
     console.log("[NotificationBubble] Contenu original:", text);
     console.log("[NotificationBubble] Contenu nettoyé:", cleanContent);
     
-    // Limiter à 60 caractères
-    const previewLength = 60;
+    // Limiter à 120 caractères (augmenté de 60 à 120)
+    const previewLength = 120;
     if (cleanContent.length <= previewLength) {
       return cleanContent;
     }
@@ -73,7 +92,7 @@ const NotificationBubble = ({
     if (type === "privateMessage" && userId) {
       console.log("[NotificationBubble] Navigation vers conversation privée avec userId:", userId);
       navigate(`/direct-messages?userId=${userId}`);
-    } else if (type === "channelMessage" && channelId) {
+    } else if ((type === "channelMessage" || type === "mention") && channelId) {
       navigate(`/workspace/${workspaceId}?channel=${channelId}`);
     }
     
@@ -109,7 +128,9 @@ const NotificationBubble = ({
           <h4>
             {type === "privateMessage" 
               ? `Message de ${senderName || (userProfile ? userProfile.username || userProfile.name || userProfile.displayName || "Utilisateur" : "Utilisateur")}` 
-              : `Nouveau message dans un canal`}
+              : type === "mention"
+                ? `Mention dans ${workspaceName || "workspace"} #${nom_canal || "canal"}`
+                : `Nouveau message dans un canal`}
           </h4>
           <button
             className="close-btn"
