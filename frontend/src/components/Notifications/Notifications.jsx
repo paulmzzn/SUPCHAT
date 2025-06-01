@@ -7,6 +7,7 @@ import { getUserProfile } from "../../services/userService";
 // Importer l'utilitaire de gestion des sons
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import NotificationBubble from "../NotificationBadge/NotificationBubble";
+import notificationService from "../../utils/notificationService"; // Nouveau service
 import "./Notifications.css";
 
 const Notifications = () => {
@@ -105,6 +106,26 @@ const Notifications = () => {
     
     // Jouer le son de notification
     playNotificationSound(notificationSettings);
+
+    // NOUVEAU: Afficher la notification push du navigateur si activée
+    if (notificationSettings?.desktop && notificationService.isNotificationEnabled()) {
+      if (notification.type === "privateMessage") {
+        notificationService.showPrivateMessageNotification(
+          notification.senderName || "Utilisateur",
+          cleanedContent,
+          notification.userId
+        );
+      } else if (notification.type === "mention") {
+        notificationService.showMentionNotification(
+          notification.workspaceName || "Workspace",
+          notification.nom_canal || "canal",
+          cleanedContent,
+          notification.senderName || "Utilisateur",
+          notification.workspaceId,
+          notification.channelId
+        );
+      }
+    }
   };
   // Fonction pour naviguer vers la conversation
   const navigateToConversation = (notification) => {
@@ -144,7 +165,7 @@ const Notifications = () => {
           content: msg.contenu,
           userId: msg.fk_expediteur || msg.fk_utilisateur,
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
-          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur")
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom : "Utilisateur")
         });
       }
     };
@@ -172,7 +193,7 @@ const Notifications = () => {
           content: msg.contenu,
           userId: msg.fk_utilisateur,
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
-          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur"),
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom : "Utilisateur"),
           channelId: msg.fk_canal,
           workspaceId: msg.fk_workspace
         });
@@ -240,7 +261,7 @@ const Notifications = () => {
           }
           
           // Vérifier toutes les propriétés possibles pour le nom
-          const possibleNameFields = ['nom', 'name', 'username', 'pseudo', 'displayName', 'prenom'];
+          const possibleNameFields = ['nom', 'name', 'pseudo', 'displayName', 'prenom'];
           for (const field of possibleNameFields) {
             if (notification.userProfile[field]) {
               console.log(`👤 DEBUG - Champ nom trouvé: ${field} =`, notification.userProfile[field]);

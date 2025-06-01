@@ -409,6 +409,22 @@ function DirectMessages() {
         console.log("[DM] Message privé reçu, tentative de lecture du son");
         playNotificationSound(notificationSettings);
 
+        // NOUVEAU: Afficher notification push si l'onglet n'est pas actif
+        if (notificationSettings?.desktop && notificationService.isNotificationEnabled()) {
+          // Récupérer le nom de l'expéditeur depuis les conversations ou API
+          let senderName = "Utilisateur";
+          const conversation = conversations.find(conv => conv.id_utilisateur === msg.fk_expediteur);
+          if (conversation) {
+            senderName = conversation.nom || conversation.username || "Utilisateur";
+          }
+          
+          notificationService.showPrivateMessageNotification(
+            senderName,
+            msg.contenu,
+            msg.fk_expediteur
+          );
+        }
+
         // Update the unread count for this sender
         setUnreadMessageCounts((prev) => {
           const senderId = msg.fk_expediteur;
@@ -601,7 +617,7 @@ function DirectMessages() {
       socket.off("privateMessageRead", handlePrivateMessageRead);
       socket.off("privateMessageReaction", handlePrivateMessageReaction);
     };
-  }, [socket, selectedUser, conversations, currentUserId]);
+  }, [socket, selectedUser, conversations, currentUserId, notificationSettings]);
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -2197,6 +2213,7 @@ function DirectMessages() {
                                     })}
                                 </div>
                               )}
+                           
                             {isOwn && (
                               <div className="dm-msg-read">
                                 {msg.date_lecture
