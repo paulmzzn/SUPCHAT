@@ -6,6 +6,35 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { getStyles } from './TabBar.styles';
 
+// Créer un émetteur d'événements simple pour React Native
+const EventEmitter = {
+  listeners: {},
+  
+  addListener: (eventName, callback) => {
+    if (!EventEmitter.listeners[eventName]) {
+      EventEmitter.listeners[eventName] = [];
+    }
+    EventEmitter.listeners[eventName].push(callback);
+    return {
+      remove: () => {
+        const index = EventEmitter.listeners[eventName]?.indexOf(callback);
+        if (index !== undefined && index !== -1) {
+          EventEmitter.listeners[eventName].splice(index, 1);
+        }
+      }
+    };
+  },
+  
+  emit: (eventName, data) => {
+    if (EventEmitter.listeners[eventName]) {
+      EventEmitter.listeners[eventName].forEach(callback => callback(data));
+    }
+  }
+};
+
+// Exposer l'émetteur globalement (remplace window.addEventListener/dispatchEvent)
+global.AppEvents = EventEmitter;
+
 const TabBar = ({ state, descriptors, navigation }) => {
   const { colors: themeColors } = useTheme();
   const { totalUnreadCount, unreadMessages, workspaceUnreadCounts } = useSocket();
@@ -14,6 +43,10 @@ const TabBar = ({ state, descriptors, navigation }) => {
   
   // State pour forcer le re-render
   const [forceUpdate, setForceUpdate] = React.useState(0);
+  const lastUpdateRef = React.useRef({ 
+    timestamp: Date.now(),
+    counts: { workspaces: 0, messages: 0 }
+  });
   
   // Animation pour l'indicateur actif
   const activeTabAnimation = React.useRef(new Animated.Value(state.index)).current;
@@ -25,21 +58,68 @@ const TabBar = ({ state, descriptors, navigation }) => {
     }).start();
   }, [state.index]);
 
-  // Forcer le re-render quand les compteurs changent - AMÉLIORÉ
+  // Forcer le re-render quand les compteurs changent - ÉVITE LA BOUCLE INFINIE
   React.useEffect(() => {
-    console.log("🏷️ TabBar: Mise à jour des compteurs", { 
-      workspaceUnreadCounts: Object.keys(workspaceUnreadCounts || {}).length,
-      unreadMessages: Object.keys(unreadMessages || {}).length,
-      totalUnreadCount 
-    });
-    setForceUpdate(prev => prev + 1);
-  }, [workspaceUnreadCounts, unreadMessages, totalUnreadCount]);
+    // Calculer les totaux actuels
+    const workspaceTotal = Object.values(workspaceUnreadCounts || {}).reduce(
+      (sum, workspace) => sum + (workspace.totalUnread || 0), 0
+    );
+    const messagesTotal = Object.values(unreadMessages || {}).reduce((sum, count) => sum + count, 0);
+    
+    // Seulement mettre à jour si les compteurs ont réellement changé
+    if (workspaceTotal !== lastUpdateRef.current.counts.workspaces || 
+        messagesTotal !== lastUpdateRef.current.counts.messages) {
+      
+      // Mettre à jour notre référence
+      lastUpdateRef.current = {
+        timestamp: Date.now(),
+        counts: {
+          workspaces: workspaceTotal,
+          messages: messagesTotal
+        }
+      };
+      
+      console.log("🏷️ TabBar: Mise à jour significative des compteurs", { 
+        workspaces: workspaceTotal, 
+        messages: messagesTotal,
+      });
+      
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [workspaceUnreadCounts, unreadMessages]);
 
-  // NOUVEAU: Forcer une mise à jour périodique pour s'assurer de la synchronisation
+  // NOUVEAU: Écouter les événements personnalisés via notre EventEmitter - COMPATIBLE REACT NATIVE
+  React.useEffect(() => {
+    const handleUnreadCountsUpdate = (event) => {
+      // Empêcher une mise à jour trop rapprochée (au moins 300ms d'écart)
+      const now = Date.now();
+      if (now - lastUpdateRef.current.timestamp < 300) {
+        return;
+      }
+      
+      console.log("🏷️ TabBar: Événement personnalisé de mise à jour reçu");
+      lastUpdateRef.current.timestamp = now;
+      setForceUpdate(prev => prev + 1);
+    };
+
+    // Utiliser notre émetteur d'événements au lieu de window.addEventListener
+    const subscription = global.AppEvents.addListener('forceUnreadCountsUpdate', handleUnreadCountsUpdate);
+
+    return () => {
+      // Nettoyer l'écouteur
+      subscription.remove();
+    };
+  }, []);
+
+  // NOUVEAU: Forcer une mise à jour périodique - TEMPS PLUS LONG
   React.useEffect(() => {
     const interval = setInterval(() => {
-      setForceUpdate(prev => prev + 1);
-    }, 5000); // Toutes les 5 secondes
+      // Rafraîchir seulement si la dernière mise à jour date de plus de 10 secondes
+      const now = Date.now();
+      if (now - lastUpdateRef.current.timestamp > 10000) {
+        setForceUpdate(prev => prev + 1);
+      }
+    }, 15000); // Toutes les 15 secondes au lieu de 5
 
     return () => clearInterval(interval);
   }, []);
@@ -69,14 +149,12 @@ const TabBar = ({ state, descriptors, navigation }) => {
       case 'Messages':
         // Calculer le total des messages privés
         const privateCount = Object.values(unreadMessages || {}).reduce((sum, count) => sum + count, 0);
-        console.log("🏷️ TabBar Messages badge:", privateCount);
         return privateCount;
       case 'Workspaces':
         // Calculer le total des messages de workspace - AMÉLIORÉ
         const workspaceCount = Object.values(workspaceUnreadCounts || {}).reduce(
           (sum, workspace) => sum + (workspace.totalUnread || 0), 0
         );
-        console.log("🏷️ TabBar Workspaces badge:", workspaceCount, "from", Object.keys(workspaceUnreadCounts || {}));
         return workspaceCount;
       default:
         return 0;
