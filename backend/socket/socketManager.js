@@ -303,9 +303,7 @@ const socketManager = (io) => {
             });
         }
       }
-    );
-
-    // Edition d'un message privé (seul l'expéditeur)
+    );    // Edition d'un message privé (seul l'expéditeur)
     socket.on("editPrivateMessage", async ({ id, contenu }) => {
       try {
         const userId = socket.user.id;
@@ -320,6 +318,42 @@ const socketManager = (io) => {
       } catch (error) {
         socket.emit("error", {
           message: "Erreur lors de la modification du message privé",
+        });
+      }
+    });
+    
+    // Edition d'un message dans un canal (seul l'auteur)
+    socket.on("editChannelMessage", async ({ messageId, contenu, canalId }) => {
+      try {
+        const userId = socket.user.id;
+        
+        // Vérifier que le message existe et appartient à l'utilisateur
+        const message = await MessageModel.getById(messageId);
+        if (!message) {
+          socket.emit("error", { message: "Message non trouvé" });
+          return;
+        }
+        
+        if (message.fk_utilisateur !== userId) {
+          socket.emit("error", { message: "Vous ne pouvez pas modifier ce message" });
+          return;
+        }
+        
+        // Mettre à jour le message
+        const updatedMessage = await MessageModel.update(messageId, { contenu });
+        
+        if (!updatedMessage) {
+          socket.emit("error", { message: "Erreur lors de la mise à jour du message" });
+          return;
+        }
+        
+        // Émettre l'événement de mise à jour aux membres du canal
+        io.to(`${canalId}`).emit("updateMessage", updatedMessage);
+        
+      } catch (error) {
+        console.error("Erreur lors de la modification du message dans le canal:", error);
+        socket.emit("error", {
+          message: "Erreur lors de la modification du message dans le canal",
         });
       }
     }); // Suppression d'un message privé (seul l'expéditeur)
