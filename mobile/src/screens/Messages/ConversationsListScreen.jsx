@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
@@ -21,7 +20,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSocket } from "../../context/SocketContext";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
-
 
 const ConversationsListScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
