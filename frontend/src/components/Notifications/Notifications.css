@@ -4,7 +4,7 @@
   top: 20px;
   right: 20px;
   z-index: 9999;
-  width: 360px;
+  width: 400px; /* Augmenté de 360px à 400px */
   max-width: 90vw;
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
   cursor: pointer;
   transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
   backdrop-filter: blur(4px);
-  max-height: 110px;
+  max-height: 140px; /* Augmenté de 110px à 140px */
   overflow: hidden;
 }
 
@@ -87,16 +87,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 230px;
+  max-width: 280px; /* Augmenté de 230px à 280px */
 }
 
 .notification-message {
   margin: 0 0 5px 0;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
-  line-height: 1.4;  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Augmenté de 2 à 3 lignes */
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
@@ -212,11 +213,11 @@
   }
 
   .notification-header h4 {
-    max-width: 180px;
+    max-width: 200px; /* Ajusté pour mobile */
   }
   
   .notification {
-    max-height: 100px;
+    max-height: 120px; /* Ajusté pour mobile */
   }
   
   .notification-avatar {

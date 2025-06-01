@@ -7,6 +7,7 @@ import { getUserProfile } from "../../services/userService";
 // Importer l'utilitaire de gestion des sons
 import { playNotificationSound } from "../../assets/sounds/soundUtils";
 import NotificationBubble from "../NotificationBadge/NotificationBubble";
+import notificationService from "../../utils/notificationService"; // Nouveau service
 import "./Notifications.css";
 
 const Notifications = () => {
@@ -54,9 +55,22 @@ const Notifications = () => {
     
     return truncated + "...";
   };
+  // Nettoie les mentions markdown pour n'afficher que le nom
+  const cleanMentions = (content) => {
+    if (!content) return content;
+    // Remplace @[nom](uuid) par @nom
+    return content.replace(/@\[(.+?)\]\([^)]+\)/g, '@$1');
+  };
+
   // Fonction pour ajouter une nouvelle notification
   const addNotification = async (notification) => {
     const notificationId = Date.now();
+
+    // Nettoyer le contenu pour les mentions
+    let cleanedContent = notification.content;
+    if (notification.type === "mention") {
+      cleanedContent = cleanMentions(notification.content);
+    }
 
     console.log("🔍 DEBUG - Notification reçue:", notification);
     console.log("🔍 DEBUG - Photo URL brute:", notification.photoUrl);
@@ -73,6 +87,7 @@ const Notifications = () => {
     const fullNotification = {
       id: notificationId,
       ...notification,
+      content: cleanedContent, // Utiliser le contenu nettoyé
       userProfile,
       timestamp: new Date(),
     };
@@ -91,6 +106,26 @@ const Notifications = () => {
     
     // Jouer le son de notification
     playNotificationSound(notificationSettings);
+
+    // NOUVEAU: Afficher la notification push du navigateur si activée
+    if (notificationSettings?.desktop && notificationService.isNotificationEnabled()) {
+      if (notification.type === "privateMessage") {
+        notificationService.showPrivateMessageNotification(
+          notification.senderName || "Utilisateur",
+          cleanedContent,
+          notification.userId
+        );
+      } else if (notification.type === "mention") {
+        notificationService.showMentionNotification(
+          notification.workspaceName || "Workspace",
+          notification.nom_canal || "canal",
+          cleanedContent,
+          notification.senderName || "Utilisateur",
+          notification.workspaceId,
+          notification.channelId
+        );
+      }
+    }
   };
   // Fonction pour naviguer vers la conversation
   const navigateToConversation = (notification) => {
@@ -130,7 +165,7 @@ const Notifications = () => {
           content: msg.contenu,
           userId: msg.fk_expediteur || msg.fk_utilisateur,
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
-          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur")
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom : "Utilisateur")
         });
       }
     };
@@ -158,7 +193,7 @@ const Notifications = () => {
           content: msg.contenu,
           userId: msg.fk_utilisateur,
           photoUrl: msg.photo_url || (expediteurProfile ? expediteurProfile.photo_url : null),
-          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom || expediteurProfile.username : "Utilisateur"),
+          senderName: msg.nom || (expediteurProfile ? expediteurProfile.nom : "Utilisateur"),
           channelId: msg.fk_canal,
           workspaceId: msg.fk_workspace
         });
@@ -167,17 +202,21 @@ const Notifications = () => {
 
     // --- AJOUT: Réception d'une notification de mention ---
     const handleMentionNotification = async (notif) => {
-      // On peut récupérer le profil si besoin, mais on garde la logique simple ici
+      console.log("🔍 DEBUG - Notification de mention reçue:", notif);
+      console.log("🔍 DEBUG - Photo URL dans mention:", notif.photoUrl);
+      console.log("🔍 DEBUG - Nom expéditeur dans mention:", notif.senderName);
+      
       addNotification({
         type: "mention",
         title: notif.title || "Vous avez été mentionné",
         content: notif.content,
-        userId: notif.userId,
+        userId: notif.userId, // Remettre l'userId pour la récupération du profil
         photoUrl: notif.photoUrl,
         senderName: notif.senderName,
         channelId: notif.channelId,
         workspaceId: notif.workspaceId,
         nom_canal: notif.nom_canal,
+        workspaceName: notif.workspaceName,
         messageId: notif.messageId,
       });
     };
@@ -205,6 +244,9 @@ const Notifications = () => {
         let avatarUrl = notification.photoUrl;
         let senderName = notification.senderName;
         
+        console.log("🖼️ DEBUG - Photo URL initiale de la notification:", avatarUrl);
+        console.log("👤 DEBUG - Nom initial de la notification:", senderName);
+        
         // Si on a récupéré le profil utilisateur, utiliser ces données
         if (notification.userProfile) {
           console.log("🖼️ DEBUG - Données userProfile pour avatar:", notification.userProfile);
@@ -219,7 +261,7 @@ const Notifications = () => {
           }
           
           // Vérifier toutes les propriétés possibles pour le nom
-          const possibleNameFields = ['nom', 'name', 'username', 'pseudo', 'displayName', 'prenom'];
+          const possibleNameFields = ['nom', 'name', 'pseudo', 'displayName', 'prenom'];
           for (const field of possibleNameFields) {
             if (notification.userProfile[field]) {
               console.log(`👤 DEBUG - Champ nom trouvé: ${field} =`, notification.userProfile[field]);
@@ -243,6 +285,8 @@ const Notifications = () => {
             type={notification.type}
             channelId={notification.channelId}
             workspaceId={notification.workspaceId}
+            nom_canal={notification.nom_canal}
+            workspaceName={notification.workspaceName}
             userProfile={notification.userProfile}
             onClose={() => removeNotification(notification.id)}
           />
