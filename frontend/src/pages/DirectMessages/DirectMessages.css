@@ -274,7 +274,7 @@
   gap: 12px;
   animation: fadeIn 0.3s ease;
   margin-bottom: 16px;
-  max-width: 85%;
+  max-width: 90%; /* Augmenté de 85% à 90% pour les grandes images */
 }
 
 @keyframes fadeIn {
@@ -385,7 +385,7 @@
   background-color: var(--dm-message-other-bg);
   border-radius: 4px 16px 16px 16px;
   padding: 12px 15px;
-  max-width: 420px;
+  max-width: 750px; /* Augmenté de 420px à 750px pour les grandes images */
   word-break: break-word;
   display: flex;
   flex-direction: column;
@@ -579,26 +579,98 @@
 
 .dm-msg-image-attachment {
   position: relative;
-  max-width: 300px;
-  border-radius: 8px;
+  max-width: 100%; /* S'adapte à la largeur de la bulle de message */
+  width: fit-content; /* S'adapte au contenu de l'image */
+  min-width: 200px; /* Largeur minimale pour les petites images */
+  min-height: 100px; /* Hauteur minimale */
+  border-radius: 12px;
   overflow: hidden;
-  contain: layout paint size; /* Optimisation pour le navigateur */
+  contain: layout paint size;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  margin: 15px 0; /* Plus d'espacement */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dm-msg-image-attachment:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .dm-msg-image {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-  object-fit: contain;
-  will-change: transform; /* Optimisation pour le redimensionnement */
-  transform: translateZ(0); /* Utiliser l'accélération GPU */
-  backface-visibility: hidden; /* Améliore les performances */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100%;
+  max-width: 100%; /* S'adapte à la largeur du conteneur */
+  max-height: 500px; /* Hauteur maximale raisonnable */
+  height: auto; /* Maintient les proportions */
+  border-radius: 12px;
+  object-fit: contain; /* Affiche l'image entière sans la couper */
+  object-position: center; /* Centre l'image */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  background-color: transparent;
+  transition: all 0.3s ease;
 }
 
-.dm-msg-image-filename {
-  font-size: 0.8rem;
-  color: #8f8f8f;
-  margin-top: 4px;
+/* Style spécial pour les images chargées avec succès */
+.dm-msg-image.loaded {
+  background-color: transparent;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dm-msg-image-attachment.loaded {
+  background-color: transparent;
+  border: 1px solid #e9ecef;
+}
+
+/* Style pour les images en plein écran lors du survol */
+.dm-msg-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Styles responsives pour les images */
+@media (max-width: 768px) {
+  .dm-msg-image-attachment {
+    max-width: 90vw;
+    min-width: 150px;
+  }
+
+  .dm-msg-image {
+    max-width: 100%;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dm-msg-image-attachment {
+    max-width: 95vw;
+    min-width: 120px;
+  }
+
+  .dm-msg-image {
+    max-height: 250px;
+  }
+}
+
+/* Style pour afficher l'image entière en mode portrait */
+.dm-msg-image.portrait {
+  object-fit: contain;
+  max-height: 600px;
+}
+
+.dm-msg-image.landscape {
+  object-fit: cover;
+  max-height: 400px;
 }
 
 .dm-msg-file-attachment {

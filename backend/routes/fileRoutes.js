@@ -7,6 +7,7 @@ import { getObjectFromS3 } from "../config/s3Service.js"; // Suppression de l'im
 import AWS from "aws-sdk";
 import dotenv from "dotenv";
 import { verifyToken } from "../middleware/authMiddleware.js";
+import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -31,6 +32,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const router = express.Router();
+
+// Route pour proxy des images S3 (résout les problèmes de CORS)
+router.get("/proxy", proxyS3Image);
 
 // Nouvelle route pour télécharger des fichiers depuis S3
 router.get("/download/:filePath(*)", verifyToken, async (req, res) => {

@@ -11,7 +11,7 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 /**
  * Formate une date de message
@@ -94,14 +94,58 @@ export const formatFileSize = (bytes) => {
  * @returns {string} - URL complète
  */
 export const getCompleteFileUrl = (url) => {
-  if (!url) return "";
+  if (!url) {
+    console.warn("[messageUtils] getCompleteFileUrl: URL vide ou null");
+    return "";
+  }
 
-  // Si l'URL est déjà complète, la retourner telle quelle
-  if (url.startsWith("http")) return url;
+  console.log("[messageUtils] getCompleteFileUrl - URL originale:", url);
 
-  // Sinon, préfixer avec l'URL de l'API
-  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
-  return `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  // Nettoyer les URLs dupliquées (cas où l'URL contient déjà le domaine S3 en double)
+  let cleanUrl = url;
+  if (url.includes("https://s3.fr-par.scw.cloud/s3-supchat/https://")) {
+    // Extraire la partie après la deuxième occurrence du protocole
+    cleanUrl = url.substring(url.lastIndexOf("https://"));
+    console.log(
+      "[messageUtils] URL nettoyée (duplication détectée):",
+      cleanUrl
+    );
+  } else if (url.includes("https://s3-supchat.s3.fr-par.scw.cloud/https://")) {
+    // Extraire la partie après la deuxième occurrence du protocole
+    cleanUrl = url.substring(url.lastIndexOf("https://"));
+    console.log(
+      "[messageUtils] URL nettoyée (duplication détectée):",
+      cleanUrl
+    );
+  }
+
+  // Si l'URL est déjà complète (HTTP/HTTPS), la retourner telle quelle
+  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    console.log("[messageUtils] URL déjà complète:", cleanUrl);
+    return cleanUrl;
+  }
+
+  // Pour les chemins S3 stockés comme clés (ex: "private-messages/files/123-image.jpg")
+  if (
+    cleanUrl.includes("private-messages/") ||
+    cleanUrl.includes("s3-supchat")
+  ) {
+    // Construire l'URL S3 complète
+    const s3BaseUrl = "https://s3-supchat.s3.fr-par.scw.cloud";
+    const fullS3Url = cleanUrl.startsWith("/")
+      ? `${s3BaseUrl}${cleanUrl}`
+      : `${s3BaseUrl}/${cleanUrl}`;
+    console.log("[messageUtils] URL S3 construite:", fullS3Url);
+    return fullS3Url;
+  }
+
+  // Pour les autres URLs relatives, utiliser l'API backend
+  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
+  const apiUrl = `${API_URL}${
+    cleanUrl.startsWith("/") ? "" : "/api/files/"
+  }${cleanUrl}`;
+  console.log("[messageUtils] URL API construite:", apiUrl);
+  return apiUrl;
 };
 
 /**

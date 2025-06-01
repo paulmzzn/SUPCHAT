@@ -200,22 +200,20 @@ export const uploadAttachment = async (req, res) => {
     console.log("[PrivateMessage] Début de l'upload d'un fichier"); // Vérifier si nous avons un fichier et le destinataire    if (!req.file) {      return res.status(400).json({ message: "Aucun fichier fourni" });    }    const { recipientId, message } = req.body;    const expediteurId = req.user.id;    if (!recipientId) {      return res.status(400).json({ message: "recipientId requis" });    }    console.log("[PrivateMessage] Données reçues:", {      file: req.file.originalname,      recipientId,      expediteurId,      message: message || "(vide)"    });
     // Préparer les informations du fichier
     const file = req.file;
-    const fileExt = path.extname(file.originalname).substring(1);
-
-    // Upload vers S3 ou un autre service de stockage
+    const fileExt = path.extname(file.originalname).substring(1); // Upload vers S3 ou un autre service de stockage
     console.log("[PrivateMessage] Upload vers S3 en cours...");
-    const fileKey = await uploadToS3(file, "private-messages/files");
-    console.log("[PrivateMessage] Fichier uploadé avec succès:", fileKey);
+    const s3Result = await uploadToS3(file, "private-messages/files");
+    console.log("[PrivateMessage] Fichier uploadé avec succès:", s3Result);
 
     // Construire l'URL complète pour le front-end
     const baseUrl =
       process.env.BASE_URL || req.protocol + "://" + req.get("host");
-    const fullUrl = fileKey; // Ou construisez une URL complète si nécessaire
+    const fullUrl = s3Result.url; // URL complète S3
 
     // Créer l'entrée fichier dans la base de données
     const fichierData = {
       nom_fichier: file.originalname,
-      url: fileKey,
+      url: s3Result.url, // URL complète S3 au lieu de seulement la clé
       type: file.mimetype,
       taille_fichier: file.size,
       extension: fileExt,
