@@ -12,7 +12,7 @@ import {
 import React from "react";
 
 // Configuration de l'API URL
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.181:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
 
 /**
  * Détermine l'icône à afficher pour un type de fichier
