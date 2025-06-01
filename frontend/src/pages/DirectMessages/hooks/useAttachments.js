@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
@@ -111,6 +111,17 @@ export const useAttachments = (options = {}) => {
             return;
           }
           console.log("[useAttachments] Réponse JSON:", data);
+
+          // Debug: analyser la structure de la réponse
+          console.log("[useAttachments] Debug structure réponse:", {
+            hasUrl: !!data.url,
+            url: data.url,
+            hasFichier: !!data.fichier,
+            fichierUrl: data.fichier?.url,
+            presignedUrl: data.presignedUrl || data.fichier?.presignedUrl,
+            completeData: data,
+          });
+
           // Ajouter le fichier uploadé à la liste des uploads
           uploads.push({
             id_fichier:
@@ -122,6 +133,8 @@ export const useAttachments = (options = {}) => {
             type: file.type,
             taille_fichier: file.size,
             url: data.url || (data.fichier && data.fichier.url),
+            presignedUrl:
+              data.presignedUrl || (data.fichier && data.fichier.presignedUrl),
           });
         }
 

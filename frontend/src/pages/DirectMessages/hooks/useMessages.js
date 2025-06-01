@@ -15,7 +15,16 @@ const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
  * @param {string} currentUserId - ID de l'utilisateur courant
  * @returns {Object} - États et fonctions liés aux messages
  */
-export const useMessages = (selectedUser, socket, currentUserId) => {
+export const useMessages = (
+  selectedUser,
+  socket,
+  currentUserId,
+  attachments = [],
+  setAttachments = () => {}
+) => {
+  // Toujours appeler le hook, même si les paramètres sont nuls (règle des hooks)
+  const messageList = useMessageList({ selectedUser, socket, currentUserId });
+
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessage, setNewMessage] = useState("");
@@ -73,14 +82,11 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
       if (!message || !message.id_message_prive) return;
       socket.emit(
         "deletePrivateMessage",
-        { id: message.id_message_prive },
-        (response) => {
-          // Callback de confirmation du backend (optionnel)
-          refetchConversation();
-        }
+        { id: message.id_message_prive }
+        // On ne refait PAS refetchConversation ici, le live update WebSocket suffit
       );
     },
-    [socket, refetchConversation]
+    [socket]
   );
 
   // Édition de message
@@ -100,14 +106,12 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
       {
         id: editingMessage.id_message_prive,
         contenu: editMessageContent,
-      },
-      (response) => {
-        refetchConversation();
-        setEditingMessage(null);
-        setEditMessageContent("");
       }
+      // On ne refait PAS refetchConversation ici, le live update WebSocket suffit
     );
-  }, [socket, editingMessage, editMessageContent, refetchConversation]);
+    setEditingMessage(null);
+    setEditMessageContent("");
+  }, [socket, editingMessage, editMessageContent]);
 
   const handleCancelEdit = useCallback(() => {
     setEditingMessage(null);
@@ -119,7 +123,7 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
     if (!socket) return;
 
     const handleMessageUpdated = (updatedMsg) => {
-      setMessages((msgs) =>
+      messageList.setMessages((msgs) =>
         msgs.map((m) =>
           m.id_message_prive === updatedMsg.id_message_prive
             ? { ...m, ...updatedMsg }
@@ -137,7 +141,7 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
     };
 
     const handleMessageDeleted = ({ id }) => {
-      setMessages((msgs) =>
+      messageList.setMessages((msgs) =>
         msgs.map((m) =>
           m.id_message_prive === id ? { ...m, is_deleted: true } : m
         )
@@ -156,14 +160,13 @@ export const useMessages = (selectedUser, socket, currentUserId) => {
       socket.off("privateMessageUpdated", handleMessageUpdated);
       socket.off("privateMessageDeleted", handleMessageDeleted);
     };
-  }, [socket, setMessages, editingMessage]);
+  }, [socket, messageList, editingMessage]);
 
   return {
     ...messageList,
     ...messageInput,
     ...contextMenu,
     ...reactions,
-    ...rest,
     messages: messageList.messages,
     loadingMessages: messageList.loadingMessages,
     newMessage,

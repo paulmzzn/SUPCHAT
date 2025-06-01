@@ -1,7 +1,7 @@
 // Hook pour la gestion de la liste des messages (chargement, suppression, édition, reply, etc.)
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 export function useMessageList({ selectedUser, socket, currentUserId }) {
   const [messages, setMessages] = useState([]);
@@ -151,9 +151,9 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
       ) {
         return;
       }
-      // Récupérer les pièces jointes si besoin
-      let attachments = [];
-      if (msg.id_message_prive) {
+      // Utiliser les attachments du message WebSocket si présents, sinon fetch
+      let attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
+      if (!attachments.length && msg.id_message_prive) {
         attachments = await fetchMessageAttachments(msg.id_message_prive);
       }
       setMessages((prev) => {

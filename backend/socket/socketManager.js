@@ -186,7 +186,14 @@ const socketManager = (io) => {
     socket.on(
       "privateMessage",
       async (
-        { destinataireId, contenu, tempId, replyTo, replyToId },
+        {
+          destinataireId,
+          contenu,
+          tempId,
+          replyTo,
+          replyToId,
+          attachments = [],
+        },
         callback
       ) => {
         try {
@@ -240,18 +247,49 @@ const socketManager = (io) => {
           // Référence du message auquel on répond
           const messageParentId = replyTo || replyToId || null;
 
+          // Si le contenu est vide mais qu'il y a des pièces jointes, mettre un contenu par défaut
+          let contenuFinal = contenu;
+          if (
+            (!contenu || contenu.trim() === "") &&
+            attachments &&
+            attachments.length > 0
+          ) {
+            contenuFinal = "[Pièce jointe]";
+          }
+
           // Créer le message en base de données
           console.log("Socket.IO: Création du message privé en base");
           const message = await MessagePrive.create({
-            contenu,
+            contenu: contenuFinal,
             fk_expediteur: expediteurId,
             fk_destinataire: destinataireId,
             parent_id: messageParentId, // Ajout du parent_id
           });
 
+          // Associer les pièces jointes si présentes
+          if (attachments && attachments.length > 0) {
+            for (const attachmentId of attachments) {
+              await Fichier.addToPrivateMessage(
+                message.id_message_prive,
+                attachmentId
+              );
+            }
+          }
+
+          // Récupérer le message complet avec pièces jointes
+          const fullMessage = await MessagePrive.getById(
+            message.id_message_prive
+          );
+
+          // DEBUG: Vérifier la présence des attachments dans le message complet
+          console.log(
+            "Socket.IO: fullMessage.attachments:",
+            fullMessage.attachments
+          );
+
           // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
           if (tempId) {
-            message.tempId = tempId;
+            fullMessage.tempId = tempId;
           }
 
           // Si c'est une réponse, ajouter les données de réponse dans un format compatible avec le frontend
@@ -259,7 +297,7 @@ const socketManager = (io) => {
             try {
               const parentMessage = await MessagePrive.getById(messageParentId);
               if (parentMessage) {
-                message.reply_data = {
+                fullMessage.reply_data = {
                   reply_to: parentMessage.id_message_prive,
                   reply_content: parentMessage.contenu,
                   reply_user_id: parentMessage.fk_expediteur,
@@ -275,20 +313,20 @@ const socketManager = (io) => {
 
           console.log(
             "Socket.IO: Message privé créé avec ID:",
-            message.id_message_prive
+            fullMessage.id_message_prive
           );
 
           // Émettre vers les deux utilisateurs
           io.to(`dm:${expediteurId}`)
             .to(`dm:${destinataireId}`)
-            .emit("privateMessage", message);
+            .emit("privateMessage", fullMessage);
 
           // IMPORTANT: Toujours répondre au callback
           if (callback) {
             callback({
               ok: true,
               message: "Message reçu côté backend",
-              id: message.id_message_prive,
+              id: fullMessage.id_message_prive,
             });
           }
         } catch (error) {
@@ -303,7 +341,7 @@ const socketManager = (io) => {
             });
         }
       }
-    );    // Edition d'un message privé (seul l'expéditeur)
+    ); // Edition d'un message privé (seul l'expéditeur)
     socket.on("editPrivateMessage", async ({ id, contenu }) => {
       try {
         const userId = socket.user.id;
@@ -321,37 +359,45 @@ const socketManager = (io) => {
         });
       }
     });
-    
+
     // Edition d'un message dans un canal (seul l'auteur)
     socket.on("editChannelMessage", async ({ messageId, contenu, canalId }) => {
       try {
         const userId = socket.user.id;
-        
+
         // Vérifier que le message existe et appartient à l'utilisateur
         const message = await MessageModel.getById(messageId);
         if (!message) {
           socket.emit("error", { message: "Message non trouvé" });
           return;
         }
-        
+
         if (message.fk_utilisateur !== userId) {
-          socket.emit("error", { message: "Vous ne pouvez pas modifier ce message" });
+          socket.emit("error", {
+            message: "Vous ne pouvez pas modifier ce message",
+          });
           return;
         }
-        
+
         // Mettre à jour le message
-        const updatedMessage = await MessageModel.update(messageId, { contenu });
-        
+        const updatedMessage = await MessageModel.update(messageId, {
+          contenu,
+        });
+
         if (!updatedMessage) {
-          socket.emit("error", { message: "Erreur lors de la mise à jour du message" });
+          socket.emit("error", {
+            message: "Erreur lors de la mise à jour du message",
+          });
           return;
         }
-        
+
         // Émettre l'événement de mise à jour aux membres du canal
         io.to(`${canalId}`).emit("updateMessage", updatedMessage);
-        
       } catch (error) {
-        console.error("Erreur lors de la modification du message dans le canal:", error);
+        console.error(
+          "Erreur lors de la modification du message dans le canal:",
+          error
+        );
         socket.emit("error", {
           message: "Erreur lors de la modification du message dans le canal",
         });
@@ -456,7 +502,7 @@ const socketManager = (io) => {
           message: "Erreur lors de l'accusé de lecture groupé",
         });
       }
-    });    // Recevoir un message
+    }); // Recevoir un message
     socket.on("message", async (data) => {
       try {
         console.log("Socket.IO: Message reçu", data);
@@ -495,17 +541,19 @@ const socketManager = (io) => {
               systemDbMessage.id_message
             );
 
-            if (fullSystemMessage) {              // Récupérer les informations du canal pour le message
+            if (fullSystemMessage) {
+              // Récupérer les informations du canal pour le message
               const canalInfo = await pool.query(
                 "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
                 [canal_id]
               );
-              
-              const canalData = canalInfo.rows.length > 0 ? canalInfo.rows[0] : {};
+
+              const canalData =
+                canalInfo.rows.length > 0 ? canalInfo.rows[0] : {};
 
               // Assurons-nous de toujours avoir un workspace_id pour les notifications
               let finalWorkspaceId = workspace_id || canalData.workspace_id;
-              
+
               // Si nous n'avons toujours pas de workspace_id, essayons de le récupérer différemment
               if (!finalWorkspaceId) {
                 try {
@@ -514,13 +562,21 @@ const socketManager = (io) => {
                     "SELECT fk_workspace FROM canal WHERE id_canal = $1",
                     [canal_id]
                   );
-                  
-                  if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+                  if (
+                    workspaceQuery.rows.length > 0 &&
+                    workspaceQuery.rows[0].fk_workspace
+                  ) {
                     finalWorkspaceId = workspaceQuery.rows[0].fk_workspace;
-                    console.log(`[System Message] Workspace ID récupéré via requête alternative: ${finalWorkspaceId}`);
+                    console.log(
+                      `[System Message] Workspace ID récupéré via requête alternative: ${finalWorkspaceId}`
+                    );
                   }
                 } catch (wsErr) {
-                  console.error("Erreur lors de la récupération alternative du workspace_id pour message système:", wsErr);
+                  console.error(
+                    "Erreur lors de la récupération alternative du workspace_id pour message système:",
+                    wsErr
+                  );
                 }
               }
 
@@ -551,7 +607,7 @@ const socketManager = (io) => {
             console.error(
               "Socket.IO: Erreur lors de l'enregistrement du message système:",
               error
-            );            // En cas d'erreur, on crée un message temporaire sans enregistrement en base
+            ); // En cas d'erreur, on crée un message temporaire sans enregistrement en base
             // Essayons d'abord de récupérer le workspace_id à partir du canal
             let finalWorkspaceId = workspace_id;
             try {
@@ -560,13 +616,19 @@ const socketManager = (io) => {
                   "SELECT fk_workspace FROM canal WHERE id_canal = $1",
                   [canal_id]
                 );
-                
-                if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+                if (
+                  workspaceQuery.rows.length > 0 &&
+                  workspaceQuery.rows[0].fk_workspace
+                ) {
                   finalWorkspaceId = workspaceQuery.rows[0].fk_workspace;
                 }
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du workspace pour fallback message:", err);
+              console.error(
+                "Erreur lors de la récupération du workspace pour fallback message:",
+                err
+              );
             }
 
             const fallbackSystemMessage = {
@@ -587,18 +649,28 @@ const socketManager = (io) => {
         }
 
         // NOUVELLE VERIFICATION: Vérifier si l'utilisateur a les droits d'écriture sur ce canal
-        const accessCheck = await Canal.checkUserAccess(canal_id, socket.user.id);
-        
+        const accessCheck = await Canal.checkUserAccess(
+          canal_id,
+          socket.user.id
+        );
+
         if (!accessCheck.hasAccess) {
-          console.error(`Socket.IO: Utilisateur ${socket.user.id} n'a pas accès au canal ${canal_id}`);
+          console.error(
+            `Socket.IO: Utilisateur ${socket.user.id} n'a pas accès au canal ${canal_id}`
+          );
           socket.emit("error", { message: "Vous n'avez pas accès à ce canal" });
           return;
         }
-        
+
         // Vérifier si l'utilisateur a des droits d'écriture
-        if (accessCheck.accessType !== 'lecture_ecriture') {
-          console.error(`Socket.IO: Utilisateur ${socket.user.id} n'a pas les droits d'écriture sur le canal ${canal_id} (${accessCheck.accessType})`);
-          socket.emit("error", { message: "Vous avez un accès en lecture seule à ce canal. Vous ne pouvez pas y envoyer de messages." });
+        if (accessCheck.accessType !== "lecture_ecriture") {
+          console.error(
+            `Socket.IO: Utilisateur ${socket.user.id} n'a pas les droits d'écriture sur le canal ${canal_id} (${accessCheck.accessType})`
+          );
+          socket.emit("error", {
+            message:
+              "Vous avez un accès en lecture seule à ce canal. Vous ne pouvez pas y envoyer de messages.",
+          });
           return;
         }
 
@@ -619,12 +691,12 @@ const socketManager = (io) => {
           "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
           [canal_id]
         );
-        
+
         const canalData = canalInfo.rows.length > 0 ? canalInfo.rows[0] : {};
 
         // Assurons-nous que workspace_id est toujours présent pour les notifications
         const messageWorkspaceId = workspace_id || canalData.workspace_id;
-        
+
         // Si nous n'avons toujours pas de workspace_id, essayons de le récupérer différemment
         let finalWorkspaceId = messageWorkspaceId;
         if (!finalWorkspaceId) {
@@ -634,13 +706,21 @@ const socketManager = (io) => {
               "SELECT fk_workspace FROM canal WHERE id_canal = $1",
               [canal_id]
             );
-            
-            if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+            if (
+              workspaceQuery.rows.length > 0 &&
+              workspaceQuery.rows[0].fk_workspace
+            ) {
               finalWorkspaceId = workspaceQuery.rows[0].fk_workspace;
-              console.log(`[Message Debug] Workspace ID récupéré via requête alternative: ${finalWorkspaceId}`);
+              console.log(
+                `[Message Debug] Workspace ID récupéré via requête alternative: ${finalWorkspaceId}`
+              );
             }
           } catch (wsErr) {
-            console.error("Erreur lors de la récupération alternative du workspace_id:", wsErr);
+            console.error(
+              "Erreur lors de la récupération alternative du workspace_id:",
+              wsErr
+            );
           }
         }
 
@@ -659,7 +739,8 @@ const socketManager = (io) => {
           // --- AJOUT: Détection des mentions et notification ---
           // Chercher toutes les mentions au format @[username](userId) ou @username
           // On va supporter les deux formats pour compatibilité
-          const mentionRegex = /@\[([^\]]+)\]\(([\w-]+)\)|@([a-zA-Z0-9_\-\.]+)/g;
+          const mentionRegex =
+            /@\[([^\]]+)\]\(([\w-]+)\)|@([a-zA-Z0-9_\-\.]+)/g;
           let match;
           const mentionedUserIds = new Set();
 
@@ -685,7 +766,8 @@ const socketManager = (io) => {
               title: "Vous avez été mentionné",
               content: content,
               userId: socket.user.id,
-              senderName: socket.user.nom || socket.user.username || "Utilisateur",
+              senderName:
+                socket.user.nom || socket.user.username || "Utilisateur",
               photoUrl: socket.user.photo_de_profil || null,
               channelId: canal_id,
               workspaceId: finalWorkspaceId,
@@ -716,7 +798,7 @@ const socketManager = (io) => {
         if (isMistralMentioned) {
           // Traiter la mention à Mistral...
           if (!MISTRAL_API_KEY) {
-            console.error("Clé API Mistral non configurée.");            // Envoyer un message d'erreur dans le chat si la clé n'est pas configurée
+            console.error("Clé API Mistral non configurée."); // Envoyer un message d'erreur dans le chat si la clé n'est pas configurée
             // Récupérer le workspace_id associé au canal
             let errorWorkspaceId = workspace_id;
             try {
@@ -725,13 +807,19 @@ const socketManager = (io) => {
                   "SELECT fk_workspace FROM canal WHERE id_canal = $1",
                   [canal_id]
                 );
-                
-                if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+                if (
+                  workspaceQuery.rows.length > 0 &&
+                  workspaceQuery.rows[0].fk_workspace
+                ) {
                   errorWorkspaceId = workspaceQuery.rows[0].fk_workspace;
                 }
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du workspace pour le message d'erreur Mistral:", err);
+              console.error(
+                "Erreur lors de la récupération du workspace pour le message d'erreur Mistral:",
+                err
+              );
             }
 
             const errorMessage = {
@@ -873,7 +961,7 @@ const socketManager = (io) => {
               console.log(
                 "Socket.IO: Réponse de Mistral enregistrée en DB:",
                 savedMistralMessage
-              );            // Créer l'objet message pour l'émission UNIQUEMENT si l'enregistrement a réussi
+              ); // Créer l'objet message pour l'émission UNIQUEMENT si l'enregistrement a réussi
               // Récupérer le workspace_id du canal pour le joindre au message
               let finalWorkspaceId = workspace_id;
               try {
@@ -882,13 +970,19 @@ const socketManager = (io) => {
                     "SELECT fk_workspace FROM canal WHERE id_canal = $1",
                     [canal_id]
                   );
-                  
-                  if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+                  if (
+                    workspaceQuery.rows.length > 0 &&
+                    workspaceQuery.rows[0].fk_workspace
+                  ) {
                     finalWorkspaceId = workspaceQuery.rows[0].fk_workspace;
                   }
                 }
               } catch (err) {
-                console.error("Erreur lors de la récupération du workspace pour le message Mistral:", err);
+                console.error(
+                  "Erreur lors de la récupération du workspace pour le message Mistral:",
+                  err
+                );
               }
 
               const mistralMessageForEmit = {
@@ -943,7 +1037,7 @@ const socketManager = (io) => {
                 apiError
               );
               errorMessageContent = `Désolé, une erreur est survenue lors de la communication avec Mistral AI: ${apiError.message}`;
-            }            // Envoyer un message d'erreur dans le chat (non stocké en DB)
+            } // Envoyer un message d'erreur dans le chat (non stocké en DB)
             // Récupérer le workspace_id associé au canal
             let errorWorkspaceId = workspace_id;
             try {
@@ -952,13 +1046,19 @@ const socketManager = (io) => {
                   "SELECT fk_workspace FROM canal WHERE id_canal = $1",
                   [canal_id]
                 );
-                
-                if (workspaceQuery.rows.length > 0 && workspaceQuery.rows[0].fk_workspace) {
+
+                if (
+                  workspaceQuery.rows.length > 0 &&
+                  workspaceQuery.rows[0].fk_workspace
+                ) {
                   errorWorkspaceId = workspaceQuery.rows[0].fk_workspace;
                 }
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du workspace pour le message d'erreur API Mistral:", err);
+              console.error(
+                "Erreur lors de la récupération du workspace pour le message d'erreur API Mistral:",
+                err
+              );
             }
 
             const errorMessage = {
@@ -1089,26 +1189,26 @@ const socketManager = (io) => {
         // Récupérer le message complet avec infos utilisateur
         const fullUserMessage = await MessageModel.getById(
           userMessage.id_message
-        );          // Récupérer les informations du canal pour le message
-          const canalInfo = await pool.query(
-            "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
-            [channelId]
-          );
-          
-          const canalData = canalInfo.rows.length > 0 ? canalInfo.rows[0] : {};
-          const workspaceId = canalData.workspace_id;
+        ); // Récupérer les informations du canal pour le message
+        const canalInfo = await pool.query(
+          "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
+          [channelId]
+        );
 
-          if (fullUserMessage) {
-            // Diffuser le message aux membres du canal
-            io.to(`${channelId}`).emit("message", {
-              ...fullUserMessage,
-              date_creation:
-                fullUserMessage.date_creation ||
-                fullUserMessage.created_at ||
-                new Date().toISOString(),
-              workspace_id: workspaceId, // Ajouter l'ID du workspace pour les notifications
-              nom_canal: canalData.nom_canal
-            });
+        const canalData = canalInfo.rows.length > 0 ? canalInfo.rows[0] : {};
+        const workspaceId = canalData.workspace_id;
+
+        if (fullUserMessage) {
+          // Diffuser le message aux membres du canal
+          io.to(`${channelId}`).emit("message", {
+            ...fullUserMessage,
+            date_creation:
+              fullUserMessage.date_creation ||
+              fullUserMessage.created_at ||
+              new Date().toISOString(),
+            workspace_id: workspaceId, // Ajouter l'ID du workspace pour les notifications
+            nom_canal: canalData.nom_canal,
+          });
 
           // Indiquer que Mistral est en train d'écrire avec l'événement 'typing'
           io.to(`${channelId}`).emit("typing", {
@@ -1233,7 +1333,7 @@ const socketManager = (io) => {
             // Après avoir reçu la réponse, arrêter l'indication de frappe
             io.to(`${channelId}`).emit("stopTyping", {
               userId: MISTRAL_USER_ID,
-            });            // Diffuser le message de Mistral aux membres du canal
+            }); // Diffuser le message de Mistral aux membres du canal
             io.to(`${channelId}`).emit("message", {
               ...fullBotMessage,
               nom: MISTRAL_USERNAME,
@@ -1265,7 +1365,7 @@ const socketManager = (io) => {
 
             const fullErrorMessage = await MessageModel.getById(
               errorMessage.id_message
-            );            // Diffuser le message d'erreur
+            ); // Diffuser le message d'erreur
             io.to(`${channelId}`).emit("message", {
               ...fullErrorMessage,
               nom: MISTRAL_USERNAME,
