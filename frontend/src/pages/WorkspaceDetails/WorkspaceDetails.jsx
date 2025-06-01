@@ -15,6 +15,7 @@ import VideoCallModal from "./VideoCallModal";
 import StrawpollWebviewModal from "./StrawpollWebviewModal";
 import ChannelMembersModal from "./ChannelMembersModal"; // Importer la nouvelle modal
 import MemberAccessModal from "./MemberAccessModal"; // Importer notre nouvelle modale de droits d'accès
+import GoogleDriveModal from "../../components/GoogleDrive/GoogleDriveModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -57,6 +58,7 @@ function WorkspaceDetails() {
   const [fullscreenFile, setFullscreenFile] = useState(null);
   const [showToolbox, setShowToolbox] = useState(false);
   const [showStrawpollModal, setShowStrawpollModal] = useState(false);
+  const [showGoogleDriveModal, setShowGoogleDriveModal] = useState(false);
   const [showStrawpollResults, setShowStrawpollResults] = useState(false);
   const [strawpollResults, setStrawpollResults] = useState(null);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -92,12 +94,15 @@ function WorkspaceDetails() {
 
         const userData = await userResponse.json();
         const userId = userData.user_id;
-        
-        const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+
+        const membershipResponse = await fetch(
+          `${API_URL}/api/workspaces/${workspaceId}/members/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
 
         if (!membershipResponse.ok) {
           throw new Error("Impossible de vérifier l'appartenance au workspace");
@@ -107,17 +112,17 @@ function WorkspaceDetails() {
         setIsMember(membershipData.isMember);
 
         if (!membershipData.isMember) {
-          const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
+          const workspaceResponse = await fetch(
+            `${API_URL}/api/workspaces/${workspaceId}`
+          );
 
           if (workspaceResponse.ok) {
             navigate(`/join-workspace?id=${workspaceId}`);
           } else {
-
-            navigate('/workspaces', { 
-              state: { 
-                error: "Ce workspace n'existe pas ou vous n'y avez pas accès." 
-              } 
-
+            navigate("/workspaces", {
+              state: {
+                error: "Ce workspace n'existe pas ou vous n'y avez pas accès.",
+              },
             });
           }
         }
@@ -173,10 +178,18 @@ function WorkspaceDetails() {
     setCurrentPollId(pollId);
     setShowStrawpollVote(true);
   };
-
   const handleCloseStrawpollVote = () => {
     setShowStrawpollVote(false);
     setCurrentPollId(null);
+  };
+
+  // Fonctions de gestion du modal Google Drive
+  const handleOpenGoogleDrive = () => {
+    setShowGoogleDriveModal(true);
+  };
+
+  const handleCloseGoogleDrive = () => {
+    setShowGoogleDriveModal(false);
   };
 
   useEffect(() => {
@@ -330,7 +343,7 @@ function WorkspaceDetails() {
     // New handler for channel suggestions
     handleChannelSuggestionNavigation,
     handleSelectActiveChannelSuggestion,
-    handleSelectChannelSuggestion,    // New handler for deleting messages
+    handleSelectChannelSuggestion, // New handler for deleting messages
     handleDeleteMessage,
     handleMistralMention,
     fetchActiveChannel,
@@ -348,7 +361,7 @@ function WorkspaceDetails() {
   const enhancedLoadMoreMessages = useCallback(() => {
     // Définir isPrependingMessages à true avant d'appeler loadMoreMessages
     setIsPrependingMessages(true);
-    
+
     // Appeler la fonction originale de chargement
     loadMoreMessages();
   }, [loadMoreMessages]);
@@ -391,7 +404,7 @@ function WorkspaceDetails() {
     setFullscreenFile(null);
   };
 
-// Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
+  // Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
   const handleFileUpload = async (e) => {
     console.log("🚀 Début de handleFileUpload");
     const file = e.target.files[0];
@@ -576,7 +589,6 @@ function WorkspaceDetails() {
     navigate(`/profile/${member.id}`);
   };
 
-
   // Handler pour gérer les clics sur les mentions de canaux
   const handleChannelClick = (channelName) => {
     console.log("Canal cliqué:", channelName);
@@ -739,7 +751,7 @@ function WorkspaceDetails() {
 
   const handleChannelMembersUpdated = () => {
     if (activeChannel) {
-      if (typeof fetchActiveChannel === 'function') {
+      if (typeof fetchActiveChannel === "function") {
         fetchActiveChannel(activeChannel.id);
       }
     }
@@ -759,7 +771,7 @@ function WorkspaceDetails() {
   // Fonction pour gérer les droits d'accès des membres aux canaux privés
   const handleSetMemberChannelAccess = async (memberId, accessType) => {
     if (!activeChannel || !activeChannel.isPrivate) return;
-    
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
@@ -773,19 +785,23 @@ function WorkspaceDetails() {
           body: JSON.stringify({ accessType }),
         }
       );
-      
+
       if (!res.ok) {
         const err = await res.json();
-        alert(err.message || "Erreur lors de la modification des droits d'accès");
+        alert(
+          err.message || "Erreur lors de la modification des droits d'accès"
+        );
       } else {
         // Rafraîchir le canal actif pour mettre à jour les informations
-        if (typeof fetchActiveChannel === 'function') {
+        if (typeof fetchActiveChannel === "function") {
           fetchActiveChannel(activeChannel.id);
         }
       }
     } catch (e) {
       console.error("Erreur lors de la modification des droits d'accès:", e);
-      alert("Une erreur est survenue lors de la modification des droits d'accès");
+      alert(
+        "Une erreur est survenue lors de la modification des droits d'accès"
+      );
     } finally {
       handleCloseMemberContextMenu();
     }
@@ -864,7 +880,6 @@ function WorkspaceDetails() {
           isSearching={isSearching}
           currentUserId={currentUserId}
         />
-
         <ChatContainer
           activeChannel={activeChannel}
           loadingMessages={loadingMessages}
@@ -892,7 +907,8 @@ function WorkspaceDetails() {
           setShowEmojiPicker={setShowEmojiPicker}
           showMentionSuggestions={showMentionSuggestions}
           mentionSuggestions={mentionSuggestions}
-          activeMentionIndex={activeMentionIndex}          handleSelectMention={handleSelectMention}
+          activeMentionIndex={activeMentionIndex}
+          handleSelectMention={handleSelectMention}
           handleMentionNavigation={handleMentionSuggestionNavigation}
           handleSelectActiveItem={handleSelectActiveMention}
           handleSendMessageWithMistralCheck={handleSendMessageWithMistralCheck}
@@ -906,6 +922,9 @@ function WorkspaceDetails() {
           showStrawpollModal={showStrawpollModal}
           handleCloseStrawpollModal={handleCloseStrawpollModal}
           handleStrawpollSubmit={handleStrawpollSubmit}
+          showGoogleDriveModal={showGoogleDriveModal}
+          handleOpenGoogleDrive={handleOpenGoogleDrive}
+          handleCloseGoogleDrive={handleCloseGoogleDrive}
           commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
@@ -913,8 +932,6 @@ function WorkspaceDetails() {
             renderTextWithLinks(text, handleChannelClick, handleUserClick)
           }
           isUuid={isUuid}
-
-          handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall}
           handleManageChannelMembers={handleManageChannelMembers}
           isChannelPrivate={activeChannel?.isPrivate}
@@ -927,11 +944,10 @@ function WorkspaceDetails() {
           // Pagination props
           hasMoreMessages={hasMoreMessages}
           loadingMoreMessages={loadingMoreMessages}
-          loadMoreMessages={enhancedLoadMoreMessages}  // Utiliser la fonction améliorée
+          loadMoreMessages={enhancedLoadMoreMessages} // Utiliser la fonction améliorée
           isPrependingMessages={isPrependingMessages}
           setIsPrependingMessages={setIsPrependingMessages}
         />
-
         <WorkspaceDetailsSidebar
           showMembers={showMembers}
           showOnlineMembers={showOnlineMembers}
@@ -962,7 +978,6 @@ function WorkspaceDetails() {
           handleSetMemberChannelAccess={handleSetMemberChannelAccess}
           handleOpenMemberAccessModal={handleOpenMemberAccessModal}
         />
-
         {showCreateChannelModal && (
           <CreateChannelModal
             channelError={channelError}
@@ -974,7 +989,6 @@ function WorkspaceDetails() {
             setNewChannel={setNewChannel}
           />
         )}
-
         {contextMenu.visible && (
           <div
             className="channel-context-menu"
@@ -986,7 +1000,10 @@ function WorkspaceDetails() {
               <span>Modifier le canal</span>
             </div>
             {contextMenu.channel && contextMenu.channel.isPrivate && (
-              <div className="context-menu-item" onClick={handleManageChannelMembers}>
+              <div
+                className="context-menu-item"
+                onClick={handleManageChannelMembers}
+              >
                 <FaUsers className="context-menu-icon" />
                 <span>Gérer les membres</span>
               </div>
@@ -1000,7 +1017,6 @@ function WorkspaceDetails() {
             </div>
           </div>
         )}
-
         {showEditChannelModal && (
           <EditChannelModal
             updateChannelError={updateChannelError}
@@ -1011,7 +1027,6 @@ function WorkspaceDetails() {
             setEditingChannel={setEditingChannel}
           />
         )}
-
         {showChannelMembersModal && contextMenu.channel && (
           <ChannelMembersModal
             show={showChannelMembersModal}
@@ -1024,7 +1039,6 @@ function WorkspaceDetails() {
             onSetMemberAccess={handleSetMemberChannelAccess}
           />
         )}
-
         {messageContextMenu.visible && (
           <div
             className="message-context-menu"
@@ -1041,7 +1055,8 @@ function WorkspaceDetails() {
             <div className="context-menu-item" onClick={handleShowEmojiPicker}>
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
-            </div>            {messageContextMenu.message &&
+            </div>{" "}
+            {messageContextMenu.message &&
               messageContextMenu.message.fk_utilisateur === currentUserId && (
                 <>
                   <div
@@ -1062,7 +1077,6 @@ function WorkspaceDetails() {
               )}
           </div>
         )}
-
         {showEmojiPicker && (
           <EmojiPickerModal
             commonEmojis={commonEmojis}
@@ -1070,7 +1084,6 @@ function WorkspaceDetails() {
             setShowEmojiPicker={setShowEmojiPicker}
           />
         )}
-
         {fullscreenFile && (
           <FileViewerModal
             fullscreenFile={fullscreenFile}
@@ -1078,20 +1091,17 @@ function WorkspaceDetails() {
             handleDownloadFile={handleDownloadFile}
           />
         )}
-
         <StrawpollResultsModal
           showStrawpollResults={showStrawpollResults}
           handleCloseStrawpollResults={handleCloseStrawpollResults}
           loadingResults={loadingResults}
           strawpollResults={strawpollResults}
         />
-
         <StrawpollModalWrapper
           show={showStrawpollModal}
           onClose={handleCloseStrawpollModal}
           onSubmit={handleStrawpollSubmit}
         />
-
         <VideoCallModal
           show={showVideoCallModal}
           onClose={() => setShowVideoCallModal(false)}
@@ -1099,14 +1109,24 @@ function WorkspaceDetails() {
           activeChannel={activeChannel}
           currentUserName={currentUserName}
           socket={socket}
-        />
-
+        />{" "}
         <StrawpollWebviewModal
           show={showStrawpollVote}
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}
         />
-
+        <GoogleDriveModal
+          show={showGoogleDriveModal}
+          onClose={handleCloseGoogleDrive}
+          onFilesSelected={(files) => {
+            console.log("Fichiers sélectionnés depuis Google Drive:", files);
+            // TODO: Gérer l'envoi des fichiers sélectionnés
+          }}
+          mode="workspace"
+          workspaceId={workspaceId}
+          canalId={activeChannel?.id}
+          socket={socket}
+        />
         {showMemberAccessModal && selectedMember && (
           <MemberAccessModal
             show={showMemberAccessModal}
