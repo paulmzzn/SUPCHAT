@@ -261,7 +261,7 @@ function DirectMessages() {
             (msg || {}).handleCloseMessageContextMenu || (() => {})
           }
           onReplyMessage={(msg || {}).handleReplyMessage || (() => {})}
-          onEditMessage={(msg || {}).handleEditMessage || (() => {})}
+          onEditMessage={msg.handleEditMessage}
           onDeleteMessage={(msg || {}).handleDeleteMessage || (() => {})}
           onAddReaction={(msg || {}).handleAddReaction || (() => {})}
           onEmojiSelect={(msg || {}).handleEmojiSelect || (() => {})}

@@ -161,6 +161,7 @@ const MessageArea = ({
         xPos={messageContextMenu?.xPos || 0}
         yPos={messageContextMenu?.yPos || 0}
         isOwnMessage={messageContextMenu?.isOwnMessage || false}
+        message={messageContextMenu?.message || null}
         onReply={() => {
           console.log(
             "[DM] Click sur Répondre dans le menu contextuel",

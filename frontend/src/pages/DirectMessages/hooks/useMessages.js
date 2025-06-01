@@ -4,7 +4,9 @@ import { useMessageList } from "./useMessageList";
 import { useMessageInput } from "./useMessageInput";
 import { useMessageContextMenu } from "./useMessageContextMenu";
 import { useMessageReactions } from "./useMessageReactions";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.29:3000";
 
 export const useMessages = (
   selectedUser,
@@ -54,28 +56,38 @@ export const useMessages = (
   const fileInputRef = useRef(null);
   const emojiPickerRef = reactions.emojiPickerRef;
 
-  // Fonction pour supprimer un message
-  const handleDeleteMessage = useCallback(
-    async (message) => {
-      if (!message || !message.id_message_prive) return;
-      // Appel API ou socket pour supprimer
-      try {
-        await fetch(`${API_URL}/messages/${message.id_message_prive}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        setMessages((msgs) =>
-          msgs.map((m) =>
-            m.id_message_prive === message.id_message_prive
-              ? { ...m, is_deleted: true }
-              : m
-          )
-        );
-      } catch (err) {
-        console.error("Erreur suppression message:", err);
+  // Fonction utilitaire pour recharger la conversation depuis l'API
+  const refetchConversation = useCallback(async () => {
+    if (!selectedUser) return;
+    try {
+      const res = await fetch(`${API_URL}/private-messages/${selectedUser}`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data);
+      } else {
+        console.error("Erreur lors du rechargement des messages:", res.status);
       }
+    } catch (err) {
+      console.error("Erreur réseau lors du rechargement des messages:", err);
+    }
+  }, [selectedUser, setMessages]);
+
+  // Fonction pour supprimer un message via WebSocket
+  const handleDeleteMessage = useCallback(
+    (message) => {
+      if (!message || !message.id_message_prive) return;
+      socket.emit(
+        "deletePrivateMessage",
+        { id: message.id_message_prive },
+        (response) => {
+          // Callback de confirmation du backend (optionnel)
+          refetchConversation();
+        }
+      );
     },
-    [setMessages]
+    [socket, refetchConversation]
   );
 
   // Édition de message
@@ -87,28 +99,71 @@ export const useMessages = (
     setEditMessageContent(message.contenu);
   }, []);
 
-  const handleSaveEdit = useCallback(async () => {
+  // Fonction pour éditer un message via WebSocket
+  const handleSaveEdit = useCallback(() => {
     if (!editingMessage) return;
-    try {
-      await fetch(`${API_URL}/messages/${editingMessage.id_message_prive}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contenu: editMessageContent }),
-      });
+    socket.emit(
+      "editPrivateMessage",
+      {
+        id: editingMessage.id_message_prive,
+        contenu: editMessageContent,
+      },
+      (response) => {
+        refetchConversation();
+        setEditingMessage(null);
+        setEditMessageContent("");
+      }
+    );
+  }, [socket, editingMessage, editMessageContent, refetchConversation]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setEditMessageContent("");
+  }, []);
+
+  // --- Live update via WebSocket events ---
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageUpdated = (updatedMsg) => {
       setMessages((msgs) =>
         msgs.map((m) =>
-          m.id_message_prive === editingMessage.id_message_prive
-            ? { ...m, contenu: editMessageContent }
+          m.id_message_prive === updatedMsg.id_message_prive
+            ? { ...m, ...updatedMsg }
             : m
         )
       );
-      setEditingMessage(null);
-      setEditMessageContent("");
-    } catch (err) {
-      console.error("Erreur modification message:", err);
-    }
-  }, [editingMessage, editMessageContent]);
+      // Fermer l'éditeur si on est en train d'éditer ce message
+      if (
+        editingMessage &&
+        editingMessage.id_message_prive === updatedMsg.id_message_prive
+      ) {
+        setEditingMessage(null);
+        setEditMessageContent("");
+      }
+    };
+
+    const handleMessageDeleted = ({ id }) => {
+      setMessages((msgs) =>
+        msgs.map((m) =>
+          m.id_message_prive === id ? { ...m, is_deleted: true } : m
+        )
+      );
+      // Fermer l'éditeur si on est en train d'éditer ce message supprimé
+      if (editingMessage && editingMessage.id_message_prive === id) {
+        setEditingMessage(null);
+        setEditMessageContent("");
+      }
+    };
+
+    socket.on("privateMessageUpdated", handleMessageUpdated);
+    socket.on("privateMessageDeleted", handleMessageDeleted);
+
+    return () => {
+      socket.off("privateMessageUpdated", handleMessageUpdated);
+      socket.off("privateMessageDeleted", handleMessageDeleted);
+    };
+  }, [socket, setMessages, editingMessage]);
 
   return {
     ...messageList,
@@ -116,7 +171,12 @@ export const useMessages = (
     ...contextMenu,
     ...reactions,
     ...rest,
+    messages: messageList.messages,
+    loadingMessages: messageList.loadingMessages,
     newMessage,
+    editingMessage,
+    editMessageContent,
+    setEditMessageContent,
     setMessages,
     setNewMessage,
     messagesContainerRef,
@@ -124,6 +184,7 @@ export const useMessages = (
     emojiPickerRef,
     handleDeleteMessage, // Ajout de la fonction de suppression
     handleEditMessage, // Ajout de la fonction d'édition
-    handleSaveEdit, // Ajout de la fonction pour sauvegarder l'édition
+    handleSaveEdit,
+    handleCancelEdit,
   };
 };

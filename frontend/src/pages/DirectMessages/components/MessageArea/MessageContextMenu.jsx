@@ -12,6 +12,7 @@ const MessageContextMenu = ({
   xPos,
   yPos,
   isOwnMessage,
+  message,
   onReply,
   onEdit,
   onDelete,
@@ -62,7 +63,7 @@ const MessageContextMenu = ({
             <div
               className="dm-context-menu-item"
               onClick={() => {
-                onEdit && onEdit(messageContextMenu.message);
+                onEdit && onEdit(message);
                 onClose();
               }}
             >
@@ -71,7 +72,7 @@ const MessageContextMenu = ({
             <div
               className="dm-context-menu-item"
               onClick={() => {
-                onDelete && onDelete(messageContextMenu.message);
+                onDelete && onDelete(message);
                 onClose();
               }}
               style={{ color: "red" }}
