@@ -165,12 +165,31 @@ const Notifications = () => {
       }
     };
 
+    // --- AJOUT: Réception d'une notification de mention ---
+    const handleMentionNotification = async (notif) => {
+      // On peut récupérer le profil si besoin, mais on garde la logique simple ici
+      addNotification({
+        type: "mention",
+        title: notif.title || "Vous avez été mentionné",
+        content: notif.content,
+        userId: notif.userId,
+        photoUrl: notif.photoUrl,
+        senderName: notif.senderName,
+        channelId: notif.channelId,
+        workspaceId: notif.workspaceId,
+        nom_canal: notif.nom_canal,
+        messageId: notif.messageId,
+      });
+    };
+
     socket.on("privateMessage", handlePrivateMessage);
     socket.on("message", handleChannelMessage);
+    socket.on("mentionNotification", handleMentionNotification); // <-- AJOUT
 
     return () => {
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("message", handleChannelMessage);
+      socket.off("mentionNotification", handleMentionNotification); // <-- AJOUT
     };
   }, [socket]);
 
