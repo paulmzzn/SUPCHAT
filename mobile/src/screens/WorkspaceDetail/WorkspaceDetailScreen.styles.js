@@ -362,7 +362,7 @@ export const getStyles = (theme) => StyleSheet.create({
   // Input - enhanced styling
   messageInputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
     backgroundColor: theme.cardBackground,
@@ -371,51 +371,129 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: -3,
+      height: -2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 12,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+
+  attachmentButton: {
+    width: 40, 
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
 
   messageInput: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: theme.borderColor,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    marginRight: 12,
     backgroundColor: theme.inputBackground,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    maxHeight: 80,
+    minHeight: 36,
     color: theme.textPrimary,
-    maxHeight: 120,
-    minHeight: 44,
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '400',
   },
 
   sendButton: {
     backgroundColor: theme.accentPrimary,
-    borderRadius: 24,
-    padding: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: theme.accentPrimary,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 6,
-    transform: [{ scale: 1 }],
+    marginLeft: 10,
   },
 
   sendButtonDisabled: {
-    backgroundColor: theme.textMuted,
-    shadowOpacity: 0,
-    elevation: 0,
-    transform: [{ scale: 0.95 }],
+    backgroundColor: theme.disabledButton,
+    opacity: 0.5,
+  },
+
+  // Styles pour les fichiers
+  fileAttachment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+
+  fileIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginRight: 10,
+  },
+
+  fileDetails: {
+    flex: 1,
+    paddingRight: 8,
+  },
+
+  fileName: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+
+  fileSize: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+
+  // Styles pour les images
+  imageAttachment: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 4,
+    position: 'relative',
+    maxWidth: 280,
+    minWidth: 150,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+
+  imagePreview: {
+    width: '100%',
+    minHeight: 120,
+    maxHeight: 250,
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+
+  imageOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  imageCaptionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+
+  imageCaption: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

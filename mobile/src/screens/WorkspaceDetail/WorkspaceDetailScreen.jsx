@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   FlatList,
   KeyboardAvoidingView,
@@ -18,6 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { getStyles } from './WorkspaceDetailScreen.styles';
+import MessageInput from '../../components/MessageInput';
+import AttachmentViewer from '../../components/AttachmentViewer/AttachmentViewer';
 
 const WorkspaceDetailScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
@@ -36,6 +37,11 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [connectionError, setConnectionError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // États pour l'AttachmentViewer
+  const [attachmentViewerVisible, setAttachmentViewerVisible] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState(null);
+  
   const LIMIT = 30;
   const MAX_RETRY_ATTEMPTS = 3;
   
@@ -400,6 +406,9 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           const isFirstMessage = index === 0;
           const isLastMessage = index === chronologicalMessages.length - 1;
           
+          // Parser le contenu pour détecter les fichiers
+          const fileData = parseFileContent(message.contenu);
+          
           return (
             <View
               key={message.id_message}
@@ -431,12 +440,107 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                 </View>
               )}
               
-              <Text style={[
-                styles.messageText,
-                group.isOwn ? styles.ownMessageText : styles.otherMessageText
-              ]}>
-                {message.contenu}
-              </Text>
+              {/* Affichage du fichier ou du texte */}
+              {fileData ? (
+                // C'est un fichier
+                fileData.isImage ? (
+                  // Prévisualisation d'image
+                  <TouchableOpacity 
+                    style={[
+                      styles.imageAttachment,
+                      { backgroundColor: group.isOwn ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+                    ]}
+                    onPress={() => handleOpenAttachment(fileData)}
+                  >
+                    <Image
+                      source={{ 
+                        uri: fileData.fileUrl.startsWith('http') 
+                          ? fileData.fileUrl 
+                          : `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`
+                      }}
+                      style={styles.imagePreview}
+                      resizeMode="cover"
+                      onError={(e) => {
+                        console.log('Erreur chargement image:', e.nativeEvent.error);
+                      }}
+                    />
+                    <View style={styles.imageOverlay}>
+                      <Ionicons
+                        name="eye-outline"
+                        size={20}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                    </View>
+                    {fileData.fileName && (
+                      <View style={[
+                        styles.imageCaptionContainer,
+                        { backgroundColor: group.isOwn ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.9)' }
+                      ]}>
+                        <Text 
+                          style={[
+                            styles.imageCaption,
+                            { color: group.isOwn ? '#FFFFFF' : '#000000' }
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {fileData.fileName}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  // Fichier non-image (affichage normal)
+                  <TouchableOpacity 
+                    style={[
+                      styles.fileAttachment,
+                      { backgroundColor: group.isOwn ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+                    ]}
+                    onPress={() => handleOpenAttachment(fileData)}
+                  >
+                    <View style={styles.fileIconContainer}>
+                      <Ionicons
+                        name={getFileIcon(fileData.fileType)}
+                        size={24}
+                        color={group.isOwn ? '#FFFFFF' : themeColors.textPrimary}
+                      />
+                    </View>
+                    <View style={styles.fileDetails}>
+                      <Text
+                        style={[
+                          styles.fileName,
+                          { color: group.isOwn ? '#FFFFFF' : themeColors.textPrimary }
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {fileData.fileName}
+                      </Text>
+                      {fileData.fileSize && (
+                        <Text 
+                          style={[
+                            styles.fileSize,
+                            { color: group.isOwn ? 'rgba(255,255,255,0.7)' : themeColors.textSecondary }
+                          ]}
+                        >
+                          {formatFileSize(fileData.fileSize)}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name="eye-outline"
+                      size={20}
+                      color={group.isOwn ? 'rgba(255,255,255,0.8)' : themeColors.accentPrimary}
+                    />
+                  </TouchableOpacity>
+                )
+              ) : (
+                // C'est un message texte normal
+                <Text style={[
+                  styles.messageText,
+                  group.isOwn ? styles.ownMessageText : styles.otherMessageText
+                ]}>
+                  {message.contenu}
+                </Text>
+              )}
               
               {group.isOwn && isLastMessage && (
                 <Text style={styles.ownMessageTime}>
@@ -451,7 +555,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         })}
       </View>
     );
-  }, [styles, renderAvatarInBubble]);
+  }, [styles, renderAvatarInBubble, parseFileContent, handleOpenAttachment, getFileIcon, formatFileSize, themeColors]);
 
   const renderTypingIndicator = useCallback(() => {
     if (typingUsers.length === 0) return null;
@@ -521,6 +625,87 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     }
   }, [loadingMore, hasMoreMessages, messages.length, fetchChannelMessages]);
 
+  // Fonction pour parser le contenu des fichiers
+  const parseFileContent = useCallback((content) => {
+    if (!content) return null;
+    
+    // Vérifier si le contenu ressemble à du JSON avant de tenter le parsing
+    if (typeof content === 'string') {
+      // Si le contenu ne commence pas par '{' ou '[', ce n'est probablement pas du JSON
+      const trimmedContent = content.trim();
+      if (!trimmedContent.startsWith('{') && !trimmedContent.startsWith('[')) {
+        return null; // Ce n'est pas un fichier, c'est du texte normal
+      }
+    }
+    
+    try {
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      if (parsed && parsed.type === 'file') {
+        return {
+          fileName: parsed.fileName,
+          fileUrl: parsed.fileUrl,
+          fileSize: parsed.fileSize,
+          fileType: parsed.fileType,
+          isImage: parsed.isImage || false
+        };
+      }
+    } catch (error) {
+      // Supprimer le log d'erreur pour éviter le spam dans la console
+      // Les messages texte normaux vont générer des erreurs ici, c'est normal
+      return null;
+    }
+    
+    return null;
+  }, []);
+
+  // Fonction pour ouvrir l'AttachmentViewer
+  const handleOpenAttachment = useCallback((fileData) => {
+    if (!fileData) return;
+    
+    // Construire l'URL complète pour S3
+    const baseUrl = 'https://s3-supchat.s3.fr-par.scw.cloud';
+    const fullUrl = fileData.fileUrl.startsWith('http') 
+      ? fileData.fileUrl 
+      : `${baseUrl}/${fileData.fileUrl}`;
+    
+    setSelectedAttachment({
+      fileName: fileData.fileName,
+      fileUrl: fullUrl,
+      fileType: fileData.fileType,
+      fileSize: fileData.fileSize
+    });
+    setAttachmentViewerVisible(true);
+  }, []);
+
+  // Fonction pour fermer l'AttachmentViewer
+  const handleCloseAttachmentViewer = useCallback(() => {
+    setAttachmentViewerVisible(false);
+    setSelectedAttachment(null);
+  }, []);
+
+  // Fonction pour obtenir l'icône du fichier
+  const getFileIcon = useCallback((fileType) => {
+    if (!fileType) return 'document-outline';
+    
+    if (fileType.startsWith('image/')) return 'image-outline';
+    if (fileType === 'application/pdf') return 'document-text-outline';
+    if (fileType.startsWith('video/')) return 'videocam-outline';
+    if (fileType.startsWith('audio/')) return 'musical-notes-outline';
+    if (fileType.includes('word')) return 'document-outline';
+    if (fileType.includes('excel') || fileType.includes('sheet')) return 'grid-outline';
+    
+    return 'document-outline';
+  }, []);
+
+  // Fonction pour formater la taille du fichier
+  const formatFileSize = useCallback((bytes) => {
+    if (!bytes) return '';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -585,34 +770,39 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
       
       {renderTypingIndicator()}
       
-      <View style={styles.messageInputContainer}>
-        <TextInput
-          ref={messageInputRef}
-          style={styles.messageInput}
-          value={newMessage}
-          onChangeText={handleInputChange}
-          placeholder={`Message dans #${channelName}`}
-          placeholderTextColor={themeColors.textPlaceholder}
-          multiline
-          maxLength={1000}
-          returnKeyType="send"
-          onSubmitEditing={sendMessage}
-          blurOnSubmit={false}
-          enablesReturnKeyAutomatically={true}
-          textAlignVertical="top"
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !newMessage.trim() && styles.sendButtonDisabled
-          ]}
-          onPress={sendMessage}
-          disabled={!newMessage.trim()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="send" size={20} color={themeColors.textOnAccent} />
-        </TouchableOpacity>
-      </View>
+      <MessageInput 
+        value={newMessage}
+        onChangeText={handleInputChange}
+        onSend={sendMessage}
+        placeholder={`Message dans #${channelName}`}
+        inputRef={messageInputRef}
+        // Propriétés pour l'upload de fichiers dans un workspace
+        uploadType="workspace-message"
+        workspaceId={workspaceId}
+        channelId={channelId}
+        onFileSelected={(file) => console.log('Fichier sélectionné:', file)}
+        onUploadProgress={(isUploading) => console.log('Upload en cours:', isUploading)}
+        onUploadComplete={(result) => {
+          console.log('Upload terminé:', result);
+          // Traiter le résultat de l'upload si nécessaire
+        }}
+        onUploadError={(error) => {
+          console.error('Erreur upload:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Erreur',
+            text2: 'Impossible d\'envoyer le fichier'
+          });
+        }}
+      />
+
+      {/* AttachmentViewer pour visualiser les fichiers */}
+      <AttachmentViewer
+        visible={attachmentViewerVisible}
+        attachment={selectedAttachment}
+        onClose={handleCloseAttachmentViewer}
+        theme={themeColors}
+      />
     </KeyboardAvoidingView>
   );
 };
