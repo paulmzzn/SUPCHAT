@@ -24,6 +24,9 @@ import { NotificationSettingsProvider } from "./context/NotificationSettingsCont
 import SoundTest from "./pages/SoundTest/SoundTest";
 import { AuthProvider } from "./context/AuthContext";
 import Notifications from "./components/Notifications/Notifications";
+import { ThemeProvider } from "./context/ThemeContext";
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import NotificationPermissionRequest from "./components/NotificationPermissionRequest/NotificationPermissionRequest"; // Nouveau composant
 // Importer le ToastProvider pour l'utiliser au niveau de l'app
 import ToastProvider from "./components/Toast/ToastProvider";
 
@@ -149,13 +152,14 @@ function App() {
 
   console.log("[App.jsx] Rendu global - authChecked prêt, rendu des routes");
   return (
-    <SocketProvider>
-      <AuthProvider>
-        <NotificationSettingsProvider>
+    <ThemeProvider>
+      <NotificationSettingsProvider>
+        <SocketProvider>
           <NotificationProvider>
             <Router>
               {/* Ajout du composant Notifications ici pour qu'il soit disponible sur toutes les pages */}
               <Notifications />
+              <NotificationPermissionRequest /> {/* Nouveau composant global */}
               <Routes>
                 <Route
                   path="/login"
@@ -324,9 +328,9 @@ function App() {
               </Routes>{" "}
             </Router>
           </NotificationProvider>
-        </NotificationSettingsProvider>
-      </AuthProvider>
-    </SocketProvider>
+        </SocketProvider>
+      </NotificationSettingsProvider>
+    </ThemeProvider>
   );
 }
 

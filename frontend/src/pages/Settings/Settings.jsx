@@ -132,14 +132,36 @@ const Settings = () => {
     reader.readAsDataURL(file);
     setHasChanges(true);
   };
-  const handleNotificationChange = (setting) => {
-    const updatedSettings = {
+  const handleNotificationChange = async (type) => {
+    const newSettings = {
       ...notifications,
-      [setting]: !notifications[setting],
+      [type]: !notifications[type],
     };
-    setNotifications(updatedSettings);
-    updateNotificationSettings(updatedSettings);
-    setHasChanges(true);
+
+    setNotifications(newSettings);
+
+    // Sauvegarder immédiatement
+    localStorage.setItem("notification_settings", JSON.stringify(newSettings));
+    updateNotificationSettings(newSettings);
+
+    // NOUVEAU: Si on active les notifications desktop, vérifier les permissions
+    if (type === "desktop" && !notifications[type]) {
+      const hasPermission = await notificationService.requestPermission();
+      if (!hasPermission) {
+        // Si la permission est refusée, désactiver l'option
+        const revertedSettings = {
+          ...newSettings,
+          desktop: false,
+        };
+        setNotifications(revertedSettings);
+        localStorage.setItem("notification_settings", JSON.stringify(revertedSettings));
+        updateNotificationSettings(revertedSettings);
+
+        alert(
+          "Les notifications de bureau ont été refusées. Vous pouvez les activer dans les paramètres de votre navigateur."
+        );
+      }
+    }
   };
 
   const handlePrivacyChange = (setting, value) => {
