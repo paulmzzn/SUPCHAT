@@ -12,6 +12,7 @@ const MessageContextMenu = ({
   xPos,
   yPos,
   isOwnMessage,
+  message,
   onReply,
   onEdit,
   onDelete,
@@ -29,33 +30,60 @@ const MessageContextMenu = ({
           left: xPos,
         }}
       >
-        {isOwnMessage ? (
+        {/* Bouton Répondre toujours en premier */}
+        <div
+          className="dm-context-menu-item"
+          tabIndex={0}
+          role="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (typeof onReply === "function") {
+              onReply();
+            }
+            if (typeof onClose === "function") {
+              onClose();
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (typeof onReply === "function") {
+                onReply();
+              }
+              if (typeof onClose === "function") {
+                onClose();
+              }
+            }
+          }}
+        >
+          <FaReply className="dm-context-menu-icon" /> Répondre
+        </div>
+        {isOwnMessage && (
           <>
-            <div className="dm-context-menu-item" onClick={onEdit}>
-              Modifier
+            <div
+              className="dm-context-menu-item"
+              onClick={() => {
+                onEdit && onEdit(message);
+                onClose();
+              }}
+            >
+              ✏️ Modifier
             </div>
-            <div className="dm-context-menu-item" onClick={onDelete}>
-              Supprimer
-            </div>
-            <div className="dm-context-menu-item" onClick={onReply}>
-              <FaReply className="dm-context-menu-icon" /> Répondre
-            </div>
-            <div className="dm-context-menu-item" onClick={onAddReaction}>
-              <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
-              réaction
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="dm-context-menu-item" onClick={onReply}>
-              <FaReply className="dm-context-menu-icon" /> Répondre
-            </div>
-            <div className="dm-context-menu-item" onClick={onAddReaction}>
-              <FaRegSmile className="dm-context-menu-icon" /> Ajouter une
-              réaction
+            <div
+              className="dm-context-menu-item"
+              onClick={() => {
+                onDelete && onDelete(message);
+                onClose();
+              }}
+              style={{ color: "red" }}
+            >
+              🗑️ Supprimer
             </div>
           </>
         )}
+        <div className="dm-context-menu-item" onClick={onAddReaction}>
+          <FaRegSmile className="dm-context-menu-icon" /> Ajouter une réaction
+        </div>
       </div>
 
       {/* Couche transparente pour fermer le menu */}

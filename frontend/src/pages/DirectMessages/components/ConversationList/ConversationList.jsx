@@ -9,26 +9,32 @@ import Spinner from "../../../../components/Spinner/Spinner";
  * @returns {JSX.Element}
  */
 const ConversationList = ({
-  conversations,
-  usersInfo,
-  selectedUser,
-  loading,
-  error,
-  unreadMessageCounts,
-  searchQuery,
-  setSearchQuery,
-  onUserSelect,
-  onOpenNewConversation,
-  onConversationContextMenu,
+  conversations = [],
+  usersInfo = {},
+  selectedUser = null,
+  loading = false,
+  error = null,
+  unreadMessageCounts = {},
+  searchQuery = "",
+  setSearchQuery = () => {},
+  onUserSelect = () => {},
+  onOpenNewConversation = () => {},
+  onConversationContextMenu = () => {},
 }) => {
+  // Vérification défensive des entrées pour éviter des erreurs
+  const safeConversations = Array.isArray(conversations) ? conversations : [];
+  const safeUsersInfo =
+    usersInfo && typeof usersInfo === "object" ? usersInfo : {};
+  const safeSearch = typeof searchQuery === "string" ? searchQuery : "";
+
   // Filtrer les conversations en fonction de la recherche
-  const filteredConversations = searchQuery.trim()
-    ? conversations.filter((userId) => {
-        const user = usersInfo[userId] || {};
+  const filteredConversations = safeSearch.trim()
+    ? safeConversations.filter((userId) => {
+        const user = safeUsersInfo[userId] || {};
         const username = user.name || "";
-        return username.toLowerCase().includes(searchQuery.toLowerCase());
+        return username.toLowerCase().includes(safeSearch.toLowerCase());
       })
-    : conversations;
+    : safeConversations;
 
   return (
     <div className="dm-sidebar">

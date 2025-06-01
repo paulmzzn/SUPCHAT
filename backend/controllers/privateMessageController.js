@@ -18,7 +18,7 @@ export const sendPrivateMessage = async (req, res) => {
       fk_expediteur: expediteurId,
       fk_destinataire: destinataireId,
     };
-    
+
     // Ajouter l'ID du message auquel on répond, si présent
     if (replyTo) {
       messageData.replyTo = replyTo;
@@ -82,24 +82,42 @@ export const getPrivateConversation = async (req, res) => {
   }
 };
 
+// Dans privateMessageController.js
 export const updatePrivateMessage = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const { contenu } = req.body;
-    const updated = await MessagePrive.updateMessage(id, userId, contenu);
-    if (!updated)
-      return res.status(403).json({ message: "Modification refusée" });
-    // Notifier l'autre utilisateur via socket.io
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`dm:${updated.fk_expediteur}`)
-        .to(`dm:${updated.fk_destinataire}`)
-        .emit("privateMessageUpdated", updated);
+    const { id } = req.params; // id_message_prive de l'URL
+    const { contenu } = req.body; // Nouveau contenu
+    const userId = req.user.id; // ID de l'utilisateur authentifié
+
+    // Vérifier que l'utilisateur est bien l'expéditeur du message
+    const message = await prisma.messagesPrive.findUnique({
+      where: { id_message_prive: id },
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: "Message non trouvé" });
     }
-    res.json(updated);
+
+    if (message.fk_expediteur !== userId) {
+      return res.status(403).json({ message: "Non autorisé" });
+    }
+
+    // Mettre à jour le message
+    const updatedMessage = await prisma.messagesPrive.update({
+      where: { id_message_prive: id },
+      data: { contenu },
+    });
+
+    // Émettre un événement WebSocket pour informer les autres utilisateurs
+    io.to(`user:${message.fk_destinataire}`).emit(
+      "messageUpdated",
+      updatedMessage
+    );
+
+    res.json(updatedMessage);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Erreur lors de la mise à jour du message:", error);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
@@ -314,7 +332,7 @@ export const deleteConversation = async (req, res) => {
   try {
     const userId = req.user.id; // L'utilisateur qui fait la demande
     const otherUserId = req.params.userId; // L'autre utilisateur dans la conversation
-    
+
     // Vérifier si les IDs sont valides
     if (!userId || !otherUserId) {
       return res.status(400).json({ message: "IDs utilisateurs requis" });
@@ -322,23 +340,24 @@ export const deleteConversation = async (req, res) => {
 
     // Appeler le modèle pour effectuer la suppression
     const result = await MessagePrive.deleteConversation(userId, otherUserId);
-    
+
     // Notifier les deux utilisateurs via socket.io si disponible
     const io = req.app.get("io");
     if (io) {
-      io.to(`dm:${userId}`).to(`dm:${otherUserId}`)
-        .emit("conversationDeleted", { 
+      io.to(`dm:${userId}`)
+        .to(`dm:${otherUserId}`)
+        .emit("conversationDeleted", {
           participants: [userId, otherUserId],
-          deletedBy: userId
+          deletedBy: userId,
         });
     }
-    
-    res.json({ 
-      message: "Conversation supprimée", 
-      deletedCount: result.deletedCount
+
+    res.json({
+      message: "Conversation supprimée",
+      deletedCount: result.deletedCount,
     });
   } catch (error) {
-    console.error('Erreur lors de la suppression de la conversation:', error);
+    console.error("Erreur lors de la suppression de la conversation:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -350,32 +369,35 @@ export const markAllMessagesAsRead = async (req, res) => {
   try {
     const destinataireId = req.user.id; // L'utilisateur qui marque comme lu
     const expediteurId = req.params.userId; // L'expéditeur des messages
-    
+
     // Vérifier si les IDs sont valides
     if (!destinataireId || !expediteurId) {
       return res.status(400).json({ message: "IDs utilisateurs requis" });
     }
 
     // Appeler le modèle pour marquer les messages comme lus
-    const result = await MessagePrive.markAllAsRead(expediteurId, destinataireId);
-    
+    const result = await MessagePrive.markAllAsRead(
+      expediteurId,
+      destinataireId
+    );
+
     // Notifier l'expéditeur via socket.io si disponible
     const io = req.app.get("io");
     if (io && result.messages.length > 0) {
       io.to(`dm:${expediteurId}`).emit("allMessagesRead", {
         readBy: destinataireId,
         count: result.markedCount,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
-    
-    res.json({ 
-      message: "Messages marqués comme lus", 
+
+    res.json({
+      message: "Messages marqués comme lus",
       count: result.markedCount,
-      messageIds: result.messages.map(m => m.id_message_prive)
+      messageIds: result.messages.map((m) => m.id_message_prive),
     });
   } catch (error) {
-    console.error('Erreur lors du marquage des messages comme lus:', error);
+    console.error("Erreur lors du marquage des messages comme lus:", error);
     res.status(500).json({ message: error.message });
   }
-}
+};

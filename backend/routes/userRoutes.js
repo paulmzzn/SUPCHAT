@@ -78,6 +78,7 @@ router.get(
 
   passport.authenticate("google", {
 
+
     failureRedirect: "http://192.168.1.31:3001/login",
 
   }),
@@ -106,7 +107,6 @@ router.get(
   "/auth/github/callback",
 
   passport.authenticate("github", {
-
     failureRedirect: "http://192.168.1.31:3001/login",
 
   }),
