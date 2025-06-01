@@ -298,6 +298,14 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  attachmentButton: {
+    width: 40, 
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   messageInput: {
     flex: 1,
     backgroundColor: theme.inputBackground,

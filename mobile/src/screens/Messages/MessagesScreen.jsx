@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   Image,
   ActivityIndicator,
   ScrollView,
@@ -25,8 +24,9 @@ import { useTheme } from "../../theme/ThemeContext";
 import { useSocket } from "../../context/SocketContext";
 // Import the environment configuration
 import env from "../../config/env";
-// Import the new MediaViewer component
+// Import the MediaViewer and MessageInput components
 import MediaViewer from "../../components/MediaViewer/MediaViewer";
+import MessageInput from "../../components/MessageInput";
 
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.63:3000';
@@ -323,8 +323,8 @@ const MessagesScreen = ({ navigation, route }) => {
             m.id_message_prive === msg.id_message_prive ||
             (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) ||
             (m.isOptimistic &&
-              m.contenu === msg.contenu &&
-              m.fk_expediteur === msg.fk_expediteur)
+              m.fk_expediteur === msg.fk_expediteur &&
+              Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 10000) // Messages dans les 10 secondes
         );
 
         if (isNewMessage) {
@@ -354,9 +354,8 @@ const MessagesScreen = ({ navigation, route }) => {
             (m) =>
               m.id_message_prive === msg.id_message_prive ||
               (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`) ||
-              (m.isOptimistic &&
-                m.contenu === msg.contenu &&
-                m.fk_expediteur === msg.fk_expediteur)
+              (m.isOptimistic && m.fk_expediteur === msg.fk_expediteur && 
+               Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 10000) // Messages dans les 10 secondes
           );
 
           if (messageExists) {
@@ -364,16 +363,55 @@ const MessagesScreen = ({ navigation, route }) => {
               if (m.id_message_prive === msg.id_message_prive) return msg;
               if (msg.tempId && m.id_message_prive === `temp-${msg.tempId}`)
                 return msg;
+              // Amélioration : remplacer les messages optimistes en fonction du timestamp et de l'expéditeur
               if (
                 m.isOptimistic &&
-                m.contenu === msg.contenu &&
-                m.fk_expediteur === msg.fk_expediteur
+                m.fk_expediteur === msg.fk_expediteur &&
+                Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 10000
+              )
+                return msg;
+              // Remplacer les messages optimistes d'upload de fichier par le vrai message du serveur
+              if (
+                m.isOptimistic &&
+                m.isFileUpload &&
+                m.fk_expediteur === msg.fk_expediteur &&
+                msg.attachments &&
+                msg.attachments.length > 0 &&
+                Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 30000 // 30 secondes pour l'upload
               )
                 return msg;
               return m;
             });
           } else {
-            return [...prev, msg];
+            // Vérifier s'il y a un message optimiste d'upload qui devrait être remplacé
+            const hasOptimisticUpload = prev.some(
+              (m) =>
+                m.isOptimistic &&
+                m.isFileUpload &&
+                m.fk_expediteur === msg.fk_expediteur &&
+                msg.attachments &&
+                msg.attachments.length > 0 &&
+                Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 30000
+            );
+
+            if (hasOptimisticUpload) {
+              // Remplacer le message optimiste par le vrai message
+              return prev.map((m) => {
+                if (
+                  m.isOptimistic &&
+                  m.isFileUpload &&
+                  m.fk_expediteur === msg.fk_expediteur &&
+                  msg.attachments &&
+                  msg.attachments.length > 0 &&
+                  Math.abs(new Date(m.date_envoi).getTime() - new Date(msg.date_envoi).getTime()) < 30000
+                ) {
+                  return msg;
+                }
+                return m;
+              });
+            } else {
+              return [...prev, msg];
+            }
           }
         });
 
@@ -1158,6 +1196,75 @@ const MessagesScreen = ({ navigation, route }) => {
     );
   };
 
+  // Ajouter des états pour gérer l'upload de fichiers
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Fonctions pour gérer l'upload de fichiers
+  const handleFileSelected = useCallback((file) => {
+    console.log('Fichier sélectionné:', file);
+  }, []);
+
+  const handleUploadProgress = useCallback((isUploading) => {
+    setUploadingFile(isUploading);
+  }, []);
+
+  const handleUploadComplete = useCallback((result) => {
+    console.log('Upload terminé:', result);
+    
+    // Créer un message optimiste avec la pièce jointe pour un affichage immédiat
+    if (result.message_prive && result.fichier) {
+      const optimisticMessageWithAttachment = {
+        id_message_prive: `temp-upload-${Date.now()}`,
+        contenu: result.message_prive.contenu || "",
+        fk_expediteur: currentUserId,
+        fk_destinataire: userId,
+        date_envoi: new Date().toISOString(),
+        isOptimistic: true,
+        isFileUpload: true, // Marquer comme upload de fichier
+        attachments: [{
+          id_fichier: result.fichier.id_fichier,
+          nom_fichier: result.fichier.nom_fichier,
+          type: result.fichier.type || result.fichier.mime_type,
+          taille_fichier: result.fichier.taille_fichier,
+          url: result.fichier.url,
+          presignedUrl: result.fichier.presignedUrl
+        }]
+      };
+
+      // Ajouter le message optimiste avec pièce jointe
+      setMessages((prev) => [...prev, optimisticMessageWithAttachment]);
+
+      // Marquer comme animé
+      const messageId = optimisticMessageWithAttachment.id_message_prive;
+      setAnimatingMessages((prev) => ({
+        ...prev,
+        [messageId]: true,
+      }));
+
+      // Supprimer l'animation après un délai
+      setTimeout(() => {
+        setAnimatingMessages((prev) => {
+          const updated = { ...prev };
+          delete updated[messageId];
+          return updated;
+        });
+      }, 500);
+    }
+    
+    // Faire défiler vers le bas pour s'assurer que le nouveau message est visible
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 100);
+    
+    // Mettre à jour le timestamp de la conversation
+    saveConversationTimestamp(userId);
+  }, [currentUserId, userId, scrollToBottom, saveConversationTimestamp]);
+
+  const handleUploadError = useCallback((error) => {
+    console.error('Erreur d\'upload:', error);
+    // L'erreur est déjà gérée dans le FileUploader avec Alert.alert
+  }, []);
+
   if (!userId) {
     return (
       <View style={styles.errorContainer}>
@@ -1545,71 +1652,28 @@ const MessagesScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          <View
-            style={[
-              styles.inputContainer,
-              keyboardVisible &&
-                Platform.OS === "android" && { paddingBottom: 5 },
-            ]}
-          >
-            {/* Replying UI */}
-            {replyingTo && (
-              <View style={styles.replyContainer}>
-                <View style={styles.replyContent}>
-                  <Text style={styles.replyText}>
-                    Réponse à{" "}
-                    {replyingTo.fk_expediteur === currentUserId
-                      ? "vous-même"
-                      : userInfo?.name || "Utilisateur"}
-                  </Text>
-                  <Text style={styles.replyMessage} numberOfLines={1}>
-                    {replyingTo.contenu}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.replyCloseButton}
-                  onPress={handleCancelReply}
-                >
-                  <Ionicons
-                    name="close"
-                    size={20}
-                    color={themeColors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.inputRow}>
-              <TextInput
-                ref={textInputRef}
-                style={styles.messageInput}
-                placeholder="Type a message..."
-                value={newMessage}
-                onChangeText={setNewMessage}
-                multiline
-                keyboardAppearance={isDarkMode ? "dark" : "light"}
-                placeholderTextColor={isDarkMode ? "#777" : "#999"}
-                selectionColor={
-                  isDarkMode ? themeColors.accentPrimary : undefined
-                }
-                cursorColor={isDarkMode ? themeColors.accentPrimary : undefined}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  !newMessage.trim() && styles.sendButtonDisabled,
-                ]}
-                disabled={!newMessage.trim()}
-                onPress={handleSendMessage}
-              >
-                <Ionicons
-                  name="send"
-                  size={24}
-                  color={themeColors.textOnAccent}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Utilisation du composant MessageInput */}
+          <MessageInput 
+            value={newMessage}
+            onChangeText={setNewMessage}
+            onSend={handleSendMessage}
+            placeholder="Type a message..."
+            replyingTo={replyingTo}
+            onCancelReply={handleCancelReply}
+            replyUserName={replyingTo?.fk_expediteur === currentUserId
+              ? "vous-même"
+              : userInfo?.name || "Utilisateur"}
+            isDarkMode={isDarkMode}
+            inputRef={textInputRef}
+            keyboardVisible={keyboardVisible}
+            // Props pour l'upload de fichiers
+            uploadType="private-message"
+            recipientId={userId}
+            onFileSelected={handleFileSelected}
+            onUploadProgress={handleUploadProgress}
+            onUploadComplete={handleUploadComplete}
+            onUploadError={handleUploadError}
+          />
         </View>
 
         {/* Replace the old preview modal with the MediaViewer component */}
