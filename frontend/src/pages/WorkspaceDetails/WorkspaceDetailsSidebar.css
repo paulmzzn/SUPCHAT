@@ -207,3 +207,67 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Reminder Section Styles */
+.reminder-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.reminder-create-btn {
+  background: rgba(124, 58, 237, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.6);
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.reminder-create-btn:hover {
+  background: rgba(124, 58, 237, 1);
+  border-color: rgba(124, 58, 237, 0.8);
+  transform: scale(1.05);
+}
+
+.reminders-content {
+  padding: 8px 0;
+}
+
+.reminders-loading {
+  text-align: center;
+  color: var(--workspace-details-text-muted, #9b9ba8);
+  padding: 20px;
+  font-style: italic;
+}
+
+.reminders-error {
+  text-align: center;
+  color: #ff6b6b;
+  padding: 20px;
+  font-size: 14px;
+}
+
+.retry-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--workspace-details-text, #bbbcc4);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--workspace-details-text-hover, #ffffff);
+}
