@@ -639,4 +639,241 @@ export const getStyles = (theme) => StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
   },
+
+  // Styles pour le menu contextuel
+  contextMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1000,
+  },
+  contextMenu: {
+    position: 'absolute',
+    width: 180,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 10,
+    padding: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+    zIndex: 1001,
+  },
+  contextMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 1,
+  },
+  deleteMenuItem: {
+    marginTop: 5,
+    backgroundColor: 'rgba(255, 0, 0, 0.05)', // Light red background
+  },
+  contextMenuItemText: {
+    fontSize: 16,
+    color: theme.textPrimary,
+    marginLeft: 10,
+  },
+
+  // Styles pour le sélecteur d'emoji
+  emojiPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiPicker: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 15,
+    width: '80%',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+    zIndex: 1001,
+  },
+  emojiScrollView: {
+    flexGrow: 0,
+  },
+  emojiButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  emojiText: {
+    fontSize: 24,
+  },
+
+  // Styles pour l'édition de message
+  editOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  editContainer: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    width: '90%',
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  editTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+    marginBottom: 15,
+  },
+  editInput: {
+    backgroundColor: theme.inputBackground,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    minHeight: 80,
+    color: theme.textPrimary,
+    fontSize: 16,
+  },
+  editButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 15,
+  },
+  editButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  cancelButton: {
+    backgroundColor: theme.disabledButton,
+  },
+  cancelButtonText: {
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: theme.accentPrimary,
+  },
+  saveButtonText: {
+    color: theme.textOnAccent,
+    fontWeight: '600',
+  },
+
+  // Styles pour les réactions sur les messages
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 4,
+  },
+  reactionBubble: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 4,
+    marginBottom: 4,
+    alignItems: 'center',
+  },
+  userReactedBubble: {
+    backgroundColor: `${theme.accentPrimary}30`, // Semi-transparent accent color
+    borderWidth: 1,
+    borderColor: theme.accentPrimary,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+    marginRight: 3,
+  },
+  reactionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+
+  // Styles pour les réponses aux messages
+  replyContainer: {
+    backgroundColor: `${theme.accentPrimary}15`,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.accentPrimary,
+    padding: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    borderRadius: 8,
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  replyContent: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  replyText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  replyMessage: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    opacity: 0.8,
+  },
+  replyCloseButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+
+  // Styles pour l'affichage des réponses dans les messages
+  messageReplyContainer: {
+    borderLeftWidth: 2,
+    borderLeftColor: theme.accentPrimary,
+    paddingLeft: 8,
+    marginBottom: 6,
+    opacity: 0.8,
+  },
+  messageReplyText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#000000', // Noir pour tous les messages "Réponse à"
+    marginBottom: 2,
+  },
+  messageReplyContent: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: theme.textSecondary,
+  },
 });
