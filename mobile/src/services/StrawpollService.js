@@ -38,6 +38,11 @@ class StrawpollService {
     }
   }
 
+  // Alias pour compatibilité
+  extractPollIdFromUrl(url) {
+    return this.extractPollId(url);
+  }
+
   // Détecter les liens Strawpoll dans un texte
   detectStrawpollLinks(text) {
     try {
