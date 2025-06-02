@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import StrawpollWebView from './StrawpollWebView';
 
 const StrawpollMessageCard = ({ 
   messageContent, 
@@ -14,6 +15,8 @@ const StrawpollMessageCard = ({
   onViewResults, 
   isOwn 
 }) => {
+  const [webViewVisible, setWebViewVisible] = useState(false);
+
   // Extraire les informations du sondage depuis le contenu du message
   const extractPollInfo = (content) => {
     const strawpollRegex = /Sondage créé\s*:\s*([^\[]*)\[([^\]]+)\]\((https?:\/\/strawpoll\.com\/[^\)]+)\)\s*\[strawpoll:([a-zA-Z0-9]+)\]/;
@@ -38,9 +41,8 @@ const StrawpollMessageCard = ({
   }
 
   const handleVote = () => {
-    if (onVote) {
-      onVote(pollInfo.pollId, pollInfo.url);
-    }
+    // Ouvrir le WebView intégré au lieu du navigateur externe
+    setWebViewVisible(true);
   };
 
   const handleViewResults = () => {
@@ -49,48 +51,63 @@ const StrawpollMessageCard = ({
     }
   };
 
+  const handleCloseWebView = () => {
+    setWebViewVisible(false);
+  };
+
   const styles = getStyles(theme, isOwn);
 
   return (
-    <View style={styles.container}>
-      {/* Header avec icône et titre */}
-      <View style={styles.header}>
-        <Ionicons 
-          name="bar-chart" 
-          size={18} 
-          color={isOwn ? '#FFFFFF' : theme.accentPrimary} 
-        />
-        <Text style={styles.title} numberOfLines={2}>
-          {pollInfo.title}
-        </Text>
-      </View>
-
-      {/* Indicateur de sondage */}
-      <Text style={styles.subtitle}>
-        Sondage Strawpoll
-      </Text>
-
-      {/* Boutons d'action */}
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.voteButton]} 
-          onPress={handleVote}
-        >
-          <Ionicons name="open-outline" size={16} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Voter</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.resultsButton]} 
-          onPress={handleViewResults}
-        >
-          <Ionicons name="analytics-outline" size={16} color={isOwn ? '#FFFFFF' : theme.textPrimary} />
-          <Text style={[styles.actionButtonText, styles.resultsButtonText]}>
-            Résultats
+    <>
+      <View style={styles.container}>
+        {/* Header avec icône et titre */}
+        <View style={styles.header}>
+          <Ionicons 
+            name="bar-chart" 
+            size={18} 
+            color={isOwn ? '#FFFFFF' : theme.accentPrimary} 
+          />
+          <Text style={styles.title} numberOfLines={2}>
+            {pollInfo.title}
           </Text>
-        </TouchableOpacity>
+        </View>
+
+        {/* Indicateur de sondage */}
+        <Text style={styles.subtitle}>
+          Sondage Strawpoll
+        </Text>
+
+        {/* Boutons d'action */}
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.voteButton]} 
+            onPress={handleVote}
+          >
+            <Ionicons name="open-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Voter</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.resultsButton]} 
+            onPress={handleViewResults}
+          >
+            <Ionicons name="analytics-outline" size={16} color={isOwn ? '#FFFFFF' : theme.textPrimary} />
+            <Text style={[styles.actionButtonText, styles.resultsButtonText]}>
+              Résultats
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+
+      {/* WebView Modal pour voter */}
+      <StrawpollWebView
+        visible={webViewVisible}
+        pollUrl={pollInfo.url}
+        pollTitle={pollInfo.title}
+        onClose={handleCloseWebView}
+        theme={theme}
+      />
+    </>
   );
 };
 

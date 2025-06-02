@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import strawpollService from '../../services/StrawpollService';
+import StrawpollWebView from './StrawpollWebView';
 import { calculateVotePercentage, truncateText, formatPollDate } from '../../utils/strawpollUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -24,6 +25,7 @@ const StrawpollCard = ({
   const [pollData, setPollData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [webViewVisible, setWebViewVisible] = useState(false);
 
   useEffect(() => {
     if (showPreview && strawpoll?.pollId) {
@@ -45,23 +47,18 @@ const StrawpollCard = ({
     }
   };
 
-  const handleOpenPoll = async () => {
-    try {
-      const url = strawpoll.url || strawpollService.buildPollUrl(strawpoll.pollId);
-      const supported = await Linking.canOpenURL(url);
-      
-      if (supported) {
-        await Linking.openURL(url);
-      }
-    } catch (error) {
-      console.error('Erreur ouverture sondage:', error);
-    }
+  const handleOpenPoll = () => {
+    setWebViewVisible(true);
   };
 
   const handleViewResults = () => {
     if (onViewResults) {
       onViewResults(strawpoll.pollId);
     }
+  };
+
+  const handleCloseWebView = () => {
+    setWebViewVisible(false);
   };
 
   const normalizeData = () => {
@@ -86,22 +83,32 @@ const StrawpollCard = ({
 
   const renderCompactView = () => {
     return (
-      <TouchableOpacity style={[styles.compactCard, { backgroundColor: theme.cardBackground }]} onPress={handleOpenPoll}>
-        <View style={styles.compactContent}>
-          <View style={styles.compactIcon}>
-            <Ionicons name="bar-chart" size={16} color={theme.accentPrimary} />
+      <>
+        <TouchableOpacity style={[styles.compactCard, { backgroundColor: theme.cardBackground }]} onPress={handleOpenPoll}>
+          <View style={styles.compactContent}>
+            <View style={styles.compactIcon}>
+              <Ionicons name="bar-chart" size={16} color={theme.accentPrimary} />
+            </View>
+            <View style={styles.compactInfo}>
+              <Text style={[styles.compactTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+                {truncateText(strawpoll.title, 30)}
+              </Text>
+              <Text style={[styles.compactSubtitle, { color: theme.textSecondary }]}>
+                Sondage Strawpoll
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
           </View>
-          <View style={styles.compactInfo}>
-            <Text style={[styles.compactTitle, { color: theme.textPrimary }]} numberOfLines={1}>
-              {truncateText(strawpoll.title, 30)}
-            </Text>
-            <Text style={[styles.compactSubtitle, { color: theme.textSecondary }]}>
-              Sondage Strawpoll
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        <StrawpollWebView
+          visible={webViewVisible}
+          pollUrl={strawpoll.url || strawpollService.buildPollUrl(strawpoll.pollId)}
+          pollTitle={strawpoll.title}
+          onClose={handleCloseWebView}
+          theme={theme}
+        />
+      </>
     );
   };
 
@@ -109,108 +116,118 @@ const StrawpollCard = ({
     const normalizedData = normalizeData();
 
     return (
-      <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.borderColor }]}>
-        <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <Ionicons name="bar-chart" size={20} color={theme.accentPrimary} />
-            <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
-              {normalizedData?.title || strawpoll.title || 'Sondage Strawpoll'}
-            </Text>
-          </View>
-          
-          {normalizedData?.created && (
-            <Text style={[styles.date, { color: theme.textSecondary }]}>
-              {formatPollDate(normalizedData.created)}
-            </Text>
-          )}
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.accentPrimary} />
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Chargement...
-            </Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="warning" size={20} color="#ff6b6b" />
-            <Text style={[styles.errorText, { color: theme.textSecondary }]}>
-              Aperçu indisponible
-            </Text>
-          </View>
-        ) : normalizedData ? (
-          <View style={styles.previewContainer}>
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.textPrimary }]}>
-                  {normalizedData.totalVotes}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                  Vote{normalizedData.totalVotes !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              
-              <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.textPrimary }]}>
-                  {normalizedData.options.length}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                  Option{normalizedData.options.length !== 1 ? 's' : ''}
-                </Text>
-              </View>
+      <>
+        <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.borderColor }]}>
+          <View style={styles.header}>
+            <View style={styles.titleContainer}>
+              <Ionicons name="bar-chart" size={20} color={theme.accentPrimary} />
+              <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
+                {normalizedData?.title || strawpoll.title || 'Sondage Strawpoll'}
+              </Text>
             </View>
-
-            {normalizedData.options.length > 0 && (
-              <View style={styles.optionsPreview}>
-                {normalizedData.options.slice(0, 3).map((option, index) => {
-                  const percentage = calculateVotePercentage(option.votes, normalizedData.totalVotes);
-                  
-                  return (
-                    <View key={index} style={styles.optionPreview}>
-                      <Text style={[styles.optionText, { color: theme.textPrimary }]} numberOfLines={1}>
-                        {truncateText(option.text, 25)}
-                      </Text>
-                      <Text style={[styles.optionPercentage, { color: theme.textSecondary }]}>
-                        {percentage}%
-                      </Text>
-                    </View>
-                  );
-                })}
-                
-                {normalizedData.options.length > 3 && (
-                  <Text style={[styles.moreOptions, { color: theme.textSecondary }]}>
-                    +{normalizedData.options.length - 3} autre{normalizedData.options.length - 3 !== 1 ? 's' : ''}
-                  </Text>
-                )}
-              </View>
+            
+            {normalizedData?.created && (
+              <Text style={[styles.date, { color: theme.textSecondary }]}>
+                {formatPollDate(normalizedData.created)}
+              </Text>
             )}
           </View>
-        ) : (
-          <View style={styles.basicInfo}>
-            <Text style={[styles.basicInfoText, { color: theme.textSecondary }]}>
-              Cliquez pour participer au sondage
-            </Text>
-          </View>
-        )}
 
-        <View style={styles.actions}>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.accentPrimary }]} onPress={handleOpenPoll}>
-            <Ionicons name="open-outline" size={16} color="#fff" />
-            <Text style={styles.actionButtonText}>Voter</Text>
-          </TouchableOpacity>
-          
-          {normalizedData && (
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.secondaryButton, { borderColor: theme.borderColor }]} 
-              onPress={handleViewResults}
-            >
-              <Ionicons name="analytics-outline" size={16} color={theme.textPrimary} />
-              <Text style={[styles.actionButtonText, { color: theme.textPrimary }]}>Résultats</Text>
-            </TouchableOpacity>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={theme.accentPrimary} />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                Chargement...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="warning" size={20} color="#ff6b6b" />
+              <Text style={[styles.errorText, { color: theme.textSecondary }]}>
+                Aperçu indisponible
+              </Text>
+            </View>
+          ) : normalizedData ? (
+            <View style={styles.previewContainer}>
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={[styles.statValue, { color: theme.textPrimary }]}>
+                    {normalizedData.totalVotes}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                    Vote{normalizedData.totalVotes !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                
+                <View style={styles.stat}>
+                  <Text style={[styles.statValue, { color: theme.textPrimary }]}>
+                    {normalizedData.options.length}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                    Option{normalizedData.options.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+
+              {normalizedData.options.length > 0 && (
+                <View style={styles.optionsPreview}>
+                  {normalizedData.options.slice(0, 3).map((option, index) => {
+                    const percentage = calculateVotePercentage(option.votes, normalizedData.totalVotes);
+                    
+                    return (
+                      <View key={index} style={styles.optionPreview}>
+                        <Text style={[styles.optionText, { color: theme.textPrimary }]} numberOfLines={1}>
+                          {truncateText(option.text, 25)}
+                        </Text>
+                        <Text style={[styles.optionPercentage, { color: theme.textSecondary }]}>
+                          {percentage}%
+                        </Text>
+                      </View>
+                    );
+                  })}
+                  
+                  {normalizedData.options.length > 3 && (
+                    <Text style={[styles.moreOptions, { color: theme.textSecondary }]}>
+                      +{normalizedData.options.length - 3} autre{normalizedData.options.length - 3 !== 1 ? 's' : ''}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.basicInfo}>
+              <Text style={[styles.basicInfoText, { color: theme.textSecondary }]}>
+                Cliquez pour participer au sondage
+              </Text>
+            </View>
           )}
+
+          <View style={styles.actions}>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.accentPrimary }]} onPress={handleOpenPoll}>
+              <Ionicons name="open-outline" size={16} color="#fff" />
+              <Text style={styles.actionButtonText}>Voter</Text>
+            </TouchableOpacity>
+            
+            {normalizedData && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.secondaryButton, { borderColor: theme.borderColor }]} 
+                onPress={handleViewResults}
+              >
+                <Ionicons name="analytics-outline" size={16} color={theme.textPrimary} />
+                <Text style={[styles.actionButtonText, { color: theme.textPrimary }]}>Résultats</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+
+        <StrawpollWebView
+          visible={webViewVisible}
+          pollUrl={strawpoll.url || strawpollService.buildPollUrl(strawpoll.pollId)}
+          pollTitle={normalizedData?.title || strawpoll.title}
+          onClose={handleCloseWebView}
+          theme={theme}
+        />
+      </>
     );
   };
 
