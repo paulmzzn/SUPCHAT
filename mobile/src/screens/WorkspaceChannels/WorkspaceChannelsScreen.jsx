@@ -225,7 +225,8 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
       onPress={() => navigation.navigate('Workspace', {
         workspaceId: workspaceId,
         channelId: item.id,
-        channelName: item.name
+        channelName: item.name,
+        workspaceName: workspace?.nom
       })}
     >
       <View style={styles.channelIcon}>

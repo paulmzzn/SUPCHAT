@@ -24,6 +24,9 @@ import AttachmentViewer from '../../components/AttachmentViewer/AttachmentViewer
 import StrawpollCreationModal from '../../components/Strawpoll/StrawpollCreationModal';
 import StrawpollMessageCard from '../../components/Strawpoll/StrawpollMessageCard';
 import StrawpollResultsModal from '../../components/Strawpoll/StrawpollResultsModal';
+import ContextMenu from '../../components/Messages/ContextMenu';
+import EmojiPicker from '../../components/Messages/EmojiPicker';
+import EditMessageModal from '../../components/Messages/EditMessageModal';
 import { parseStrawpollsInMessage } from '../../utils/strawpollUtils';
 
 // Constantes pour l'utilisateur système
@@ -32,6 +35,15 @@ const SYSTEM_USERNAME = "Système";
 
 const WorkspaceDetailScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
+  
+  // Debug log pour voir les paramètres reçus
+  console.log("WorkspaceDetailScreen params:", {
+    workspaceId,
+    channelId, 
+    channelName,
+    workspaceName
+  });
+  
   const { socket, markChannelAsRead } = useSocket();
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
@@ -61,6 +73,19 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   // États pour les sondages Strawpoll
   const [strawpollResultsModalVisible, setStrawpollResultsModalVisible] = useState(false);
   const [selectedPollId, setSelectedPollId] = useState(null);
+
+  // États pour les fonctionnalités de messages avancées
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    message: null,
+    position: { x: 0, y: 0 },
+    isOwnMessage: false,
+  });
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editMessageContent, setEditMessageContent] = useState("");
 
   const LIMIT = 30;
   const MAX_RETRY_ATTEMPTS = 3;
@@ -311,14 +336,16 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
       user_id: currentUserId,
       canal_id: channelId,
       workspace_id: workspaceId,
-      content: newMessage.trim()
+      content: newMessage.trim(),
+      reply_to: replyingTo ? replyingTo.id_message : null,
     };
     
     socket.emit('message', messageData);
     socket.emit('stopTyping', { canalId: channelId, userId: currentUserId });
     setNewMessage('');
     setIsTyping(false);
-  }, [newMessage, socket, currentUserId, channelId, workspaceId]);
+    setReplyingTo(null);
+  }, [newMessage, socket, currentUserId, channelId, workspaceId, replyingTo]);
 
   const handleInputChange = useCallback((text) => {
     setNewMessage(text);
@@ -469,8 +496,9 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           const isStrawpoll = message.contenu && message.contenu.includes('[strawpoll:');
           
           return (
-            <View
+            <TouchableOpacity
               key={message.id_message}
+              onLongPress={(event) => handleLongPressMessage(message, event)}
               style={[
                 styles.messageContainer,
                 group.isOwn ? styles.ownMessage : styles.otherMessage,
@@ -496,6 +524,18 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                       })}
                     </Text>
                   </View>
+                </View>
+              )}
+              
+              {/* Affichage de la réponse si c'est une réponse à un autre message */}
+              {message.reply_to && (
+                <View style={styles.messageReplyContainer}>
+                  <Text style={styles.messageReplyText}>
+                    Réponse à {message.reply_to_user_name || "Utilisateur"}
+                  </Text>
+                  <Text style={styles.messageReplyContent} numberOfLines={2}>
+                    {message.reply_to_content || "Message"}
+                  </Text>
                 </View>
               )}
               
@@ -618,12 +658,37 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                   })}
                 </Text>
               )}
-            </View>
+              
+              {/* Affichage des réactions */}
+              {message.reactions && message.reactions.length > 0 && (
+                <View style={styles.reactionsContainer}>
+                  {message.reactions.map((reaction, index) => (
+                    <TouchableOpacity
+                      key={`${reaction.reaction_type}-${index}`}
+                      style={[
+                        styles.reactionBubble,
+                        reaction.user_reacted && styles.userReactedBubble
+                      ]}
+                      onPress={() => {
+                        if (reaction.user_reacted) {
+                          handleRemoveReaction(message, reaction.reaction_type);
+                        } else {
+                          handleEmojiSelect(reaction.reaction_type);
+                        }
+                      }}
+                    >
+                      <Text style={styles.reactionEmoji}>{reaction.reaction_type}</Text>
+                      <Text style={styles.reactionCount}>{reaction.count}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </TouchableOpacity>
           );
         })}
       </View>
     );
-  }, [styles, renderAvatarInBubble, parseFileContent, handleOpenAttachment, getFileIcon, formatFileSize, themeColors, handleStrawpollVote, handleStrawpollViewResults]);
+  }, [styles, renderAvatarInBubble, parseFileContent, handleOpenAttachment, getFileIcon, formatFileSize, themeColors, handleStrawpollVote, handleStrawpollViewResults, handleLongPressMessage, handleRemoveReaction, handleEmojiSelect]);
 
   const renderTypingIndicator = useCallback(() => {
     if (typingUsers.length === 0) return null;
@@ -864,6 +929,215 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     setSelectedPollId(null);
   }, []);
 
+  // Fonctions pour la gestion des messages avancées (menu contextuel, réactions, réponse, édition, suppression)
+  
+  // Fonction pour gérer le long press sur un message
+  const handleLongPressMessage = useCallback((message, event) => {
+    if (!message || message.fk_utilisateur === SYSTEM_USER_ID) return; // Pas de menu contextuel pour les messages système
+    
+    console.log("Long press detected on message:", message.id_message);
+    
+    const isOwnMessage = message.fk_utilisateur === currentUserId;
+    const { pageX, pageY } = event.nativeEvent || event;
+    
+    setContextMenu({
+      visible: true,
+      message: message,
+      position: { x: pageX || 0, y: pageY || 0 },
+      isOwnMessage,
+    });
+    
+    setSelectedMessageForReaction(message);
+  }, [currentUserId]);
+
+  // Fonction pour fermer le menu contextuel
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu({
+      visible: false,
+      message: null,
+      position: { x: 0, y: 0 },
+      isOwnMessage: false,
+    });
+  }, []);
+
+  // Fonction pour répondre à un message
+  const handleReplyMessage = useCallback(() => {
+    if (!contextMenu.message) return;
+    
+    setReplyingTo(contextMenu.message);
+    handleCloseContextMenu();
+    
+    // Focus sur l'input de message
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+      }
+    }, 100);
+  }, [contextMenu.message, handleCloseContextMenu]);
+
+  // Fonction pour annuler une réponse
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  // Fonction pour éditer un message
+  const handleEditMessage = useCallback(() => {
+    if (!contextMenu.message || !contextMenu.isOwnMessage) return;
+    
+    setEditingMessage(contextMenu.message);
+    setEditMessageContent(contextMenu.message.contenu);
+    handleCloseContextMenu();
+  }, [contextMenu.message, contextMenu.isOwnMessage, handleCloseContextMenu]);
+
+  // Fonction pour sauvegarder l'édition d'un message
+  const handleSaveEdit = useCallback(() => {
+    if (!editingMessage || !editMessageContent.trim() || !socket) return;
+    
+    // Émettre l'événement de modification via socket
+    socket.emit("editChannelMessage", {
+      messageId: editingMessage.id_message,
+      contenu: editMessageContent.trim(),
+      canalId: channelId,
+      workspaceId: workspaceId
+    });
+    
+    // Mise à jour optimiste de l'UI
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id_message === editingMessage.id_message
+          ? { ...msg, contenu: editMessageContent.trim() }
+          : msg
+      )
+    );
+    
+    // Réinitialiser l'état d'édition
+    setEditingMessage(null);
+    setEditMessageContent("");
+  }, [editingMessage, editMessageContent, socket, channelId, workspaceId]);
+
+  // Fonction pour annuler l'édition
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setEditMessageContent("");
+  }, []);
+
+  // Fonction pour supprimer un message
+  const handleDeleteMessage = useCallback(() => {
+    if (!contextMenu.message || !contextMenu.isOwnMessage || !socket) return;
+    
+    Alert.alert(
+      "Supprimer le message",
+      "Êtes-vous sûr de vouloir supprimer ce message ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => {
+            // Émettre l'événement de suppression via socket
+            socket.emit("deleteChannelMessage", {
+              messageId: contextMenu.message.id_message,
+              canalId: channelId,
+              workspaceId: workspaceId
+            });
+            
+            // Mise à jour optimiste de l'UI
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id_message === contextMenu.message.id_message
+                  ? { ...msg, is_deleted: true, contenu: "[Message supprimé]" }
+                  : msg
+              )
+            );
+            
+            handleCloseContextMenu();
+          },
+        },
+      ]
+    );
+  }, [contextMenu.message, contextMenu.isOwnMessage, socket, channelId, workspaceId, handleCloseContextMenu]);
+
+  // Fonction pour ouvrir le sélecteur d'emoji
+  const handleAddReaction = useCallback(() => {
+    setSelectedMessageForReaction(contextMenu.message);
+    setShowEmojiPicker(true);
+    handleCloseContextMenu();
+  }, [contextMenu.message, handleCloseContextMenu]);
+
+  // Fonction pour sélectionner un emoji
+  const handleEmojiSelect = useCallback((emoji) => {
+    if (!selectedMessageForReaction || !socket) {
+      console.error("No message selected for reaction or socket not available");
+      return;
+    }
+    
+    console.log("Adding reaction to message:", selectedMessageForReaction.id_message);
+    
+    // Émettre l'événement d'ajout de réaction via socket
+    socket.emit("addChannelMessageReaction", {
+      messageId: selectedMessageForReaction.id_message,
+      reaction: emoji,
+      canalId: channelId,
+      workspaceId: workspaceId
+    });
+    
+    // Mise à jour optimiste de l'UI (optionnel)
+    const messageId = selectedMessageForReaction.id_message;
+    const existingReactions = selectedMessageForReaction.reactions || [];
+    const hasReaction = existingReactions.find(r => r.reaction_type === emoji);
+    
+    if (!hasReaction) {
+      const updatedReactions = [
+        ...existingReactions,
+        {
+          reaction_type: emoji,
+          count: 1,
+          user_reacted: true,
+        }
+      ];
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id_message === messageId
+            ? { ...msg, reactions: updatedReactions }
+            : msg
+        )
+      );
+    }
+    
+    setShowEmojiPicker(false);
+    setSelectedMessageForReaction(null);
+  }, [selectedMessageForReaction, socket, channelId, workspaceId]);
+
+  // Fonction pour supprimer une réaction
+  const handleRemoveReaction = useCallback((message, emoji) => {
+    if (!socket) return;
+    
+    console.log("Removing reaction from message:", message.id_message);
+    
+    // Émettre l'événement de suppression de réaction via socket
+    socket.emit("removeChannelMessageReaction", {
+      messageId: message.id_message,
+      reaction: emoji,
+      canalId: channelId,
+      workspaceId: workspaceId
+    });
+    
+    // Mise à jour optimiste de l'UI
+    setMessages(prev => 
+      prev.map(msg => {
+        if (msg.id_message === message.id_message) {
+          const updatedReactions = (msg.reactions || []).filter(r => r.reaction_type !== emoji);
+          return { ...msg, reactions: updatedReactions };
+        }
+        return msg;
+      })
+    );
+  }, [socket, channelId, workspaceId]);
+
   // Rendu du modal de la boîte à outils
   const renderToolboxModal = useCallback(() => {
     return (
@@ -1043,6 +1317,8 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         onSend={sendMessage}
         placeholder={`Message dans #${channelName}`}
         inputRef={messageInputRef}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
         // Propriétés pour l'upload de fichiers dans un workspace
         uploadType="workspace-message"
         workspaceId={workspaceId}
@@ -1089,6 +1365,34 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         pollId={selectedPollId}
         onClose={handleCloseStrawpollResults}
         theme={themeColors}
+      />
+
+      {/* Menu contextuel pour les messages */}
+      <ContextMenu
+        visible={contextMenu.visible}
+        position={contextMenu.position}
+        isOwnMessage={contextMenu.isOwnMessage}
+        onClose={handleCloseContextMenu}
+        onReply={handleReplyMessage}
+        onEdit={handleEditMessage}
+        onDelete={handleDeleteMessage}
+        onAddReaction={handleAddReaction}
+      />
+
+      {/* Sélecteur d'emoji */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onSelect={handleEmojiSelect}
+        onClose={() => setShowEmojiPicker(false)}
+      />
+
+      {/* Modal d'édition de message */}
+      <EditMessageModal
+        visible={!!editingMessage}
+        messageContent={editMessageContent}
+        onChangeText={setEditMessageContent}
+        onSave={handleSaveEdit}
+        onCancel={handleCancelEdit}
       />
     </KeyboardAvoidingView>
   );
