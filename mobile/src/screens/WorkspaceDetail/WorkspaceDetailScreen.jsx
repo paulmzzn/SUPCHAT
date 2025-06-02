@@ -26,6 +26,10 @@ import StrawpollMessageCard from '../../components/Strawpoll/StrawpollMessageCar
 import StrawpollResultsModal from '../../components/Strawpoll/StrawpollResultsModal';
 import { parseStrawpollsInMessage } from '../../utils/strawpollUtils';
 
+// Constantes pour l'utilisateur système
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000003";
+const SYSTEM_USERNAME = "Système";
+
 const WorkspaceDetailScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
   const { socket, markChannelAsRead } = useSocket();
@@ -385,25 +389,47 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     let currentGroup = null;
     
     messages.forEach((message, index) => {
-      const messageDate = new Date(message.date_creation);
-      const shouldGroup = currentGroup && 
-        currentGroup.userId === message.fk_utilisateur &&
-        (messageDate - currentGroup.lastMessageTime) < 5 * 60 * 1000;
+      // Vérifier si c'est un message système
+      const isSystemMessage = message.fk_utilisateur === SYSTEM_USER_ID || 
+                              message.nom === SYSTEM_USERNAME ||
+                              message.is_system_message === true;
       
-      if (shouldGroup) {
-        currentGroup.messages.push(message);
-        currentGroup.lastMessageTime = messageDate;
-      } else {
-        currentGroup = {
+      if (isSystemMessage) {
+        // Les messages système ne sont pas groupés, chacun est affiché séparément
+        grouped.push({
           id: message.id_message,
-          userId: message.fk_utilisateur,
-          userName: message.nom,
-          userAvatar: message.photo_de_profil,
+          userId: SYSTEM_USER_ID,
+          userName: SYSTEM_USERNAME,
+          userAvatar: null,
           messages: [message],
-          lastMessageTime: messageDate,
-          isOwn: message.fk_utilisateur === currentUserId
-        };
-        grouped.push(currentGroup);
+          lastMessageTime: new Date(message.date_creation),
+          isOwn: false,
+          isSystem: true
+        });
+        currentGroup = null; // Reset le groupe actuel pour éviter de grouper avec le message suivant
+      } else {
+        const messageDate = new Date(message.date_creation);
+        const shouldGroup = currentGroup && 
+          currentGroup.userId === message.fk_utilisateur &&
+          !currentGroup.isSystem && // Ne pas grouper avec un message système
+          (messageDate - currentGroup.lastMessageTime) < 5 * 60 * 1000;
+        
+        if (shouldGroup) {
+          currentGroup.messages.push(message);
+          currentGroup.lastMessageTime = messageDate;
+        } else {
+          currentGroup = {
+            id: message.id_message,
+            userId: message.fk_utilisateur,
+            userName: message.nom,
+            userAvatar: message.photo_de_profil,
+            messages: [message],
+            lastMessageTime: messageDate,
+            isOwn: message.fk_utilisateur === currentUserId,
+            isSystem: false
+          };
+          grouped.push(currentGroup);
+        }
       }
     });
     
@@ -413,6 +439,22 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   const renderMessageGroup = useCallback(({ item: group }) => {
     const chronologicalMessages = [...group.messages].reverse();
     
+    // Si c'est un message système, utiliser un rendu spécial
+    if (group.isSystem) {
+      return (
+        <View style={styles.systemMessageContainer}>
+          {chronologicalMessages.map((message) => (
+            <View key={message.id_message} style={styles.systemMessageBubble}>
+              <Text style={styles.systemMessageText}>
+                {message.contenu}
+              </Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+    
+    // Rendu normal pour les messages utilisateur
     return (
       <View style={[
         styles.messageGroupContainer,
@@ -744,6 +786,49 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     Alert.alert('Rappel', 'Fonctionnalité de création de rappel à venir !');
   }, []);
 
+  // Fonctions pour Google Drive
+  const handleOpenGoogleDrive = useCallback(async () => {
+    setToolboxVisible(false);
+    try {
+      const googleDriveUrl = 'https://drive.google.com';
+      const supported = await Linking.canOpenURL(googleDriveUrl);
+      if (supported) {
+        await Linking.openURL(googleDriveUrl);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Impossible d\'ouvrir Google Drive'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur ouverture Google Drive:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Impossible d\'ouvrir Google Drive'
+      });
+    }
+  }, []);
+
+  const handleImportFromGoogleDrive = useCallback(() => {
+    setToolboxVisible(false);
+    Alert.alert(
+      'Importer depuis Google Drive',
+      'Cette fonctionnalité permet d\'importer des fichiers directement depuis votre Google Drive vers le canal.',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel'
+        },
+        {
+          text: 'Ouvrir Google Drive',
+          onPress: handleOpenGoogleDrive
+        }
+      ]
+    );
+  }, [handleOpenGoogleDrive]);
+
   // Fonctions pour la gestion des sondages Strawpoll
   const handleStrawpollVote = useCallback(async (pollId, pollUrl) => {
     try {
@@ -840,12 +925,45 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
+
+              {/* Section Google Drive */}
+              <Text style={styles.toolboxSectionTitle}>Google Drive</Text>
+              <TouchableOpacity 
+                style={styles.toolboxOption}
+                onPress={handleOpenGoogleDrive}
+              >
+                <View style={styles.toolboxOptionIcon}>
+                  <Ionicons name="cloud-outline" size={24} color={themeColors.accentPrimary} />
+                </View>
+                <View style={styles.toolboxOptionContent}>
+                  <Text style={styles.toolboxOptionTitle}>Ouvrir Google Drive</Text>
+                  <Text style={styles.toolboxOptionDescription}>
+                    Accéder à vos fichiers sur Google Drive
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.toolboxOption}
+                onPress={handleImportFromGoogleDrive}
+              >
+                <View style={styles.toolboxOptionIcon}>
+                  <Ionicons name="cloud-download-outline" size={24} color={themeColors.accentPrimary} />
+                </View>
+                <View style={styles.toolboxOptionContent}>
+                  <Text style={styles.toolboxOptionTitle}>Importer depuis Google Drive</Text>
+                  <Text style={styles.toolboxOptionDescription}>
+                    Importer des fichiers directement depuis Google Drive
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableOpacity>
       </Modal>
     );
-  }, [toolboxVisible, themeColors, handleCreateStrawpoll, handleCreateReminder, styles]);
+  }, [toolboxVisible, themeColors, handleCreateStrawpoll, handleCreateReminder, handleOpenGoogleDrive, handleImportFromGoogleDrive, styles]);
 
   if (loading) {
     return (
