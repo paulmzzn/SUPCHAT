@@ -19,7 +19,6 @@ function AuthCallback() {
         // on considère l'utilisateur comme déjà validé
         localStorage.setItem('isValidated', 'true');
         
-        console.log('Auth callback: token et validation enregistrés');
         
         // Redirige proprement avec React Router
         navigate('/dashboard', { replace: true });

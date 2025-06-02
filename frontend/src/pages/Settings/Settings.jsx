@@ -159,14 +159,12 @@ const Settings = () => {
 
       // Obtenir l'ID du statut ou utiliser 1 (en ligne) par défaut
       const statusId = statusMap[formData.status] || 1;
-      console.log("Envoi du statut:", { status: formData.status, statusId });
 
       // S'assurer que le statut est envoyé comme un nombre, pas une chaîne
       formDataToSend.append("fk_statut", statusId.toString());
 
       // Log pour débogage - vérifier ce qui est réellement envoyé
       for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
       }
 
       if (avatarFile) {
@@ -184,7 +182,6 @@ const Settings = () => {
 
       // Analyser la réponse même en cas d'erreur pour le débogage
       const responseData = await response.json();
-      console.log("Réponse du serveur:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || "Failed to update profile");
@@ -215,17 +212,6 @@ const Settings = () => {
   };
 
   const handleSaveSettings = (settingType) => {
-    // Simuler la sauvegarde des paramètres
-    console.log(
-      `Saving ${settingType} settings:`,
-      settingType === "notifications"
-        ? notifications
-        : settingType === "privacy"
-        ? privacy
-        : settingType === "appearance"
-        ? { theme }
-        : null
-    );
     alert(`${settingType} settings saved!`);
     resetChangesState();
   };
@@ -293,7 +279,6 @@ const Settings = () => {
           return response.json();
         })
         .then((data) => {
-          console.log("Account deleted successfully:", data);
           alert(
             "Votre compte a été supprimé avec succès. Vous allez être déconnecté."
           );

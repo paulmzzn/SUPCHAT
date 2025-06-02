@@ -19,7 +19,7 @@ import { useTheme } from "../../theme/ThemeContext";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.104:3000";
 
 const ConversationsListScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
@@ -59,14 +59,10 @@ const ConversationsListScreen = ({ navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const windowDimensions = Dimensions.get("window");
 
-  const markAsRead = useCallback(
-    (userId) => {
+  const markAsRead = useCallback(    (userId) => {
       if (markMessagesAsRead) {
         markMessagesAsRead(userId);
       } else {
-        console.log(
-          "markMessagesAsRead not available in context, using fallback"
-        );
         if (unreadMessages && unreadMessages[userId]) {
           setUnreadMessages &&
             setUnreadMessages((prev) => {
@@ -81,13 +77,7 @@ const ConversationsListScreen = ({ navigation }) => {
   );
 
   useEffect(() => {
-    const unsubscribe = subscribeToNotifications((notification) => {
-      if (notification.type === "newPrivateMessage") {
-        console.log(
-          "New message notification received from:",
-          notification.senderId
-        );
-
+    const unsubscribe = subscribeToNotifications((notification) => {      if (notification.type === "newPrivateMessage") {
         isProcessingNotification.current = true;
 
         const senderId = notification.senderId;
@@ -162,10 +152,8 @@ const ConversationsListScreen = ({ navigation }) => {
       sortConversationsByTimestamp();
     }
   }, [conversationTimestamps]);
-
   useEffect(() => {
     if (isInitialMount.current) {
-      console.log("Initial fetch of conversations");
       fetchConversations();
       isInitialMount.current = false;
     }
@@ -173,23 +161,15 @@ const ConversationsListScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      const now = Date.now();
-
-      if (isProcessingNotification.current) {
-        console.log("Skipping refresh - notification processing in progress");
+      const now = Date.now();      if (isProcessingNotification.current) {
         return;
-      }
-
-      if (
+      }      if (
         now - lastFetchTime.current > 5000 ||
         pendingConversationUpdate.current
       ) {
-        console.log("Refreshing conversations on screen focus");
         fetchConversations();
         refreshUnreadCounts();
         pendingConversationUpdate.current = false;
-      } else {
-        console.log("Skipping refresh - too soon since last fetch");
       }
 
       return () => {};
@@ -257,11 +237,8 @@ const ConversationsListScreen = ({ navigation }) => {
           timestamps,
           skipLoadingState
         );
-      }
-
-      // Récupérer les données étendues qui incluent les IDs des utilisateurs, leurs infos et derniers messages
+      }      // Récupérer les données étendues qui incluent les IDs des utilisateurs, leurs infos et derniers messages
       const extendedData = await res.json();
-      console.log("Extended conversations data received:", extendedData.length);
 
       // Mettre à jour les timestamps pour chaque conversation
       extendedData.forEach((convo) => {
@@ -494,11 +471,8 @@ const ConversationsListScreen = ({ navigation }) => {
   };
 
   const fetchLastMessageForConversation = async (userId) => {
-    try {
-      const token = await AsyncStorage.getItem("token");
+    try {      const token = await AsyncStorage.getItem("token");
       const url = `${API_URL}/api/private-messages/${userId}?limit=5&sort=desc`;
-
-      console.log(`Fetching last message for conversation with ${userId}`);
 
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -518,10 +492,7 @@ const ConversationsListScreen = ({ navigation }) => {
           const dateA = new Date(a.date_envoi || a.date_creation);
           const dateB = new Date(b.date_envoi || b.date_creation);
           return dateB - dateA;
-        });
-
-        const latestMessage = sortedMessages[0];
-        console.log(`Got last message for ${userId}:`, latestMessage.contenu);
+        });        const latestMessage = sortedMessages[0];
 
         setLastMessages((prev) => ({
           ...prev,
@@ -562,13 +533,7 @@ const ConversationsListScreen = ({ navigation }) => {
           const dateA = new Date(a.date_envoi || a.date_creation);
           const dateB = new Date(b.date_envoi || b.date_creation);
           return dateB - dateA;
-        });
-
-        const latestMessage = sortedMessages[0];
-        console.log(
-          `Alternative method found last message for ${userId}:`,
-          latestMessage.contenu
-        );
+        });        const latestMessage = sortedMessages[0];
 
         setLastMessages((prev) => ({
           ...prev,
@@ -774,13 +739,9 @@ const ConversationsListScreen = ({ navigation }) => {
     if (!user) return <View style={styles.avatar} />;
 
     if (user.avatar) {
-      return (
-        <Image
+      return (        <Image
           source={{ uri: user.avatar }}
           style={styles.avatar}
-          onError={(e) => {
-            console.log("Avatar image failed to load, using placeholder");
-          }}
         />
       );
     } else {

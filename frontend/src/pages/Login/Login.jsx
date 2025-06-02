@@ -38,7 +38,6 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Tentative de connexion...');
     
     try {
       const response = await fetch(`${API_URL}/api/users/login`, {
@@ -50,7 +49,6 @@ function Login() {
       });
       
       const data = await response.json();
-      console.log('Réponse du serveur:', data);
       
       if (response.ok) {
         // Stocker l'email et le token dans localStorage
@@ -60,20 +58,15 @@ function Login() {
         // S'assurer que l'indicateur de validation est bien supprimé
         localStorage.removeItem('isValidated');
         
-        console.log('Email et token sauvegardés dans localStorage');
-        console.log('Token présent:', localStorage.getItem('token') ? "oui" : "non");
-        console.log('isValidated:', localStorage.getItem('isValidated') || 'non défini');
         
         // Handle pending workspace invitation if present
         if (pendingInvitation && pendingInvitation.workspaceId) {
           // Clean up sessionStorage
           sessionStorage.removeItem("pendingInvitation");
           
-          console.log('Invitation en attente détectée, redirection vers /code');
           // Go through 2FA but keep the invitation information
           navigate('/code', { state: { pendingInvitation } });
         } else {
-          console.log('Connexion réussie, redirection vers /code');
           // Regular flow - go to 2FA
           navigate('/code', { state: { email } });
         }

@@ -54,7 +54,6 @@ function StrawpollResultsModal({
   // Log the data for debugging
   useEffect(() => {
     if (strawpollResults) {
-      console.log("StrawPoll raw data:", strawpollResults);
       setDataDebug(JSON.stringify(strawpollResults, null, 2));
     }
   }, [strawpollResults]);

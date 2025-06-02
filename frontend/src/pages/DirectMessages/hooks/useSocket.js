@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import io from "socket.io-client";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.104:3000";
 
 /**
  * Hook pour gérer la connexion socket et les événements associés
@@ -44,11 +44,8 @@ export const useSocket = (currentUserId) => {
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         timeout: 10000,
-      });
-
-      // Gestionnaires d'événements de connexion
+      });      // Gestionnaires d'événements de connexion
       newSocket.on("connect", () => {
-        console.log("Socket.io connecté");
         setSocketStatus({
           connected: true,
           connecting: false,
@@ -79,10 +76,7 @@ export const useSocket = (currentUserId) => {
           error: err.message,
           reconnectAttempts: prev.reconnectAttempts + 1,
         }));
-      });
-
-      newSocket.on("disconnect", (reason) => {
-        console.log("Socket déconnecté:", reason);
+      });      newSocket.on("disconnect", (reason) => {
         setSocketStatus((prev) => ({
           ...prev,
           connected: false,
@@ -92,18 +86,13 @@ export const useSocket = (currentUserId) => {
       });
 
       newSocket.on("reconnect_attempt", (attemptNumber) => {
-        console.log(`Tentative de reconnexion #${attemptNumber}`);
         setSocketStatus((prev) => ({
           ...prev,
           connecting: true,
           reconnectAttempts: attemptNumber,
         }));
-      });
-
-      // Gestion des nouveaux messages privés
+      });      // Gestion des nouveaux messages privés
       newSocket.on("private_message", async (msg) => {
-        console.log("[DM] Received private message:", msg);
-
         if (!currentUserId) return;
 
         // Mise à jour du compteur de messages non lus

@@ -1,7 +1,7 @@
 // Hook pour la gestion de la liste des messages (chargement, suppression, édition, reply, etc.)
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.104:3000";
 
 export function useMessageList({ selectedUser, socket, currentUserId }) {
   const [messages, setMessages] = useState([]);
@@ -10,12 +10,9 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
   const [editMessageContent, setEditMessageContent] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const paramsRef = useRef({ selectedUser, socket, currentUserId });
-
   // Fonction pour répondre à un message
   const handleReplyMessage = useCallback((message) => {
-    console.log("[useMessageList] handleReplyMessage appelé avec:", message);
     setReplyingTo(message);
-    console.log("[useMessageList] État de replyingTo mis à jour");
   }, []);
 
   // Annuler la réponse

@@ -96,12 +96,8 @@ const VideoCallModal = ({
       // Vérifier que le message vient bien de kMeet
       if (event.origin === "https://kmeet.infomaniak.com") {
         try {
-          console.log("🔍 Message reçu de kMeet:", event.data);
           const data = event.data;
           if (data.participantCount !== undefined) {
-            console.log(
-              `🔍 Nombre de participants détecté: ${data.participantCount}. Premier participant? ${isFirstParticipant.current}. A déjà rejoint? ${hasJoinedCall}`
-            );
             const newParticipantCount = data.participantCount;
             setParticipants(newParticipantCount);
 
@@ -112,33 +108,16 @@ const VideoCallModal = ({
               isFirstParticipant.current &&
               !hasJoinedCall
             ) {
-              console.log(
-                "🔔 DÉCLENCHEMENT de sendVideoCallNotification - Conditions remplies ✓"
-              );
               // On est la première personne à rejoindre la réunion, donc on lance une notification
               setTimeout(() => {
-                console.log(
-                  "🔔 Exécution de sendVideoCallNotification avec délai"
-                );
                 sendVideoCallNotification();
               }, 1000); // Petit délai pour être sûr que tout est initialisé
 
               isFirstParticipant.current = false;
               setHasJoinedCall(true);
             } else {
-              // Afficher les raisons pour lesquelles la fonction n'est pas déclenchée
-              console.log("❌ sendVideoCallNotification NON DÉCLENCHÉ car:", {
-                "newParticipantCount === 1": newParticipantCount === 1,
-                "isFirstParticipant.current": isFirstParticipant.current,
-                "!hasJoinedCall": !hasJoinedCall,
-                "Toutes les conditions remplies":
-                  newParticipantCount === 1 &&
-                  isFirstParticipant.current &&
-                  !hasJoinedCall,
-              });
-
-              // On a rejoint une réunion existante, donc on ne fait pas de notification
-              if (!hasJoinedCall) {
+              // Participant déjà dans l'appel ou autres conditions non remplies
+              if (newParticipantCount === 1 && !isFirstParticipant.current) {
                 isFirstParticipant.current = false;
                 setHasJoinedCall(true);
               }
@@ -156,26 +135,7 @@ const VideoCallModal = ({
 
   // Fonction pour envoyer une notification d'appel vidéo au chat
   const sendVideoCallNotification = () => {
-    console.log("📞 Tentative d'envoi de notification d'appel vidéo", {
-      socketExiste: !!socket,
-      socketConnecté: socket?.connected,
-      canal: activeChannel?.id,
-      workspace: workspace?.id,
-      utilisateur: currentUserName,
-    });
-
     if (socket && socket.connected && activeChannel && workspace) {
-      console.log(
-        "📞 CONDITIONS REMPLIES: Envoi de la notification d'appel vidéo au chat",
-        {
-          canal_id: activeChannel.id,
-          content: `📹 **${
-            currentUserName || "Un utilisateur"
-          }** a lancé un appel vidéo dans ce canal.`,
-          workspace_id: workspace.id,
-        }
-      );
-
       // Envoyer un message système au canal
       socket.emit("message", {
         canal_id: activeChannel.id,
@@ -185,18 +145,6 @@ const VideoCallModal = ({
         workspace_id: workspace.id,
         is_system_message: true, // Indiquer que c'est un message système
       });
-
-      console.log("📞 Notification d'appel vidéo ENVOYÉE ✅");
-    } else {
-      console.error(
-        "📞 ERREUR: Impossible d'envoyer la notification d'appel vidéo:",
-        {
-          socketExiste: !!socket,
-          socketConnecté: socket?.connected,
-          canal: activeChannel?.id,
-          workspace: workspace?.id,
-        }
-      );
     }
   };
 

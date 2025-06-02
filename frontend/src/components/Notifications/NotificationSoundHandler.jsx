@@ -36,10 +36,6 @@ const NotificationSoundHandler = () => {
         hasInteracted &&
         notificationSettings?.sounds
       ) {
-        console.log(
-          "[NotificationSoundHandler] 🔊 Son canal déclenché",
-          event.detail
-        );
         playNotificationSound(notificationSettings);
       }
     };
@@ -50,10 +46,6 @@ const NotificationSoundHandler = () => {
         hasInteracted &&
         notificationSettings?.sounds
       ) {
-        console.log(
-          "[NotificationSoundHandler] 🔊 Son message privé déclenché",
-          event.detail
-        );
         playNotificationSound(notificationSettings);
       }
     };

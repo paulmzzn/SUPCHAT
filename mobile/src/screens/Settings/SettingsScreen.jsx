@@ -27,9 +27,7 @@ const SettingsScreen = () => {
   const fetchUserProfile = async () => {
     setLoadingProfile(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        console.log('No token found, cannot fetch profile.');
+      const token = await AsyncStorage.getItem('token');      if (!token) {
         setLoadingProfile(false);
         return;
       }

@@ -28,7 +28,7 @@ import env from "../../config/env";
 // Import the new MediaViewer component
 import MediaViewer from "../../components/MediaViewer/MediaViewer";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.104:3000";
 const S3_BASE_URL =
   env.S3_BASE_URL || "https://s3-supchat.s3.fr-par.scw.cloud/";
 
@@ -93,13 +93,11 @@ const getFileURL = (url) => {
 
   // Si l'URL est déjà complète, la retourner telle quelle
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-
   // Si le chemin commence par 'private-messages/files/', construire une URL S3
   if (
     url.startsWith("private-messages/files/") ||
     url.startsWith("private-messages/")
   ) {
-    console.log(`Using S3 base URL for file: ${url}`);
     return `${S3_BASE_URL}${url}`;
   }
 
@@ -219,12 +217,7 @@ const MessagesScreen = ({ navigation, route }) => {
           m.fk_expediteur === userId && // uniquement les messages de l'autre utilisateur
           m.fk_expediteur !== currentUserId && // pas les messages envoyés par soi-même
           !m.date_lecture // messages non lus
-      );
-
-      if (unreadMessages.length > 0) {
-        console.log(
-          `Marking ${unreadMessages.length} messages as read for user ${userId}`
-        );
+      );      if (unreadMessages.length > 0) {
         unreadMessages.forEach((msg) => {
           socket.emit("readPrivateMessage", {
             id: msg.id_message_prive,
@@ -268,11 +261,9 @@ const MessagesScreen = ({ navigation, route }) => {
   }, []);
 
   // Function to save conversation timestamps safely
-  const saveConversationTimestamp = async (userId) => {
-    try {
+  const saveConversationTimestamp = async (userId) => {    try {
       // Update timestamp with a random delay to avoid conflicts
       const timestamp = Date.now() + Math.floor(Math.random() * 10);
-      console.log(`Updating timestamp for ${userId} to ${timestamp}`);
 
       // Get current timestamps
       const timestampsStr = await AsyncStorage.getItem(
@@ -280,11 +271,10 @@ const MessagesScreen = ({ navigation, route }) => {
       );
       let timestamps = {};
 
-      if (timestampsStr) {
-        try {
+      if (timestampsStr) {        try {
           timestamps = JSON.parse(timestampsStr);
         } catch (e) {
-          console.error("Error parsing timestamps:", e);
+          // Silently handle parsing errors
         }
       }
 
@@ -292,29 +282,22 @@ const MessagesScreen = ({ navigation, route }) => {
       const newTimestamps = {
         ...timestamps,
         [userId]: timestamp,
-      };
-
-      // Save back to AsyncStorage
+      };      // Save back to AsyncStorage
       await AsyncStorage.setItem(
         "conversationTimestamps",
         JSON.stringify(newTimestamps)
       );
-      console.log("Timestamps updated in storage:", newTimestamps);
 
       // Update local state
       setConversationTimestamps(newTimestamps);
     } catch (e) {
-      console.error("Error saving conversation timestamp:", e);
+      // Silently handle storage errors
     }
   };
 
   // Handle incoming messages with optimized animations
   useEffect(() => {
-    if (!socket || !currentUserId || !userId) return;
-
-    const handlePrivateMessage = async (msg) => {
-      console.log("Received message:", msg);
-
+    if (!socket || !currentUserId || !userId) return;    const handlePrivateMessage = async (msg) => {
       // Update messages if relevant to current conversation
       if (msg.fk_expediteur === userId || msg.fk_destinataire === userId) {
         const isNewMessage = !messages.some(
@@ -387,10 +370,7 @@ const MessagesScreen = ({ navigation, route }) => {
         // Update timestamp for this conversation in AsyncStorage
         await saveConversationTimestamp(userId);
       }
-    };
-
-    const handlePrivateMessageUpdated = (msg) => {
-      console.log("Message updated:", msg);
+    };    const handlePrivateMessageUpdated = (msg) => {
       if (msg.fk_expediteur === userId || msg.fk_destinataire === userId) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -398,10 +378,7 @@ const MessagesScreen = ({ navigation, route }) => {
           )
         );
       }
-    };
-
-    const handlePrivateMessageDeleted = (data) => {
-      console.log("Message deleted:", data);
+    };    const handlePrivateMessageDeleted = (data) => {
       if (data?.id) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -416,10 +393,7 @@ const MessagesScreen = ({ navigation, route }) => {
           )
         );
       }
-    };
-
-    const handlePrivateMessageReaction = (data) => {
-      console.log("Message reaction received:", data);
+    };    const handlePrivateMessageReaction = (data) => {
       if (data?.messageId && data?.reactions) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -473,14 +447,12 @@ const MessagesScreen = ({ navigation, route }) => {
       setHasMoreMessages(true);
     };
   }, [userId]);
-
-  // Modifier l'effet pour le marquage comme lu uniquement quand l'utilisateur ouvre la conversation
+  // Mark messages as read when user opens conversation
   useEffect(() => {
     if (messages.length === 0 || isInitialLoad || !userId || !currentUserId)
       return;
 
-    // Marquer les messages comme lus dès que l'utilisateur ouvre la conversation et que les messages sont chargés
-    console.log("User opened conversation, marking messages as read");
+    // Mark messages as read when user opens conversation and messages are loaded
     markMessagesAsRead(messages);
   }, [messages, isInitialLoad, userId, currentUserId, markMessagesAsRead]);
 
@@ -764,10 +736,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
       if (!res.ok) {
         throw new Error(`Error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      console.log("Message sent via API:", data);
+      }      const data = await res.json();
 
       // Update message in UI
       setMessages((prev) =>
@@ -793,12 +762,11 @@ const MessagesScreen = ({ navigation, route }) => {
     if (!user) return <View style={styles.avatar} />;
 
     if (user.avatar) {
-      return (
-        <Image
+      return (        <Image
           source={{ uri: user.avatar }}
           style={styles.avatar}
           onError={(e) => {
-            console.log("Avatar image failed to load, using placeholder");
+            // Avatar failed to load, using placeholder
           }}
         />
       );
@@ -929,16 +897,8 @@ const MessagesScreen = ({ navigation, route }) => {
   // Simplify the attachment opening function
   const handleOpenAttachment = (attachment) => {
     try {
-      // Get the file URL
-      const fileUrl = attachment.url || attachment.presignedUrl;
+      // Get the file URL      const fileUrl = attachment.url || attachment.presignedUrl;
       const fullFileUrl = getFileURL(fileUrl);
-
-      console.log("Opening attachment with URL:", fullFileUrl);
-      console.log("Attachment details:", {
-        fileUrl: fullFileUrl,
-        filename: attachment.nom_fichier,
-        type: attachment.type,
-      });
 
       // Open the modal with the MediaViewer component
       setMediaPreview({
@@ -962,15 +922,12 @@ const MessagesScreen = ({ navigation, route }) => {
       media: null,
     });
   };
-
   // Handle long press on message to show context menu
   const handleLongPressMessage = (message, event) => {
-    console.log("Long press detected on message:", message.id_message_prive);
-
     // Only allow editing of own messages
     const isOwnMessage = message.fk_expediteur === currentUserId;
 
-    // Dans React Native, les coordonnées sont directement dans l'événement, pas dans nativeEvent
+    // In React Native, coordinates are directly in event, not in nativeEvent
     const pageX = event.pageX || 0;
     const pageY = event.pageY || 0;
 
@@ -1080,20 +1037,11 @@ const MessagesScreen = ({ navigation, route }) => {
     setShowEmojiPicker(true);
     handleCloseContextMenu();
   };
-
   // Handle emoji selection
   const handleEmojiSelect = (emoji) => {
-    console.log("Emoji selected:", emoji);
-
     if (!selectedMessageForReaction || !socket) {
-      console.error("No message selected for reaction or socket not available");
       return;
     }
-
-    console.log(
-      "Adding reaction to message:",
-      selectedMessageForReaction.id_message_prive
-    );
 
     // Emit socket event to add reaction with the correct parameter name
     socket.emit("addPrivateMessageReaction", {
@@ -1129,17 +1077,14 @@ const MessagesScreen = ({ navigation, route }) => {
 
     setShowEmojiPicker(false);
   };
-
   // Handle removing a reaction
   const handleRemoveReaction = (messageId, reactionType) => {
     if (!socket) return;
 
-    console.log("Removing reaction:", reactionType, "from message:", messageId);
-
     // Emit socket event to remove reaction with the correct parameter name
     socket.emit("removePrivateMessageReaction", {
       id: messageId,
-      reaction: reactionType, // Cohérent avec le nom de paramètre utilisé dans handleEmojiSelect
+      reaction: reactionType, // Consistent with parameter name used in handleEmojiSelect
     });
 
     // Mise à jour optimiste de l'UI
@@ -1294,12 +1239,7 @@ const MessagesScreen = ({ navigation, route }) => {
                               ? styles.ownMessageWrapper
                               : styles.otherMessageWrapper,
                             isAnimating && styles.animatingMessage,
-                          ]}
-                          onLongPress={(event) => {
-                            console.log(
-                              "Long press detected on message:",
-                              msg.id_message_prive
-                            );
+                          ]}                          onLongPress={(event) => {
                             handleLongPressMessage(msg, event.nativeEvent);
                           }}
                           delayLongPress={500}
@@ -1332,25 +1272,11 @@ const MessagesScreen = ({ navigation, route }) => {
                                   if (
                                     !attachment ||
                                     (!attachment.url &&
-                                      !attachment.presignedUrl)
-                                  ) {
-                                    console.warn(
-                                      `Invalid attachment at index ${i}:`,
-                                      attachment
-                                    );
+                                      !attachment.presignedUrl)                                  ) {
                                     return null;
-                                  }
-
-                                  console.log(`Rendering attachment ${i}:`, {
-                                    type: attachment.type,
-                                    url: attachment.url,
-                                    presignedUrl: attachment.presignedUrl,
-                                  });
-
-                                  const fileUrl =
+                                  }                                  const fileUrl =
                                     attachment.url || attachment.presignedUrl;
                                   const fullFileUrl = getFileURL(fileUrl);
-                                  console.log(`Full file URL: ${fullFileUrl}`);
 
                                   if (attachment.type?.startsWith("image/")) {
                                     return (

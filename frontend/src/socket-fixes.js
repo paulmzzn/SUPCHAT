@@ -43,8 +43,6 @@ const socketOptions = {
 
 // Ajouter ces gestionnaires d'événements de socket :
 newSocket.on("reconnect", (attemptNumber) => {
-  console.log("[Socket] Reconnecté après", attemptNumber, "tentatives");
-
   // Rejoindre la room privée à nouveau
   newSocket.emit("joinPrivate");
 

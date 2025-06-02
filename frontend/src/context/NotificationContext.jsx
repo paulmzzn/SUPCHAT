@@ -82,21 +82,6 @@ export function NotificationProvider({ children }) {
 
     // Set this channel as the last marked one
     lastMarkedChannelRef.current = channelId;
-    
-    console.log(`NotificationContext: Marquage du canal ${channelId} comme lu`);
-    
-    // Mise à jour optimiste de l'interface
-    setUnreadCounts(prev => ({
-      ...prev,
-      channels: {
-        ...prev.channels,
-        [channelId]: { count: 0 }
-      },
-      // Recalculer le total en excluant le canal qu'on vient de lire
-      total: Object.entries(prev.channels).reduce((sum, [id, data]) => {
-        return id === channelId ? sum : sum + (data.count || 0);
-      }, 0)
-    }));
 
     // Use debouncing to avoid making too many API calls
     markChannelTimerRef.current = setTimeout(async () => {
@@ -121,9 +106,6 @@ export function NotificationProvider({ children }) {
           );
           
           if (markReadResponse.ok) {
-            console.log(`Canal ${channelId} marqué comme lu via API REST`);
-          } else {
-            console.error("Erreur API lors du marquage du canal comme lu:", await markReadResponse.text());
           }
         }
       } catch (error) {
@@ -151,11 +133,6 @@ export function NotificationProvider({ children }) {
     
     // Écouter les mises à jour des compteurs
     socket.on('unreadChannelMessagesUpdated', (data) => {
-      console.log("[NotificationContext] unreadChannelMessagesUpdated reçu:", data);
-      setUnreadCounts({
-        channels: data.channels || {},
-        total: data.total || 0
-      });
     });
     
     return () => {

@@ -617,22 +617,13 @@ return {
 
   // Socket message listener effect
   useEffect(() => {
-    if (!socket) return;
-
-    // Abonnement à l'événement "message"
+    if (!socket) return;    // Subscribe to "message" event
     socket.on("message", (message) => {
-      console.log("[DEBUG] Message reçu:", message);
-      console.log("[DEBUG] Type de message:", typeof message);
-      console.log("[DEBUG] Propriétés:", Object.keys(message));
-
-      // Vérifie si c'est un message système pour l'appel vidéo
+      // Check if it's a system message for video call
       const isVideoCallMessage =
         message.contenu &&
         (message.contenu.includes("appel vidéo") ||
-          message.contenu.includes("video call"));
-
-      if (isVideoCallMessage) {
-        console.log("[DEBUG] Message d'appel vidéo détecté");
+          message.contenu.includes("video call"));      if (isVideoCallMessage) {
         message.is_system_message = true;
       }
 
@@ -640,10 +631,6 @@ return {
     });
 
     const handleNewMessage = (message) => {
-      console.log("[DEBUG] Traitement du message:", message);
-      // Reste de la fonction handleNewMessage
-      console.log("🎉 Nouveau message reçu via socket:", message);
-
       // S'assurer que le format de date est cohérent
       if (message.created_at && !message.date_creation) {
         message.date_creation = message.created_at;
@@ -680,23 +667,14 @@ return {
           }
         }, 150); // Légère augmentation du délai
       }
-    };
-
-    // Abonnement aux réactions
+    };    // Subscribe to reactions
     socket.on("messageReaction", ({ messageId, reactions }) => {
-      console.log(`Réaction reçue pour le message ${messageId}:`, reactions);
-      console.log("Détail des réactions reçues:", JSON.stringify(reactions));
-
       setMessages((prevMessages) =>
         prevMessages.map((msg) => {
           if (msg.id_message === messageId) {
             const formattedReactions = reactions.map((r) => {
               if (!r.emoji) {
                 r.emoji = getEmojiForType(r.reaction_type);
-
-                console.warn(
-                  `Emoji manquant pour ${r.reaction_type}: ${r.emoji}`
-                );
               }
               if (
                 typeof r.emoji === "string" &&
@@ -707,44 +685,29 @@ return {
                   r.emoji = JSON.parse(
                     r.emoji.substring(1, r.emoji.length - 1)
                   );
-                  console.log(`Emoji extrait du format array: ${r.emoji}`);
                 } catch (e) {
-                  console.warn(`Impossible de parser l'emoji: ${r.emoji}`);
+                  // Handle emoji parsing error silently
                 }
               }
               return r;
             });
-            console.log("Réactions formatées pour UI:", formattedReactions);
             return { ...msg, reactions: formattedReactions };
           }
           return msg;
         })
       );
-    });
-
-    // Add listener for deleted messages
+    });    // Add listener for deleted messages
     socket.on("messageDeleted", ({ messageId }) => {
-      console.log(
-        `Socket event 'messageDeleted' received for message ${messageId}`
-      );
       setMessages((prevMessages) =>
         prevMessages.filter((message) => message.id_message !== messageId)
       );
-    });
-
-    // Add another listener for 'deleteMessage' event (in case server uses this instead)
+    });    // Add another listener for 'deleteMessage' event (in case server uses this instead)
     socket.on("deleteMessage", ({ messageId }) => {
-      console.log(
-        `Socket event 'deleteMessage' received for message ${messageId}`
-      );
       setMessages((prevMessages) =>
         prevMessages.filter((message) => message.id_message !== messageId)
       );
-    });
-
-    // Écouteur pour les messages mis à jour
+    });    // Écouteur pour les messages mis à jour
     socket.on("updateMessage", (updatedMessage) => {
-      console.log(`Message mis à jour reçu:`, updatedMessage);
       setMessages((prevMessages) =>
         prevMessages.map((message) =>
           message.id_message === updatedMessage.id_message
@@ -752,28 +715,21 @@ return {
             : message
         )
       );
-    });
-
-    // *** Listen for typing events ***
+    });// *** Listen for typing events ***
     socket.on("typing", (data) => {
-      console.log("Événement typing reçu:", data);
       if (data.userId === MISTRAL_USER_ID) {
-        console.log("Mistral commence à écrire");
         setIsMistralTyping(true);
       }
     });
 
     socket.on("stopTyping", (data) => {
-      console.log("Événement stopTyping reçu:", data);
       if (data.userId === MISTRAL_USER_ID) {
-        console.log("Mistral arrête d'écrire");
         setIsMistralTyping(false);
       }
     });
 
     // Ajouter aussi un écouteur pour botTyping (au cas où l'ancien nom d'événement est utilisé)
     socket.on("botTyping", (data) => {
-      console.log("Événement botTyping reçu:", data);
       setIsMistralTyping(data.isTyping);
     });
     // *** End typing event listeners ***
@@ -804,33 +760,20 @@ return {
       socket.off("memberRoleChanged", handleRoleChange);
     };
   }, [socket, workspaceId, fetchWorkspaceMembers]);
-
   useEffect(() => {
     if (socket && workspaceId) {
       socket.emit("joinWorkspace", { workspaceId, userId: currentUserId });
-      console.log(
-        "[WS DEBUG] Demande de joinWorkspace envoyée pour",
-        workspaceId,
-        "avec userId:",
-        currentUserId
-      );
     }
   }, [socket, workspaceId, currentUserId]);
-
   // Socket: join canal à chaque changement de canal actif
   useEffect(() => {
     if (!socket || !activeChannel || !workspaceId) return;
     // Rejoindre la room du canal à chaque sélection
     socket.emit("joinCanal", { canalId: activeChannel.id, workspaceId });
-    console.log("[WS DEBUG] joinCanal envoyé", {
-      canalId: activeChannel.id,
-      workspaceId,
-    });
   }, [socket, activeChannel, workspaceId]);
 
   // Écouter les changements de statut utilisateur et mettre à jour les membres en temps réel
   useEffect(() => {
-    console.log("[HOOK] userStatuses changed, refetching members");
     if (workspaceId) {
       fetchWorkspaceMembers();
     }
@@ -937,11 +880,8 @@ return {
       setSearchResults({ channels: [], users: [], messages: [] });
       setIsSearching(false);
       return;
-    }
-
-    setIsSearching(true);
+    }    setIsSearching(true);
     try {
-      console.log(`Recherche dans le workspace ${workspaceId} pour: ${searchQuery}`);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(
@@ -957,10 +897,7 @@ return {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Erreur lors de la recherche");
-      }
-
-      const data = await response.json();
-      console.log("Résultats de recherche:", data);
+      }      const data = await response.json();
 
       // Formater les résultats pour assurer la compatibilité
       const formattedResults = {
@@ -1231,13 +1168,8 @@ return {
         if (!channel || !channel.id) {
           console.warn("Tentative de marquer un canal sans ID comme lu");
           return;
-        }
-
-        console.log(`Marquage du canal ${channel.id} comme lu`);
-
-        // Essayer d'abord via socket.io si disponible
+        }        // Essayer d'abord via socket.io si disponible
         if (socket && socket.connected) {
-          console.log(`Marquage du canal ${channel.id} comme lu via socket.io`);
           socket.emit("markChannelAsRead", { channelId: channel.id });
 
           // Créer un délai pour vérifier si nous recevons une confirmation
@@ -1268,10 +1200,8 @@ return {
       
       const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error("Token d'authentification manquant");
-      }
+        throw new Error("Token d'authentification manquant");      }
       
-      console.log(`Canal ${channelId} marqué comme lu via API REST (fallback)`);
       const markReadResponse = await fetch(
         `${API_URL}/api/messages/channel/${channelId}/read`,
         {
@@ -1281,11 +1211,7 @@ return {
             "Content-Type": "application/json",
           },
         }
-      );
-
-      if (markReadResponse.ok) {
-        console.log(`Canal ${channelId} marqué comme lu via API REST`);
-
+      );      if (markReadResponse.ok) {
         // Après avoir marqué le canal comme lu via API, rafraîchir les compteurs de messages non lus
         await refreshUnreadChannelCounts(token);
       } else {
@@ -1318,11 +1244,8 @@ return {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
-
-      if (unreadResponse.ok) {
+      });      if (unreadResponse.ok) {
         const unreadData = await unreadResponse.json();
-        console.log("Compteurs de messages non lus mis à jour:", unreadData);
 
         // Émettre un événement pour mettre à jour les badges
         const event = new CustomEvent("unreadChannelMessagesUpdated", {
@@ -1365,14 +1288,8 @@ return {
       e.preventDefault();
     }
 
-    if (!displayMessage.trim() || !socket || !activeChannel) return;
-
-    // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
+    if (!displayMessage.trim() || !socket || !activeChannel) return;    // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
     const messageToSend = convertMentionsForSending(displayMessage);
-
-    console.log(
-      `Envoi du message: "${messageToSend}" dans le canal ${activeChannel.id}`
-    );
 
     // Envoyer via socket.io
     socket.emit("message", {
@@ -1548,10 +1465,7 @@ return {
       // Update UI immediately (optimistic update)
       setMessages((prevMessages) =>
         prevMessages.filter((m) => m.id_message !== messageIdToDelete)
-      );
-
-      // Delete on server via REST API first
-      console.log(`Suppression du message ${messageIdToDelete} via API REST`);
+      );      // Delete on server via REST API first
       const response = await fetch(
         `${API_URL}/api/messages/${messageIdToDelete}`,
         {
@@ -1565,15 +1479,9 @@ return {
 
       if (!response.ok) {
         throw new Error(`Error deleting message: ${response.status}`);
-      }
-
-      // If API call succeeds, broadcast deletion via socket
-      console.log(`Message ${messageIdToDelete} supprimé avec succès`);
+      }      // If API call succeeds, broadcast deletion via socket
 
       // Use consistent event name - ONLY use deleteMessage (not messageDeleted)
-      console.log(
-        `Émission de l'événement deleteMessage pour le message ${messageIdToDelete}`
-      );
       socket.emit("deleteMessage", {
         messageId: messageIdToDelete,
         canalId: channelId,
@@ -1614,8 +1522,7 @@ return {
       // Filtrer les utilisateurs selon la requête
       const filteredUsers = mentionableUsers.filter((user) =>
         user.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setMentionSuggestions(filteredUsers);
+      );      setMentionSuggestions(filteredUsers);
       setActiveMentionIndex(0);
     } else {
       setShowMentionSuggestions(false);
@@ -1624,15 +1531,6 @@ return {
 
     // Vérifier pour les mentions de canaux (#)
     const lastHashIndex = value.lastIndexOf("#");
-
-    console.log("Détection de #:", {
-      lastHashIndex,
-      lastBreakIndex,
-      condition:
-        lastHashIndex !== -1 &&
-        (lastHashIndex > lastBreakIndex || lastBreakIndex === -1),
-      channels: channels.length,
-    });
 
     if (
       lastHashIndex !== -1 &&
@@ -1653,12 +1551,6 @@ return {
         // Limiter le nombre de suggestions si nécessaire
         const maxSuggestions = 5;
         const limitedChannels = filteredChannels.slice(0, maxSuggestions);
-
-        console.log("Filtrage des canaux pour #" + query, {
-          query,
-          canaux: channels.length,
-          filteredChannels: limitedChannels,
-        });
 
         setChannelSuggestions(limitedChannels);
         setActiveChannelSuggestionIndex(0);

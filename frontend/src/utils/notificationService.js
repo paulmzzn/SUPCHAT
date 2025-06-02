@@ -36,13 +36,10 @@ class NotificationService {
       const permission = await Notification.requestPermission();
       this.permission = permission;
       this.isEnabled = permission === 'granted';
-      
-      if (permission === 'granted') {
-        console.log('Permission accordée pour les notifications push');
+        if (permission === 'granted') {
         // Stocker la préférence dans localStorage
         localStorage.setItem('notifications_permission', 'granted');
       } else {
-        console.log('Permission refusée pour les notifications push');
         localStorage.setItem('notifications_permission', 'denied');
       }
       
@@ -50,18 +47,13 @@ class NotificationService {
     } catch (error) {
       console.error('Erreur lors de la demande de permission:', error);
       return false;
-    }
-  }
+    }  }
 
   async showNotification(title, options = {}) {
     if (!this.isEnabled) {
-      console.log('Notifications désactivées ou non autorisées');
       return null;
-    }
-
-    // Vérifier si l'onglet est actif
+    }    // Vérifier si l'onglet est actif
     if (document.visibilityState === 'visible' && document.hasFocus()) {
-      console.log('Onglet actif, notification push ignorée');
       return null;
     }
 
@@ -96,11 +88,10 @@ class NotificationService {
       return notification;
     } catch (error) {
       console.error('Erreur lors de l\'affichage de la notification:', error);
-      return null;
-    }
+      return null;    }
   }
 
-  showPrivateMessageNotification(senderName, content, userId) {
+  async showPrivateMessageNotification(senderName, content, userId) {
     const title = `Nouveau message de ${senderName}`;
     const body = content.length > 100 ? content.substring(0, 100) + '...' : content;
     

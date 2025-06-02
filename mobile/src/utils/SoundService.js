@@ -34,7 +34,6 @@ const initializeSound = async () => {
   if (isInitialized) return;
   
   try {
-    console.log('Initialisation du son de notification...');
     
     // Configurer l'audio
     await Audio.setAudioModeAsync({
@@ -52,21 +51,17 @@ const initializeSound = async () => {
       const { sound: soundObject } = await Audio.Sound.createAsync(
         { uri: soundAssetUri.localUri || soundAssetUri.uri },
         { shouldPlay: false }
-      );
-      
+      );      
       sound = soundObject;
       isInitialized = true;
-      console.log('Son de notification initialisé avec succès');
     } catch (assetError) {
       // Essayer une méthode alternative en cas d'échec
       const { sound: soundObject } = await Audio.Sound.createAsync(
         require('../../assets/COMCell_Message 1 (ID 1111)_LS.mp3'),
         { shouldPlay: false }
-      );
-      
+      );      
       sound = soundObject;
       isInitialized = true;
-      console.log('Son de notification initialisé (méthode alternative)');
     }
   } catch (error) {
     console.error('Erreur lors de l\'initialisation du son:', error.message);
@@ -78,11 +73,9 @@ const initializeSound = async () => {
  * Joue le son de notification
  */
 const playNotificationSound = async () => {
-  try {
-    // Vérifier d'abord si le son des notifications est activé dans les préférences
+  try {    // Vérifier d'abord si le son des notifications est activé dans les préférences
     const soundEnabled = await isNotificationSoundEnabled();
     if (!soundEnabled) {
-      console.log('Son de notification désactivé dans les préférences, aucun son ne sera joué');
       return;
     }
 
@@ -99,16 +92,10 @@ const playNotificationSound = async () => {
       } catch (e) {
         // Ignore les erreurs si le son n'est pas déjà en lecture
       }
-      
-      // Jouer le son
-      console.log('Lecture du son de notification');
+        // Jouer le son
       await sound.playAsync();
-      
-      // Vérifier si la lecture a commencé
+        // Vérifier si la lecture a commencé
       const newStatus = await sound.getStatusAsync();
-      if (newStatus.isPlaying) {
-        console.log('Son de notification en cours de lecture');
-      }
     } else {
       console.error('Impossible de jouer le son - non disponible');
     }

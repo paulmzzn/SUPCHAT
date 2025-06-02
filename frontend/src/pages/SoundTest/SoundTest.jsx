@@ -1,4 +1,3 @@
-// filepath: c:\Users\gault\Documents\supinfo code\SUPCHAT\frontend\src\pages\SoundTest\SoundTest.jsx
 import React from "react";
 
 const SoundTest = () => (

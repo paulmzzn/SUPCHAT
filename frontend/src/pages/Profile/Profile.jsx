@@ -52,10 +52,9 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.31:3001") +
+      (process.env.REACT_APP_API_URL || "http://192.168.1.104:3001") +
       `/api/users/${userId}`;
 
-    console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
     fetch(apiUrl, {
       headers: {
@@ -103,7 +102,6 @@ function Profile() {
   // Vérifier la structure des données reçues
   useEffect(() => {
     if (user) {
-      console.log("Données utilisateur reçues:", user);
     }
   }, [user]);
 
@@ -114,8 +112,6 @@ function Profile() {
         (process.env.REACT_APP_API_URL || "http://192.168.1.31:3001") +
         `/api/users/${userId}/workspaces`;
 
-      console.log(`Fetching workspaces from: ${apiUrl}`);
-
       const response = await fetch(apiUrl, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -124,7 +120,6 @@ function Profile() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Workspaces reçus:", data);
         setUserWorkspaces(data);
       } else {
         const errorData = await response.json();
@@ -187,16 +182,13 @@ function Profile() {
   // Fonction pour afficher la date d'inscription formatée
   const formatJoinDate = (dateString) => {
     if (!dateString) {
-      console.log("Date manquante:", dateString);
       return "Date inconnue";
     }
 
-    console.log("Date reçue:", dateString, typeof dateString);
 
     // Essayer de traiter différents formats de date
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      console.log("Date invalide après conversion:", date);
       return "Date invalide";
     }
 

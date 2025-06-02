@@ -163,16 +163,9 @@ const MessageArea = ({
         isOwnMessage={messageContextMenu?.isOwnMessage || false}
         message={messageContextMenu?.message || null}
         onReply={() => {
-          console.log(
-            "[DM] Click sur Répondre dans le menu contextuel",
-            messageContextMenu?.message
-          );
           if (messageContextMenu?.message) {
             onReplyMessage(messageContextMenu.message);
             onCloseMessageContextMenu();
-            console.log("[DM] onReplyMessage appelé, menu contextuel fermé");
-          } else {
-            console.log("[DM] Pas de message dans le menu contextuel");
           }
         }}
         onEdit={onEditMessage || (() => {})}

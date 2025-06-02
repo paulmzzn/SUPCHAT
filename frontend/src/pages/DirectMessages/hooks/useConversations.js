@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
 // import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.104:3000";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs
@@ -53,10 +53,6 @@ export const useConversations = (options = {}) => {
     (userId) => {
       if (!userId) return;
 
-      console.log(
-        "[useConversations] Réinitialisation du compteur pour",
-        userId
-      );
 
       setUnreadMessageCounts((prev) => {
         // Si le compteur est déjà à 0 ou n'existe pas, ne rien faire
@@ -66,10 +62,6 @@ export const useConversations = (options = {}) => {
         const newCounts = { ...prev, [userId]: 0 };
         const newTotal = calculateTotalUnreadCount(newCounts);
 
-        console.log("[useConversations] Nouveau total après reset:", newTotal);
-
-        // Mettre à jour le total
-        setTotalUnreadCount(newTotal);
 
         // Sauvegarder dans localStorage
         localStorage.setItem("unreadDMCounts", JSON.stringify(newCounts));
@@ -100,9 +92,6 @@ export const useConversations = (options = {}) => {
       // Réinitialiser le compteur de messages non lus pour cet utilisateur
       resetUnreadCountForUser(userId); // Notifier le serveur que les messages de cet utilisateur ont été lus
       if (socket && socket.connected && userId) {
-        console.log(
-          `[useConversations] Marquage des messages de ${userId} comme lus`
-        );
         socket.emit("readAllPrivateMessages", {
           senderId: userId,
           recipientId: currentUserId,
@@ -159,10 +148,7 @@ export const useConversations = (options = {}) => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      console.log("[useConversations] Récupération des conversations...");
-
       if (!token) {
-        console.error("[useConversations] Pas de token d'authentification");
         setError("Vous n'êtes pas connecté");
         setLoading(false);
         return;
@@ -195,10 +181,6 @@ export const useConversations = (options = {}) => {
         throw new Error("Format de données invalide pour les conversations");
       }
 
-      console.log(
-        `[useConversations] ${convList.length} conversations récupérées:`,
-        convList
-      );
 
       // Vérifier si la liste a changé pour éviter de déclencher des rendus inutiles
       setConversations((prev) => {
@@ -207,9 +189,6 @@ export const useConversations = (options = {}) => {
         const sortedNew = [...convList].sort();
 
         if (JSON.stringify(sortedPrev) === JSON.stringify(sortedNew)) {
-          console.log(
-            "[useConversations] Aucun changement dans les conversations"
-          );
           return prev;
         }
         return convList;
@@ -486,8 +465,6 @@ export const useConversations = (options = {}) => {
       );
       const payload = JSON.parse(jsonPayload);
       if (payload && payload.id) {
-        console.log("[useConversations] ID utilisateur récupéré:", payload.id);
-        setCurrentUserId(payload.id);
 
         // Une fois l'ID utilisateur défini, charger les conversations une seule fois
         fetchConversations();
@@ -549,21 +526,15 @@ export const useConversations = (options = {}) => {
     });
 
     setFilteredUsers(filtered);
-  }, [searchUserQuery, availableUsers]); // Écouter l'événement allMessagesRead
+  }, [searchUserQuery, availableUsers]); 
+  
+  // Écouter l'événement allMessagesRead
   useEffect(() => {
     if (!socket) return;
 
     const handleAllMessagesRead = (data) => {
-      console.log("[useConversations] Tous les messages ont été lus:", data);
-
-      // Si ce sont mes messages qui ont été lus par quelqu'un d'autre, ne rien faire
-      if (data.readBy !== currentUserId) return;
-
-      // Mettre à jour le compteur pour l'expéditeur concerné
-      if (data.count > 0) {
-        const senderId =
-          data.readBy === currentUserId ? selectedUser : data.readBy;
-        resetUnreadCountForUser(senderId);
+      if (data.userId) {
+        resetUnreadCountForUser(data.userId);
       }
     };
 
@@ -614,10 +585,6 @@ export const useConversations = (options = {}) => {
         setConversations((prev) => {
           // Vérifier si l'expéditeur est déjà dans les conversations
           if (!prev.includes(senderId)) {
-            console.log(
-              "[useConversations] Nouvelle conversation avec:",
-              senderId
-            );
             // Récupérer les informations de l'utilisateur
             fetchUserInfo(senderId);
             // Ajouter à la liste des conversations
@@ -640,14 +607,6 @@ export const useConversations = (options = {}) => {
             ...prev,
             [senderId]: (prev[senderId] || 0) + 1,
           };
-          console.log(
-            "[useConversations] Nouveau message non lu de",
-            senderId,
-            "total:",
-            newCounts[senderId],
-            "tous compteurs:",
-            JSON.stringify(newCounts)
-          ); // Mettre à jour le total
           const newTotal = calculateTotalUnreadCount(newCounts);
           setTotalUnreadCount(newTotal);
 

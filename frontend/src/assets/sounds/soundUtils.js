@@ -16,16 +16,8 @@ let audioInstance = null;
  */
 export async function playNotificationSound(notificationSettings) {
   if (!notificationSettings?.sounds) {
-    console.log("[soundUtils] Sons désactivés dans les paramètres.");
-    return;
-  }
-  try {
-    const audio = new Audio(notificationSound);
     audio.volume = 0.8; // adapte le volume si besoin
     await audio.play();
-    console.log("[soundUtils] ✅ Son mp3 joué avec succès");
-  } catch (err) {
-    console.error("[soundUtils] ❌ Erreur lors de la lecture du mp3 :", err);
   }
 }
 
@@ -43,12 +35,8 @@ export const testNotificationSound = () => {
     // Ajouter temporairement au DOM pour permettre l'interaction
     document.body.appendChild(audioEl);
 
-    console.log("Test de son avec un élément audio visible dans le DOM");
-
-    return audioEl
-      .play()
+    return audioEl.play()
       .then(() => {
-        console.log("Test de son réussi");
         // Retirer l'élément après lecture
         setTimeout(() => document.body.removeChild(audioEl), 1000);
         return true;

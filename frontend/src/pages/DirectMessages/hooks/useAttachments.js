@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.104:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
@@ -27,11 +27,9 @@ export const useAttachments = (options = {}) => {
   /**
    * Gère la sélection d'un fichier (upload DM ou channel)
    * @param {Event} e - Événement de changement de fichier
-   */
-  const handleFileSelect = useCallback(
+   */  const handleFileSelect = useCallback(
     async (e) => {
       const files = Array.from(e.target.files);
-      console.log("[useAttachments] Fichiers sélectionnés:", files);
       if (files.length === 0) return;
 
       setUploadingFile(true);
@@ -47,28 +45,12 @@ export const useAttachments = (options = {}) => {
             uploadUrl = `${API_URL}/api/messages/upload`;
             formData.append("canalId", canalId);
             formData.append("workspaceId", workspaceId);
-            console.log(
-              "[useAttachments] Mode channel, url:",
-              uploadUrl,
-              "canalId:",
-              canalId,
-              "workspaceId:",
-              workspaceId
-            );
           } else {
             uploadUrl = `${API_URL}/api/private-messages/upload`;
             formData.append("recipientId", recipientId);
             // Optionnel: formData.append("message", "");
-            console.log(
-              "[useAttachments] Mode DM, url:",
-              uploadUrl,
-              "recipientId:",
-              recipientId
-            );
           }
-          for (let pair of formData.entries()) {
-            console.log("[useAttachments] FormData:", pair[0], pair[1]);
-          }
+
           const response = await fetch(uploadUrl, {
             method: "POST",
             headers: {
@@ -76,10 +58,7 @@ export const useAttachments = (options = {}) => {
             },
             body: formData,
           });
-          console.log(
-            "[useAttachments] Status de la réponse:",
-            response.status
-          );
+
           if (!response.ok) {
             let errText = await response.text();
             console.error(
@@ -110,17 +89,6 @@ export const useAttachments = (options = {}) => {
             setAttachments([]);
             return;
           }
-          console.log("[useAttachments] Réponse JSON:", data);
-
-          // Debug: analyser la structure de la réponse
-          console.log("[useAttachments] Debug structure réponse:", {
-            hasUrl: !!data.url,
-            url: data.url,
-            hasFichier: !!data.fichier,
-            fichierUrl: data.fichier?.url,
-            presignedUrl: data.presignedUrl || data.fichier?.presignedUrl,
-            completeData: data,
-          });
 
           // Ajouter le fichier uploadé à la liste des uploads
           uploads.push({
@@ -140,11 +108,6 @@ export const useAttachments = (options = {}) => {
 
         // Après l'upload de tous les fichiers, envoyer DIRECTEMENT le message par socket
         if (socket && uploads.length > 0 && recipientId) {
-          console.log("[useAttachments] Envoi direct via WebSocket:", {
-            socket: !!socket,
-            uploads,
-            recipientId,
-          });
 
           // Envoyer un message vide avec les pièces jointes
           socket.emit("privateMessage", {
@@ -169,10 +132,6 @@ export const useAttachments = (options = {}) => {
 
         // Réinitialiser le champ file input
         e.target.value = "";
-        console.log(
-          "[useAttachments] Upload terminé, pièces jointes:",
-          uploads
-        );
       } catch (error) {
         console.error("[useAttachments] Erreur lors de l'upload:", error);
         alert(
@@ -181,10 +140,9 @@ export const useAttachments = (options = {}) => {
         );
       } finally {
         setUploadingFile(false);
-        console.log("[useAttachments] Fin de handleFileSelect");
       }
     },
-    [mode, canalId, workspaceId, recipientId, socket]
+    [recipientId, socket, mode, canalId, workspaceId, setMessages, setNewMessage, setReplyingTo]
   );
 
   /**
@@ -207,10 +165,6 @@ export const useAttachments = (options = {}) => {
     }
 
     // Log pour debug
-    console.log("[useAttachments] Téléchargement de fichier demandé:", {
-      fileUrl,
-      fileName,
-    }); // Gestion spéciale pour les chemins de fichiers des messages privés
     let filePath = fileUrl;
 
     // Détection et extraction du chemin pour les messages privés
@@ -220,35 +174,17 @@ export const useAttachments = (options = {}) => {
       );
       if (privateMessageMatch) {
         filePath = `private-messages/files/${privateMessageMatch[1]}`;
-        console.log("[useAttachments] Chemin message privé extrait:", filePath);
       }
-    }
-    // Extraction pour les URLs S3 standard
-    else if (fileUrl && fileUrl.includes("s3-supchat")) {
-      // Plusieurs tentatives d'extraction de chemins S3
-      const s3CloudMatch = fileUrl.match(
-        /s3-supchat\.s3\.fr-par\.scw\.cloud\/(.+)$/
-      );
+    } else if (fileUrl && fileUrl.includes("s3-supchat/")) {
       const s3Match = fileUrl.match(/s3-supchat\/(.+)$/);
-
-      if (s3CloudMatch) {
-        filePath = s3CloudMatch[1];
-        console.log("[useAttachments] Chemin S3 cloud extrait:", filePath);
-      } else if (s3Match) {
+      if (s3Match) {
         filePath = s3Match[1];
-        console.log("[useAttachments] Chemin S3 simple extrait:", filePath);
       } else {
         // Si aucun pattern ne correspond, utiliser simplement "s3-supchat/" + le nom du fichier
         filePath = `s3-supchat/private-messages/files/${fileName}`;
-        console.log(
-          "[useAttachments] Utilisation du chemin construit:",
-          filePath
-        );
       }
     }
 
-    console.log("[useAttachments] URL originale:", fileUrl);
-    console.log("[useAttachments] URL transformée:", filePath);
 
     // Appel API backend sécurisé avec la méthode de WorkspaceDetails
     const token = localStorage.getItem("token");
@@ -259,13 +195,13 @@ export const useAttachments = (options = {}) => {
       alert("Erreur: Vous devez être connecté pour télécharger des fichiers");
       return;
     }
-    const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
-      filePath
-    )}`;
-    console.log("[useAttachments] URL de téléchargement:", downloadUrl);
-
     try {
+      const downloadUrl = `${API_URL}/api/files/download/${encodeURIComponent(
+        filePath
+      )}`;
+
       const response = await fetch(downloadUrl, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -283,8 +219,6 @@ export const useAttachments = (options = {}) => {
       }
 
       const blob = await response.blob();
-      console.log("[useAttachments] Blob reçu:", blob.type, blob.size);
-
       const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objectUrl;
@@ -293,8 +227,6 @@ export const useAttachments = (options = {}) => {
       a.click();
       window.URL.revokeObjectURL(objectUrl);
       document.body.removeChild(a);
-
-      console.log("[useAttachments] Téléchargement initié avec succès");
     } catch (error) {
       console.error("[useAttachments] Erreur lors du téléchargement:", error);
       alert(

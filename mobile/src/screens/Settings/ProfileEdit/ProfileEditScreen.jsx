@@ -37,9 +37,7 @@ const ProfileEditScreen = ({ navigation }) => {
   const fetchUserProfile = async () => {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        console.log('No token found, cannot fetch profile.');
+      const token = await AsyncStorage.getItem('token');      if (!token) {
         setLoading(false);
         return;
       }

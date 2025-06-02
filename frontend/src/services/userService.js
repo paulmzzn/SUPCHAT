@@ -17,15 +17,12 @@ const CACHE_TTL = 15 * 60 * 1000;
  * @returns {Promise<Object|null>} - Informations du profil ou null en cas d'erreur
  */
 export const getUserProfile = async (userId) => {
-  console.log("🔍 DEBUG userService - getUserProfile appelé pour:", userId);
-  
   // Vérifier si le profil est déjà dans le cache et n'est pas expiré
   if (userProfileCache.has(userId)) {
     const cachedData = userProfileCache.get(userId);
     
     // Vérifier si les données du cache sont encore valides
     if (cachedData.timestamp > Date.now() - CACHE_TTL) {
-      console.log("📋 DEBUG userService - Retour du cache pour userId:", userId, cachedData.data);
       return cachedData.data;
     }
     
@@ -53,8 +50,7 @@ export const getUserProfile = async (userId) => {
       console.error(`Erreur lors de la récupération du profil utilisateur (${userId}):`, response.status);
       return null;
     }    const userData = await response.json();
-    
-    // Normaliser les données utilisateur pour assurer la cohérence
+      // Normaliser les données utilisateur pour assurer la cohérence
     const normalizedUserData = normalizeUserData(userData);
     
     // Mettre en cache pour les futures requêtes
@@ -63,7 +59,6 @@ export const getUserProfile = async (userId) => {
       timestamp: Date.now()
     });
     
-    console.log("📋 DEBUG userService - Données utilisateur normalisées:", normalizedUserData);
     return normalizedUserData;
   } catch (error) {
     console.error("Erreur lors de la récupération du profil utilisateur:", error);
@@ -122,16 +117,12 @@ const normalizeUserData = (userData) => {
       }
     }
   }
-  
-  // S'assurer que l'ID est toujours disponible sous forme de chaîne
+    // S'assurer que l'ID est toujours disponible sous forme de chaîne
   if (normalized.id && !normalized.userId) {
     normalized.userId = String(normalized.id);
   } else if (normalized.userId && !normalized.id) {
     normalized.id = String(normalized.userId);
   }
-  
-  console.log("🔄 DEBUG userService - Données avant normalisation:", userData);
-  console.log("🔄 DEBUG userService - Données après normalisation:", normalized);
   
   return normalized;
 };

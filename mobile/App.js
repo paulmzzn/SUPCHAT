@@ -49,10 +49,8 @@ function MessagesNavigator() {
 // Tab Navigator for the main sections of the app
 function AppTabs() {
   const { refreshUnreadCounts } = useSocket();
-  
-  // Forcer le chargement des notifications au démarrage
+    // Forcer le chargement des notifications au démarrage
   React.useEffect(() => {
-    console.log("AppTabs: Chargement initial des notifications");
     // Utiliser un délai court pour s'assurer que le contexte est complètement initialisé
     const timer = setTimeout(() => {
       refreshUnreadCounts();

@@ -45,7 +45,7 @@ export const UserPreferencesProvider = ({ children }) => {
       
       setPreferences(updatedPreferences);
       await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(updatedPreferences));
-      console.log(`Préférence mise à jour: ${key} = ${value}`);
+
     } catch (error) {
       console.error('Erreur lors de la mise à jour des préférences:', error);
     }

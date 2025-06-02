@@ -27,6 +27,8 @@ import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
 import ReminderModal from "../../components/ReminderModal/ReminderModal";
 import ReminderList from "../../components/ReminderList/ReminderList";
+import ContextMenu from "../../components/shared/ContextMenu";
+import { createMemberContextMenu, createStatusContextMenu } from "../../utils/contextMenuUtils";
 import "./WorkspaceDetailsSidebar.css";
 
 // Drapeau pour activer/désactiver les logs de débogage (mettre à false pour désactiver tous les logs)
@@ -36,7 +38,6 @@ const isProd = process.env.NODE_ENV === "production";
 // Fonction utilitaire pour logger uniquement en développement ou si DEBUG_LOGGING est activé
 const debugLog = (message, ...args) => {
   if (!isProd && DEBUG_LOGGING) {
-    console.log(message, ...args);
   }
 };
 
@@ -85,12 +86,17 @@ function WorkspaceDetailsSidebar({
   const [processingRequestId, setProcessingRequestId] = useState(null);
   // States for reminders management
   const [reminders, setReminders] = useState([]);
-  const [showReminders, setShowReminders] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showReminders, setShowReminders] = useState(false);  const [showReminderModal, setShowReminderModal] = useState(false);
   const [loadingReminders, setLoadingReminders] = useState(false);
   const [reminderError, setReminderError] = useState(null);
   const [creatingReminder, setCreatingReminder] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null); // New state for editing
+  // States for status context menu
+  const [statusContextMenu, setStatusContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+  });
 
   // Référence pour le panneau des demandes d'adhésion
   const joinRequestsPanelRef = useRef(null);
@@ -377,8 +383,6 @@ function WorkspaceDetailsSidebar({
 
       if (response.ok) {
         const data = await response.json();
-        console.log("DEBUG: Loaded reminders from API:", data);
-        console.log("DEBUG: First reminder structure:", data.length > 0 ? data[0] : "No reminders");
         setReminders(data);
       } else {
         const errorData = await response.json();
@@ -416,7 +420,6 @@ function WorkspaceDetailsSidebar({
         });
 
         if (response.ok) {
-          console.log("Rappel modifié avec succès");
           // Recharger les rappels pour assurer la cohérence
           await loadReminders();
           setShowReminderModal(false);
@@ -444,7 +447,6 @@ function WorkspaceDetailsSidebar({
 
         if (response.ok) {
           const newReminder = await response.json();
-          console.log("Nouveau rappel créé:", newReminder);
           
           // Instead of adding to the state, reload all reminders to ensure consistency
           // This prevents any display issues from data structure mismatches
@@ -547,12 +549,9 @@ function WorkspaceDetailsSidebar({
   };
   // Load reminders when channel changes
   useEffect(() => {
-    console.log("WorkspaceDetailsSidebar - activeChannel changed:", activeChannel);
     if (activeChannel && activeChannel.id) {
-      console.log("Loading reminders for channel:", activeChannel.id);
       loadReminders();
     } else {
-      console.log("No active channel or channel ID");
     }
   }, [activeChannel?.id]);
 
@@ -587,26 +586,6 @@ function WorkspaceDetailsSidebar({
       invisible: <FaRegMoon />,
       offline: <FaRegMoon />,
     };
-
-    const titles = {
-      online: "En ligne",
-      away: "Absent",
-      dnd: "Ne pas déranger",
-      invisible: "Invisible",
-      offline: "Hors ligne",
-    };
-
-    const statusKey = status in baseClasses ? status : "offline";
-
-    return (
-      <span
-        className={baseClasses[statusKey]}
-        title={titles[statusKey]}
-        data-source={realTimeStatus ? "websocket" : "default"}
-      >
-        {iconComponent[statusKey]}
-      </span>
-    );
   };
 
   const handleCurrentUserContextMenu = (e, member, isCurrentUser) => {
@@ -616,106 +595,20 @@ function WorkspaceDetailsSidebar({
     }
 
     e.preventDefault();
-
-    const statusMenu = document.createElement("div");
-    statusMenu.className = "status-context-menu";
-    statusMenu.style.position = "absolute";
-    statusMenu.style.top = `${e.pageY}px`;
-    statusMenu.style.left = `${e.pageX}px`;
-    statusMenu.style.zIndex = "2000";
-    statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
-    statusMenu.style.borderRadius = "8px";
-    statusMenu.style.padding = "8px 0";
-    statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-    statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
-
-    const statuses = [
-      { id: "online", label: "En ligne", icon: FaCircle, color: "#44b700" },
-      { id: "away", label: "Absent", icon: FaClock, color: "#ffc107" },
-      {
-        id: "dnd",
-        label: "Ne pas déranger",
-        icon: FaTimesCircle,
-        color: "#f44336",
-      },
-      {
-        id: "invisible",
-        label: "Invisible",
-        icon: FaRegMoon,
-        color: "#9e9e9e",
-      },
-    ];
-
-    statuses.forEach((status) => {
-      const option = document.createElement("div");
-      option.style.padding = "8px 16px";
-      option.style.display = "flex";
-      option.style.alignItems = "center";
-      option.style.gap = "10px";
-      option.style.cursor = "pointer";
-      option.style.color = "white";
-
-      const icon = document.createElement("span");
-      icon.style.color = status.color;
-      icon.innerHTML = `<svg viewBox="0 0 512 512" width="16" height="16" fill="currentColor"><path d="${getIconPath(
-        status.id
-      )}"></path></svg>`;
-
-      const text = document.createElement("span");
-      text.textContent = status.label;
-
-      option.appendChild(icon);
-      option.appendChild(text);
-
-      option.addEventListener("click", () => {
-        const success = setUserStatus(status.id);
-        debugLog(
-          `[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`
-        );
-        document.body.removeChild(statusMenu);
-      });
-
-      option.addEventListener("mouseover", () => {
-        option.style.backgroundColor = "rgba(147, 72, 183, 0.15)";
-      });
-
-      option.addEventListener("mouseout", () => {
-        option.style.backgroundColor = "transparent";
-      });
-
-      statusMenu.appendChild(option);
+    
+    // Create context menu items for status changes
+    const statusMenuItems = createStatusContextMenu(handleStatusChange);
+    
+    // Show the context menu at the click position
+    setStatusContextMenu({
+      visible: true,
+      x: e.pageX,
+      y: e.pageY,
     });
-
-    document.body.appendChild(statusMenu);
-
-    const handleClickOutside = () => {
-      if (document.body.contains(statusMenu)) {
-        document.body.removeChild(statusMenu);
-      }
-      document.removeEventListener("click", handleClickOutside);
-    };
-
-    setTimeout(() => {
-      document.addEventListener("click", handleClickOutside);
-    }, 0);
-  };
-
-  const getIconPath = (status) => {
-    switch (status) {
-      case "online":
-        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z";
-      case "away":
-        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200-200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z";
-      case "dnd":
-        return "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200-200-89.5 200-200 200zm101.8-262.2L295.6 256l62.2 62.2c4.7 4.7 4.7 12.3 0 17l-22.6 22.6c-4.7 4.7-12.3 4.7-17 0L256 295.6l-62.2 62.2c-4.7 4.7-12.3 4.7-17 0l-22.6-22.6c-4.7-4.7-4.7-12.3 0-17l62.2-62.2-62.2-62.2c-4.7-4.7-4.7-12.3 0-17l22.6-22.6c4.7-4.7 12.3-4.7 17 0l62.2 62.2 62.2-62.2c4.7-4.7 12.3-4.7 17 0l22.6 22.6c4.7 4.7 4.7 12.3 0 17z";
-      case "invisible":
-      default:
-        return "M248 12.8c-137 0-248 111-248 248s111 248 248 248 248-111 248-248-111-248-248-248zm0 48c110.5 0 200 89.5 200 200s-89.5 200-200 200-200-89.5-200-200 89.5-200 200-200zm0 304c-57.9 0-105.9-43.1-113.8-99.2 9.1 1.2 18.4 1.9 27.8 1.9 105.8 0 192-86.2 192-192 0-9.4-.7-18.7-1.9-27.8 56.2 7.9 99.2 55.9 99.2 113.8 0 62.8-51.2 114-114.3 114z";
-    }
   };
 
   return (
-    <div className="details-sidebar">
+    <div className="workspace-details-sidebar">
       <div className="details-section">
         <div className="section-header" onClick={toggleMembers}>
           {showMembers ? (
@@ -791,32 +684,17 @@ function WorkspaceDetailsSidebar({
                   {joinRequests.map((request) => (
                     <li key={request.id_request} className="join-request-item">
                       <div className="join-request-user">
-                        {request.photo_url ? (
-                          <img
-                            src={request.photo_url}
-                            alt={request.nom_utilisateur}
-                            className="join-request-avatar"
-                          />
-                        ) : (
-                          <div className="join-request-avatar-placeholder">
-                            {request.nom_utilisateur
-                              ? request.nom_utilisateur[0].toUpperCase()
-                              : "?"}
+                        <div className="join-request-name">
+                          {request.nom_utilisateur}
+                        </div>
+                        <div className="join-request-email">
+                          {request.email}
+                        </div>
+                        {request.message && (
+                          <div className="join-request-message">
+                            <em>"{request.message}"</em>
                           </div>
                         )}
-                        <div className="join-request-details">
-                          <div className="join-request-name">
-                            {request.nom_utilisateur}
-                          </div>
-                          <div className="join-request-email">
-                            {request.email}
-                          </div>
-                          {request.message && (
-                            <div className="join-request-message">
-                              <em>"{request.message}"</em>
-                            </div>
-                          )}
-                        </div>
                       </div>
                       <div className="join-request-actions">
                         <button
@@ -976,50 +854,26 @@ function WorkspaceDetailsSidebar({
             </div>
           </div>
         )}
+
+        {/* Member Context Menu */}
+        {memberContextMenu.visible && memberContextMenu.member && (
+          <ContextMenu
+            visible={memberContextMenu.visible}
+            x={memberContextMenu.x}
+            y={memberContextMenu.y}
+            items={createMemberContextMenu({
+              member: memberContextMenu.member,
+              currentUserRole,
+              onPromoteToAdmin: () => handleChangeMemberRole("admin"),
+              onDemoteToMember: () => handleChangeMemberRole("member"),
+              onManageAccess: () => handleOpenMemberAccessModal(memberContextMenu.member),
+            })}
+            onClose={() => setMemberContextMenu({ visible: false })}
+            className="channel-context-menu"
+          />
+        )}
       </div>
-      {memberContextMenu.visible && memberContextMenu.member && (
-        <div
-          className="channel-context-menu"
-          style={{
-            top: memberContextMenu.y,
-            left: memberContextMenu.x,
-            zIndex: 2000,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {((currentUserRole === "owner" &&
-            memberContextMenu.member.role === "member") ||
-            (currentUserRole === "admin" &&
-              memberContextMenu.member.role === "member")) && (
-            <div
-              className="context-menu-item"
-              onClick={() => handleChangeMemberRole("admin")}
-            >
-              <FaArrowUp className="context-menu-icon" />
-              Promouvoir en admin
-            </div>
-          )}
-          {currentUserRole === "owner" &&
-            memberContextMenu.member.role === "admin" && (
-              <div
-                className="context-menu-item"
-                onClick={() => handleChangeMemberRole("member")}
-              >
-                <FaArrowDown className="context-menu-icon" />
-                Rétrograder en membre
-              </div>
-          )}
-          {(currentUserRole === "owner" || currentUserRole === "admin") && (
-            <div
-              className="context-menu-item"
-              onClick={() => handleOpenMemberAccessModal(memberContextMenu.member)}
-            >
-              <FaUserCog className="context-menu-icon" />
-              Gérer les droits d'accès
-            </div>
-          )}
-        </div>
-      )}
+
       {files.length > 0 && (
         <div className="details-section">
           <div className="section-header" onClick={toggleFiles}>
@@ -1125,7 +979,6 @@ function WorkspaceDetailsSidebar({
           <h3>Rappels ({reminders.length})</h3>            <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>            <button
               className={`reminder-create-btn ${activeChannel ? 'channel-active' : ''}`}
               onClick={() => {
-                console.log("Bouton rappel cliqué!");
                 setEditingReminder(null); // Reset editing state for new reminder
                 setShowReminderModal(true);
               }}
@@ -1230,6 +1083,16 @@ function WorkspaceDetailsSidebar({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Status Context Menu */}
+      {statusContextMenu.visible && (
+        <ContextMenu
+          items={createStatusContextMenu(handleStatusChange)}
+          onClose={handleCloseStatusContextMenu}
+          x={statusContextMenu.x}
+          y={statusContextMenu.y}
+        />
       )}
     </div>
   );

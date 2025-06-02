@@ -32,22 +32,15 @@ import ToastProvider from "./components/Toast/ToastProvider";
 import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
 import { isMobileDevice } from "./utils/deviceDetection";
 
-import CGUPage from "./pages/CGUPage";
+import CGUPage from "./pages/Settings/CGU";
 
-// Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
+// Global status change events for development
 if (process.env.NODE_ENV === "development") {
   window.addEventListener("userStatusChanged", (event) => {
-    console.log(
-      "[App Debug] Événement userStatusChanged détecté:",
-      event.detail
-    );
+    // Status change event handled
   });
 
-  // Ajouter une fonction globale pour tester le statut
   window.testUserStatus = (userId, status) => {
-    console.log(
-      `[Test] Émission manuelle d'un changement de statut: ${userId} -> ${status}`
-    );
     const event = new CustomEvent("userStatusChanged", {
       detail: { userId, status },
     });
@@ -58,111 +51,58 @@ if (process.env.NODE_ENV === "development") {
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  // Vérifier l'état de l'authentification et la détection mobile au chargement de l'application
+  // Check authentication state and mobile detection on app load
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log(
-      "[App.jsx] useEffect - Token dans localStorage:",
-      token ? token.substring(0, 15) + "..." : "non trouvé"
-    );
-    
-    // Détecter si c'est un appareil mobile
     setIsMobile(isMobileDevice());
-    
     setAuthChecked(true);
   }, []);
-
-  // Fonction pour vérifier si l'utilisateur est authentifié avec débogage renforcé
+  // Function to check if user is authenticated
   const isAuthenticated = () => {
     const token = localStorage.getItem("token");
-    console.log("[App.jsx] isAuthenticated() appelé");
-    console.log("- Token présent:", token ? "Oui" : "Non");
     if (token) {
-      console.log("- Début du token:", token.substring(0, 20) + "...");
       try {
         const parts = token.split(".");
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
-          console.log("- Payload du token:", payload);
-          console.log(
-            "- Expiration:",
-            new Date(payload.exp * 1000).toLocaleString()
-          );
-          console.log(
-            "- Token expiré:",
-            Date.now() > payload.exp * 1000 ? "Oui" : "Non"
-          );
-        } else {
-          console.log("- Format du token non valide");
+          const isExpired = Date.now() > payload.exp * 1000;
+          return !isExpired;
         }
       } catch (e) {
-        console.log("- Erreur lors du décodage du token:", e);
+        return false;
       }
     }
-    const isAuth = token !== null && token !== undefined;
-    console.log("- Résultat final isAuthenticated():", isAuth);
-    return isAuth;
+    return token !== null && token !== undefined;
   };
-
-  // Fonction complète qui vérifie à la fois le token ET la validation du code
+  // Complete function that checks both token AND code validation
   const isFullyAuthenticated = () => {
     const token = localStorage.getItem("token");
     const isValidated = localStorage.getItem("isValidated") === "true";
-    console.log("[App.jsx] isFullyAuthenticated() appelé");
-    console.log("- Token présent:", token ? "Oui" : "Non");
-    console.log("- Code validé:", isValidated ? "Oui" : "Non");
     return token !== null && token !== undefined && isValidated;
   };
-
-  // Composant amélioré pour les routes protégées
+  // Enhanced component for protected routes
   const ProtectedRoute = ({ children }) => {
     const isAuth = isAuthenticated();
     const isValidated = localStorage.getItem("isValidated") === "true";
-    console.log(
-      "[App.jsx] ProtectedRoute rendu - authChecked:",
-      authChecked,
-      ", isAuth:",
-      isAuth,
-      ", isValidated:",
-      isValidated
-    );
+    
     if (!authChecked) {
-      console.log(
-        "[App.jsx] ProtectedRoute - En attente de la vérification d'authentification"
-      );
-      return <div>Vérification de l'authentification...</div>;
+      return <div>Checking authentication...</div>;
     }
     if (!isAuth) {
-      console.log(
-        "[App.jsx] ProtectedRoute - Redirection vers login car non authentifié"
-      );
       return <Navigate to="/login" replace />;
     }
     if (isAuth && !isValidated) {
-      console.log(
-        "[App.jsx] ProtectedRoute - Redirection vers /code car authentifié mais code non validé"
-      );
       return <Navigate to="/code" replace />;
     }
-    console.log(
-      "[App.jsx] ProtectedRoute - Utilisateur authentifié, affichage du contenu protégé"
-    );
     return children;
-  };
-  // Ne rien afficher jusqu'à ce que l'état de l'authentification soit vérifié
+  };  // Don't display anything until authentication state is checked
   if (!authChecked) {
-    console.log("[App.jsx] Rendu global - authChecked pas encore prêt");
-    return <div>Chargement...</div>; // Ou un spinner de chargement
+    return <div>Loading...</div>; // Or a loading spinner
   }
-
-  // Redirection mobile
+  // Mobile redirection
   if (isMobile) {
-    console.log("[App.jsx] Appareil mobile détecté - affichage de la page de redirection");
     return <MobileRedirect />;
   }
-
-  console.log("[App.jsx] Rendu global - authChecked prêt, rendu des routes");
   return (
     <ThemeProvider>
       <NotificationSettingsProvider>
@@ -172,156 +112,74 @@ function App() {
               {/* Ajout du composant Notifications ici pour qu'il soit disponible sur toutes les pages */}
               <Notifications />
               <NotificationPermissionRequest /> {/* Nouveau composant global */}
-              <Routes>
-                <Route
-                  path="/login"
-                  element={
-                    <>
-                      <Login />
-                      <script>
-                        {console.log("[App.jsx] Route /login rendue")}
-                      </script>
-                    </>
-                  }
-                />
-                <Route
-                  path="/register"
-                  element={
-                    <>
-                      <Register />
-                      <script>
-                        {console.log("[App.jsx] Route /register rendue")}
-                      </script>
-                    </>
-                  }
-                />
-                <Route
-                  path="/code"
-                  element={
-                    <>
-                      <Code email={localStorage.getItem("email")} />
-                      <script>
-                        {console.log("[App.jsx] Route /code rendue")}
-                      </script>
-                    </>
-                  }
-                />
-                <Route
-                  path="/auth/callback"
-                  element={
-                    <>
-                      <AuthCallback />
-                      <script>
-                        {console.log("[App.jsx] Route /auth/callback rendue")}
-                      </script>
-                    </>
-                  }
-                />
-                {/* Routes protégées */}
-                <Route
+              <Routes>                <Route path="/login" element={<Login />} />                <Route path="/register" element={<Register />} />                <Route 
+                  path="/code" 
+                  element={<Code email={localStorage.getItem("email")} />} 
+                />                <Route path="/auth/callback" element={<AuthCallback />} />
+                {/* Routes protégées */}                <Route
                   path="/dashboard"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /dashboard protégée rendue"
-                      )}
                       <Dashboard />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/workspaces"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /workspaces protégée rendue"
-                      )}
                       <Workspaces />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/workspace/:workspaceId"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /workspace/:workspaceId protégée rendue"
-                      )}
                       <WorkspaceDetails />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/discover"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /discover protégée rendue")}
                       <Discover />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/validate"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /validate protégée rendue")}
                       <Validate />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/settings"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /settings protégée rendue")}
                       <Settings />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/profile/:userId"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /profile/:userId protégée rendue"
-                      )}
                       <Profile />
                     </ProtectedRoute>
                   }
-                />{" "}
-                <Route
+                />                <Route
                   path="/direct-messages"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /direct-messages protégée rendue"
-                      )}
                       <DirectMessages />
                     </ProtectedRoute>
                   }
-                />
-                <Route
+                />                <Route
                   path="/sound-test"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /sound-test protégée rendue"
-                      )}
                       <SoundTest />
                     </ProtectedRoute>
                   }
-                />
-                <Route
-                  path="/join-workspace"
-                  element={
-                    <>
-                      <JoinWorkspace />
-                      <script>
-                        {console.log("[App.jsx] Route /join-workspace rendue")}
-                      </script>
-                    </>
-                  }
-                />
+                />                <Route path="/join-workspace" element={<JoinWorkspace />} />
                 {/* Route par défaut modifiée pour vérifier aussi l'indicateur isValidated */}
                 <Route
                   path="/"

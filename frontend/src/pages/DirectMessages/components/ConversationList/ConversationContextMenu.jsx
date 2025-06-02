@@ -1,5 +1,7 @@
 // Composant pour le menu contextuel des conversations
 import React from "react";
+import ContextMenu from "../../../../components/shared/ContextMenu";
+import { createConversationContextMenu } from "../../../../utils/contextMenuUtils";
 
 /**
  * Composant de menu contextuel pour les conversations
@@ -15,46 +17,20 @@ const ConversationContextMenu = ({
   onDeleteConversation,
   onClose,
 }) => {
-  if (!visible) return null;
+  const menuItems = createConversationContextMenu({
+    onOpen: () => onOpenConversation(userId),
+    onDelete: () => onDeleteConversation(userId),
+  });
 
   return (
-    <>
-      <div
-        className="dm-context-menu"
-        style={{
-          top: yPos,
-          left: xPos,
-        }}
-      >
-        <div
-          className="dm-context-menu-item"
-          onClick={() => {
-            onOpenConversation(userId);
-            onClose();
-          }}
-        >
-          Ouvrir la conversation
-        </div>
-        <div
-          className="dm-context-menu-item dm-context-menu-item-danger"
-          onClick={() => {
-            // Confirmation avant suppression
-            if (
-              window.confirm(
-                "Voulez-vous vraiment supprimer cette conversation ? Les messages seront définitivement supprimés."
-              )
-            ) {
-              onDeleteConversation(userId);
-            }
-            onClose();
-          }}
-        >
-          Supprimer la conversation
-        </div>
-      </div>
-      {/* Couche transparente pour fermer le menu */}
-      <div className="dm-context-menu-overlay" onClick={onClose} />
-    </>
+    <ContextMenu
+      visible={visible}
+      x={xPos}
+      y={yPos}
+      items={menuItems}
+      onClose={onClose}
+      className="dm-context-menu"
+    />
   );
 };
 

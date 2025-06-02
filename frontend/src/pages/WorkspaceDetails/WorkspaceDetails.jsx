@@ -15,6 +15,8 @@ import VideoCallModal from "./VideoCallModal";
 import StrawpollWebviewModal from "./StrawpollWebviewModal";
 import ChannelMembersModal from "./ChannelMembersModal"; // Importer la nouvelle modal
 import MemberAccessModal from "./MemberAccessModal"; // Importer notre nouvelle modale de droits d'accès
+import ContextMenu from "../../components/shared/ContextMenu";
+import { createMessageContextMenu, createChannelContextMenu, createMemberContextMenu } from "../../utils/contextMenuUtils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -219,9 +221,7 @@ function WorkspaceDetails() {
       alert(err.message || "Erreur lors de la création du sondage Strawpoll.");
     }
   };
-
   const sendVideoCallSystemMessage = () => {
-    console.log("Envoi d'un message système pour l'appel vidéo");
     if (socket && activeChannel) {
       socket.emit("message", {
         canal_id: activeChannel.id,
@@ -391,53 +391,33 @@ function WorkspaceDetails() {
     setFullscreenFile(null);
   };
 
-// Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
+// Modify handleFileUpload function to avoid error with setMessages
   const handleFileUpload = async (e) => {
-    console.log("🚀 Début de handleFileUpload");
     const file = e.target.files[0];
     if (!file) {
-      console.log("❌ Aucun fichier sélectionné");
       return;
     }
-
-    console.log(
-      `📁 Fichier sélectionné: ${file.name} (${file.size} octets, type: ${file.type})`
-    );
 
     if (file.size > 10 * 1024 * 1024) {
-      // 10MB limite
-      console.log("❌ Fichier trop volumineux");
+      // 10MB limit
       alert("Le fichier ne doit pas dépasser 10MB");
       return;
-    }
-
-    try {
+    }try {
       if (activeChannel && socket) {
-        console.log(
-          `📡 Canal actif: ${activeChannel.id}, Socket disponible: ${!!socket}`
-        );
-
         // Création de FormData pour l'envoi du fichier
         const formData = new FormData();
         formData.append("file", file);
         formData.append("canalId", activeChannel.id);
         formData.append("workspaceId", workspaceId);
 
-        console.log(
-          `🔍 Formulaire préparé - canalId: ${activeChannel.id}, workspaceId: ${workspaceId}`
-        );
-
         if (replyingTo) {
-          console.log(`↩️ Réponse à un message: ${replyingTo.id_message}`);
           formData.append("parentId", replyingTo.id_message);
         }
 
         const token = localStorage.getItem("token");
-        console.log(`🔑 Token disponible: ${token ? "Oui" : "Non"}`);
 
         // Afficher un message temporaire de téléchargement
         const tempMsgId = `temp-upload-${Date.now()}`;
-        console.log(`📝 Création du message temporaire: ${tempMsgId}`);
         const loadingMessage = {
           id_message: tempMsgId,
           contenu: `Envoi du fichier ${file.name}...`,
@@ -445,11 +425,9 @@ function WorkspaceDetails() {
           fk_utilisateur: currentUserId,
           date_creation: new Date().toISOString(),
           isUploading: true,
-          reactions: [],
-        };
+          reactions: [],        };
 
-        console.log(`⏳ Ajout du message temporaire au chat`);
-        setMessages((prevMessages) => [...prevMessages, loadingMessage]); // Forcer une mise à jour du DOM
+        setMessages((prevMessages) => [...prevMessages, loadingMessage]);// Forcer une mise à jour du DOM
         if (chatContainerRef && chatContainerRef.current) {
           setTimeout(() => {
             // Vérifier à nouveau que la référence est toujours valide
@@ -457,12 +435,7 @@ function WorkspaceDetails() {
               chatContainerRef.current.scrollTop =
                 chatContainerRef.current.scrollHeight;
             }
-          }, 50);
-        }
-
-        console.log(
-          `🌐 Début de l'appel API vers ${API_URL}/api/messages/upload`
-        );
+          }, 50);        }
 
         // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
         // Ce qui évite les problèmes de timeout avec Socket.IO
@@ -475,11 +448,7 @@ function WorkspaceDetails() {
           body: formData,
           // Augmenter le timeout pour les fichiers volumineux
           timeout: 60000, // 60 secondes de timeout
-        });
-
-        console.log(`📡 Réponse reçue - Status: ${response.status}`);
-
-        if (!response.ok) {
+        });        if (!response.ok) {
           try {
             const errorData = await response.json();
             console.error("❌ Détails de l'erreur API:", errorData);
@@ -496,13 +465,9 @@ function WorkspaceDetails() {
               `Erreur ${response.status}: ${response.statusText}`
             );
           }
-        }
-
-        const data = await response.json();
-        console.log("✅ Réponse API réussie:", data);
+        }        const data = await response.json();
 
         // Supprimer le message temporaire
-        console.log(`🗑️ Suppression du message temporaire: ${tempMsgId}`);
         setMessages((prevMessages) =>
           prevMessages.filter((msg) => msg.id_message !== tempMsgId)
         );
@@ -510,13 +475,10 @@ function WorkspaceDetails() {
         // Réinitialiser l'input de fichier et le mode réponse
         e.target.value = null;
         setReplyingTo(null);
-        console.log(`✅ Fin de l'upload avec succès`);
       } else {
         if (!activeChannel) {
-          console.log("❌ Aucun canal actif");
           alert("Veuillez d'abord sélectionner un canal");
         } else if (!socket) {
-          console.log(`❌ Problème de socket - socket n'est pas disponible`);
           alert(
             "Problème de connexion au serveur. Veuillez rafraîchir la page."
           );
@@ -524,8 +486,6 @@ function WorkspaceDetails() {
       }
     } catch (error) {
       console.error("❌ ERREUR DÉTAILLÉE:", error);
-      console.log(`❌ Message d'erreur: ${error.message}`);
-      console.log(`❌ Stack trace: ${error.stack}`);
       alert(
         `Erreur lors de l'envoi du fichier: ${
           error.message || "Erreur inconnue"
@@ -533,15 +493,10 @@ function WorkspaceDetails() {
       );
 
       // Supprimer le message de chargement en cas d'erreur
-      console.log(
-        "🗑️ Nettoyage des messages temporaires d'upload en cas d'erreur"
-      );
       setMessages((prevMessages) =>
         prevMessages.filter((msg) => !msg.isUploading)
       );
     }
-
-    console.log("🏁 Fin de handleFileUpload");
   }; // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
   const handleChatInputKeyDown = (e) => {
     // Si le mode édition est actif, gérer les touches Enter et Escape
@@ -576,11 +531,8 @@ function WorkspaceDetails() {
     navigate(`/profile/${member.id}`);
   };
 
-
   // Handler pour gérer les clics sur les mentions de canaux
   const handleChannelClick = (channelName) => {
-    console.log("Canal cliqué:", channelName);
-
     // Trouver le canal correspondant au nom cliqué
     const targetChannel = channels.find(
       (channel) => channel.name.toLowerCase() === channelName.toLowerCase()
@@ -591,11 +543,8 @@ function WorkspaceDetails() {
       handleSelectChannel(targetChannel);
     } else {
       console.warn(`Canal non trouvé: ${channelName}`);
-    }
-  }; // Handler pour gérer les clics sur les mentions d'utilisateurs
+    }  }; // Handler pour gérer les clics sur les mentions d'utilisateurs
   const handleUserClick = (userId, userName) => {
-    console.log("Utilisateur cliqué:", userName, "avec ID:", userId);
-
     // Vérifier si c'est Mistral AI
     if (userId === "00000000-0000-0000-0000-000000000001") {
       // Insérer une mention de Mistral dans le champ de texte actuel avec un espace après
@@ -914,7 +863,6 @@ function WorkspaceDetails() {
           }
           isUuid={isUuid}
 
-          handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall}
           handleManageChannelMembers={handleManageChannelMembers}
           isChannelPrivate={activeChannel?.isPrivate}
@@ -971,34 +919,23 @@ function WorkspaceDetails() {
             handleCloseModal={handleCloseModal}
             handleSubmitChannel={handleSubmitChannel}
             handleChannelInputChange={handleChannelInputChange}
-            setNewChannel={setNewChannel}
           />
         )}
 
         {contextMenu.visible && (
-          <div
+          <ContextMenu
+            visible={contextMenu.visible}
+            x={contextMenu.xPos}
+            y={contextMenu.yPos}
+            items={createChannelContextMenu({
+              onEdit: handleEditChannel,
+              onManageMembers: handleManageChannelMembers,
+              onDelete: handleDeleteChannel,
+              isPrivate: contextMenu.channel?.isPrivate || contextMenu.isPrivate,
+            })}
+            onClose={handleCloseContextMenu}
             className="channel-context-menu"
-            style={{ top: contextMenu.yPos, left: contextMenu.xPos }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="context-menu-item" onClick={handleEditChannel}>
-              <FaEdit className="context-menu-icon" />
-              <span>Modifier le canal</span>
-            </div>
-            {contextMenu.channel && contextMenu.channel.isPrivate && (
-              <div className="context-menu-item" onClick={handleManageChannelMembers}>
-                <FaUsers className="context-menu-icon" />
-                <span>Gérer les membres</span>
-              </div>
-            )}
-            <div
-              className="context-menu-item delete"
-              onClick={handleDeleteChannel}
-            >
-              <FaTrashAlt className="context-menu-icon" />
-              <span>Supprimer le canal</span>
-            </div>
-          </div>
+          />
         )}
 
         {showEditChannelModal && (
@@ -1021,46 +958,26 @@ function WorkspaceDetails() {
             workspaceMembers={members.online.concat(members.offline)}
             currentUserRole={currentUserRole}
             onMembersUpdated={handleChannelMembersUpdated}
-            onSetMemberAccess={handleSetMemberChannelAccess}
           />
         )}
 
         {messageContextMenu.visible && (
-          <div
+          <ContextMenu
+            visible={messageContextMenu.visible}
+            x={messageContextMenu.xPos}
+            y={messageContextMenu.yPos}
+            items={createMessageContextMenu({
+              onReply: handleReplyMessage,
+              onEdit: handleEditMessage,
+              onDelete: handleDeleteMessage,
+              onAddReaction: handleShowEmojiPicker,
+              isOwnMessage:
+                messageContextMenu.message &&
+                messageContextMenu.message.fk_utilisateur === currentUserId,
+            })}
+            onClose={handleCloseMessageContextMenu}
             className="message-context-menu"
-            style={{
-              top: messageContextMenu.yPos,
-              left: messageContextMenu.xPos,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="context-menu-item" onClick={handleReplyMessage}>
-              <FaReply className="context-menu-icon" />
-              <span>Répondre</span>
-            </div>
-            <div className="context-menu-item" onClick={handleShowEmojiPicker}>
-              <FaRegSmile className="context-menu-icon" />
-              <span>Ajouter une réaction</span>
-            </div>            {messageContextMenu.message &&
-              messageContextMenu.message.fk_utilisateur === currentUserId && (
-                <>
-                  <div
-                    className="context-menu-item edit"
-                    onClick={handleEditMessage}
-                  >
-                    <FaEdit className="context-menu-icon" />
-                    <span>Modifier</span>
-                  </div>
-                  <div
-                    className="context-menu-item delete"
-                    onClick={handleDeleteMessage}
-                  >
-                    <FaTrashAlt className="context-menu-icon" />
-                    <span>Supprimer</span>
-                  </div>
-                </>
-              )}
-          </div>
+          />
         )}
 
         {showEmojiPicker && (

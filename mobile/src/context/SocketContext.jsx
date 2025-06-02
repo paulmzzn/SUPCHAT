@@ -9,7 +9,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import io from "socket.io-client";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.104:3000";
 
 const SocketContext = createContext(null);
 
@@ -47,13 +47,10 @@ export const SocketProvider = ({ children }) => {
     });
   }, []);
 
-  // Fonction pour charger les compteurs de messages non lus
-  const fetchUnreadCounts = useCallback(async () => {
+  // Fonction pour charger les compteurs de messages non lus  const fetchUnreadCounts = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
-
-      console.log("Socket: Fetching unread message counts");
 
       const response = await fetch(
         `${API_URL}/api/private-messages/unread-counts`,
@@ -64,10 +61,6 @@ export const SocketProvider = ({ children }) => {
 
       if (response.ok) {
         const counts = await response.json();
-        console.log(
-          "Socket: Unread counts received:",
-          Object.keys(counts).length
-        );
 
         // Mettre à jour uniquement si les données sont différentes
         setUnreadMessages((prevCounts) => {
@@ -84,7 +77,6 @@ export const SocketProvider = ({ children }) => {
             prevTotal !== newTotal ||
             JSON.stringify(prevCounts) !== JSON.stringify(counts)
           ) {
-            console.log("Socket: Setting total unread count to", newTotal);
             setTotalUnreadCount(newTotal);
             return counts;
           }
@@ -103,7 +95,6 @@ export const SocketProvider = ({ children }) => {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
 
-        console.log("Socket: Connecting to", API_URL);
 
         const newSocket = io(API_URL, {
           auth: { token },
@@ -113,7 +104,6 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on("connect", () => {
-          console.log("Socket: Connected with ID", newSocket.id);
           setConnected(true);
           newSocket.emit("joinPrivate");
 
@@ -127,7 +117,6 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on("disconnect", () => {
-          console.log("Socket: Disconnected");
           setConnected(false);
         });
 
@@ -148,7 +137,6 @@ export const SocketProvider = ({ children }) => {
 
         return () => {
           if (newSocket) {
-            console.log("Socket: Cleaning up connection");
             newSocket.disconnect();
           }
         };
@@ -163,7 +151,6 @@ export const SocketProvider = ({ children }) => {
   // Assurer le chargement des compteurs même si connecté avant le rendu du composant
   useEffect(() => {
     if (connected && !initialFetchDone.current) {
-      console.log("Socket: Initial fetch of unread counts");
       fetchUnreadCounts();
       initialFetchDone.current = true;
     }
@@ -222,7 +209,6 @@ export const SocketProvider = ({ children }) => {
     if (!socket || !currentUserId) return;
 
     const handlePrivateMessage = (msg) => {
-      console.log("Socket: New private message received", msg.id_message_prive);
 
       // Si le message vient de quelqu'un d'autre, incrémenter le compteur
       if (msg.fk_expediteur !== currentUserId) {

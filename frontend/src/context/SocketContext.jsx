@@ -216,15 +216,9 @@ export function SocketProvider({ children }) {
           autoConnect: true,
           forceNew: false,
           query: { token }, // Inclure aussi le token dans la query pour plus de flexibilité
-        };
-
-        // Log de debug temporaire
-        console.debug("[Socket] Tentative de connexion au serveur", API_URL);
-
-        const newSocket = io(API_URL, socketOptions);
+        };        const newSocket = io(API_URL, socketOptions);
 
         newSocket.on("connect", () => {
-          console.log("[Socket] Connexion établie");
           newSocket.emit("joinPrivate"); // Rejoindre la room privée
 
           // Fetch notifications on reconnect to ensure badges are up-to-date
@@ -257,11 +251,7 @@ export function SocketProvider({ children }) {
               "[Socket] Déconnexion initiée par le serveur, pas de reconnexion automatique"
             );
           }
-        });
-
-        newSocket.on("reconnect", (attemptNumber) => {
-          console.log("[Socket] Reconnecté après", attemptNumber, "tentatives");
-
+        });        newSocket.on("reconnect", (attemptNumber) => {
           // Rejoindre la room privée à nouveau
           newSocket.emit("joinPrivate");
 
@@ -270,10 +260,8 @@ export function SocketProvider({ children }) {
             refreshUnreadDM();
             refreshUnreadChannels();
           }, 1000);
-        });
-
-        newSocket.on("reconnect_attempt", (attemptNumber) => {
-          console.log("[Socket] Tentative de reconnexion #", attemptNumber);
+        });        newSocket.on("reconnect_attempt", (attemptNumber) => {
+          // Attempting reconnection
         });
 
         newSocket.on("reconnect_error", (error) => {
@@ -415,11 +403,8 @@ export function SocketProvider({ children }) {
     // Mise à jour du compteur à chaque lecture de message
     socket.on("privateMessageRead", (data) => {
       refreshUnreadDM();
-    });
-
-    // Écouter l'événement de réinitialisation des compteurs
+    });    // Écouter l'événement de réinitialisation des compteurs
     socket.on("privateMessagesMarkedAsRead", (data) => {
-      console.log("[Socket] Messages privés marqués comme lus:", data);
       refreshUnreadDM();
     });
 
@@ -497,32 +482,15 @@ export function SocketProvider({ children }) {
           data
         );
         return;
-      }
-
-      console.log(
-        `[WEBSOCKET] Changement de statut reçu: ${userId} -> ${status}`
-      );
-
-      // Mise à jour synchrone des statuts (mise à jour en DIRECT)
+      }      // Mise à jour synchrone des statuts (mise à jour en DIRECT)
       setUserStatuses((prevStatuses) => {
         const newStatuses = { ...prevStatuses, [userId]: status };
-
-        // Déboguer les détails des statuts après mise à jour
-        const userIds = Object.keys(newStatuses);
-        console.log(
-          `[WEBSOCKET] ${userIds.length} statuts utilisateur dans le tableau:`,
-          userIds.map((id) => `${id}: ${newStatuses[id]}`).join(", ")
-        );
-
         return newStatuses;
       });
-    };
-
-    // Écouter UNIQUEMENT sur le socket
+    };    // Écouter UNIQUEMENT sur le socket
     socket.on("userStatusChanged", handleStatusChange);
 
     // Demander l'état des statuts au moment du chargement
-    console.log("[WEBSOCKET] Demande de l'état initial des statuts");
     socket.emit("getUserStatuses");
 
     // Configuration du débogage
@@ -537,10 +505,7 @@ export function SocketProvider({ children }) {
 
   // Ajouter un gestionnaire pour recevoir les statuts initiaux
   useEffect(() => {
-    if (!socket) return;
-
-    const handleInitialStatuses = (statusData) => {
-      console.log("[WEBSOCKET] Réception des statuts initiaux:", statusData);
+    if (!socket) return;    const handleInitialStatuses = (statusData) => {
       if (statusData && typeof statusData === "object") {
         setUserStatuses((currentStatuses) => ({
           ...currentStatuses,
@@ -553,29 +518,18 @@ export function SocketProvider({ children }) {
 
     return () => {
       socket.off("initialUserStatuses", handleInitialStatuses);
-    };
-  }, [socket]);
+    };  }, [socket]);
 
   // Fonction pour envoyer un changement de statut - simplifiée et directe
   const setUserStatus = (status) => {
     if (!socket || !socket.connected) {
-      console.error(
-        "[Socket] Impossible de définir le statut: Socket non connecté"
-      );
       return false;
     }
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      console.error(
-        "[Socket] Impossible de définir le statut: ID utilisateur non trouvé"
-      );
       return false;
     }
-
-    console.log(
-      `[Socket] Envoi du changement de statut au serveur: ${userId} -> ${status}`
-    );
 
     // Mise à jour optimiste locale AVANT envoi au serveur
     setUserStatuses((prev) => ({ ...prev, [userId]: status }));
@@ -584,7 +538,6 @@ export function SocketProvider({ children }) {
     socket.emit("setUserStatus", { status, userId });
     return true;
   };
-
   // Notifier le backend des workspaces rejoints au chargement
   useEffect(() => {
     if (!socket || !socket.connected) return;
@@ -595,7 +548,7 @@ export function SocketProvider({ children }) {
         const response = await fetch(`${API_URL}/api/workspaces/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
+        
         if (response.ok) {
           const workspaces = await response.json();
           const workspaceIds = workspaces.map((w) => w.id_workspace);
@@ -604,15 +557,13 @@ export function SocketProvider({ children }) {
           socket.emit("userJoinedWorkspaces", { workspaces: workspaceIds });
         }
       } catch (error) {
-        console.error(
-          "[Socket] Erreur lors du chargement des workspaces:",
-          error
-        );
+        // Error loading workspaces, continue silently
       }
     };
 
     loadWorkspaces();
   }, [socket, API_URL]);
+  
   return (
     <SocketContext.Provider
       value={{
@@ -625,7 +576,9 @@ export function SocketProvider({ children }) {
         setUserStatus, // Fonction pour changer le statut
       }}
     >
-      {children}{" "}
+      {children}
     </SocketContext.Provider>
   );
 }
+
+export default SocketProvider;

@@ -52,16 +52,13 @@ function Workspaces() {
   const bannerInputRef = useRef(null);
   const iconInputRef = useRef(null);
   const navigate = useNavigate();
-
   const checkTokenValidity = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.log("Pas de token trouvé");
       return false;
     }
 
     try {
-      console.log("Vérification du token:", token.substring(0, 15) + "...");
       const response = await fetch(`${API_URL}/api/users/verify-token`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -75,7 +72,6 @@ function Workspaces() {
       }
 
       const data = await response.json();
-      console.log("Token valide, expiration dans:", data.expires_in);
       return true;
     } catch (error) {
       console.error("Erreur lors de la vérification du token:", error);
@@ -114,10 +110,7 @@ function Workspaces() {
           response.status
         );
         return [];
-      }
-
-      const data = await response.json();
-      console.log("Favoris récupérés:", data);
+      }      const data = await response.json();
 
       const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
 
@@ -438,11 +431,7 @@ function Workspaces() {
       setError(err.message);
     }
   };
-
   const handleLeaveWorkspace = (workspaceId) => {
-    console.log(
-      `Workspace ${workspaceId} quitté, rafraîchissement de la liste...`
-    );
     fetchWorkspaces();
   };
 

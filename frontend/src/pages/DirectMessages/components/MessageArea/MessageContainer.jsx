@@ -26,7 +26,6 @@ const MessageContainer = ({
 }) => {
   // Debug : log le nombre de messages reçus
   React.useEffect(() => {
-    console.log("[MessageContainer] messages:", messages);
   }, [messages]);
 
   const lastMessageIdRef = React.useRef();

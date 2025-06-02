@@ -169,7 +169,6 @@ function WorkspaceCard({
         }
         break;
       case "settings":
-        console.log("Settings for workspace:", workspace.id);
         navigate(`/workspace/${workspace.id}/settings`);
         break;
       default:

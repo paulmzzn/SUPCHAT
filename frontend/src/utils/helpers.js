@@ -108,7 +108,7 @@ export const isUuid = (str) =>
 
 // Helper pour logger les interactions avec Mistral
 export const debugMistralInteraction = (message) => {
-  console.log(`[Mistral Debug] ${message}`);
+  // Debug logging disabled in production
 };
 
 // Helper pour rendre les liens cliquables dans un texte

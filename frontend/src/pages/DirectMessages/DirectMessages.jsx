@@ -86,22 +86,10 @@ function DirectMessages() {
 
   // Valeurs par défaut si les hooks retournent null/undefined
   const convWithDefaults = conv || {};
-
   // Debug logs déplacés dans useEffect pour éviter les rendus en boucle
   React.useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      // Log uniquement si les données ont changé significativement
-      console.log("[DirectMessages] État des messages:", {
-        messages: (msg || {}).messages?.length,
-        loadingMessages: (msg || {}).loadingMessages,
-        error: (msg || {}).error,
-      });
-
-      console.log("[DirectMessages] État des conversations:", {
-        conversations: (conv?.getFilteredConversations?.() || []).length,
-        selectedUser,
-        currentUserId,
-      });
+      // Log uniquement si les données ont changé significativement - removed for production
     }
   }, [
     msg?.messages?.length,
@@ -110,16 +98,10 @@ function DirectMessages() {
     selectedUser,
     currentUserId,
   ]);
-
-  // Dans DirectMessages.jsx, juste avant le return
+  // Debug effect for development only
   React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[DirectMessages] État final avant render:", {
-        replyingTo: msg?.replyingTo,
-        handleReplyMessage: !!msg?.handleReplyMessage,
-      });
-    }
-  }, [msg?.replyingTo, !!msg?.handleReplyMessage]); // Effet pour nettoyer les ressources et prévenir les fuites de mémoire
+    // Development debugging removed for production
+  }, [msg?.replyingTo, !!msg?.handleReplyMessage]);// Effet pour nettoyer les ressources et prévenir les fuites de mémoire
   useEffect(() => {
     return () => {
       // Nettoyer les ressources en fin de vie du composant
@@ -139,9 +121,8 @@ function DirectMessages() {
           // Annuler seulement quelques frames récentes (pas toutes)
           for (let i = id; i > id - 10; i--) {
             if (i > 0) cancelAnimationFrame(i);
-          }
-        } catch (e) {
-          console.error("Erreur lors du nettoyage des animations:", e);
+          }        } catch (e) {
+          // Silent error handling for animation cleanup
         }
       }
     };
@@ -175,16 +156,11 @@ function DirectMessages() {
     return () => {
       window.removeEventListener("unreadMessagesUpdated", syncUnreadCounts);
     };
-  }, [conv]);
-  // Effet pour réinitialiser le compteur quand on sélectionne une conversation
+  }, [conv]);  // Reset counter when selecting a conversation
   useEffect(() => {
     if (selectedUser && conv?.resetUnreadCountForUser) {
-      // Réinitialiser le compteur pour cet utilisateur
+      // Reset counter for this user
       conv.resetUnreadCountForUser(selectedUser);
-      console.log(
-        "[DirectMessages] Réinitialisation compteur pour:",
-        selectedUser
-      );
     }
   }, [selectedUser, conv?.resetUnreadCountForUser]);
 

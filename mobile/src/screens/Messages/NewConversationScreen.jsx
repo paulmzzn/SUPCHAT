@@ -14,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStyles } from "./NewConversationScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.104:3000";
 
 const NewConversationScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
@@ -100,11 +100,9 @@ const NewConversationScreen = ({ navigation }) => {
     if (!user) return <View style={styles.avatar} />;
 
     if (user.photo_de_profil || user.avatar) {
-      return (
-        <Image
+      return (        <Image
           source={{ uri: user.photo_de_profil || user.avatar }}
           style={styles.avatar}
-          onError={(e) => console.log("Avatar image failed to load")}
         />
       );
     } else {

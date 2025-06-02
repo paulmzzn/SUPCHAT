@@ -36,10 +36,6 @@ function Sidebar() {
 
     const handleUnreadChannelMessagesUpdate = (event) => {
       if (event.detail && typeof event.detail.total === "number") {
-        console.log(
-          "[Sidebar] Mise à jour des messages de canal non lus:",
-          event.detail
-        );
         setLocalNotifications((prev) => ({
           ...prev,
           workspace: event.detail.total,

@@ -136,8 +136,6 @@ function ChatContainer({
           const viewportTop = container.getBoundingClientRect().top;
           const targetOffset = targetTop - viewportTop; // Position relative dans le viewport
           
-          console.log(`📜 Chargement déclenché, message de référence: ${targetId}`);
-          console.log(`Position relative du message: ${targetOffset}px`);
           
           // Préparer pour le chargement
           setIsLoadingOlderMessages(true);
@@ -161,10 +159,8 @@ function ChatContainer({
               const newOffset = newTop - newViewportTop;
               const adjustment = newOffset - targetOffset;
               
-              console.log(`Ajustement de scroll: ${adjustment}px`);
               container.scrollTop += adjustment;
               
-              console.log(`Position maintenue pour le message ${targetId}`);
             }
             
             // Réinitialiser les états après un court délai

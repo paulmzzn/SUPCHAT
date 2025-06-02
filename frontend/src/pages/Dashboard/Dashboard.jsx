@@ -11,28 +11,21 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
   useEffect(() => {
-    console.log("Dashboard: Initialisation du composant");
     // Correction: utiliser 'token' au lieu de 'userToken'
     const token = localStorage.getItem("token");
 
-    console.log("Dashboard: Token récupéré:", token ? "Présent" : "Absent");
-
     if (!token) {
-      console.error("Dashboard: Token manquant, redirection vers login");
       navigate("/login");
       return;
     }
 
     try {
       const decoded = jwtDecode(token);
-      console.log("Dashboard: Token décodé avec succès:", decoded);
       setTokenInfo(token);
       setDecodedToken(decoded);
       setLoading(false);
     } catch (error) {
-      console.error("Dashboard: Erreur lors du décodage du token:", error);
       setError("Erreur d'authentification: " + error.message);
       // Plutôt que de rediriger immédiatement, afficher l'erreur
       setLoading(false);
@@ -40,7 +33,6 @@ function Dashboard() {
   }, [navigate]);
 
   const handleLogout = () => {
-    console.log("Dashboard: Déconnexion");
     // Correction: utiliser 'token' au lieu de 'userToken'
     localStorage.removeItem("token");
     localStorage.removeItem("email"); // Aussi changer 'userEmail' en 'email' pour être cohérent
