@@ -78,7 +78,7 @@ router.get(
 
   passport.authenticate("google", {
 
-    failureRedirect: "http://192.168.1.98:3001/login",
+    failureRedirect: "http://localhost:3001/login",
 
   }),
 
@@ -92,7 +92,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://192.168.1.98:3001/auth/callback?token=${token}&email=${user.email}`
+      `http://localhost:3001/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
