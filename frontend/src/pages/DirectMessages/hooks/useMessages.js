@@ -1,7 +1,7 @@
 // Hook personnalisé pour gérer les messages
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.63:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.98:3000";
 
 /**
  * Hook pour gérer les messages entre utilisateurs

@@ -29,7 +29,7 @@ import MediaViewer from "../../components/MediaViewer/MediaViewer";
 import MessageInput from "../../components/MessageInput";
 
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.63:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.98:3000';
 const S3_BASE_URL = env.S3_BASE_URL || 'https://s3-supchat.s3.fr-par.scw.cloud/';
 
 

@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Linking,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSocket } from '../../context/SocketContext';
@@ -19,6 +21,10 @@ import { useTheme } from '../../theme/ThemeContext';
 import { getStyles } from './WorkspaceDetailScreen.styles';
 import MessageInput from '../../components/MessageInput';
 import AttachmentViewer from '../../components/AttachmentViewer/AttachmentViewer';
+import StrawpollCreationModal from '../../components/Strawpoll/StrawpollCreationModal';
+import StrawpollMessageCard from '../../components/Strawpoll/StrawpollMessageCard';
+import StrawpollResultsModal from '../../components/Strawpoll/StrawpollResultsModal';
+import { parseStrawpollsInMessage } from '../../utils/strawpollUtils';
 
 const WorkspaceDetailScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
@@ -42,6 +48,16 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   const [attachmentViewerVisible, setAttachmentViewerVisible] = useState(false);
   const [selectedAttachment, setSelectedAttachment] = useState(null);
   
+  // État pour la boîte à outils
+  const [toolboxVisible, setToolboxVisible] = useState(false);
+  
+  // État pour le modal de création de strawpoll
+  const [strawpollModalVisible, setStrawpollModalVisible] = useState(false);
+
+  // États pour les sondages Strawpoll
+  const [strawpollResultsModalVisible, setStrawpollResultsModalVisible] = useState(false);
+  const [selectedPollId, setSelectedPollId] = useState(null);
+
   const LIMIT = 30;
   const MAX_RETRY_ATTEMPTS = 3;
   
@@ -406,8 +422,9 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           const isFirstMessage = index === 0;
           const isLastMessage = index === chronologicalMessages.length - 1;
           
-          // Parser le contenu pour détecter les fichiers
+          // Parser le contenu pour détecter les fichiers ou sondages
           const fileData = parseFileContent(message.contenu);
+          const isStrawpoll = message.contenu && message.contenu.includes('[strawpoll:');
           
           return (
             <View
@@ -440,8 +457,17 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                 </View>
               )}
               
-              {/* Affichage du fichier ou du texte */}
-              {fileData ? (
+              {/* Affichage du contenu selon le type */}
+              {isStrawpoll ? (
+                // C'est un sondage
+                <StrawpollMessageCard
+                  messageContent={message.contenu}
+                  theme={themeColors}
+                  onVote={handleStrawpollVote}
+                  onViewResults={handleStrawpollViewResults}
+                  isOwn={group.isOwn}
+                />
+              ) : fileData ? (
                 // C'est un fichier
                 fileData.isImage ? (
                   // Prévisualisation d'image
@@ -555,7 +581,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         })}
       </View>
     );
-  }, [styles, renderAvatarInBubble, parseFileContent, handleOpenAttachment, getFileIcon, formatFileSize, themeColors]);
+  }, [styles, renderAvatarInBubble, parseFileContent, handleOpenAttachment, getFileIcon, formatFileSize, themeColors, handleStrawpollVote, handleStrawpollViewResults]);
 
   const renderTypingIndicator = useCallback(() => {
     if (typingUsers.length === 0) return null;
@@ -706,6 +732,121 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   }, []);
 
+  // Fonctions pour la boîte à outils
+  const handleCreateStrawpoll = useCallback(() => {
+    setToolboxVisible(false);
+    setStrawpollModalVisible(true);
+  }, []);
+
+  const handleCreateReminder = useCallback(() => {
+    setToolboxVisible(false);
+    // TODO: Naviguer vers la création de rappel
+    Alert.alert('Rappel', 'Fonctionnalité de création de rappel à venir !');
+  }, []);
+
+  // Fonctions pour la gestion des sondages Strawpoll
+  const handleStrawpollVote = useCallback(async (pollId, pollUrl) => {
+    try {
+      if (pollUrl) {
+        const supported = await Linking.canOpenURL(pollUrl);
+        if (supported) {
+          await Linking.openURL(pollUrl);
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Erreur',
+            text2: 'Impossible d\'ouvrir le lien du sondage'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Erreur ouverture sondage:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Impossible d\'ouvrir le sondage'
+      });
+    }
+  }, []);
+
+  const handleStrawpollViewResults = useCallback((pollId) => {
+    setSelectedPollId(pollId);
+    setStrawpollResultsModalVisible(true);
+  }, []);
+
+  const handleCloseStrawpollResults = useCallback(() => {
+    setStrawpollResultsModalVisible(false);
+    setSelectedPollId(null);
+  }, []);
+
+  // Rendu du modal de la boîte à outils
+  const renderToolboxModal = useCallback(() => {
+    return (
+      <Modal
+        visible={toolboxVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setToolboxVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setToolboxVisible(false)}
+        >
+          <View style={styles.toolboxModal}>
+            <View style={styles.toolboxHeader}>
+              <Text style={styles.toolboxTitle}>Boîte à outils</Text>
+              <TouchableOpacity 
+                onPress={() => setToolboxVisible(false)}
+                style={styles.toolboxCloseButton}
+              >
+                <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.toolboxContent}>
+              {/* Section Sondages */}
+              <Text style={styles.toolboxSectionTitle}>Sondages</Text>
+              <TouchableOpacity 
+                style={styles.toolboxOption}
+                onPress={handleCreateStrawpoll}
+              >
+                <View style={styles.toolboxOptionIcon}>
+                  <Ionicons name="bar-chart-outline" size={24} color={themeColors.accentPrimary} />
+                </View>
+                <View style={styles.toolboxOptionContent}>
+                  <Text style={styles.toolboxOptionTitle}>Créer un Strawpoll</Text>
+                  <Text style={styles.toolboxOptionDescription}>
+                    Créer un sondage pour recueillir l'avis des membres
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Section Rappels */}
+              <Text style={styles.toolboxSectionTitle}>Rappels</Text>
+              <TouchableOpacity 
+                style={styles.toolboxOption}
+                onPress={handleCreateReminder}
+              >
+                <View style={styles.toolboxOptionIcon}>
+                  <Ionicons name="alarm-outline" size={24} color={themeColors.accentPrimary} />
+                </View>
+                <View style={styles.toolboxOptionContent}>
+                  <Text style={styles.toolboxOptionTitle}>Créer un rappel</Text>
+                  <Text style={styles.toolboxOptionDescription}>
+                    Programmer un rappel pour l'équipe ou pour vous-même
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  }, [toolboxVisible, themeColors, handleCreateStrawpoll, handleCreateReminder, styles]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -736,12 +877,20 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
             {workspaceName}
           </Text>
         </View>
-        <TouchableOpacity 
-          style={styles.headerAction}
-          onPress={() => navigation.navigate('WorkspaceSettings', { workspaceId, workspaceName })}
-        >
-          <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerActionButton}
+            onPress={() => setToolboxVisible(true)}
+          >
+            <Ionicons name="construct-outline" size={24} color={themeColors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerActionButton}
+            onPress={() => navigation.navigate('WorkspaceSettings', { workspaceId, workspaceName })}
+          >
+            <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {renderConnectionError()}
@@ -801,6 +950,26 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         visible={attachmentViewerVisible}
         attachment={selectedAttachment}
         onClose={handleCloseAttachmentViewer}
+        theme={themeColors}
+      />
+
+      {/* Modal de la boîte à outils */}
+      {renderToolboxModal()}
+
+      {/* Modal de création de strawpoll */}
+      <StrawpollCreationModal
+        visible={strawpollModalVisible}
+        onClose={() => setStrawpollModalVisible(false)}
+        channelId={channelId}
+        workspaceId={workspaceId}
+        theme={themeColors}
+      />
+
+      {/* Modal pour afficher les résultats des sondages */}
+      <StrawpollResultsModal
+        visible={strawpollResultsModalVisible}
+        pollId={selectedPollId}
+        onClose={handleCloseStrawpollResults}
         theme={themeColors}
       />
     </KeyboardAvoidingView>
