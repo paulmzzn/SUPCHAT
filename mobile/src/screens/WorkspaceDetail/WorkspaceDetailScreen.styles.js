@@ -496,4 +496,112 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+
+  // Styles pour la boîte à outils
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  toolboxModal: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  toolboxHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+
+  toolboxTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+
+  toolboxCloseButton: {
+    padding: 4,
+  },
+
+  toolboxContent: {
+    padding: 20,
+  },
+
+  toolboxSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+    marginBottom: 12,
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+
+  toolboxOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: theme.primaryBackground,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+  },
+
+  toolboxOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.accentSecondary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+
+  toolboxOptionContent: {
+    flex: 1,
+    paddingRight: 8,
+  },
+
+  toolboxOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+
+  toolboxOptionDescription: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    lineHeight: 18,
+  },
+
+  // Styles pour les actions du header
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  headerActionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
 });
