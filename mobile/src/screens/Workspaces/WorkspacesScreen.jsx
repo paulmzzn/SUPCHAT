@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, RefreshControl } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { getStyles } from './WorkspacesScreen.styles';
 import { useTheme } from '../../theme/ThemeContext';
@@ -28,6 +28,7 @@ const WorkspacesScreen = () => {
   const [workspaces, setWorkspaces] = useState([]);
   const [filteredWorkspaces, setFilteredWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -39,6 +40,10 @@ const WorkspacesScreen = () => {
     navigation.navigate('WorkspaceChannels', {
       workspaceId: workspace.id,
     });
+  };
+
+  const navigateToCreateWorkspace = () => {
+    navigation.navigate('CreateWorkspace');
   };
 
   const debugWebSocket = () => {
@@ -107,76 +112,93 @@ const WorkspacesScreen = () => {
     }, []) // Supprimer les dépendances pour éviter les déclenchements en cascade
   );
 
-  useEffect(() => {
-    const fetchWorkspaces = async () => {
-      try {
-        setLoading(true);
-        
-        const token = await AsyncStorage.getItem('token');
-        if (!token) {
-          throw new Error("Vous devez être connecté pour accéder à vos workspaces");
-        }
-
-        let userId = null;
-        try {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1]));
-            userId = payload.id;
-          }
-        } catch (e) {
-          console.error("Erreur lors du décodage du token:", e);
-          throw new Error("Impossible de récupérer votre identifiant utilisateur");
-        }
-
-        if (!userId) {
-          throw new Error("Identifiant utilisateur non trouvé");
-        }
-
-        const response = await fetch(`${env.API_URL}/api/users/${userId}/workspaces`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erreur lors de la récupération des workspaces: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        const transformedWorkspaces = data.map(workspace => ({
-          id: workspace.id_workspace,
-          name: workspace.nom,
-          description: workspace.description || 'Aucune description disponible',
-          banner: workspace.banner_url && !workspace.banner_url.startsWith('http') 
-            ? S3_BASE_URL + workspace.banner_url 
-            : workspace.banner_url || null,
-          icon: workspace.icon_url && !workspace.icon_url.startsWith('http') 
-            ? S3_BASE_URL + workspace.icon_url 
-            : workspace.icon_url || null,
-          onlineUsers: workspace.online_users || 0,
-          totalMembers: workspace.total_members || 0,
-          userRole: workspace.user_role || 'member'
-        }));
-
-        setWorkspaces(transformedWorkspaces);
-        setFilteredWorkspaces(transformedWorkspaces);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des workspaces:', error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
+  const fetchWorkspaces = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error("Vous devez être connecté pour accéder à vos workspaces");
       }
+
+      let userId = null;
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          userId = payload.id;
+        }
+      } catch (e) {
+        console.error("Erreur lors du décodage du token:", e);
+        throw new Error("Impossible de récupérer votre identifiant utilisateur");
+      }
+
+      if (!userId) {
+        throw new Error("Identifiant utilisateur non trouvé");
+      }
+
+      const response = await fetch(`${env.API_URL}/api/users/${userId}/workspaces`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur lors de la récupération des workspaces: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const transformedWorkspaces = data.map(workspace => ({
+        id: workspace.id_workspace,
+        name: workspace.nom,
+        description: workspace.description || 'Aucune description disponible',
+        banner: workspace.banner_url && !workspace.banner_url.startsWith('http') 
+          ? S3_BASE_URL + workspace.banner_url 
+          : workspace.banner_url || null,
+        icon: workspace.icon_url && !workspace.icon_url.startsWith('http') 
+          ? S3_BASE_URL + workspace.icon_url 
+          : workspace.icon_url || null,
+        onlineUsers: workspace.online_users || 0,
+        totalMembers: workspace.total_members || 0,
+        userRole: workspace.user_role || 'member'
+      }));
+
+      setWorkspaces(transformedWorkspaces);
+      setFilteredWorkspaces(transformedWorkspaces);
+      setError(null);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des workspaces:', error);
+      setError(error.message);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchWorkspaces();
+      // Rafraîchir également les compteurs de notifications
+      refreshUnreadCounts();
+      setForceUpdate(prev => prev + 1);
+    } catch (error) {
+      console.error('Erreur lors du refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeWorkspaces = async () => {
+      setLoading(true);
+      await fetchWorkspaces();
+      setLoading(false);
+
+      // Rafraîchir les compteurs après avoir chargé les workspaces
+      setTimeout(() => {
+        refreshUnreadCounts();
+        debugWebSocket();
+      }, 1000);
     };
 
-    fetchWorkspaces();
-    
-    // Rafraîchir les compteurs après avoir chargé les workspaces
-    setTimeout(() => {
-      refreshUnreadCounts();
-      debugWebSocket();
-    }, 1000);
+    initializeWorkspaces();
   }, [refreshUnreadCounts]);
 
   useEffect(() => {
@@ -236,6 +258,9 @@ const WorkspacesScreen = () => {
         <TouchableOpacity style={styles.searchIconButton} onPress={toggleSearch}>
           <FontAwesome name="search" size={20} color={themeColors.textPrimary} />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.createWorkspaceButton} onPress={navigateToCreateWorkspace}>
+          <MaterialIcons name="add" size={24} color={themeColors.textPrimary} />
+        </TouchableOpacity>
       </View>
       
       {showSearch && (
@@ -260,7 +285,17 @@ const WorkspacesScreen = () => {
         </View>
       )}
       
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+      <ScrollView 
+        style={styles.scrollContainer} 
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[themeColors.accentPrimary]} 
+          />
+        }
+      >
         {workspaces.length > 0 ? (
           <View style={styles.workspacesSection}>
             {showSearch && (

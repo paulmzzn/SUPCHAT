@@ -30,7 +30,16 @@ import { useFileUpload } from "../../components/Messages/hooks/useFileUpload";
 const MessagesScreen = ({ navigation, route }) => {
   const { colors: themeColors, mode } = useTheme();
   const styles = getStyles(themeColors);
-  const { userId } = route.params || {};
+  
+  // Récupération des paramètres avec support pour les deux formats
+  const { userId, recipientId, recipientName } = route.params || {};
+  const actualUserId = userId || recipientId;
+  
+  // Debug: Afficher les paramètres reçus
+  console.log("MessagesScreen - route.params:", route.params);
+  console.log("MessagesScreen - userId:", userId);
+  console.log("MessagesScreen - recipientId:", recipientId);
+  console.log("MessagesScreen - actualUserId:", actualUserId);
 
   const isDarkMode =
     mode === "dark" ||
@@ -38,7 +47,7 @@ const MessagesScreen = ({ navigation, route }) => {
     themeColors.primaryBackground.toString().toLowerCase() === "#000000" ||
     themeColors.textPrimary?.toString().toLowerCase() === "#ffffff";
 
-  const messagesData = useMessagesData(userId);
+  const messagesData = useMessagesData(actualUserId);
   const {
     messages,
     setMessages,
@@ -87,7 +96,7 @@ const MessagesScreen = ({ navigation, route }) => {
   const messageActions = useMessageActions({
     socket,
     currentUserId,
-    userId,
+    userId: actualUserId,  // Corriger le nom du paramètre
     setMessages,
     addAnimatingMessage,
     scrollToBottom,
@@ -114,7 +123,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const fileUploadHandlers = useFileUpload({
     currentUserId,
-    userId,
+    actualUserId,
     setMessages,
     addAnimatingMessage,
     scrollToBottom,
@@ -124,7 +133,7 @@ const MessagesScreen = ({ navigation, route }) => {
   useSocketMessages({
     socket,
     currentUserId,
-    userId,
+    actualUserId,
     messages,
     setMessages,
     addAnimatingMessage,
@@ -133,13 +142,13 @@ const MessagesScreen = ({ navigation, route }) => {
   });
 
   useEffect(() => {
-    if (!userId || userId === lastFetchedUserId.current) return;
+    if (!actualUserId || actualUserId === lastFetchedUserId.current) return;
 
-    lastFetchedUserId.current = userId;
+    lastFetchedUserId.current = actualUserId;
 
     const loadUserAndMessages = async () => {
-      await fetchUserInfo(userId);
-      await fetchMessages(userId, 1);
+      await fetchUserInfo(actualUserId);
+      await fetchMessages(actualUserId, 1);
     };
 
     loadUserAndMessages();
@@ -147,13 +156,13 @@ const MessagesScreen = ({ navigation, route }) => {
     return () => {
       setMessages([]);
     };
-  }, [userId]);
+  }, [actualUserId]);
 
   useEffect(() => {
-    if (messages.length === 0 || isInitialLoad || !userId || !currentUserId) return;
+    if (messages.length === 0 || isInitialLoad || !actualUserId || !currentUserId) return;
     console.log("User opened conversation, marking messages as read");
     markMessagesAsRead(messages);
-  }, [messages, isInitialLoad, userId, currentUserId, markMessagesAsRead]);
+  }, [messages, isInitialLoad, actualUserId, currentUserId, markMessagesAsRead]);
 
   const handleScroll = (event) => {
     if (loadingMoreMessages || !hasMoreMessages || isLoadingMore.current) return;
@@ -184,7 +193,8 @@ const MessagesScreen = ({ navigation, route }) => {
   }, [messages.length, isInitialLoad, loadingMoreMessages]);
 
   const handleGoBack = () => {
-    navigation.goBack();
+    // Toujours naviguer vers la liste des conversations
+    navigation.navigate('Messages', { screen: 'ConversationsList' });
   };
 
   const handleLongPressMessage = (message, event) => {
@@ -233,12 +243,13 @@ const MessagesScreen = ({ navigation, route }) => {
     setSelectedMessageForReaction(null);
   };
 
-  if (!userId) {
+  if (!actualUserId) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>No conversation selected</Text>
+        <Text style={styles.errorText}>Chargement de la conversation...</Text>
+        <ActivityIndicator size="large" color={themeColors.accentPrimary} />
         <TouchableOpacity style={styles.button} onPress={handleGoBack}>
-          <Text style={styles.buttonText}>Go Back</Text>
+          <Text style={styles.buttonText}>Retour</Text>
         </TouchableOpacity>
       </View>
     );
@@ -300,7 +311,7 @@ const MessagesScreen = ({ navigation, route }) => {
             inputRef={textInputRef}
             keyboardVisible={keyboardVisible}
             uploadType="private-message"
-            recipientId={userId}
+            recipientId={actualUserId}
             onFileSelected={fileUploadHandlers.handleFileSelected}
             onUploadProgress={fileUploadHandlers.handleUploadProgress}
             onUploadComplete={fileUploadHandlers.handleUploadComplete}

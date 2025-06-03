@@ -340,30 +340,66 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
           </View>
           
           <View style={styles.workspaceStats}>
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => {
+                console.log('Navigation vers WorkspaceMembers avec params:', {
+                  workspaceId,
+                  workspaceName: workspace?.nom
+                });
+                navigation.navigate('WorkspaceMembers', {
+                  workspaceId: workspaceId,
+                  workspaceName: workspace?.nom || 'Workspace'
+                });
+              }}
+            >
               <Text style={styles.statNumber}>{channels.length}</Text>
               <Text style={styles.statLabel}>
                 {channels.length === 1 ? 'Canal' : 'Canaux'}
               </Text>
-            </View>
+            </TouchableOpacity>
             
             <View style={styles.statDivider} />
             
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => {
+                console.log('Navigation vers WorkspaceMembers avec params:', {
+                  workspaceId,
+                  workspaceName: workspace?.nom
+                });
+                navigation.navigate('WorkspaceMembers', {
+                  workspaceId: workspaceId,
+                  workspaceName: workspace?.nom || 'Workspace'
+                });
+              }}
+            >
               <Text style={styles.statNumber}>{members.length}</Text>
               <Text style={styles.statLabel}>
                 {members.length === 1 ? 'Membre' : 'Membres'}
               </Text>
-            </View>
+            </TouchableOpacity>
             
             <View style={styles.statDivider} />
             
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => {
+                console.log('Navigation vers WorkspaceMembers avec params:', {
+                  workspaceId,
+                  workspaceName: workspace?.nom
+                });
+                navigation.navigate('WorkspaceMembers', {
+                  workspaceId: workspaceId,
+                  workspaceName: workspace?.nom || 'Workspace'
+                });
+              }}
+            >
               <Text style={styles.statNumber}>
                 {members.filter(m => m.status === 1).length}
               </Text>
               <Text style={styles.statLabel}>En ligne</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
