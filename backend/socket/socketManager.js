@@ -1406,156 +1406,56 @@ const socketManager = (io) => {
       }
     });
 
-    // Ajouter des handlers pour différents événements d'erreur de socket
-    socket.on("error", (err) => {
-      console.error("Socket.IO: Erreur socket individuelle:", err);
-    });
-
-    // Nouvel événement pour gérer les réactions aux messages privés
-    socket.on("addPrivateMessageReaction", async (data) => {
+    // Nouvel événement pour récupérer les fichiers d'un canal
+    socket.on("getChannelFiles", async ({ channelId }, callback) => {
       try {
-        console.log("Socket.IO: Réaction à message privé reçue", data);
-        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const {
-          id: messageId,
-          reaction: reactionFromMobile,
-          reaction_type,
-        } = data;
-        const reaction_type_final = reactionFromMobile || reaction_type;
+        const userId = socket.user.id;
 
-        if (!messageId || !reaction_type_final) {
-          console.error("Socket.IO: Données de réaction incomplètes");
-          socket.emit("error", { message: "Données de réaction incomplètes" });
+        if (!channelId) {
+          const error = { message: "ID du canal manquant" };
+          if (callback) callback({ success: false, error });
+          else socket.emit("error", error);
           return;
         }
 
-        // Récupérer le message privé
-        const message = await MessagePrive.getById(messageId);
-        if (!message) {
-          socket.emit("error", { message: "Message privé non trouvé" });
+        console.log(`Socket.IO: Récupération des fichiers pour le canal ${channelId} par l'utilisateur ${userId}`);
+
+        // Vérifier que l'utilisateur a accès à ce canal
+        const accessCheck = await Canal.checkUserAccess(channelId, userId);
+        if (!accessCheck.hasAccess) {
+          const error = { message: "Accès refusé à ce canal" };
+          if (callback) callback({ success: false, error });
+          else socket.emit("error", error);
           return;
         }
 
-        // Vérifier que l'utilisateur est soit l'expéditeur soit le destinataire du message
-        if (
-          message.fk_expediteur !== socket.user.id &&
-          message.fk_destinataire !== socket.user.id
-        ) {
-          socket.emit("error", {
-            message: "Non autorisé à réagir à ce message",
+        // Récupérer les fichiers du canal
+        const files = await Fichier.getByCanalId(channelId);
+        
+        console.log(`Socket.IO: ${files.length} fichiers trouvés pour le canal ${channelId}`);
+
+        // Répondre avec les fichiers
+        if (callback) {
+          callback({ 
+            success: true, 
+            files: files || [] 
           });
-          return;
-        }
-
-        // Ajouter la réaction en base de données
-        await ReactionPrive.create({
-          fk_message_prive: messageId,
-          fk_utilisateur: socket.user.id,
-          reaction_type: reaction_type_final,
-        });
-
-        // Récupérer toutes les réactions mises à jour pour ce message
-        const updatedReactions = await ReactionPrive.getByMessage(
-          messageId,
-          socket.user.id
-        );
-
-        // Diffuser aux deux utilisateurs concernés par le message privé
-        io.to(`dm:${message.fk_expediteur}`)
-          .to(`dm:${message.fk_destinataire}`)
-          .emit("privateMessageReaction", {
-            messageId,
-            reactions: updatedReactions,
-          });
-      } catch (error) {
-        // Gérer l'erreur si la réaction existe déjà (contrainte unique)
-        if (error.code === "23505") {
-          // Code d'erreur PostgreSQL pour violation d'unicité
-          console.log(
-            `L'utilisateur ${socket.user.id} a déjà réagi au message privé ${data.id}`
-          );
-          // Optionnel: renvoyer les réactions actuelles pour synchroniser le client
-          const message = await MessagePrive.getById(data.id);
-          if (message) {
-            const currentReactions = await ReactionPrive.getByMessage(
-              data.id,
-              socket.user.id
-            );
-            socket.emit("privateMessageReaction", {
-              messageId: data.id,
-              reactions: currentReactions,
-            });
-          }
         } else {
-          console.error(
-            "Socket.IO: Erreur de traitement de réaction au message privé",
-            error
-          );
-          socket.emit("error", {
-            message: "Erreur lors du traitement de la réaction",
+          socket.emit("channelFiles", { 
+            channelId, 
+            files: files || [] 
           });
         }
-      }
-    });
 
-    // Nouvel événement pour gérer la suppression des réactions aux messages privés
-    socket.on("removePrivateMessageReaction", async (data) => {
-      try {
-        console.log(
-          "Socket.IO: Suppression de réaction de message privé",
-          data
-        );
-        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const {
-          id: messageId,
-          reaction: reactionFromMobile,
-          reaction_type,
-        } = data;
-        const reaction_type_final = reactionFromMobile || reaction_type;
-
-        if (!messageId || !reaction_type_final) {
-          console.error(
-            "Socket.IO: Données de suppression de réaction incomplètes"
-          );
-          socket.emit("error", { message: "Données incomplètes" });
-          return;
-        }
-
-        // Récupérer le message privé
-        const message = await MessagePrive.getById(messageId);
-        if (!message) {
-          socket.emit("error", { message: "Message privé non trouvé" });
-          return;
-        }
-
-        // Supprimer la réaction en base de données
-        await ReactionPrive.delete(
-          messageId,
-          socket.user.id,
-          reaction_type_final
-        );
-
-        // Récupérer toutes les réactions mises à jour pour ce message
-        const updatedReactions = await ReactionPrive.getByMessage(
-          messageId,
-          socket.user.id
-        );
-
-        // Diffuser aux deux utilisateurs concernés par le message privé
-        io.to(`dm:${message.fk_expediteur}`)
-          .to(`dm:${message.fk_destinataire}`)
-          .emit("privateMessageReaction", {
-            messageId,
-            reactions: updatedReactions,
-          });
       } catch (error) {
-        console.error(
-          "Socket.IO: Erreur de suppression de réaction de message privé",
-          error
-        );
-        socket.emit("error", {
-          message: "Erreur lors de la suppression de la réaction",
-        });
+        console.error("Socket.IO: Erreur lors de la récupération des fichiers du canal:", error);
+        const errorResponse = { message: "Erreur lors de la récupération des fichiers" };
+        
+        if (callback) {
+          callback({ success: false, error: errorResponse });
+        } else {
+          socket.emit("error", errorResponse);
+        }
       }
     });
 

@@ -33,6 +33,10 @@ export const getStyles = (theme) => StyleSheet.create({
   searchIconButton: {
     padding: 8,
   },
+  createWorkspaceButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',

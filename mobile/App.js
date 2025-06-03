@@ -18,8 +18,10 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
+import CreateWorkspaceScreen from './src/screens/CreateWorkspace/CreateWorkspaceScreen';
 import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
 import WorkspaceChannelsScreen from './src/screens/WorkspaceChannels/WorkspaceChannelsScreen';
+import WorkspaceMembersScreen from './src/screens/WorkspaceMembers/WorkspaceMembersScreen';
 import ChannelFilesScreen from './src/screens/ChannelFiles/ChannelFilesScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
@@ -56,9 +58,11 @@ function WorkspacesNavigator() {
     <WorkspacesStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkspacesStack.Screen name="WorkspacesList" component={WorkspacesScreen} />
       <WorkspacesStack.Screen name="WorkspaceChannels" component={WorkspaceChannelsScreen} />
+      <WorkspacesStack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} />
       <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
       <WorkspacesStack.Screen name="ChannelFiles" component={ChannelFilesScreen} />
       <WorkspacesStack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
+      <WorkspacesStack.Screen name="CreateWorkspace" component={CreateWorkspaceScreen} />
     </WorkspacesStack.Navigator>
   );
 }

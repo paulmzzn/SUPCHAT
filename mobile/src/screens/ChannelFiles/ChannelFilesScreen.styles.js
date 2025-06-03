@@ -3,13 +3,13 @@ import { StyleSheet } from 'react-native';
 export const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryBackground,
+    backgroundColor: colors.backgroundPrimary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.primaryBackground,
+    backgroundColor: colors.backgroundPrimary,
   },
   loadingText: {
     color: colors.textSecondary,
@@ -51,7 +51,7 @@ export const getStyles = (colors) => StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryBackground,
+    backgroundColor: colors.backgroundPrimary,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -75,7 +75,7 @@ export const getStyles = (colors) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     marginRight: 8,
-    backgroundColor: colors.primaryBackground,
+    backgroundColor: colors.backgroundPrimary,
   },
   filterButtonActive: {
     backgroundColor: colors.accentPrimary,
@@ -85,7 +85,7 @@ export const getStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   filterButtonTextActive: {
-    color: colors.primaryBackground,
+    color: colors.backgroundPrimary,
     fontWeight: '500',
   },
   filesCount: {
@@ -101,11 +101,9 @@ export const getStyles = (colors) => StyleSheet.create({
   },
   filesList: {
     flex: 1,
-    backgroundColor: colors.primaryBackground,
   },
   filesListContent: {
     paddingVertical: 5,
-    backgroundColor: colors.primaryBackground,
   },
   fileItem: {
     flexDirection: 'row',
@@ -114,7 +112,6 @@ export const getStyles = (colors) => StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
-    backgroundColor: colors.primaryBackground,
   },
   fileIcon: {
     width: 40,
@@ -152,7 +149,6 @@ export const getStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingTop: 100,
-    backgroundColor: colors.primaryBackground,
   },
   emptyText: {
     fontSize: 18,
