@@ -335,3 +335,32 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--workspace-details-text-hover, #ffffff);
 }
+
+/* Corrections pour le thème clair */
+.theme-light .member-action-btn {
+  color: #6b7280;
+}
+
+.theme-light .member-action-btn:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .reminder-create-btn {
+  background: rgba(147, 72, 183, 0.9) !important;
+  border: 1px solid rgba(147, 72, 183, 0.7) !important;
+  color: #ffffff !important;
+}
+
+.theme-light .reminder-create-btn.channel-active:hover {
+  background: rgba(147, 72, 183, 1) !important;
+  border-color: rgba(147, 72, 183, 0.9) !important;
+}
+
+.theme-light .context-menu-section {
+  color: #6b7280;
+}
+
+.theme-light .context-menu-divider {
+  background-color: rgba(0, 0, 0, 0.1);
+}
