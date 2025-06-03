@@ -19,7 +19,7 @@ const GoogleDriveSetup = ({ onClientIdSubmit, onCancel }) => {
   // Utiliser un Client ID de test pour la démonstration
   const handleUseTestClientId = () => {
     const testClientId =
-      "1REDACTED";
+      "REDACTED";
     setClientId(testClientId);
     onClientIdSubmit(testClientId);
   };
