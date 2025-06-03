@@ -859,21 +859,42 @@ export const getStyles = (theme) => StyleSheet.create({
 
   // Styles pour l'affichage des réponses dans les messages
   messageReplyContainer: {
-    borderLeftWidth: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderLeftWidth: 3,
     borderLeftColor: theme.accentPrimary,
-    paddingLeft: 8,
-    marginBottom: 6,
-    opacity: 0.8,
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 8,
   },
+  
+  replyIndicator: {
+    width: 2,
+    backgroundColor: theme.accentPrimary,
+    marginRight: 8,
+    alignSelf: 'stretch',
+  },
+  
+  replyContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
   messageReplyText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#000000', // Noir pour tous les messages "Réponse à"
-    marginBottom: 2,
+    fontWeight: '600',
+    color: theme.accentPrimary,
+    marginLeft: 4,
+    flex: 1,
   },
+  
   messageReplyContent: {
     fontSize: 12,
     fontStyle: 'italic',
     color: theme.textSecondary,
+    marginTop: 2,
+    paddingLeft: 16,
   },
 });
