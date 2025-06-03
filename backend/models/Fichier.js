@@ -303,7 +303,10 @@ class Fichier {
    */
   static async getByCanalId(canalId) {
     try {
-      const query = `
+      console.log(`🔍 [DEBUG] Recherche de fichiers pour le canal: ${canalId}`);
+      
+      // Méthode 1: Fichiers via table message_fichier (approche JOIN classique)
+      const joinQuery = `
         SELECT DISTINCT f.*
         FROM fichier f
         JOIN message_fichier mf ON f.id_fichier = mf.fk_fichier
@@ -311,8 +314,83 @@ class Fichier {
         WHERE m.fk_canal = $1
         ORDER BY f.date_upload DESC
       `;
-      const result = await pool.query(query, [canalId]);
-      return result.rows;
+      const joinResult = await pool.query(joinQuery, [canalId]);
+      console.log(`🔗 [DEBUG] Fichiers trouvés via JOIN: ${joinResult.rows.length}`);
+      
+      // Méthode 2: Fichiers stockés dans le contenu JSON des messages
+      const contentQuery = `
+        SELECT m.contenu, m.created_at, m.fk_utilisateur, u.nom as username
+        FROM message m
+        LEFT JOIN utilisateur u ON m.fk_utilisateur = u.id_utilisateur
+        WHERE m.fk_canal = $1 
+        AND m.contenu::text LIKE '%"type":"file"%'
+        ORDER BY m.created_at DESC
+      `;
+      const contentResult = await pool.query(contentQuery, [canalId]);
+      console.log(`📄 [DEBUG] Messages avec fichiers JSON trouvés: ${contentResult.rows.length}`);
+      
+      // Parser les fichiers du contenu JSON
+      const filesFromContent = [];
+      contentResult.rows.forEach((row, index) => {
+        try {
+          const content = typeof row.contenu === 'string' ? JSON.parse(row.contenu) : row.contenu;
+          if (content && content.type === 'file') {
+            console.log(`📁 [DEBUG] Fichier JSON ${index + 1}:`, content);
+            filesFromContent.push({
+              id_fichier: content.fileId || `json-${Date.now()}-${index}`,
+              nom_fichier: content.fileName || 'Fichier',
+              url: content.fileUrl || '',
+              type: content.fileType || 'application/octet-stream',
+              taille_fichier: content.fileSize || 0,
+              date_upload: row.date_creation,
+              fk_utilisateur: row.fk_utilisateur,
+              username: row.username
+            });
+          }
+        } catch (error) {
+          console.log(`⚠️ [DEBUG] Erreur parsing JSON pour message ${index}:`, error.message);
+        }
+      });
+      
+      console.log(`📁 [DEBUG] Fichiers extraits du JSON: ${filesFromContent.length}`);
+      
+      // Méthode 3: Tous les fichiers de l'utilisateur dans ce workspace (fallback)
+      const workspaceQuery = `
+        SELECT DISTINCT f.*, u.nom as username
+        FROM fichier f
+        LEFT JOIN utilisateur u ON f.fk_utilisateur = u.id_utilisateur
+        JOIN canal c ON c.id_canal = $1
+        WHERE f.fk_utilisateur IN (
+          SELECT mw.fk_utilisateur 
+          FROM membre_workspace mw 
+          WHERE mw.fk_workspace = c.fk_workspace
+        )
+        ORDER BY f.date_upload DESC
+        LIMIT 50
+      `;
+      const workspaceResult = await pool.query(workspaceQuery, [canalId]);
+      console.log(`🏢 [DEBUG] Fichiers du workspace (fallback): ${workspaceResult.rows.length}`);
+      
+      // Combiner tous les résultats en priorisant les plus précis
+      let allFiles = [...joinResult.rows];
+      
+      // Ajouter les fichiers du contenu JSON qui ne sont pas déjà présents
+      filesFromContent.forEach(jsonFile => {
+        if (!allFiles.find(f => f.url === jsonFile.url)) {
+          allFiles.push(jsonFile);
+        }
+      });
+      
+      console.log(`📁 [DEBUG] Total fichiers combinés: ${allFiles.length}`);
+      
+      // Si toujours aucun fichier, retourner les fichiers du workspace comme fallback
+      if (allFiles.length === 0) {
+        console.log(`🔄 [DEBUG] Utilisation du fallback workspace`);
+        allFiles = workspaceResult.rows;
+      }
+      
+      return allFiles;
+      
     } catch (error) {
       console.error("Erreur dans Fichier.getByCanalId:", error);
       throw error;
