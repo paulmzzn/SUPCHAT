@@ -20,6 +20,7 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
 import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
 import WorkspaceChannelsScreen from './src/screens/WorkspaceChannels/WorkspaceChannelsScreen';
+import ChannelFilesScreen from './src/screens/ChannelFiles/ChannelFilesScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
 import NewConversationScreen from './src/screens/Messages/NewConversationScreen';
@@ -56,6 +57,7 @@ function WorkspacesNavigator() {
       <WorkspacesStack.Screen name="WorkspacesList" component={WorkspacesScreen} />
       <WorkspacesStack.Screen name="WorkspaceChannels" component={WorkspaceChannelsScreen} />
       <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
+      <WorkspacesStack.Screen name="ChannelFiles" component={ChannelFilesScreen} />
       <WorkspacesStack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
     </WorkspacesStack.Navigator>
   );

@@ -158,6 +158,16 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     Alert.alert('Importer depuis Google Drive', 'Cette fonctionnalité permet d\'importer des fichiers directement depuis votre Google Drive vers le canal.');
   }, []);
 
+  const handleViewFiles = useCallback(() => {
+    // Navigate to files screen or show files modal
+    navigation.navigate('ChannelFiles', { 
+      workspaceId, 
+      channelId, 
+      channelName,
+      workspaceName 
+    });
+  }, [navigation, workspaceId, channelId, channelName, workspaceName]);
+
   const handleStrawpollVote = useCallback(async (pollId, pollUrl) => {
     try {
       if (pollUrl) {
@@ -215,6 +225,9 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           <Text style={styles.activeChannelName} numberOfLines={1}>{workspaceName}</Text>
         </View>
         <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.headerActionButton} onPress={handleViewFiles}>
+            <Ionicons name="folder-outline" size={24} color={themeColors.textPrimary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.headerActionButton} onPress={() => setToolboxVisible(true)}>
             <Ionicons name="construct-outline" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
