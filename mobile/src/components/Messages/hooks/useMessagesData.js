@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSocket } from "../../../context/SocketContext";
+import env from "../../../config/env";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.98:3000';
+const API_URL = env.API_URL;
 
 export const useMessagesData = (userId) => {
   const [messages, setMessages] = useState([]);

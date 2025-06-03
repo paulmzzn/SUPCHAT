@@ -1,27 +1,32 @@
 import { useState, useCallback } from "react";
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
+import env from "../../../config/env";
+
+const API_URL = env.API_URL;
 
 export const useMediaPreview = () => {
-  const [mediaPreview, setMediaPreview] = useState({
-    visible: false,
-    media: null,
-  });
+  const [previewMedia, setPreviewMedia] = useState(null);
+
+  const getFileURL = useCallback((url) => {
+    if (!url) return null;
+
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+    if (url.startsWith("private-messages/files/") || url.startsWith("private-messages/")) {
+      return `${env.S3_BASE_URL}${url}`;
+    }
+
+    if (url.startsWith("/api/files/")) return `${API_URL}${url}`;
+
+    return `${API_URL}/api/files/${url}`;
+  }, []);
 
   const openAttachment = useCallback((attachment) => {
     try {
       const fileUrl = attachment.url || attachment.presignedUrl;
-      const getFileURL = (url) => {
-        if (!url) return null;
-        if (url.startsWith("http://") || url.startsWith("https://")) return url;
-        if (url.startsWith("private-messages/files/") || url.startsWith("private-messages/")) {
-          return `https://s3-supchat.s3.fr-par.scw.cloud/${url}`;
-        }
-        if (url.startsWith("/api/files/")) return `${process.env.EXPO_PUBLIC_API_URL}${url}`;
-        return `${process.env.EXPO_PUBLIC_API_URL}/api/files/${url}`;
-      };
       const fullFileUrl = getFileURL(fileUrl);
 
-      setMediaPreview({
+      setPreviewMedia({
         visible: true,
         media: {
           fileUrl: fullFileUrl,
@@ -36,14 +41,14 @@ export const useMediaPreview = () => {
   }, []);
 
   const closePreview = useCallback(() => {
-    setMediaPreview({
+    setPreviewMedia({
       visible: false,
       media: null,
     });
   }, []);
 
   return {
-    mediaPreview,
+    previewMedia,
     openAttachment,
     closePreview,
   };
