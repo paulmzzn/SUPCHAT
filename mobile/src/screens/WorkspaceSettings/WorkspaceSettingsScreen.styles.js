@@ -18,6 +18,7 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    position: 'relative',
   },
   backButton: {
     width: 40,
@@ -51,18 +52,41 @@ export const getStyles = (theme) => StyleSheet.create({
   workspaceBanner: {
     height: 80,
     backgroundColor: theme.accentBackground,
-    justifyContent: 'flex-end',
+  },
+  workspaceBannerImage: {
+    height: 80,
+    width: '100%',
+  },
+  workspaceInfo: {
     padding: 16,
+    paddingTop: 8,
+  },
+  workspaceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  workspaceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  workspaceIconPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.accentBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   workspaceName: {
     fontSize: 22,
     fontWeight: 'bold',
     color: theme.textPrimary,
     marginBottom: 4,
-  },
-  workspaceInfo: {
-    padding: 16,
-    paddingTop: 8,
+    flex: 1,
   },
   workspaceDescription: {
     fontSize: 14,
@@ -138,6 +162,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.accentBackground,
     marginRight: 12,
+    position: 'relative',
   },
   settingContent: {
     flex: 1,
@@ -219,5 +244,46 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   switchContainer: {
     marginLeft: 8,
+  },
+  headerNotificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 16,
+    backgroundColor: theme.danger,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    zIndex: 10,
+  },
+  headerNotificationText: {
+    color: theme.textOnAccent,
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: theme.danger,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: theme.cardBackground,
+  },
+  notificationText: {
+    color: theme.textOnAccent,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  pendingCount: {
+    color: theme.danger,
+    fontWeight: 'bold',
   },
 });
