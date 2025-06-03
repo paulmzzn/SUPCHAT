@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSocket } from '../../context/SocketContext'; // Importer useSocket
+import CreateChannelModal from '../../components/CreateChannelModal';
 import { getStyles } from './WorkspaceChannelsScreen.styles';
 
 const WorkspaceChannelsScreen = ({ route, navigation }) => {
@@ -29,6 +30,7 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isCreateChannelModalVisible, setCreateChannelModalVisible] = useState(false);
 
   useEffect(() => {
     loadWorkspaceData();
@@ -210,6 +212,17 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleChannelCreated = (newChannel) => {
+    // Rafraîchir la liste des canaux après la création d'un nouveau canal
+    fetchChannels();
+    Toast.show({
+      type: 'success',
+      text1: 'Canal créé',
+      text2: `Le canal a été créé avec succès`,
+      position: 'bottom'
+    });
+  };
+
   const navigateToChannel = (channel) => {
     navigation.navigate('Workspace', {
       workspaceId,
@@ -247,11 +260,6 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
         <View style={styles.channelHeader}>
           <Text style={styles.channelName}>{item.name}</Text>
         </View>
-        {item.description ? (
-          <Text style={styles.channelDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
       </View>
 
       {/* Badge de notification */}
@@ -407,7 +415,10 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
         <View style={styles.channelsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Canaux</Text>
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setCreateChannelModalVisible(true)}
+            >
               <Ionicons name="add" size={20} color={themeColors.accentPrimary} />
             </TouchableOpacity>
           </View>
@@ -427,6 +438,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal de création de canal */}
+      <CreateChannelModal
+        visible={isCreateChannelModalVisible}
+        onClose={() => setCreateChannelModalVisible(false)}
+        workspaceId={workspaceId}
+        onChannelCreated={handleChannelCreated}
+      />
     </View>
   );
 };
