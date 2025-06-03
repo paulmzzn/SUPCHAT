@@ -109,16 +109,18 @@ export const useGoogleDrive = (options = {}) => {
   const [isGoogleApiLoaded, setIsGoogleApiLoaded] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Ajouter cette ligne manquante
   const [driveFiles, setDriveFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [configurationError, setConfigurationError] = useState(null);
-  const [authMode, setAuthMode] = useState("none"); // "full", "auth-only", "none"
+  const [authMode, setAuthMode] = useState("none");
   const [needsSetup, setNeedsSetup] = useState(false);
   const [error, setError] = useState(null);
   const gapiInitialized = useRef(false);
   const authInstanceRef = useRef(null);
+  const tokenClient = useRef(null);
 
   const {
     mode = "dm",
@@ -231,17 +233,43 @@ export const useGoogleDrive = (options = {}) => {
     );
 
     try {
-      // Initialiser Google Identity Services
+      // Initialiser Google Identity Services avec les bons scopes
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: handleCredentialResponse,
+        callback: handleTokenResponse,
+        scope:
+          "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file", // Ajouter les scopes Drive
       });
 
-      // Initialiser le client OAuth2 pour les scopes d'API
-      window.googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      // Initialiser le client OAuth2 pour les scopes Drive
+      tokenClient.current = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: GOOGLE_DRIVE_CONFIG.scope,
-        callback: handleTokenResponse,
+        scope:
+          "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
+        callback: (tokenResponse) => {
+          console.log("🔐 [Google Drive] Token OAuth2 reçu", tokenResponse);
+
+          if (tokenResponse.access_token) {
+            // Stocker le token avec une expiration
+            const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
+            localStorage.setItem(
+              "google_access_token",
+              tokenResponse.access_token
+            );
+            localStorage.setItem(
+              "google_token_expires_at",
+              expiresAt.toString()
+            );
+
+            setIsSignedIn(true);
+            setIsAuthenticating(false);
+
+            console.log(
+              "✅ [Google Drive] Utilisateur authentifié avec succès, token expire le:",
+              new Date(expiresAt)
+            );
+          }
+        },
       });
 
       setIsGoogleApiLoaded(true);
@@ -293,30 +321,28 @@ export const useGoogleDrive = (options = {}) => {
    * Connecte l'utilisateur à Google Drive avec redirection dans un nouvel onglet
    */
   const signInToGoogle = useCallback(async () => {
-    if (!isGoogleApiLoaded) return;
+    if (!tokenClient.current) {
+      console.error("❌ [Google Drive] Client OAuth2 non initialisé");
+      setError("Erreur d'initialisation de l'authentification Google");
+      return;
+    }
 
-    setIsAuthenticating(true);
     try {
-      console.log(
-        "🔐 [Google Drive] Demande d'authentification OAuth2 avec redirection"
-      );
+      setIsAuthenticating(true);
+      setError(null);
 
-      // Utiliser le nouveau client OAuth2 avec redirection dans un nouvel onglet
-      if (window.googleTokenClient) {
-        window.googleTokenClient.requestAccessToken({
-          prompt: "select_account", // Permettre la sélection du compte
-          ux_mode: "redirect", // Utiliser la redirection au lieu d'une popup
-          redirect_uri: window.location.origin + window.location.pathname, // Retourner sur la même page
-        });
-      } else {
-        throw new Error("Client OAuth2 non initialisé");
-      }
+      console.log("🔐 [Google Drive] Demande d'autorisation OAuth2...");
+
+      // Demander l'autorisation avec les scopes Drive
+      tokenClient.current.requestAccessToken({
+        prompt: "consent", // Forcer l'affichage du consentement pour s'assurer que tous les scopes sont accordés
+      });
     } catch (error) {
       console.error("❌ [Google Drive] Erreur lors de la connexion:", error);
+      setError("Erreur lors de la connexion à Google Drive");
       setIsAuthenticating(false);
     }
-    // Note: setIsAuthenticating(false) sera appelé dans handleTokenResponse
-  }, [isGoogleApiLoaded]);
+  }, []);
 
   /**
    * Déconnecte l'utilisateur de Google Drive
@@ -329,7 +355,7 @@ export const useGoogleDrive = (options = {}) => {
       if (accessToken) {
         window.google.accounts.oauth2.revoke(accessToken);
         localStorage.removeItem("google_access_token");
-        localStorage.removeItem("google_token_expiry");
+        localStorage.removeItem("google_token_expires_at");
       }
 
       setIsSignedIn(false);
@@ -346,14 +372,39 @@ export const useGoogleDrive = (options = {}) => {
   const loadDriveFiles = useCallback(
     async (folderId = null, query = "") => {
       try {
-        // Vérifier si l'utilisateur est authentifié AVANT d'essayer de charger les fichiers
+        // Vérifier si l'utilisateur est authentifié
         if (!isSignedIn) {
-          console.log(
-            "❌ [Google Drive] Utilisateur non connecté, impossible de charger les fichiers"
-          );
+          console.log("❌ [Google Drive] Utilisateur non connecté");
           setError(
             "Vous devez vous connecter à Google Drive pour accéder à vos fichiers"
           );
+          setDriveFiles([]);
+          setIsLoadingFiles(false);
+          return;
+        }
+
+        // Vérifier que le token est disponible et valide
+        const accessToken = localStorage.getItem("google_access_token");
+        const tokenExpiry = localStorage.getItem("google_token_expires_at");
+
+        if (!accessToken) {
+          console.log("❌ [Google Drive] Aucun token d'accès trouvé");
+          setError("Session expirée, veuillez vous reconnecter");
+          setIsSignedIn(false);
+          setDriveFiles([]);
+          setIsLoadingFiles(false);
+          return;
+        }
+
+        // Vérifier l'expiration du token
+        if (tokenExpiry && Date.now() > parseInt(tokenExpiry)) {
+          console.log("❌ [Google Drive] Token expiré");
+          setError(
+            "Votre session Google Drive a expiré. Veuillez vous reconnecter."
+          );
+          setIsSignedIn(false);
+          localStorage.removeItem("google_access_token");
+          localStorage.removeItem("google_token_expires_at");
           setDriveFiles([]);
           setIsLoadingFiles(false);
           return;
@@ -367,169 +418,458 @@ export const useGoogleDrive = (options = {}) => {
         if (folderId) {
           searchQuery += ` and '${folderId}' in parents`;
         } else if (!query) {
-          // Par défaut, afficher les fichiers récents
+          // Par défaut, afficher les fichiers récents (pas seulement certains types)
           searchQuery +=
-            " and (mimeType contains 'image/' or mimeType contains 'application/' or mimeType contains 'text/' or mimeType contains 'video/' or mimeType contains 'audio/')";
+            " and (mimeType contains 'image/' or mimeType contains 'application/' or mimeType contains 'text/' or mimeType contains 'video/' or mimeType contains 'audio/' or mimeType='application/vnd.google-apps.folder')";
         }
 
         if (query) {
           searchQuery += ` and name contains '${query}'`;
         }
-        let response;
 
-        // Vérifier que le token est encore valide avant de faire la requête
-        const accessToken = localStorage.getItem("google_access_token");
-        const tokenExpiry = localStorage.getItem("google_token_expiry");
+        console.log("🔍 [Google Drive] Recherche avec query:", searchQuery);
 
-        if (
-          !accessToken ||
-          !tokenExpiry ||
-          Date.now() >= parseInt(tokenExpiry)
-        ) {
-          console.log(
-            "❌ [Google Drive] Token expiré ou manquant, reconnexion nécessaire"
-          );
-          setError(
-            "Votre session Google Drive a expiré. Veuillez vous reconnecter."
-          );
-          setIsSignedIn(false);
-          setDriveFiles([]);
-          setIsLoadingFiles(false);
-          return;
-        }
+        // Utiliser l'API REST Google Drive
+        const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+          searchQuery
+        )}&pageSize=50&orderBy=modifiedTime desc&fields=${encodeURIComponent(
+          "files(id,name,mimeType,size,thumbnailLink,webViewLink,webContentLink,modifiedTime,parents)"
+        )}`;
 
-        if (authMode === "full") {
-          response = await window.gapi.client.drive.files.list({
-            q: searchQuery,
-            pageSize: 50,
-            orderBy: "modifiedTime desc",
-            fields:
-              "files(id,name,mimeType,size,thumbnailLink,webViewLink,webContentLink,modifiedTime,parents)",
-          });
-        } else {
-          // Mode auth-only : utiliser l'API REST directement
-          const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-            searchQuery
-          )}&pageSize=50&orderBy=modifiedTime desc&fields=${encodeURIComponent(
-            "files(id,name,mimeType,size,thumbnailLink,webViewLink,webContentLink,modifiedTime,parents)"
-          )}`;
+        console.log("🌐 [Google Drive] URL API:", apiUrl);
 
-          const apiResponse = await fetch(apiUrl, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
+        const apiResponse = await fetch(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-          if (!apiResponse.ok) {
-            if (apiResponse.status === 401) {
-              console.log("❌ [Google Drive] Token invalide ou expiré (401)");
-              setError(
-                "Votre session Google Drive a expiré. Veuillez vous reconnecter."
-              );
-              setIsSignedIn(false);
-              setDriveFiles([]);
-              setIsLoadingFiles(false);
-              return;
-            }
-            throw new Error(`Erreur API: ${apiResponse.status}`);
+        console.log(
+          "📡 [Google Drive] Réponse API:",
+          apiResponse.status,
+          apiResponse.statusText
+        );
+
+        if (!apiResponse.ok) {
+          if (apiResponse.status === 401) {
+            console.log("❌ [Google Drive] Token invalide ou expiré (401)");
+            setError(
+              "Votre session Google Drive a expiré. Veuillez vous reconnecter."
+            );
+            setIsSignedIn(false);
+            localStorage.removeItem("google_access_token");
+            localStorage.removeItem("google_token_expires_at");
+            setDriveFiles([]);
+            setIsLoadingFiles(false);
+            return;
+          } else if (apiResponse.status === 403) {
+            console.log(
+              "❌ [Google Drive] Accès refusé (403) - Permissions insuffisantes"
+            );
+            setError(
+              "Permissions insuffisantes pour accéder à Google Drive. Veuillez vous reconnecter et accorder les permissions nécessaires."
+            );
+            setDriveFiles([]);
+            setIsLoadingFiles(false);
+            return;
           }
-
-          response = { result: await apiResponse.json() };
-        }
-        const files = response.result.files || [];
-        console.log(`✅ [Google Drive] ${files.length} fichiers chargés`);
-        setDriveFiles(files);
-      } catch (error) {
-        console.error("Erreur lors du chargement des fichiers Drive:", error); // Si c'est une erreur 401, c'est probablement un token expiré
-        if (error.message.includes("401")) {
-          setError(
-            "Votre session Google Drive a expiré. Veuillez vous reconnecter."
+          throw new Error(
+            `Erreur API: ${apiResponse.status} ${apiResponse.statusText}`
           );
-          setIsSignedIn(false);
-        } else {
-          setError(`Erreur lors du chargement: ${error.message}`);
         }
+
+        const data = await apiResponse.json();
+        const files = data.files || [];
+
+        console.log(`✅ [Google Drive] ${files.length} fichiers chargés`);
+
+        // Traitement des fichiers pour ajouter les propriétés formatées
+        const processedFiles = files.map((file) => ({
+          ...file,
+          isFolder: file.mimeType === "application/vnd.google-apps.folder",
+          formattedSize: file.size
+            ? formatFileSize(parseInt(file.size))
+            : "Taille inconnue",
+          formattedDate: file.modifiedTime
+            ? new Date(file.modifiedTime).toLocaleDateString()
+            : "Date inconnue",
+        }));
+
+        setDriveFiles(processedFiles);
+      } catch (error) {
+        console.error("Erreur lors du chargement des fichiers Drive:", error);
+        setError(`Erreur lors du chargement: ${error.message}`);
         setDriveFiles([]);
       } finally {
         setIsLoadingFiles(false);
       }
     },
-    [isSignedIn, isGoogleApiLoaded, authMode]
+    [isSignedIn]
   );
 
   /**
    * Sélectionne/désélectionne un fichier
    */
-  const toggleFileSelection = useCallback((file) => {
-    if (file.isFolder) return; // Empêcher la sélection des dossiers
-
-    setSelectedFiles((prev) => {
-      const isSelected = prev.some((f) => f.id === file.id);
-      if (isSelected) {
-        return prev.filter((f) => f.id !== file.id);
+  const toggleFileSelection = useCallback(
+    (file) => {
+      if (selectedFiles.find((f) => f.id === file.id)) {
+        setSelectedFiles(selectedFiles.filter((f) => f.id !== file.id));
       } else {
-        return [...prev, file];
+        setSelectedFiles([...selectedFiles, file]);
       }
-    });
-  }, []);
+    },
+    [selectedFiles]
+  );
 
   /**
-   * Navigue dans un dossier
+   * Télécharge les fichiers sélectionnés
    */
-  const navigateToFolder = useCallback(
-    (folderId) => {
-      loadDriveFiles(folderId);
-    },
-    [loadDriveFiles]
-  );
-  /**
-   * Télécharge un fichier depuis Google Drive et l'envoie
-   */
-  const uploadSelectedFiles = useCallback(async () => {
-    if (selectedFiles.length === 0) return;
+  const downloadSelectedFiles = useCallback(async () => {
+    if (selectedFiles.length === 0) {
+      setError("Aucun fichier sélectionné pour le téléchargement");
+      return;
+    }
 
     setIsUploading(true);
-    const uploads = []; // Déclarer uploads ici pour qu'il soit accessible dans le catch
+    setError(null);
 
     try {
-      const token = localStorage.getItem("token");
+      // Télécharger chaque fichier sélectionné
       for (const file of selectedFiles) {
-        // Télécharger le fichier depuis Google Drive
+        if (file.isFolder) {
+          console.warn(
+            "📁 [Google Drive] Ignorer le téléchargement d'un dossier:",
+            file.name
+          );
+          continue; // Ignorer les dossiers, gérer le téléchargement des fichiers uniquement
+        }
+
+        console.log("⬇️ [Google Drive] Téléchargement du fichier:", file.name);
+
+        // Utiliser l'API REST pour télécharger le fichier
+        const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
         const accessToken = localStorage.getItem("google_access_token");
 
-        if (!accessToken) {
-          throw new Error(
-            "Token d'accès non disponible. Veuillez vous reconnecter."
-          );
-        }
-
-        let downloadUrl = "";
-        if (file.mimeType.startsWith("application/vnd.google-apps.")) {
-          // Pour les fichiers Google (Docs, Sheets, etc.), exporter en format approprié
-          const exportFormat = getExportFormat(file.mimeType);
-          downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${exportFormat}`;
-        } else {
-          // Pour les fichiers normaux
-          downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
-        }
-
-        const response = await fetch(downloadUrl, {
+        const response = await fetch(apiUrl, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error(`Erreur lors du téléchargement de ${file.name}`);
+          throw new Error(
+            `Erreur lors du téléchargement de ${file.name}: ${response.statusText}`
+          );
         }
 
+        // Créer un lien temporaire pour le téléchargement
         const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
 
-        // Créer un FormData pour l'upload vers notre serveur
+        // Créer un élément <a> pour déclencher le téléchargement
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = file.name || "fichier_sans_nom";
+        document.body.appendChild(a);
+        a.click();
+
+        // Nettoyer
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        console.log("✅ [Google Drive] Fichier téléchargé:", file.name);
+      }
+
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error("❌ [Google Drive] Erreur lors du téléchargement:", error);
+      setError(`Erreur lors du téléchargement: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedFiles]);
+
+  /**
+   * Supprime les fichiers sélectionnés
+   */
+  const deleteSelectedFiles = useCallback(async () => {
+    if (selectedFiles.length === 0) {
+      setError("Aucun fichier sélectionné pour la suppression");
+      return;
+    }
+
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ces fichiers ?")) {
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      // Supprimer chaque fichier sélectionné
+      for (const file of selectedFiles) {
+        console.log("🗑️ [Google Drive] Suppression du fichier:", file.name);
+
+        // Utiliser l'API REST pour supprimer le fichier
+        const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}`;
+        const accessToken = localStorage.getItem("google_access_token");
+
+        const response = await fetch(apiUrl, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Erreur lors de la suppression de ${file.name}: ${response.statusText}`
+          );
+        }
+
+        console.log("✅ [Google Drive] Fichier supprimé:", file.name);
+      }
+
+      setSelectedFiles([]);
+      loadDriveFiles(); // Recharger la liste des fichiers
+    } catch (error) {
+      console.error("❌ [Google Drive] Erreur lors de la suppression:", error);
+      setError(`Erreur lors de la suppression: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedFiles, loadDriveFiles]);
+
+  /**
+   * Crée un nouveau dossier dans Google Drive
+   */
+  const createFolder = useCallback(
+    async (folderName) => {
+      if (!folderName) {
+        setError("Le nom du dossier ne peut pas être vide");
+        return;
+      }
+
+      setIsUploading(true);
+      setError(null);
+
+      try {
+        // Créer le dossier dans le répertoire racine par défaut
+        const apiUrl = `https://www.googleapis.com/drive/v3/files`;
+        const accessToken = localStorage.getItem("google_access_token");
+
+        // Utiliser l'API REST pour créer un dossier
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: folderName,
+            mimeType: "application/vnd.google-apps.folder",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Erreur lors de la création du dossier: ${response.statusText}`
+          );
+        }
+
+        const newFolder = await response.json();
+        console.log("✅ [Google Drive] Dossier créé:", newFolder.name);
+
+        // Recharger les fichiers pour afficher le nouveau dossier
+        loadDriveFiles();
+      } catch (error) {
+        console.error(
+          "❌ [Google Drive] Erreur lors de la création du dossier:",
+          error
+        );
+        setError(`Erreur lors de la création du dossier: ${error.message}`);
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [loadDriveFiles]
+  );
+
+  // Ajouter la fonction uploadSelectedFiles
+  const uploadSelectedFiles = useCallback(async () => {
+    if (selectedFiles.length === 0) {
+      console.log("❌ [Google Drive] Aucun fichier sélectionné");
+      return [];
+    }
+
+    setIsUploading(true);
+    const uploads = [];
+
+    try {
+      const token = localStorage.getItem("token");
+      const accessToken = localStorage.getItem("google_access_token");
+
+      if (!token) {
+        throw new Error("Token d'authentification SUPCHAT manquant");
+      }
+
+      if (!accessToken) {
+        throw new Error("Token Google Drive manquant");
+      }
+      console.log(
+        `🚀 [Google Drive] Début de l'upload de ${selectedFiles.length} fichier(s)`
+      );
+
+      for (const file of selectedFiles) {
+        console.log(`📤 [Google Drive] Upload du fichier: ${file.name}`);
+        console.log(`📄 [Google Drive] Type de fichier: ${file.mimeType}`);
+
+        // Vérifier si c'est un fichier Google Docs/Sheets/Slides
+        if (
+          file.mimeType &&
+          file.mimeType.startsWith("application/vnd.google-apps.")
+        ) {
+          console.warn(
+            `⚠️ [Google Drive] Fichier Google Apps détecté (${file.mimeType}), conversion en cours...`
+          );
+
+          // Déterminer le format d'export approprié
+          let exportMimeType = "application/pdf"; // Par défaut PDF
+          let fileExtension = ".pdf";
+
+          if (file.mimeType === "application/vnd.google-apps.document") {
+            exportMimeType =
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            fileExtension = ".docx";
+          } else if (
+            file.mimeType === "application/vnd.google-apps.spreadsheet"
+          ) {
+            exportMimeType =
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            fileExtension = ".xlsx";
+          } else if (
+            file.mimeType === "application/vnd.google-apps.presentation"
+          ) {
+            exportMimeType =
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            fileExtension = ".pptx";
+          }
+
+          console.log(`📤 [Google Drive] Export en ${exportMimeType}`);
+
+          // Utiliser l'API d'export pour les fichiers Google Apps
+          const apiUrl = `https://www.googleapis.com/drive/v3/files/${
+            file.id
+          }/export?mimeType=${encodeURIComponent(exportMimeType)}`;
+
+          const downloadResponse = await fetch(apiUrl, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          if (!downloadResponse.ok) {
+            console.error(
+              `❌ [Google Drive] Erreur export ${file.name}:`,
+              downloadResponse.status,
+              downloadResponse.statusText
+            );
+            throw new Error(
+              `Erreur lors de l'export de ${file.name}: ${downloadResponse.statusText}`
+            );
+          }
+
+          const fileBlob = await downloadResponse.blob();
+          console.log(
+            `✅ [Google Drive] Fichier exporté: ${file.name} (${fileBlob.size} bytes)`
+          );
+
+          // Créer FormData avec le fichier exporté et une extension appropriée
+          const fileName = file.name.includes(".")
+            ? file.name
+            : file.name + fileExtension;
+          const formData = new FormData();
+          formData.append("file", fileBlob, fileName);
+
+          // Continuer avec l'upload...
+          let uploadUrl;
+          if (mode === "workspace" && canalId && workspaceId) {
+            uploadUrl = `${API_URL}/api/messages/upload`;
+            formData.append("canalId", canalId);
+            formData.append("workspaceId", workspaceId);
+          } else if (mode === "dm" && recipientId) {
+            uploadUrl = `${API_URL}/api/private-messages/upload`;
+            formData.append("recipientId", recipientId);
+          } else {
+            throw new Error("Configuration d'upload invalide");
+          }
+
+          console.log(`📡 [Google Drive] Upload vers SUPCHAT: ${uploadUrl}`);
+
+          const uploadResponse = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error(
+              `❌ [Google Drive] Erreur upload ${fileName}:`,
+              uploadResponse.status,
+              errorText
+            );
+            throw new Error(
+              `Erreur upload ${fileName}: ${uploadResponse.status} - ${errorText}`
+            );
+          }
+
+          const uploadData = await uploadResponse.json();
+          uploads.push({ ...uploadData, originalDriveFile: file });
+
+          console.log(
+            `✅ [Google Drive] Fichier ${fileName} uploadé avec succès`
+          );
+
+          continue; // Passer au fichier suivant
+        }
+
+        // Étape 1: Télécharger le fichier depuis Google Drive (fichiers normaux)
+        console.log(
+          `⬇️ [Google Drive] Téléchargement du fichier depuis Google Drive...`
+        );
+        const apiUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+
+        const downloadResponse = await fetch(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!downloadResponse.ok) {
+          console.error(
+            `❌ [Google Drive] Erreur téléchargement ${file.name}:`,
+            downloadResponse.status,
+            downloadResponse.statusText
+          );
+          throw new Error(
+            `Erreur lors du téléchargement de ${file.name}: ${downloadResponse.statusText}`
+          );
+        }
+
+        const fileBlob = await downloadResponse.blob();
+        console.log(
+          `✅ [Google Drive] Fichier téléchargé: ${file.name} (${fileBlob.size} bytes)`
+        );
+
+        // Étape 2: Créer FormData avec le fichier téléchargé
+        const fileName = file.name;
         const formData = new FormData();
-        formData.append("file", blob, file.name);
+        formData.append("file", fileBlob, fileName);
 
-        let uploadUrl = "";
+        let uploadUrl;
         if (mode === "workspace" && canalId && workspaceId) {
           uploadUrl = `${API_URL}/api/messages/upload`;
           formData.append("canalId", canalId);
@@ -537,176 +877,239 @@ export const useGoogleDrive = (options = {}) => {
         } else if (mode === "dm" && recipientId) {
           uploadUrl = `${API_URL}/api/private-messages/upload`;
           formData.append("recipientId", recipientId);
+        } else {
+          throw new Error("Configuration d'upload invalide");
         }
+
+        console.log(`📡 [Google Drive] Upload vers SUPCHAT: ${uploadUrl}`);
 
         const uploadResponse = await fetch(uploadUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
 
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
+          console.error(
+            `❌ [Google Drive] Erreur upload ${fileName}:`,
+            uploadResponse.status,
+            errorText
+          );
           throw new Error(
-            `Erreur lors de l'upload de ${file.name}: ${errorText}`
+            `Erreur upload ${fileName}: ${uploadResponse.status} - ${errorText}`
           );
         }
 
         const uploadData = await uploadResponse.json();
-        uploads.push({
-          ...uploadData,
-          originalDriveFile: file,
-        });
-      }
+        uploads.push({ ...uploadData, originalDriveFile: file });
 
-      // Après l'upload de tous les fichiers, envoyer DIRECTEMENT le message par socket
-      if (socket && uploads.length > 0) {
-        console.log("[Google Drive] Envoi direct via WebSocket:", {
-          socket: !!socket,
-          uploads,
-          mode,
-          recipientId,
-          canalId,
-          workspaceId,
-        });
-
-        // Filtrer les uploads valides et extraire les IDs
-        const validAttachments = uploads
-          .filter((upload) => upload && (upload.id_fichier || upload.id))
-          .map((upload) => upload.id_fichier || upload.id);
-
-        console.log("[Google Drive] Attachments valides:", validAttachments);
-
-        if (mode === "dm" && recipientId) {
-          // Envoyer un message privé vide avec les pièces jointes
-          socket.emit("privateMessage", {
-            destinataireId: recipientId,
-            contenu: "", // Message vide
-            attachments: validAttachments,
-          });
-        } else if (mode === "workspace" && canalId && workspaceId) {
-          // Envoyer un message de canal vide avec les pièces jointes
-          socket.emit("message", {
-            canalId: canalId,
-            workspaceId: workspaceId,
-            contenu: "", // Message vide
-            attachments: validAttachments,
-          });
-        }
-      } else {
-        console.warn(
-          "[Google Drive] Impossible d'envoyer directement via socket:",
-          {
-            socketPresent: !!socket,
-            uploadsLength: uploads.length,
-            mode,
-            recipientId,
-            canalId,
-            workspaceId,
-          }
+        console.log(
+          `✅ [Google Drive] Fichier ${fileName} uploadé avec succès`
         );
       }
 
-      // Notifier le succès et nettoyer
-      if (onFileUpload && typeof onFileUpload === "function") {
+      console.log(
+        `🎉 [Google Drive] Upload terminé: ${uploads.length} fichier(s) envoyé(s)`
+      );
+
+      // Déclencher le callback
+      if (onFileUpload && uploads.length > 0) {
         onFileUpload(uploads);
       }
+
+      // Réinitialiser les fichiers sélectionnés
       setSelectedFiles([]);
 
       return uploads;
     } catch (error) {
-      console.log(
-        "[Google Drive] Upload terminé avec uploads:",
-        uploads,
-        "- Avertissement callback:",
-        error.message
-      );
-      // L'upload fonctionne, c'est juste un problème de callback optional
-      return uploads;
+      console.error("❌ [Google Drive] Erreur lors de l'upload:", error);
+      throw error;
     } finally {
       setIsUploading(false);
     }
   }, [selectedFiles, mode, canalId, workspaceId, recipientId, onFileUpload]);
 
   /**
-   * Recherche des fichiers
+   * Navigue vers un dossier spécifique
+   */
+  const navigateToFolder = useCallback(
+    (folder) => {
+      if (folder && folder.isFolder) {
+        console.log(
+          `📁 [Google Drive] Navigation vers le dossier: ${folder.name}`
+        );
+        loadDriveFiles(folder.id);
+      }
+    },
+    [loadDriveFiles]
+  );
+
+  /**
+   * Recherche des fichiers par nom
    */
   const searchFiles = useCallback(
     (query) => {
+      console.log(`🔍 [Google Drive] Recherche: ${query}`);
       loadDriveFiles(null, query);
     },
     [loadDriveFiles]
   );
 
   /**
-   * Configure un Client ID personnalisé
+   * Définit un Client ID personnel
    */
   const setPersonalClientId = useCallback(
     (clientId) => {
+      console.log(
+        `🔧 [Google Drive] Configuration du Client ID personnel: ${clientId}`
+      );
       localStorage.setItem("google_drive_client_id", clientId);
-      // Réinitialiser l'API avec le nouveau Client ID
-      gapiInitialized.current = false;
-      setIsGoogleApiLoaded(false);
-      setIsSignedIn(false);
       setNeedsSetup(false);
-      setConfigurationError(null);
+      // Relancer l'initialisation avec le nouveau Client ID
       initializeGoogleApi();
     },
     [initializeGoogleApi]
   );
 
   /**
-   * Supprime la configuration personnalisée
+   * Efface la configuration personnelle
    */
   const clearPersonalConfig = useCallback(() => {
+    console.log(
+      `🧹 [Google Drive] Suppression de la configuration personnelle`
+    );
     localStorage.removeItem("google_drive_client_id");
-    gapiInitialized.current = false;
-    setIsGoogleApiLoaded(false);
-    setIsSignedIn(false);
+    localStorage.removeItem("google_access_token");
+    localStorage.removeItem("google_token_expires_at");
     setNeedsSetup(true);
-    setConfigurationError(null);
-  }, []); // Initialiser l'API au montage du composant
-  useEffect(() => {
-    // Vérifier si un token d'accès existe déjà et s'il est valide
-    const existingToken = localStorage.getItem("google_access_token");
-    const tokenExpiry = localStorage.getItem("google_token_expiry");
+    setIsSignedIn(false);
+    setDriveFiles([]);
+    setSelectedFiles([]);
+  }, []);
 
-    if (existingToken && tokenExpiry) {
-      const now = Date.now();
-      const expiryTime = parseInt(tokenExpiry);
+  /**
+   * Fonction utilitaire pour formater la taille des fichiers
+   */
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
-      if (now < expiryTime) {
-        console.log(
-          "🔍 [Google Drive] Token d'accès valide trouvé, connexion automatique"
-        );
-        setIsSignedIn(true);
-      } else {
-        console.log("🔍 [Google Drive] Token expiré, nettoyage");
-        localStorage.removeItem("google_access_token");
-        localStorage.removeItem("google_token_expiry");
-        setIsSignedIn(false);
-      }
+  /**
+   * Fonction utilitaire pour formater la date
+   */
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date inconnue";
+    const options = { year: "numeric", month: "2-digit", day: "2-digit" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  /**
+   * Fonction utilitaire pour gérer les erreurs
+   */
+  const handleError = (error) => {
+    console.error("Erreur:", error);
+    setError(error.message || "Une erreur est survenue");
+  };
+
+  // Améliorer la gestion du token avec une vérification de validité
+  const checkTokenValidity = useCallback(async () => {
+    const token = localStorage.getItem("google_access_token");
+    const expiryTime = localStorage.getItem("google_token_expiry");
+
+    if (!token || !expiryTime) {
+      return false;
     }
 
+    // Vérifier si le token a expiré (avec une marge de 5 minutes)
+    const now = Date.now();
+    const expiry = parseInt(expiryTime);
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (now >= expiry - fiveMinutes) {
+      // Token expiré, le supprimer
+      localStorage.removeItem("google_access_token");
+      localStorage.removeItem("google_token_expiry");
+      return false;
+    }
+
+    return true;
+  }, []);
+
+  // Modifier l'initialisation pour vérifier automatiquement le token
+  useEffect(() => {
+    const initializeGoogleDrive = async () => {
+      const configCheck = isConfigurationValid();
+
+      if (!configCheck.valid) {
+        setError("Configuration Google Drive manquante");
+        setNeedsSetup(true);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+
+        // Vérifier d'abord si on a un token valide en localStorage
+        const hasValidToken = await checkTokenValidity();
+        if (hasValidToken) {
+          setIsSignedIn(true);
+          console.log("✅ [Google Drive] Token valide trouvé en localStorage");
+          return;
+        }
+
+        console.log(
+          "🔄 [Google Drive] Aucun token valide, initialisation nécessaire"
+        );
+      } catch (error) {
+        console.error("❌ [Google Drive] Erreur d'initialisation:", error);
+        setError("Erreur lors de l'initialisation de Google Drive");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeGoogleDrive();
+  }, [checkTokenValidity]); // Garder checkTokenValidity comme dépendance
+
+  // Effet pour initialiser l'API Google Drive au montage du composant
+  useEffect(() => {
     initializeGoogleApi();
   }, [initializeGoogleApi]);
+
+  // Ajouter un effet pour vérifier périodiquement la validité du token
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    const interval = setInterval(async () => {
+      const isValid = await checkTokenValidity();
+      if (!isValid) {
+        console.log("🔄 [Google Drive] Token expiré, déconnexion automatique");
+        setIsSignedIn(false);
+        setDriveFiles([]);
+        setSelectedFiles([]);
+      }
+    }, 60000); // Vérifier toutes les minutes
+
+    return () => clearInterval(interval);
+  }, [isSignedIn, checkTokenValidity]);
+
   return {
-    // États
     isGoogleApiLoaded,
     isSignedIn,
     isAuthenticating,
+    isLoading, // Ajouter isLoading au return
     driveFiles,
     isLoadingFiles,
     selectedFiles,
     isUploading,
     configurationError,
-    authMode,
     needsSetup,
     error,
-
-    // Fonctions
     signInToGoogle,
     signOutFromGoogle,
     loadDriveFiles,
@@ -717,35 +1120,6 @@ export const useGoogleDrive = (options = {}) => {
     setSelectedFiles,
     setPersonalClientId,
     clearPersonalConfig,
+    checkTokenValidity, // Ajouter checkTokenValidity pour l'utiliser dans les composants
   };
 };
-
-/**
- * Utilitaires
- */
-
-// Format des tailles de fichier
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
-
-// Formats d'export pour les fichiers Google
-const getExportFormat = (mimeType) => {
-  const exportFormats = {
-    "application/vnd.google-apps.document":
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-    "application/vnd.google-apps.spreadsheet":
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-    "application/vnd.google-apps.presentation":
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
-    "application/vnd.google-apps.drawing": "image/png",
-  };
-
-  return exportFormats[mimeType] || "application/pdf";
-};
-
-export default useGoogleDrive;

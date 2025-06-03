@@ -30,6 +30,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import GoogleDriveModal from "../../components/GoogleDrive/GoogleDriveModal";
+import {
+  getFileIcon,
+  getDownloadIcon,
+  formatFileSize,
+  getFileType,
+} from "../../utils/fileIcons";
 
 function ChatContainer({
   activeChannel,
@@ -544,41 +550,43 @@ function ChatContainer({
                             );
                           }
                           return (
-                            <div className="message-file">
-                              <div className="file-info-container">
-                                <div className="file-details">
-                                  <span className="file-name">
-                                    {fileData.fileName}
+                            <div className="message-file-compact">
+                              <div className="file-icon-wrapper">
+                                {getFileIcon(
+                                  fileData.fileName,
+                                  fileData.fileType
+                                )}
+                              </div>
+                              <div className="file-details">
+                                <div
+                                  className="file-name"
+                                  title={fileData.fileName}
+                                >
+                                  {fileData.fileName}
+                                </div>
+                                <div className="file-meta">
+                                  <span className="file-type">
+                                    {getFileType(fileData.fileName)}
                                   </span>
                                   <span className="file-size">
-                                    {fileData.fileSize}
+                                    {formatFileSize(
+                                      parseInt(fileData.fileSize) || 0
+                                    )}
                                   </span>
                                 </div>
-                                <div className="file-actions">
-                                  <button
-                                    className="file-view-button"
-                                    onClick={() =>
-                                      handleOpenFileViewer({
-                                        ...fileData,
-                                        fullFileUrl,
-                                      })
-                                    }
-                                  >
-                                    Ouvrir
-                                  </button>
-                                  <button
-                                    className="file-download-button"
-                                    onClick={() =>
-                                      handleDownloadFile(
-                                        fileData.fileUrl,
-                                        fileData.fileName
-                                      )
-                                    }
-                                  >
-                                    Télécharger
-                                  </button>
-                                </div>
                               </div>
+                              <button
+                                className="file-download-btn"
+                                onClick={() =>
+                                  handleDownloadFile(
+                                    fileData.fileUrl,
+                                    fileData.fileName
+                                  )
+                                }
+                                title="Télécharger le fichier"
+                              >
+                                {getDownloadIcon("16px")}
+                              </button>
                             </div>
                           );
                         } else {
