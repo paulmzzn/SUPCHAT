@@ -615,19 +615,27 @@ function WorkspaceDetailsSidebar({
       return;
     }
 
-    e.preventDefault();
-
-    const statusMenu = document.createElement("div");
+    e.preventDefault();    const statusMenu = document.createElement("div");
     statusMenu.className = "status-context-menu";
     statusMenu.style.position = "absolute";
     statusMenu.style.top = `${e.pageY}px`;
     statusMenu.style.left = `${e.pageX}px`;
     statusMenu.style.zIndex = "2000";
-    statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
+    
+    // Appliquer les styles selon le thème
+    const isLightTheme = document.body.classList.contains('theme-light');
+    if (isLightTheme) {
+      statusMenu.style.background = "white";
+      statusMenu.style.border = "1px solid rgba(0, 0, 0, 0.1)";
+      statusMenu.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.15)";
+    } else {
+      statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
+      statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+      statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+    }
+    
     statusMenu.style.borderRadius = "8px";
     statusMenu.style.padding = "8px 0";
-    statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-    statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
 
     const statuses = [
       { id: "online", label: "En ligne", icon: FaCircle, color: "#44b700" },
@@ -644,16 +652,17 @@ function WorkspaceDetailsSidebar({
         icon: FaRegMoon,
         color: "#9e9e9e",
       },
-    ];
-
-    statuses.forEach((status) => {
+    ];    statuses.forEach((status) => {
       const option = document.createElement("div");
       option.style.padding = "8px 16px";
       option.style.display = "flex";
       option.style.alignItems = "center";
       option.style.gap = "10px";
       option.style.cursor = "pointer";
-      option.style.color = "white";
+      
+      // Appliquer la couleur selon le thème
+      const isLightTheme = document.body.classList.contains('theme-light');
+      option.style.color = isLightTheme ? "#333" : "white";
 
       const icon = document.createElement("span");
       icon.style.color = status.color;
@@ -673,10 +682,9 @@ function WorkspaceDetailsSidebar({
           `[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`
         );
         document.body.removeChild(statusMenu);
-      });
-
-      option.addEventListener("mouseover", () => {
-        option.style.backgroundColor = "rgba(147, 72, 183, 0.15)";
+      });      option.addEventListener("mouseover", () => {
+        const isLightTheme = document.body.classList.contains('theme-light');
+        option.style.backgroundColor = isLightTheme ? "rgba(147, 72, 183, 0.08)" : "rgba(147, 72, 183, 0.15)";
       });
 
       option.addEventListener("mouseout", () => {
