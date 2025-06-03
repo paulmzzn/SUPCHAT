@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import { getStyles } from './WorkspaceSettingsScreen.styles';
+import InviteModal from './modals/InviteModal';
 import env from '../../config/env';
 
 const API_URL = env.API_URL;
@@ -32,6 +33,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
   const [userRole, setUserRole] = useState('member'); // 'owner', 'admin', 'member'
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Effet d'animation au chargement
   useEffect(() => {
@@ -59,16 +61,146 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
         }
         
         const workspaceData = await response.json();
+        console.log('Workspace data:', workspaceData);
         setWorkspace(workspaceData);
         
-        // Récupérer le rôle de l'utilisateur dans ce workspace
-        const userRoleResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/role`, {
+        // Récupérer la liste des membres pour obtenir le rôle de l'utilisateur actuel
+        const membersResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        if (userRoleResponse.ok) {
-          const roleData = await userRoleResponse.json();
-          setUserRole(roleData.role || 'member');
+        console.log('Members response status:', membersResponse.status);
+        
+        if (membersResponse.ok) {
+          const membersData = await membersResponse.json();
+          console.log('Members data:', membersData);
+          
+          // Récupérer l'utilisateur actuel depuis AsyncStorage avec différentes clés possibles
+          let currentUser = null;
+          
+          // Essayer différentes clés de stockage
+          const possibleKeys = ['user', 'currentUser', 'authUser', 'userData'];
+          
+          for (const key of possibleKeys) {
+            const userString = await AsyncStorage.getItem(key);
+            if (userString) {
+              console.log(`Found user data in key: ${key}`);
+              currentUser = JSON.parse(userString);
+              break;
+            }
+          }
+          
+          // Si aucun utilisateur n'est trouvé, essayer de le déduire du token
+          if (!currentUser) {
+            console.log('No user found in AsyncStorage, trying to decode from token...');
+            const token = await AsyncStorage.getItem('token');
+            if (token) {
+              try {
+                // Décoder le token JWT pour obtenir l'ID utilisateur
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                console.log('Token payload:', payload);
+                
+                // Chercher l'utilisateur par ID du token
+                if (payload.sub || payload.user_id || payload.id) {
+                  const userId = payload.sub || payload.user_id || payload.id;
+                  console.log('Found user ID in token:', userId);
+                  
+                  const currentMember = membersData.find(member => 
+                    member.id_utilisateur === userId
+                  );
+                  
+                  if (currentMember) {
+                    console.log('Found current member by token ID:', currentMember);
+                    const role = currentMember.role || 'member';
+                    console.log('User role:', role);
+                    setUserRole(role);
+                    return; // Sortir de la fonction
+                  }
+                }
+              } catch (tokenError) {
+                console.log('Error decoding token:', tokenError);
+              }
+            }
+            
+            // Fallback final: si nous sommes le seul owner, c'est probablement nous
+            const ownerMember = membersData.find(member => member.role === 'owner');
+            if (ownerMember && membersData.filter(m => m.role === 'owner').length === 1) {
+              console.log('Assuming user is the only owner:', ownerMember);
+              setUserRole('owner');
+              return;
+            }
+            
+            console.log('No current user found, defaulting to member');
+            setUserRole('member');
+            return;
+          }
+          
+          console.log('Current user:', currentUser);
+          console.log('Current user ID:', currentUser.id);
+          console.log('Current user nom:', currentUser.nom);
+          
+          // Afficher tous les IDs des membres pour comparaison
+          membersData.forEach((member, index) => {
+            console.log(`Member ${index}:`, {
+              id_utilisateur: member.id_utilisateur,
+              nom: member.nom,
+              role: member.role
+            });
+          });
+          
+          // Trouver le rôle de l'utilisateur actuel dans la liste des membres
+          const currentMember = membersData.find(member => {
+            console.log(`Comparing:`, {
+              member_id_utilisateur: member.id_utilisateur,
+              current_user_id: currentUser.id,
+              are_equal: member.id_utilisateur === currentUser.id,
+              member_nom: member.nom,
+              current_user_nom: currentUser.nom,
+              names_equal: member.nom === currentUser.nom
+            });
+            
+            return member.id_utilisateur === currentUser.id || 
+                   member.user_id === currentUser.id ||
+                   member.id === currentUser.id ||
+                   member.email === currentUser.email ||
+                   member.nom === currentUser.nom;
+          });
+          
+          if (currentMember) {
+            console.log('Found current member:', currentMember);
+            const role = currentMember.role || currentMember.pivot?.role || 'member';
+            console.log('User role:', role);
+            setUserRole(role);
+          } else {
+            console.log('Current user not found in members list, defaulting to member');
+            setUserRole('member');
+          }
+        } else {
+          // Fallback: essayer de récupérer le rôle depuis les données du workspace
+          console.log('Trying to get role from workspace data...');
+          if (workspaceData.user_role) {
+            console.log('Found user_role in workspace data:', workspaceData.user_role);
+            setUserRole(workspaceData.user_role);
+          } else if (workspaceData.role) {
+            console.log('Found role in workspace data:', workspaceData.role);
+            setUserRole(workspaceData.role);
+          } else if (workspaceData.owner_id) {
+            // Si on a l'owner_id, vérifier si l'utilisateur actuel est le propriétaire
+            const currentUserString = await AsyncStorage.getItem('user');
+            if (currentUserString) {
+              const currentUser = JSON.parse(currentUserString);
+              if (currentUser.id === workspaceData.owner_id) {
+                console.log('User is the owner based on owner_id');
+                setUserRole('owner');
+              } else {
+                console.log('User is not the owner, defaulting to member');
+                setUserRole('member');
+              }
+            }
+          } else {
+            console.log('No role found, defaulting to member');
+            setUserRole('member');
+          }
         }
         
         // Vérifier si les notifications sont activées pour ce workspace
@@ -118,10 +250,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
 
   // Gérer l'invitation de nouveaux membres (pour les admins et owners)
   const handleInviteMembers = () => {
-    navigation.navigate('InviteMembers', { 
-      workspaceId, 
-      workspaceName: workspace?.nom || workspaceName 
-    });
+    setShowInviteModal(true);
   };
   
   // Gérer la gestion des membres (pour les admins et owners)
@@ -129,6 +258,49 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
     navigation.navigate('ManageMembers', { 
       workspaceId, 
       workspaceName: workspace?.nom || workspaceName 
+    });
+  };
+
+  // Gérer les invitations en cours
+  const handleManageInvitations = () => {
+    navigation.navigate('ManageInvitations', { 
+      workspaceId, 
+      workspaceName: workspace?.nom || workspaceName 
+    });
+  };
+
+  // Gérer les demandes d'adhésion
+  const handleManageJoinRequests = () => {
+    navigation.navigate('ManageJoinRequests', { 
+      workspaceId, 
+      workspaceName: workspace?.nom || workspaceName 
+    });
+  };
+
+  // Gérer le changement de nom du workspace
+  const handleChangeName = () => {
+    navigation.navigate('ChangeWorkspaceName', { 
+      workspaceId, 
+      currentName: workspace?.nom || workspaceName 
+    });
+  };
+
+  // Gérer le changement d'images (icône/bannière)
+  const handleChangeImages = () => {
+    navigation.navigate('ChangeWorkspaceImages', { 
+      workspaceId, 
+      workspaceName: workspace?.nom || workspaceName,
+      currentIcon: workspace?.icon_url,
+      currentBanner: workspace?.banner_url
+    });
+  };
+
+  // Gérer le changement de visibilité
+  const handleChangeVisibility = () => {
+    navigation.navigate('ChangeWorkspaceVisibility', { 
+      workspaceId, 
+      workspaceName: workspace?.nom || workspaceName,
+      currentVisibility: workspace?.is_private ? 'private' : 'public'
     });
   };
 
@@ -351,19 +523,33 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
           {/* Options d'administration (pour les admins et owners) */}
           {(userRole === 'admin' || userRole === 'owner') && (
             <>
-              <Text style={styles.sectionTitle}>Administration</Text>
+              <Text style={styles.sectionTitle}>Invitations et demandes</Text>
               <View style={styles.sectionCard}>
-                <TouchableOpacity style={styles.settingRow} onPress={handleEditWorkspace}>
+                <TouchableOpacity style={styles.settingRow} onPress={handleManageInvitations}>
                   <View style={styles.settingIcon}>
-                    <Ionicons name="create" size={22} color={themeColors.accentPrimary} />
+                    <Ionicons name="mail" size={22} color={themeColors.accentPrimary} />
                   </View>
                   <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Modifier le workspace</Text>
-                    <Text style={styles.settingDescription}>Changer le nom, la description ou la visibilité</Text>
+                    <Text style={styles.settingLabel}>Invitations</Text>
+                    <Text style={styles.settingDescription}>Gérer les invitations en cours</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
                 
+                <TouchableOpacity style={[styles.settingRow, styles.settingRowLast]} onPress={handleManageJoinRequests}>
+                  <View style={styles.settingIcon}>
+                    <Ionicons name="person-add" size={22} color={themeColors.accentPrimary} />
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>Demandes d'adhésion</Text>
+                    <Text style={styles.settingDescription}>Gérer les demandes en cours</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.sectionTitle}>Administration</Text>
+              <View style={styles.sectionCard}>
                 <TouchableOpacity style={styles.settingRow} onPress={handleInviteMembers}>
                   <View style={styles.settingIcon}>
                     <Ionicons name="person-add" size={22} color={themeColors.accentPrimary} />
@@ -382,6 +568,48 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
                   <View style={styles.settingContent}>
                     <Text style={styles.settingLabel}>Gérer les membres</Text>
                     <Text style={styles.settingDescription}>Modifier les rôles ou retirer des membres</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.sectionTitle}>Personnalisation</Text>
+              <View style={styles.sectionCard}>
+                <TouchableOpacity style={styles.settingRow} onPress={handleChangeName}>
+                  <View style={styles.settingIcon}>
+                    <Ionicons name="create" size={22} color={themeColors.accentPrimary} />
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>Changer le nom</Text>
+                    <Text style={styles.settingDescription}>Modifier le nom du workspace</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.settingRow} onPress={handleChangeImages}>
+                  <View style={styles.settingIcon}>
+                    <Ionicons name="image" size={22} color={themeColors.accentPrimary} />
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>Changer les images</Text>
+                    <Text style={styles.settingDescription}>Modifier l'icône ou la bannière</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={[styles.settingRow, styles.settingRowLast]} onPress={handleChangeVisibility}>
+                  <View style={styles.settingIcon}>
+                    <Ionicons 
+                      name={workspace?.is_private ? "lock-closed" : "globe"} 
+                      size={22} 
+                      color={themeColors.accentPrimary} 
+                    />
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>Changer la visibilité</Text>
+                    <Text style={styles.settingDescription}>
+                      Actuellement {workspace?.is_private ? 'privé' : 'public'}
+                    </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
@@ -437,6 +665,14 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* Modal d'invitation */}
+      <InviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        workspaceId={workspaceId}
+        workspaceName={workspace?.nom || workspaceName}
+      />
     </SafeAreaView>
   );
 };
