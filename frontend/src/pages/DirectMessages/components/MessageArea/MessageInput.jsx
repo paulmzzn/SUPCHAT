@@ -97,19 +97,24 @@ const MessageInput = ({
           style={{ display: "none" }}
           onChange={handleFileSelect}
           multiple
-        />
-
+        />{" "}
         {/* Bouton d'attachement */}
         <button
           type="button"
           className={`dm-attachment-btn ${uploadingFile ? "uploading" : ""}`}
-          onClick={onAttachmentClick}
+          onClick={() => {
+            console.log("[MessageInput] Clic sur bouton d'attachement");
+            console.log(
+              "[MessageInput] onAttachmentClick:",
+              typeof onAttachmentClick
+            );
+            onAttachmentClick();
+          }}
           disabled={uploadingFile}
         >
           <FaPaperclip />
           {uploadingFile && <span className="upload-spinner"></span>}
         </button>
-
         {/* Champ de saisie */}
         <input
           type="text"
@@ -119,7 +124,6 @@ const MessageInput = ({
           className="dm-input"
           disabled={uploadingFile}
         />
-
         {/* Bouton d'envoi */}
         <button
           type="submit"

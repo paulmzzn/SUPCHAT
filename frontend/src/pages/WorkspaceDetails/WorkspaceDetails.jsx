@@ -404,156 +404,115 @@ function WorkspaceDetails() {
     setFullscreenFile(null);
   };
 
-  // Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
-  const handleFileUpload = async (e) => {
+  // Modifier la fonction handleFileUpload pour accepter un event (input file) OU un tableau de fichiers (Google Drive)
+  const handleFileUpload = async (input) => {
     console.log("🚀 Début de handleFileUpload");
-    const file = e.target.files[0];
-    if (!file) {
+    let files = [];
+    // Cas 1 : input est un event (input file classique)
+    if (input && input.target && input.target.files) {
+      files = Array.from(input.target.files);
+    } else if (Array.isArray(input)) {
+      // Cas 2 : input est un tableau de fichiers (depuis Google Drive)
+      files = input;
+    } else {
+      console.warn("handleFileUpload appelé avec un format inattendu", input);
+      return;
+    }
+    if (files.length === 0) {
       console.log("❌ Aucun fichier sélectionné");
       return;
     }
-
-    console.log(
-      `📁 Fichier sélectionné: ${file.name} (${file.size} octets, type: ${file.type})`
-    );
-
-    if (file.size > 10 * 1024 * 1024) {
-      // 10MB limite
-      console.log("❌ Fichier trop volumineux");
-      alert("Le fichier ne doit pas dépasser 10MB");
-      return;
-    }
-
-    try {
-      if (activeChannel && socket) {
-        console.log(
-          `📡 Canal actif: ${activeChannel.id}, Socket disponible: ${!!socket}`
-        );
-
-        // Création de FormData pour l'envoi du fichier
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("canalId", activeChannel.id);
-        formData.append("workspaceId", workspaceId);
-
-        console.log(
-          `🔍 Formulaire préparé - canalId: ${activeChannel.id}, workspaceId: ${workspaceId}`
-        );
-
-        if (replyingTo) {
-          console.log(`↩️ Réponse à un message: ${replyingTo.id_message}`);
-          formData.append("parentId", replyingTo.id_message);
-        }
-
-        const token = localStorage.getItem("token");
-        console.log(`🔑 Token disponible: ${token ? "Oui" : "Non"}`);
-
-        // Afficher un message temporaire de téléchargement
-        const tempMsgId = `temp-upload-${Date.now()}`;
-        console.log(`📝 Création du message temporaire: ${tempMsgId}`);
-        const loadingMessage = {
-          id_message: tempMsgId,
-          contenu: `Envoi du fichier ${file.name}...`,
-          nom: currentUserName || "Vous",
-          fk_utilisateur: currentUserId,
-          date_creation: new Date().toISOString(),
-          isUploading: true,
-          reactions: [],
-        };
-
-        console.log(`⏳ Ajout du message temporaire au chat`);
-        setMessages((prevMessages) => [...prevMessages, loadingMessage]); // Forcer une mise à jour du DOM
-        if (chatContainerRef && chatContainerRef.current) {
-          setTimeout(() => {
-            // Vérifier à nouveau que la référence est toujours valide
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop =
-                chatContainerRef.current.scrollHeight;
-            }
-          }, 50);
-        }
-
-        console.log(
-          `🌐 Début de l'appel API vers ${API_URL}/api/messages/upload`
-        );
-
-        // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
-        // Ce qui évite les problèmes de timeout avec Socket.IO
-        // Ce qui évite les problèmes de timeout avec Socket.IO
-        const response = await fetch(`${API_URL}/api/messages/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-          // Augmenter le timeout pour les fichiers volumineux
-          timeout: 60000, // 60 secondes de timeout
-        });
-
-        console.log(`📡 Réponse reçue - Status: ${response.status}`);
-
-        if (!response.ok) {
-          try {
-            const errorData = await response.json();
-            console.error("❌ Détails de l'erreur API:", errorData);
-            throw new Error(
-              errorData.message ||
+    for (const file of files) {
+      console.log(
+        `📁 Fichier sélectionné: ${file.name} (${file.size} octets, type: ${file.type})`
+      );
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB limite
+        console.log("❌ Fichier trop volumineux");
+        alert("Le fichier ne doit pas dépasser 10MB");
+        continue;
+      }
+      try {
+        if (activeChannel && socket) {
+          // Création de FormData pour l'envoi du fichier
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("canalId", activeChannel.id);
+          formData.append("workspaceId", workspaceId);
+          if (replyingTo) {
+            formData.append("parentId", replyingTo.id_message);
+          }
+          const token = localStorage.getItem("token");
+          // Afficher un message temporaire de téléchargement
+          const tempMsgId = `temp-upload-${Date.now()}-${Math.random()}`;
+          const loadingMessage = {
+            id_message: tempMsgId,
+            contenu: `Envoi du fichier ${file.name}...`,
+            nom: currentUserName || "Vous",
+            fk_utilisateur: currentUserId,
+            date_creation: new Date().toISOString(),
+            isUploading: true,
+            reactions: [],
+          };
+          setMessages((prevMessages) => [...prevMessages, loadingMessage]);
+          if (chatContainerRef && chatContainerRef.current) {
+            setTimeout(() => {
+              if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTop =
+                  chatContainerRef.current.scrollHeight;
+              }
+            }, 50);
+          }
+          const response = await fetch(`${API_URL}/api/messages/upload`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+            timeout: 60000,
+          });
+          if (!response.ok) {
+            try {
+              const errorData = await response.json();
+              throw new Error(
+                errorData.message ||
+                  `Erreur ${response.status}: ${response.statusText}`
+              );
+            } catch (jsonError) {
+              throw new Error(
                 `Erreur ${response.status}: ${response.statusText}`
-            );
-          } catch (jsonError) {
-            console.error(
-              "❌ Erreur lors de la lecture de la réponse:",
-              jsonError
-            );
-            throw new Error(
-              `Erreur ${response.status}: ${response.statusText}`
+              );
+            }
+          }
+          const data = await response.json();
+          setMessages((prevMessages) =>
+            prevMessages.filter((msg) => msg.id_message !== tempMsgId)
+          );
+          setReplyingTo(null);
+        } else {
+          if (!activeChannel) {
+            alert("Veuillez d'abord sélectionner un canal");
+          } else if (!socket) {
+            alert(
+              "Problème de connexion au serveur. Veuillez rafraîchir la page."
             );
           }
         }
-
-        const data = await response.json();
-        console.log("✅ Réponse API réussie:", data);
-
-        // Supprimer le message temporaire
-        console.log(`🗑️ Suppression du message temporaire: ${tempMsgId}`);
-        setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg.id_message !== tempMsgId)
+      } catch (error) {
+        alert(
+          `Erreur lors de l'envoi du fichier: ${
+            error.message || "Erreur inconnue"
+          }`
         );
-
-        // Réinitialiser l'input de fichier et le mode réponse
-        e.target.value = null;
-        setReplyingTo(null);
-        console.log(`✅ Fin de l'upload avec succès`);
-      } else {
-        if (!activeChannel) {
-          console.log("❌ Aucun canal actif");
-          alert("Veuillez d'abord sélectionner un canal");
-        } else if (!socket) {
-          console.log(`❌ Problème de socket - socket n'est pas disponible`);
-          alert(
-            "Problème de connexion au serveur. Veuillez rafraîchir la page."
-          );
-        }
+        setMessages((prevMessages) =>
+          prevMessages.filter((msg) => !msg.isUploading)
+        );
       }
-    } catch (error) {
-      console.error("❌ ERREUR DÉTAILLÉE:", error);
-      console.log(`❌ Message d'erreur: ${error.message}`);
-      console.log(`❌ Stack trace: ${error.stack}`);
-      alert(
-        `Erreur lors de l'envoi du fichier: ${
-          error.message || "Erreur inconnue"
-        }`
-      );
-
-      // Supprimer le message de chargement en cas d'erreur
-      console.log(
-        "🗑️ Nettoyage des messages temporaires d'upload en cas d'erreur"
-      );
-      setMessages((prevMessages) =>
-        prevMessages.filter((msg) => !msg.isUploading)
-      );
     }
-
+    // Réinitialiser l'input file si c'était un event
+    if (input && input.target && input.target.value !== undefined) {
+      input.target.value = null;
+    }
     console.log("🏁 Fin de handleFileUpload");
   }; // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
   const handleChatInputKeyDown = (e) => {
@@ -1116,11 +1075,11 @@ function WorkspaceDetails() {
           onClose={handleCloseStrawpollVote}
         />
         <GoogleDriveModal
-          show={showGoogleDriveModal}
+          isOpen={showGoogleDriveModal}
           onClose={handleCloseGoogleDrive}
           onFilesSelected={(files) => {
-            console.log("Fichiers sélectionnés depuis Google Drive:", files);
-            // TODO: Gérer l'envoi des fichiers sélectionnés
+            handleFileUpload(files);
+            handleCloseGoogleDrive();
           }}
           mode="workspace"
           workspaceId={workspaceId}

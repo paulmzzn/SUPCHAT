@@ -17,6 +17,11 @@ import MessageArea from "./components/MessageArea/MessageArea";
 import { useConversations } from "./hooks/useConversations";
 import { useMessages } from "./hooks/useMessages";
 import { useAttachments } from "./hooks/useAttachments";
+import { useGoogleDrive } from "../../hooks/useGoogleDrive";
+
+// Composants additionnels
+import FileSourceSelector from "../../components/FileSourceSelector";
+import GoogleDriveModal from "../../components/GoogleDrive/GoogleDriveModal";
 
 // Utilitaires
 import {
@@ -51,13 +56,14 @@ function DirectMessages() {
     currentUserId,
     attachments,
     setAttachments
-  );
-  // Ensuite le hook des attachments
+  ); // Ensuite le hook des attachments
   const {
     uploadingFile,
     fileInputRef,
     handleFileSelect,
     handleAttachmentClick,
+    handleLocalFileSelect,
+    handleGoogleDriveFiles,
     removeAttachment,
     handleAddReaction,
     handleEmojiSelect,
@@ -71,6 +77,42 @@ function DirectMessages() {
     setNewMessage: msg.setNewMessage,
     setReplyingTo: msg.setReplyingTo,
   });
+
+  // Hook Google Drive
+  const googleDrive = useGoogleDrive();
+
+  // États pour la gestion de la sélection de source de fichiers
+  const [showFileSourceSelector, setShowFileSourceSelector] = useState(false);
+  const [showGoogleDriveModal, setShowGoogleDriveModal] = useState(false); // Fonction pour gérer le clic sur le bouton d'attachement (nouveau comportement)
+  const handleAttachmentClickWithSelector = useCallback(() => {
+    setShowFileSourceSelector(true);
+  }, []);
+
+  // Fonction pour sélectionner les fichiers locaux
+  const handleSelectLocalFiles = useCallback(() => {
+    setShowFileSourceSelector(false);
+    handleLocalFileSelect();
+  }, [handleLocalFileSelect]); // Fonction pour ouvrir Google Drive
+  const handleSelectGoogleDrive = useCallback(() => {
+    setShowFileSourceSelector(false);
+    setShowGoogleDriveModal(true);
+  }, []);
+
+  // Fonction pour gérer la sélection de fichiers Google Drive
+  const handleGoogleDriveSelection = useCallback(
+    async (selectedFiles) => {
+      setShowGoogleDriveModal(false);
+      if (selectedFiles && selectedFiles.length > 0) {
+        await handleGoogleDriveFiles(selectedFiles);
+      }
+    },
+    [handleGoogleDriveFiles]
+  );
+
+  // Fonction pour fermer le modal Google Drive
+  const handleCloseGoogleDriveModal = useCallback(() => {
+    setShowGoogleDriveModal(false);
+  }, []);
 
   // Effet pour charger les conversations si la liste est vide
   React.useEffect(() => {
@@ -231,13 +273,12 @@ function DirectMessages() {
           editMessageContent={(msg || {}).editMessageContent || ""}
           setEditMessageContent={
             (msg || {}).setEditMessageContent || (() => {})
-          }
-          // --- Utilisation des props du hook useAttachments ---
+          } // --- Utilisation des props du hook useAttachments ---
           attachments={attachments}
           uploadingFile={uploadingFile}
           fileInputRef={fileInputRef}
           handleFileSelect={handleFileSelect}
-          handleAttachmentClick={handleAttachmentClick}
+          handleAttachmentClick={handleAttachmentClickWithSelector}
           removeAttachment={removeAttachment}
           // --- Fin props fichiers ---
           messageContextMenu={
@@ -300,6 +341,22 @@ function DirectMessages() {
             onStartConversation={conv.handleStartConversation || (() => {})}
           />
         )}{" "}
+        {/* Popup de sélection de source de fichiers */}
+        <FileSourceSelector
+          isOpen={showFileSourceSelector}
+          onClose={() => setShowFileSourceSelector(false)}
+          onSelectLocal={handleSelectLocalFiles}
+          onSelectGoogleDrive={handleSelectGoogleDrive}
+        />
+        {/* Modal Google Drive */}
+        <GoogleDriveModal
+          isOpen={showGoogleDriveModal}
+          onClose={handleCloseGoogleDriveModal}
+          onFilesSelected={handleGoogleDriveFiles}
+          socket={socket}
+          mode="dm"
+          recipientId={selectedUser}
+        />
       </div>
       {/* Utiliser le ToastProvider séparé */}
       <ToastProvider />

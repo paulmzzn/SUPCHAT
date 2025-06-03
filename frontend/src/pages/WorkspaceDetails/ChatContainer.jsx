@@ -1082,8 +1082,7 @@ function ChatContainer({
         show={showGoogleDriveModal}
         onClose={handleCloseGoogleDrive}
         onFileSelect={(files) => {
-          // Gérer les fichiers sélectionnés depuis Google Drive
-          console.log("Fichiers sélectionnés depuis Google Drive:", files);
+          handleFileUpload(files);
           handleCloseGoogleDrive();
         }}
       />
