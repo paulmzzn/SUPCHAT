@@ -191,11 +191,12 @@ function WorkspaceDetails() {
   const handleCloseGoogleDrive = () => {
     setShowGoogleDriveModal(false);
   };
-
   useEffect(() => {
     window.handleOpenStrawpollVote = handleOpenStrawpollVote;
+    window.handleOpenStrawpollResults = handleOpenStrawpollResults;
     return () => {
       window.handleOpenStrawpollVote = undefined;
+      window.handleOpenStrawpollResults = undefined;
     };
   }, []);
 

@@ -254,3 +254,68 @@
     justify-content: center;
   }
 }
+
+/* Light theme corrections */
+.theme-light .reminder-modal-content {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.theme-light .reminder-modal-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-light .reminder-modal-title h2 {
+  color: #1f2937;
+}
+
+.theme-light .close-button {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.theme-light .close-button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+  color: #1f2937;
+}
+
+.theme-light .form-group label {
+  color: #1f2937;
+}
+
+.theme-light .form-group input,
+.theme-light .form-group textarea {
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+}
+
+.theme-light .form-group input:focus,
+.theme-light .form-group textarea:focus {
+  border-color: #9933cc;
+  box-shadow: 0 0 0 2px rgba(153, 51, 204, 0.2);
+}
+
+.theme-light .error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+.theme-light .modal-actions {
+  border-top: 1px solid #e5e7eb;
+}
+
+.theme-light .cancel-button {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.theme-light .cancel-button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.15);
+  color: #1f2937;
+}
+
+.theme-light .spinner {
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-top: 2px solid #1f2937;
+}
