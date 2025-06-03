@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.72:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.78:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
