@@ -61,8 +61,35 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   
   headerAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
     padding: 8,
     marginLeft: 8,
+  },
+  
+  // Nouveau style pour le badge de notification sur les paramètres
+  settingsNotificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: theme.danger,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: theme.primaryBackground,
+  },
+  settingsNotificationText: {
+    color: theme.textOnAccent,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   
   content: {

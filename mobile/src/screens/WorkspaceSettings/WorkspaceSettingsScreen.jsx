@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   StatusBar,
   Animated,
-  SafeAreaView
+  SafeAreaView,
+  Image
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,9 +19,13 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import { getStyles } from './WorkspaceSettingsScreen.styles';
 import InviteModal from './modals/InviteModal';
+import ManageWorkspaceModal from './modals/ManageWorkspaceModal';
+import ManageJoinRequestsModal from './modals/ManageJoinRequestsModal';
+import ManageMembersModal from './modals/ManageMembersModal';
 import env from '../../config/env';
 
 const API_URL = env.API_URL;
+const S3_BASE_URL = env.S3_BASE_URL;
 
 const WorkspaceSettingsScreen = ({ route, navigation }) => {
   const { workspaceId, workspaceName } = route.params;
@@ -34,6 +39,18 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showManageWorkspaceModal, setShowManageWorkspaceModal] = useState(false);
+  const [showManageJoinRequestsModal, setShowManageJoinRequestsModal] = useState(false);
+  const [showManageMembersModal, setShowManageMembersModal] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  // Fonction pour construire l'URL complète d'une image
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath; // URL complète
+    if (imagePath.startsWith('file://') || imagePath.startsWith('content://')) return imagePath; // URI locale
+    return `${S3_BASE_URL}${imagePath}`; // Ajouter la base URL S3
+  };
 
   // Effet d'animation au chargement
   useEffect(() => {
@@ -223,6 +240,38 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
     fetchWorkspaceDetails();
   }, [workspaceId, preferences]);
 
+  // Fonction pour charger le nombre de demandes en attente
+  const loadPendingRequestsCount = async () => {
+    try {
+      // Seulement pour les admins et owners
+      if (userRole !== 'admin' && userRole !== 'owner') {
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/requests`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const requests = await response.json();
+        setPendingRequestsCount(requests.length);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des demandes:', error);
+    }
+  };
+
+  // Charger les demandes en attente après avoir déterminé le rôle
+  useEffect(() => {
+    if (userRole && (userRole === 'admin' || userRole === 'owner')) {
+      loadPendingRequestsCount();
+    }
+  }, [userRole, workspaceId]);
+
   // Gérer le changement d'état des notifications
   const handleToggleNotifications = async (value) => {
     setNotificationsEnabled(value);
@@ -255,10 +304,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
   
   // Gérer la gestion des membres (pour les admins et owners)
   const handleManageMembers = () => {
-    navigation.navigate('ManageMembers', { 
-      workspaceId, 
-      workspaceName: workspace?.nom || workspaceName 
-    });
+    setShowManageMembersModal(true);
   };
 
   // Gérer les invitations en cours
@@ -271,10 +317,14 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
 
   // Gérer les demandes d'adhésion
   const handleManageJoinRequests = () => {
-    navigation.navigate('ManageJoinRequests', { 
-      workspaceId, 
-      workspaceName: workspace?.nom || workspaceName 
-    });
+    setShowManageJoinRequestsModal(true);
+  };
+
+  // Callback quand la modal des demandes se ferme
+  const handleJoinRequestsModalClose = () => {
+    setShowManageJoinRequestsModal(false);
+    // Recharger le nombre de demandes
+    loadPendingRequestsCount();
   };
 
   // Gérer le changement de nom du workspace
@@ -304,6 +354,16 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
     });
   };
 
+  // Gérer la gestion des paramètres du workspace (nom, images, visibilité)
+  const handleManageWorkspaceSettings = () => {
+    setShowManageWorkspaceModal(true);
+  };
+
+  // Callback quand le workspace est mis à jour
+  const handleWorkspaceUpdated = (updatedWorkspace) => {
+    setWorkspace(updatedWorkspace);
+  };
+
   // Gérer la suppression du workspace (uniquement pour les owners)
   const handleDeleteWorkspace = () => {
     Alert.alert(
@@ -319,13 +379,38 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
               setLoading(true);
               const token = await AsyncStorage.getItem('token');
               
-              const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}`, {
+              console.log('Attempting to delete workspace:', workspaceId);
+              
+              // Utiliser l'endpoint de suppression en cascade
+              const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/cascade`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
               });
               
+              console.log('Delete workspace response status:', response.status);
+              
               if (!response.ok) {
-                throw new Error('Impossible de supprimer le workspace');
+                const errorText = await response.text();
+                console.log('Delete workspace error response:', errorText);
+                
+                let errorMessage = 'Impossible de supprimer le workspace';
+                try {
+                  const errorData = JSON.parse(errorText);
+                  errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                  if (response.status === 403) {
+                    errorMessage = 'Vous n\'avez pas les permissions pour supprimer ce workspace';
+                  } else if (response.status === 404) {
+                    errorMessage = 'Workspace non trouvé';
+                  } else if (response.status === 409) {
+                    errorMessage = 'Impossible de supprimer le workspace car il contient des données liées';
+                  }
+                }
+                
+                throw new Error(errorMessage);
               }
               
               Toast.show({
@@ -341,7 +426,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
               Toast.show({
                 type: 'error',
                 text1: 'Erreur',
-                text2: 'Impossible de supprimer le workspace'
+                text2: error.message || 'Impossible de supprimer le workspace'
               });
             } finally {
               setLoading(false);
@@ -356,7 +441,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
   const handleLeaveWorkspace = () => {
     Alert.alert(
       'Quitter le workspace',
-      'Êtes-vous sûr de vouloir quitter ce workspace ? Vous devrez être invité à nouveau pour y accéder.',
+      'Êtes-vous sûr de vouloir quitter ce workspace ?',
       [
         { text: 'Annuler', style: 'cancel' },
         { 
@@ -367,13 +452,63 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
               setLoading(true);
               const token = await AsyncStorage.getItem('token');
               
-              const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/leave`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` }
+              // Récupérer l'ID utilisateur depuis AsyncStorage ou token
+              let currentUserId = null;
+              const userString = await AsyncStorage.getItem('user');
+              if (userString) {
+                const currentUser = JSON.parse(userString);
+                currentUserId = currentUser.id;
+              } else {
+                // Fallback: décoder le token pour obtenir l'ID
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  currentUserId = payload.sub || payload.user_id || payload.id;
+                } catch (tokenError) {
+                  console.log('Error decoding token for user ID:', tokenError);
+                  throw new Error('Impossible de déterminer votre identité');
+                }
+              }
+
+              if (!currentUserId) {
+                throw new Error('Impossible de déterminer votre identité');
+              }
+
+              console.log('Leaving workspace with user ID:', currentUserId);
+
+              // Utiliser la route DELETE pour retirer le membre (soi-même)
+              // En envoyant l'userId dans le body comme attendu par le backend
+              const response = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${currentUserId}`, {
+                method: 'DELETE',
+                headers: { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  userId: currentUserId // Envoyer l'ID utilisateur dans le body
+                })
               });
-              
+
+              console.log('Leave workspace response status:', response.status);
+
               if (!response.ok) {
-                throw new Error('Impossible de quitter le workspace');
+                const errorText = await response.text();
+                console.log('Leave workspace error response:', errorText);
+                
+                let errorMessage = 'Impossible de quitter le workspace';
+                try {
+                  const errorData = JSON.parse(errorText);
+                  errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                  if (response.status === 403) {
+                    errorMessage = 'Vous n\'avez pas les permissions pour quitter ce workspace';
+                  } else if (response.status === 404) {
+                    errorMessage = 'Workspace ou membre non trouvé';
+                  } else if (response.status === 400) {
+                    errorMessage = 'Impossible de quitter le workspace (propriétaire unique?)';
+                  }
+                }
+                
+                throw new Error(errorMessage);
               }
               
               Toast.show({
@@ -389,7 +524,7 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
               Toast.show({
                 type: 'error',
                 text1: 'Erreur',
-                text2: 'Impossible de quitter le workspace'
+                text2: error.message || 'Impossible de quitter le workspace'
               });
             } finally {
               setLoading(false);
@@ -455,11 +590,39 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
           {/* Informations du workspace */}
           <View style={styles.workspaceCard}>
-            <View style={styles.workspaceBanner}>
-              <Text style={styles.workspaceName}>{workspace?.nom || workspaceName}</Text>
-            </View>
+            {/* Bannière du workspace */}
+            {workspace?.banner_url ? (
+              <Image 
+                source={{ uri: getImageUrl(workspace.banner_url) }} 
+                style={styles.workspaceBannerImage}
+                resizeMode="cover"
+                onError={(error) => {
+                  console.log('Error loading banner:', error.nativeEvent.error);
+                }}
+              />
+            ) : (
+              <View style={styles.workspaceBanner} />
+            )}
             
             <View style={styles.workspaceInfo}>
+              {/* Icône et nom du workspace */}
+              <View style={styles.workspaceHeader}>
+                {workspace?.icon_url ? (
+                  <Image 
+                    source={{ uri: getImageUrl(workspace.icon_url) }} 
+                    style={styles.workspaceIcon}
+                    onError={(error) => {
+                      console.log('Error loading icon:', error.nativeEvent.error);
+                    }}
+                  />
+                ) : (
+                  <View style={styles.workspaceIconPlaceholder}>
+                    <Ionicons name="business" size={24} color={themeColors.textSecondary} />
+                  </View>
+                )}
+                <Text style={styles.workspaceName}>{workspace?.nom || workspaceName}</Text>
+              </View>
+
               {workspace?.description ? (
                 <Text style={styles.workspaceDescription}>{workspace.description}</Text>
               ) : (
@@ -523,31 +686,6 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
           {/* Options d'administration (pour les admins et owners) */}
           {(userRole === 'admin' || userRole === 'owner') && (
             <>
-              <Text style={styles.sectionTitle}>Invitations et demandes</Text>
-              <View style={styles.sectionCard}>
-                <TouchableOpacity style={styles.settingRow} onPress={handleManageInvitations}>
-                  <View style={styles.settingIcon}>
-                    <Ionicons name="mail" size={22} color={themeColors.accentPrimary} />
-                  </View>
-                  <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Invitations</Text>
-                    <Text style={styles.settingDescription}>Gérer les invitations en cours</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={[styles.settingRow, styles.settingRowLast]} onPress={handleManageJoinRequests}>
-                  <View style={styles.settingIcon}>
-                    <Ionicons name="person-add" size={22} color={themeColors.accentPrimary} />
-                  </View>
-                  <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Demandes d'adhésion</Text>
-                    <Text style={styles.settingDescription}>Gérer les demandes en cours</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
               <Text style={styles.sectionTitle}>Administration</Text>
               <View style={styles.sectionCard}>
                 <TouchableOpacity style={styles.settingRow} onPress={handleInviteMembers}>
@@ -557,6 +695,31 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
                   <View style={styles.settingContent}>
                     <Text style={styles.settingLabel}>Inviter des membres</Text>
                     <Text style={styles.settingDescription}>Ajouter de nouveaux participants au workspace</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.settingRow} onPress={handleManageJoinRequests}>
+                  <View style={styles.settingIcon}>
+                    <Ionicons name="person-add-outline" size={22} color={themeColors.accentPrimary} />
+                    {/* Badge de notification sur l'icône */}
+                    {pendingRequestsCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationText}>
+                          {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>
+                      Demandes d'adhésion
+                      {/* Badge de notification dans le texte */}
+                      {pendingRequestsCount > 0 && (
+                        <Text style={styles.pendingCount}> ({pendingRequestsCount})</Text>
+                      )}
+                    </Text>
+                    <Text style={styles.settingDescription}>Gérer les demandes en cours</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
@@ -573,43 +736,15 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.sectionTitle}>Personnalisation</Text>
+              <Text style={styles.sectionTitle}>Paramètres du workspace</Text>
               <View style={styles.sectionCard}>
-                <TouchableOpacity style={styles.settingRow} onPress={handleChangeName}>
+                <TouchableOpacity style={[styles.settingRow, styles.settingRowLast]} onPress={handleManageWorkspaceSettings}>
                   <View style={styles.settingIcon}>
-                    <Ionicons name="create" size={22} color={themeColors.accentPrimary} />
+                    <Ionicons name="settings" size={22} color={themeColors.accentPrimary} />
                   </View>
                   <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Changer le nom</Text>
-                    <Text style={styles.settingDescription}>Modifier le nom du workspace</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.settingRow} onPress={handleChangeImages}>
-                  <View style={styles.settingIcon}>
-                    <Ionicons name="image" size={22} color={themeColors.accentPrimary} />
-                  </View>
-                  <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Changer les images</Text>
-                    <Text style={styles.settingDescription}>Modifier l'icône ou la bannière</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={[styles.settingRow, styles.settingRowLast]} onPress={handleChangeVisibility}>
-                  <View style={styles.settingIcon}>
-                    <Ionicons 
-                      name={workspace?.is_private ? "lock-closed" : "globe"} 
-                      size={22} 
-                      color={themeColors.accentPrimary} 
-                    />
-                  </View>
-                  <View style={styles.settingContent}>
-                    <Text style={styles.settingLabel}>Changer la visibilité</Text>
-                    <Text style={styles.settingDescription}>
-                      Actuellement {workspace?.is_private ? 'privé' : 'public'}
-                    </Text>
+                    <Text style={styles.settingLabel}>Modifier le workspace</Text>
+                    <Text style={styles.settingDescription}>Nom, images, visibilité et autres paramètres</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
@@ -672,6 +807,36 @@ const WorkspaceSettingsScreen = ({ route, navigation }) => {
         onClose={() => setShowInviteModal(false)}
         workspaceId={workspaceId}
         workspaceName={workspace?.nom || workspaceName}
+      />
+
+      {/* Modal de gestion du workspace */}
+      <ManageWorkspaceModal
+        visible={showManageWorkspaceModal}
+        onClose={() => setShowManageWorkspaceModal(false)}
+        workspaceId={workspaceId}
+        workspaceName={workspace?.nom || workspaceName}
+        description={workspace?.description || ''}
+        isPrivate={workspace?.is_private || false}
+        iconUrl={getImageUrl(workspace?.icon_url)}
+        bannerUrl={getImageUrl(workspace?.banner_url)}
+        onWorkspaceUpdated={handleWorkspaceUpdated}
+      />
+
+      {/* Modal de gestion des demandes d'adhésion */}
+      <ManageJoinRequestsModal
+        visible={showManageJoinRequestsModal}
+        onClose={handleJoinRequestsModalClose}
+        workspaceId={workspaceId}
+        workspaceName={workspace?.nom || workspaceName}
+      />
+
+      {/* Modal de gestion des membres */}
+      <ManageMembersModal
+        visible={showManageMembersModal}
+        onClose={() => setShowManageMembersModal(false)}
+        workspaceId={workspaceId}
+        workspaceName={workspace?.nom || workspaceName}
+        currentUserRole={userRole}
       />
     </SafeAreaView>
   );

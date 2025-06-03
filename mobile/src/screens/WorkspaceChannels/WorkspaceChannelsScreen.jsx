@@ -31,6 +31,8 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isCreateChannelModalVisible, setCreateChannelModalVisible] = useState(false);
+  const [userRole, setUserRole] = useState('member');
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
     loadWorkspaceData();
@@ -77,13 +79,101 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
     }
   }, [channelUnreadCounts, getChannelUnreadCount]);
 
+  // Fonction pour charger le nombre de demandes en attente
+  const loadPendingRequestsCount = async () => {
+    try {
+      // Seulement pour les admins et owners
+      if (userRole !== 'admin' && userRole !== 'owner') {
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${env.API_URL}/api/workspaces/${workspaceId}/requests`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const requests = await response.json();
+        setPendingRequestsCount(requests.length);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des demandes:', error);
+    }
+  };
+
+  // Fonction pour déterminer le rôle de l'utilisateur
+  const checkUserRole = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${env.API_URL}/api/workspaces/${workspaceId}/members`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const membersData = await response.json();
+        
+        // Récupérer l'utilisateur actuel
+        let currentUser = null;
+        const possibleKeys = ['user', 'currentUser', 'authUser', 'userData'];
+        
+        for (const key of possibleKeys) {
+          const userString = await AsyncStorage.getItem(key);
+          if (userString) {
+            currentUser = JSON.parse(userString);
+            break;
+          }
+        }
+        
+        if (!currentUser) {
+          // Fallback: décoder le token
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const userId = payload.sub || payload.user_id || payload.id;
+            
+            const currentMember = membersData.find(member => 
+              member.id_utilisateur === userId
+            );
+            
+            if (currentMember) {
+              const role = currentMember.role || 'member';
+              setUserRole(role);
+              return;
+            }
+          } catch (tokenError) {
+            console.log('Error decoding token:', tokenError);
+          }
+        } else {
+          // Trouver le rôle de l'utilisateur actuel dans la liste des membres
+          const currentMember = membersData.find(member => {
+            return member.id_utilisateur === currentUser.id || 
+                   member.user_id === currentUser.id ||
+                   member.id === currentUser.id ||
+                   member.email === currentUser.email ||
+                   member.nom === currentUser.nom;
+          });
+          
+          if (currentMember) {
+            const role = currentMember.role || currentMember.pivot?.role || 'member';
+            setUserRole(role);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification du rôle:', error);
+    }
+  };
+
   const loadWorkspaceData = async () => {
     try {
       setLoading(true);
       await Promise.all([
         fetchWorkspaceDetails(),
         fetchChannels(),
-        fetchMembers()
+        fetchMembers(),
+        checkUserRole()
       ]);
     } catch (error) {
       console.error('Erreur chargement workspace:', error);
@@ -97,9 +187,20 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
     }
   };
 
+  // Charger les demandes en attente après avoir déterminé le rôle
+  useEffect(() => {
+    if (userRole && (userRole === 'admin' || userRole === 'owner')) {
+      loadPendingRequestsCount();
+    }
+  }, [userRole, workspaceId]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadWorkspaceData();
+    // Recharger aussi les demandes d'adhésion
+    if (userRole === 'admin' || userRole === 'owner') {
+      await loadPendingRequestsCount();
+    }
     setRefreshing(false);
   };
 
@@ -307,6 +408,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
           })}
         >
           <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
+          {/* Badge de notification sur l'icône paramètres */}
+          {pendingRequestsCount > 0 && (userRole === 'admin' || userRole === 'owner') && (
+            <View style={styles.settingsNotificationBadge}>
+              <Text style={styles.settingsNotificationText}>
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
