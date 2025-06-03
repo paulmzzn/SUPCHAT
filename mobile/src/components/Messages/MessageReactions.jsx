@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { getEmojiForType } from "../../utils/reactionUtils";
 
 const MessageReactions = ({
   reactions,
@@ -52,7 +53,7 @@ const MessageReactions = ({
           onPress={() => handleReactionPress(reaction)}
         >
           <Text style={styles.reactionEmoji}>
-            {reaction.reaction_type}
+            {getEmojiForType(reaction.reaction_type)}
           </Text>
           <Text style={styles.reactionCount}>
             {reaction.count}

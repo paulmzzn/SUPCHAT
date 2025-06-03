@@ -7,17 +7,14 @@ const EmojiPicker = ({ visible, onClose, onEmojiSelect }) => {
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
 
-  const emojis = [
-    "👍",
-    "👎",
-    "❤️",
-    "😂",
-    "😮",
-    "😢",
-    "😡",
-    "🎉",
-    "👏",
-    "🤔",
+  // Utiliser les mêmes noms de réaction que le web
+  const emojiReactions = [
+    { name: "thumbsUp", emoji: "👍" },
+    { name: "heart", emoji: "❤️" },
+    { name: "laugh", emoji: "😂" },
+    { name: "surprise", emoji: "😮" },
+    { name: "sad", emoji: "😢" },
+    { name: "angry", emoji: "😡" },
   ];
 
   if (!visible) return null;
@@ -30,13 +27,13 @@ const EmojiPicker = ({ visible, onClose, onEmojiSelect }) => {
     >
       <View style={styles.emojiPicker}>
         <ScrollView horizontal style={styles.emojiScrollView}>
-          {emojis.map((emoji) => (
+          {emojiReactions.map((reaction) => (
             <TouchableOpacity
-              key={emoji}
+              key={reaction.name}
               style={styles.emojiButton}
-              onPress={() => onEmojiSelect(emoji)}
+              onPress={() => onEmojiSelect(reaction.name)} // Envoyer le nom au lieu de l'emoji
             >
-              <Text style={styles.emojiText}>{emoji}</Text>
+              <Text style={styles.emojiText}>{reaction.emoji}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
