@@ -466,11 +466,10 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     if (!newMessage.trim() || !socket) return;
     
     const messageData = {
-      user_id: currentUserId,
       canal_id: channelId,
-      workspace_id: workspaceId,
       content: newMessage.trim(),
-      reply_to: replyingTo ? replyingTo.id_message : null,
+      workspace_id: workspaceId,
+      parent_id: replyingTo ? replyingTo.id_message : null, // Changé de reply_to à parent_id
     };
     
     socket.emit('message', messageData);
@@ -660,13 +659,56 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
               )}
               
               {/* Affichage de la réponse si c'est une réponse à un autre message */}
-              {message.reply_to && (
+              {(message.reply_to || message.parent_id) && (
                 <View style={styles.messageReplyContainer}>
-                  <Text style={styles.messageReplyText}>
-                    Réponse à {message.reply_to_user_name || "Utilisateur"}
-                  </Text>
+                  <View style={styles.replyIndicator} />
+                  <TouchableOpacity
+                    style={styles.replyContent}
+                    onPress={() => {
+                      // Scroll vers le message parent si possible
+                      const parentId = message.reply_to || message.parent_id;
+                      // TODO: Implémenter le scroll vers le message parent
+                    }}
+                  >
+                    <Ionicons name="return-down-forward-outline" size={12} color={themeColors.textMuted} />
+                    <Text style={styles.messageReplyText}>
+                      {(() => {
+                        // Prioriser reply_to_user_name du backend qui contient le bon nom
+                        if (message.reply_to_user_name) {
+                          return `Réponse à ${message.reply_to_user_name}`;
+                        }
+                        // Sinon utiliser parent_message.nom si disponible
+                        if (message.parent_message && message.parent_message.nom) {
+                          return `Réponse à ${message.parent_message.nom}`;
+                        }
+                        // Enfin chercher le message parent dans la liste des messages
+                        const parentId = message.reply_to || message.parent_id;
+                        const parentMessage = messages.find(m => m.id_message === parentId);
+                        if (parentMessage && parentMessage.nom) {
+                          return `Réponse à ${parentMessage.nom}`;
+                        }
+                        return "Réponse à un message";
+                      })()}
+                    </Text>
+                  </TouchableOpacity>
                   <Text style={styles.messageReplyContent} numberOfLines={2}>
-                    {message.reply_to_content || "Message"}
+                    {(() => {
+                      // Prioriser reply_to_content du backend
+                      if (message.reply_to_content) {
+                        return message.reply_to_content;
+                      }
+                      // Sinon utiliser parent_message.contenu si disponible
+                      if (message.parent_message && message.parent_message.contenu) {
+                        return message.parent_message.contenu;
+                      }
+                      // Enfin chercher le message parent dans la liste des messages
+                      const parentId = message.reply_to || message.parent_id;
+                      const parentMessage = messages.find(m => m.id_message === parentId);
+                      if (parentMessage && parentMessage.contenu) {
+                        return parentMessage.contenu;
+                      }
+                      return "Message original non disponible";
+                    })()}
                   </Text>
                 </View>
               )}
