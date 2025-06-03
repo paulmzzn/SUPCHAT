@@ -8,13 +8,20 @@ import React, {
   useMemo,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
+import env from "../config/env";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.98:3000';
+const API_URL = env.API_URL;
 
 const SocketContext = createContext(null);
 
-export const useSocket = () => useContext(SocketContext);
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return context;
+};
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);

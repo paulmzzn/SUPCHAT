@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.98:3000";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.57:3000";
 
 export const useConversationsAPI = (conversationsData) => {
   const {
