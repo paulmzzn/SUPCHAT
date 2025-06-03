@@ -1,6 +1,6 @@
 import MessagePrive from "../models/MessagePrive.js";
-import Fichier from "../models/Fichier.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
+import Fichier from "../models/Fichier.js";
 import path from "path";
 import pool from "../config/dbConnection.js";
 
@@ -286,6 +286,178 @@ export const uploadAttachment = async (req, res) => {
 
     res.status(500).json({
       message: "Erreur upload fichier MP",
+      error: error.message,
+    });
+  }
+};
+
+// Fonction pour gérer l'upload de fichiers Google Drive pour les messages privés
+export const uploadGoogleDriveFile = async (req, res) => {
+  try {
+    console.log("[PrivateMessage] Début de l'upload Google Drive");
+
+    const { googleDriveFileId, fileName, mimeType, size, recipientId } =
+      req.body;
+    const expediteurId = req.user.id;
+
+    console.log("[PrivateMessage] Données Google Drive reçues:", {
+      googleDriveFileId,
+      fileName,
+      mimeType,
+      size,
+      recipientId,
+      expediteurId,
+    });
+
+    if (!googleDriveFileId || !fileName || !recipientId) {
+      return res.status(400).json({
+        message:
+          "Données manquantes: googleDriveFileId, fileName et recipientId requis",
+      });
+    }
+
+    // Récupérer le token Google Drive de l'utilisateur
+    const userResult = await pool.query(
+      `SELECT google_drive_access_token FROM utilisateur WHERE id_utilisateur = $1`,
+      [expediteurId]
+    );
+
+    if (
+      userResult.rows.length === 0 ||
+      !userResult.rows[0].google_drive_access_token
+    ) {
+      return res.status(400).json({
+        message: "Token Google Drive non trouvé pour cet utilisateur",
+      });
+    }
+
+    const accessToken = userResult.rows[0].google_drive_access_token;
+
+    // Télécharger le fichier depuis Google Drive
+    console.log("[PrivateMessage] Téléchargement depuis Google Drive...");
+
+    let downloadUrl;
+    if (mimeType.startsWith("application/vnd.google-apps.")) {
+      // Pour les fichiers Google Workspace, utiliser l'export
+      const exportMimeTypes = {
+        "application/vnd.google-apps.document":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.google-apps.spreadsheet":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.google-apps.presentation":
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      };
+      const exportMimeType = exportMimeTypes[mimeType] || "application/pdf";
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}/export?mimeType=${encodeURIComponent(
+        exportMimeType
+      )}`;
+    } else {
+      // Pour les fichiers normaux
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}?alt=media`;
+    }
+
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!downloadResponse.ok) {
+      throw new Error(
+        `Erreur lors du téléchargement depuis Google Drive: ${downloadResponse.status}`
+      );
+    }
+
+    const fileBuffer = await downloadResponse.arrayBuffer();
+    const fileBlob = new Uint8Array(fileBuffer);
+
+    // Préparer le fichier pour S3
+    const fileExt = path.extname(fileName).substring(1) || "bin";
+
+    const fileForS3 = {
+      buffer: Buffer.from(fileBlob),
+      originalname: fileName,
+      mimetype: mimeType || "application/octet-stream",
+      size: fileBlob.length,
+    };
+
+    // Upload vers S3
+    console.log("[PrivateMessage] Upload vers S3...");
+    const s3Result = await uploadToS3(
+      fileForS3,
+      "private-messages/google-drive"
+    );
+    console.log(
+      "[PrivateMessage] Fichier Google Drive uploadé vers S3:",
+      s3Result
+    );
+
+    // Créer l'entrée fichier dans la base de données
+    const fichierData = {
+      nom_fichier: fileName,
+      url: s3Result.url,
+      type: mimeType || "application/octet-stream",
+      taille_fichier: fileBlob.length,
+      extension: fileExt,
+      mime_type: mimeType || "application/octet-stream",
+      fk_utilisateur: expediteurId,
+    };
+
+    console.log("[PrivateMessage] Création du fichier en BDD:", fichierData);
+    const newFichier = await Fichier.create(fichierData);
+    console.log("[PrivateMessage] Fichier créé:", newFichier);
+
+    // Créer le message privé
+    const messageData = {
+      contenu: "",
+      fk_expediteur: expediteurId,
+      fk_destinataire: recipientId,
+    };
+
+    console.log("[PrivateMessage] Création du message privé:", messageData);
+    const newMessage = await MessagePrive.create(messageData);
+    console.log("[PrivateMessage] Message créé:", newMessage);
+
+    // Associer le fichier au message privé
+    await Fichier.addToPrivateMessage(
+      newMessage.id_message_prive,
+      newFichier.id_fichier
+    );
+    console.log("[PrivateMessage] Association fichier-message réussie");
+
+    // Récupérer le message complet avec pièces jointes
+    const completeMessage = await MessagePrive.getById(
+      newMessage.id_message_prive
+    );
+
+    // Envoyer une notification en temps réel via WebSocket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`dm:${recipientId}`).emit("privateMessage", {
+        ...completeMessage,
+        sender: {
+          id: req.user.id,
+          nom: req.user.nom,
+          photo_de_profil: req.user.photo_de_profil,
+        },
+      });
+      console.log("[PrivateMessage] Notification WebSocket envoyée");
+    }
+
+    res.status(201).json({
+      message: "Fichier Google Drive uploadé et message privé créé",
+      fichier: {
+        ...newFichier,
+        presignedUrl: s3Result.url,
+      },
+      message_prive: newMessage,
+    });
+  } catch (error) {
+    console.error("[PrivateMessage] Erreur upload Google Drive:", error);
+    console.error("[PrivateMessage] Stack trace:", error.stack);
+
+    res.status(500).json({
+      message: "Erreur lors de l'upload Google Drive",
       error: error.message,
     });
   }

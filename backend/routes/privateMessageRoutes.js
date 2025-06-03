@@ -9,6 +9,7 @@ import {
   getUnreadCounts, // <-- Ajout ici
   deleteConversation, // <-- Ajout ici
   markAllMessagesAsRead, // <-- Ajout ici
+  uploadGoogleDriveFile, // <-- Nouveau import
 } from "../controllers/privateMessageController.js";
 import MessagePrive from "../models/MessagePrive.js";
 import multer from "multer";
@@ -205,5 +206,18 @@ router.get("/:userId", verifyToken, getPrivateConversation);
 router.put("/message/:id", verifyToken, updatePrivateMessage);
 router.delete("/message/:id", verifyToken, deletePrivateMessage);
 router.post("/message/:id/read", verifyToken, markPrivateMessageAsRead);
+
+// Route d'upload de fichier Google Drive pour les messages privés
+router.post("/upload-google-drive", verifyToken, async (req, res) => {
+  try {
+    await uploadGoogleDriveFile(req, res);
+  } catch (error) {
+    console.error("Erreur route upload Google Drive MP:", error);
+    res.status(500).json({
+      message: "Erreur lors de l'upload Google Drive",
+      error: error.message,
+    });
+  }
+});
 
 export default router;

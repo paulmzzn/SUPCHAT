@@ -216,113 +216,6 @@ export const useAttachments = (options = {}) => {
   }, []);
 
   /**
-   * Gère l'upload de fichiers depuis Google Drive
-   * @param {Array} selectedFiles - Fichiers sélectionnés depuis Google Drive
-   */
-  const handleGoogleDriveFiles = useCallback(
-    async (selectedFiles) => {
-      if (!selectedFiles || selectedFiles.length === 0) return;
-
-      setUploadingFile(true);
-
-      try {
-        console.log(
-          "[useAttachments] Fichiers Google Drive sélectionnés:",
-          selectedFiles
-        );
-
-        const token = localStorage.getItem("token");
-        const uploads = [];
-
-        for (const file of selectedFiles) {
-          // Créer un objet FormData avec les informations du fichier Google Drive
-          const formData = new FormData();
-          formData.append("googleDriveFileId", file.id);
-          formData.append("fileName", file.name);
-          formData.append("mimeType", file.mimeType);
-          formData.append("size", file.size || 0);
-
-          let uploadUrl = "";
-          if (mode === "channel" && canalId && workspaceId) {
-            uploadUrl = `${API_URL}/api/messages/upload-google-drive`;
-            formData.append("canalId", canalId);
-            formData.append("workspaceId", workspaceId);
-          } else {
-            uploadUrl = `${API_URL}/api/private-messages/upload-google-drive`;
-            formData.append("recipientId", recipientId);
-          }
-
-          const response = await fetch(uploadUrl, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
-
-          if (!response.ok) {
-            let errText = await response.text();
-            console.error(
-              "[useAttachments] Erreur HTTP Google Drive:",
-              response.status,
-              errText
-            );
-            throw new Error(
-              `Erreur lors de l'import du fichier ${file.name}: ${errText}`
-            );
-          }
-
-          const data = await response.json();
-
-          if (data.message_prive) {
-            // Pour les DM, envoyer directement via socket
-            let attachments = [];
-            try {
-              attachments = await fetchMessageAttachments(
-                data.message_prive.id_message_prive
-              );
-            } catch (err) {
-              console.error(
-                "[useAttachments] Erreur récupération attachments:",
-                err
-              );
-            }
-            console.log(
-              "[useAttachments] Fichier Google Drive uploadé, émission du message..."
-            );
-            socket?.emit("privateMessage", {
-              destinataireId: recipientId,
-              contenu: "",
-              attachments: attachments.map((a) => a.id_fichier),
-            });
-          } else {
-            // Pour les channels, ajouter à la liste locale
-            uploads.push(data.fichier || data);
-          }
-        }
-
-        if (mode === "channel") {
-          setAttachments((prev) => [...prev, ...uploads]);
-        }
-
-        console.log("[useAttachments] Upload Google Drive terminé");
-      } catch (error) {
-        console.error(
-          "[useAttachments] Erreur lors de l'upload Google Drive:",
-          error
-        );
-        alert(
-          "Une erreur est survenue lors de l'import depuis Google Drive : " +
-            error.message
-        );
-      } finally {
-        setUploadingFile(false);
-      }
-    },
-    [mode, canalId, workspaceId, recipientId, socket, fetchMessageAttachments]
-  );
-
-  /**
    * Déclenche le sélecteur de fichier local
    */
   const handleLocalFileSelect = useCallback(() => {
@@ -470,7 +363,6 @@ export const useAttachments = (options = {}) => {
     handleFileSelect,
     handleAttachmentClick,
     handleLocalFileSelect,
-    handleGoogleDriveFiles,
     handleDownloadFile,
     removeAttachment,
     fetchMessageAttachments,
