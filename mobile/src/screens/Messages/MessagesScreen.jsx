@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { getStyles } from "./MessagesScreen.styles";
@@ -65,6 +66,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const messagesScrollRef = useRef(null);
   const textInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
   const { saveTimestamp } = useConversationTimestamps();
   const { keyboardHeight, keyboardVisible } = useKeyboardHandler();
@@ -223,9 +225,9 @@ const MessagesScreen = ({ navigation, route }) => {
     closeContextMenu();
   };
 
-  const handleEmojiSelect = (emoji) => {
+  const handleEmojiSelect = (reactionName) => {
     if (selectedMessageForReaction) {
-      handleAddReaction(selectedMessageForReaction, emoji);
+      handleAddReaction(selectedMessageForReaction, reactionName);
     }
     setShowEmojiPicker(false);
     setSelectedMessageForReaction(null);
@@ -325,11 +327,35 @@ const MessagesScreen = ({ navigation, route }) => {
           onAddReaction={handleContextMenuAddReaction}
         />
 
-        <EmojiPicker
-          visible={showEmojiPicker}
-          onClose={() => setShowEmojiPicker(false)}
-          onEmojiSelect={handleEmojiSelect}
-        />
+        {/* Emoji picker for reactions */}
+        {showEmojiPicker && (
+          <TouchableOpacity
+            style={styles.emojiPickerOverlay}
+            activeOpacity={1}
+            onPress={() => setShowEmojiPicker(false)}
+          >
+            <View style={styles.emojiPicker} ref={emojiPickerRef}>
+              <ScrollView horizontal style={styles.emojiScrollView}>
+                {[
+                  { name: "thumbsUp", emoji: "👍" },
+                  { name: "heart", emoji: "❤️" },
+                  { name: "laugh", emoji: "😂" },
+                  { name: "surprise", emoji: "😮" },
+                  { name: "sad", emoji: "😢" },
+                  { name: "angry", emoji: "😡" },
+                ].map((reaction) => (
+                  <TouchableOpacity
+                    key={reaction.name}
+                    style={styles.emojiButton}
+                    onPress={() => handleEmojiSelect(reaction.name)}
+                  >
+                    <Text style={styles.emojiText}>{reaction.emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <EditMessageModal
           visible={!!editingMessage}

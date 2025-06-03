@@ -5,7 +5,10 @@ import env from "../../../config/env";
 const API_URL = env.API_URL;
 
 export const useMediaPreview = () => {
-  const [previewMedia, setPreviewMedia] = useState(null);
+  const [previewMedia, setPreviewMedia] = useState({
+    visible: false,
+    media: null,
+  });
 
   const getFileURL = useCallback((url) => {
     if (!url) return null;
@@ -48,7 +51,7 @@ export const useMediaPreview = () => {
   }, []);
 
   return {
-    previewMedia,
+    mediaPreview: previewMedia, // Corriger le nom pour correspondre à l'utilisation
     openAttachment,
     closePreview,
   };

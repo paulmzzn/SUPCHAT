@@ -28,6 +28,7 @@ import ContextMenu from '../../components/Messages/ContextMenu';
 import EmojiPicker from '../../components/Messages/EmojiPicker';
 import EditMessageModal from '../../components/Messages/EditMessageModal';
 import { parseStrawpollsInMessage } from '../../utils/strawpollUtils';
+import { getEmojiForType } from '../../utils/reactionUtils';
 
 // Constantes pour l'utilisateur système
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000003";
@@ -252,16 +253,54 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         }
       };
 
-      // Test de diagnostic - Écouter TOUS les événements socket pour voir ce qui arrive
-      const originalOn = socket.on.bind(socket);
-      const diagnosticOn = (event, handler) => {
-        const wrappedHandler = (...args) => {
-          if (event.includes('delete') || event.includes('remove') || event.includes('Message')) {
-            console.log(`🔍 [DIAGNOSTIC] Socket event '${event}' received:`, args);
-          }
-          return handler(...args);
-        };
-        return originalOn(event, wrappedHandler);
+      const handleMessageReaction = (data) => {
+        console.log("🔄 WorkspaceDetail: Message reaction event", data);
+        if (!data || !data.messageId || !data.reactions) {
+          console.warn("🔄 Invalid reaction data received:", data);
+          return;
+        }
+        
+        // Mettre à jour les réactions du message concerné
+        setMessages(prev => 
+          prev.map(msg => {
+            if (msg.id_message === data.messageId) {
+              console.log("🔄 Updating reactions for message:", data.messageId);
+              return { ...msg, reactions: data.reactions };
+            }
+            return msg;
+          })
+        );
+      };
+
+      // NOUVEAU: Gestionnaire pour les réactions ajoutées
+      const handleAddChannelMessageReaction = (data) => {
+        console.log("➕ WorkspaceDetail: Add channel message reaction event", data);
+        handleMessageReaction(data); // Réutiliser la même logique
+      };
+
+      // NOUVEAU: Gestionnaire pour les réactions supprimées
+      const handleRemoveChannelMessageReaction = (data) => {
+        console.log("➖ WorkspaceDetail: Remove channel message reaction event", data);
+        handleMessageReaction(data); // Réutiliser la même logique
+      };
+
+      // NOUVEAU: Gestionnaire pour les messages mis à jour
+      const handleUpdateMessage = (data) => {
+        console.log("✏️ WorkspaceDetail: Message updated event", data);
+        if (!data || !data.id_message) {
+          console.warn("✏️ Invalid update message data received:", data);
+          return;
+        }
+        
+        setMessages(prev => 
+          prev.map(msg => {
+            if (msg.id_message === data.id_message) {
+              console.log("✏️ Updating message content:", data.id_message);
+              return { ...msg, ...data };
+            }
+            return msg;
+          })
+        );
       };
 
       // Enregistrer tous les handlers avec diagnostic
@@ -273,6 +312,12 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
       socket.on('stopTyping', handleStopTyping);
       socket.on('connect', handleReconnect);
       socket.on('disconnect', handleDisconnect);
+      
+      // Ajouter les gestionnaires pour les réactions
+      socket.on('messageReaction', handleMessageReaction);
+      socket.on('addChannelMessageReaction', handleAddChannelMessageReaction);
+      socket.on('removeChannelMessageReaction', handleRemoveChannelMessageReaction);
+      socket.on('updateMessage', handleUpdateMessage);
       
       // Log de confirmation
       console.log("🔍 [DIAGNOSTIC] All event listeners registered for channel", channelId);
@@ -288,6 +333,10 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         socket.off('stopTyping', handleStopTyping);
         socket.off('connect', handleReconnect);
         socket.off('disconnect', handleDisconnect);
+        socket.off('messageReaction', handleMessageReaction);
+        socket.off('addChannelMessageReaction', handleAddChannelMessageReaction);
+        socket.off('removeChannelMessageReaction', handleRemoveChannelMessageReaction);
+        socket.off('updateMessage', handleUpdateMessage);
       };
     }
   }, [socket, workspaceId, channelId, currentUserId, messages.length]); // Ajouter messages.length pour le diagnostic
@@ -760,7 +809,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
                         }
                       }}
                     >
-                      <Text style={styles.reactionEmoji}>{reaction.reaction_type}</Text>
+                      <Text style={styles.reactionEmoji}>{getEmojiForType(reaction.reaction_type)}</Text>
                       <Text style={styles.reactionCount}>{reaction.count}</Text>
                     </TouchableOpacity>
                   ))}
@@ -1153,12 +1202,11 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     
     console.log("Adding reaction to message:", selectedMessageForReaction.id_message);
     
-    // Émettre l'événement d'ajout de réaction via socket
-    socket.emit("addChannelMessageReaction", {
+    // Émettre l'événement d'ajout de réaction via socket (corriger le nom de l'événement)
+    socket.emit("addReaction", {
       messageId: selectedMessageForReaction.id_message,
-      reaction: emoji,
-      canalId: channelId,
-      workspaceId: workspaceId
+      reaction_type: emoji,
+      canalId: channelId
     });
     
     // Mise à jour optimiste de l'UI (optionnel)
@@ -1187,7 +1235,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     
     setShowEmojiPicker(false);
     setSelectedMessageForReaction(null);
-  }, [selectedMessageForReaction, socket, channelId, workspaceId]);
+  }, [selectedMessageForReaction, socket, channelId]);
 
   // Fonction pour supprimer une réaction
   const handleRemoveReaction = useCallback((message, emoji) => {
@@ -1195,12 +1243,11 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     
     console.log("Removing reaction from message:", message.id_message);
     
-    // Émettre l'événement de suppression de réaction via socket
-    socket.emit("removeChannelMessageReaction", {
+    // Émettre l'événement de suppression de réaction via socket (corriger le nom de l'événement)
+    socket.emit("removeReaction", {
       messageId: message.id_message,
-      reaction: emoji,
-      canalId: channelId,
-      workspaceId: workspaceId
+      reaction_type: emoji,
+      canalId: channelId
     });
     
     // Mise à jour optimiste de l'UI
@@ -1213,7 +1260,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         return msg;
       })
     );
-  }, [socket, channelId, workspaceId]);
+  }, [socket, channelId]);
 
   // Rendu du modal de la boîte à outils
   const renderToolboxModal = useCallback(() => {
@@ -1459,7 +1506,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
       {/* Sélecteur d'emoji */}
       <EmojiPicker
         visible={showEmojiPicker}
-        onSelect={handleEmojiSelect}
+        onEmojiSelect={handleEmojiSelect}
         onClose={() => setShowEmojiPicker(false)}
       />
 
