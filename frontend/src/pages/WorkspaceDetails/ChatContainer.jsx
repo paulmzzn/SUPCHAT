@@ -23,11 +23,19 @@ import {
   FaAt,
   FaUser,
   FaEdit,
+  FaGoogle,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import GoogleDriveModal from "../../components/GoogleDrive/GoogleDriveModal";
+import {
+  getFileIcon,
+  getDownloadIcon,
+  formatFileSize,
+  getFileType,
+} from "../../utils/fileIcons";
 
 function ChatContainer({
   activeChannel,
@@ -67,6 +75,9 @@ function ChatContainer({
   showStrawpollModal,
   handleCloseStrawpollModal,
   handleStrawpollSubmit,
+  showGoogleDriveModal,
+  handleOpenGoogleDrive,
+  handleCloseGoogleDrive,
   commonEmojis,
   showEmojiPicker,
   handleAddReaction,
@@ -102,75 +113,80 @@ function ChatContainer({
 
   // --- Solution améliorée pour le chargement avec maintien de position ---
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
-  
+
   // Détecter le scroll vers le haut de façon simple
   useEffect(() => {
     if (!chatContainerRef?.current || !hasMoreMessages) return;
-    
+
     const container = chatContainerRef.current;
     let scrollThreshold = 150; // Augmenter légèrement le seuil pour une meilleure détection
     let debounceTimer = null;
-    
+
     const handleScroll = () => {
       clearTimeout(debounceTimer);
-      
+
       debounceTimer = setTimeout(() => {
         // Détection du scroll vers le haut et proche du haut
-        if (container.scrollTop < scrollThreshold && 
-            !isLoadingOlderMessages && 
-            !loadingMoreMessages && 
-            hasMoreMessages) {
-            
+        if (
+          container.scrollTop < scrollThreshold &&
+          !isLoadingOlderMessages &&
+          !loadingMoreMessages &&
+          hasMoreMessages
+        ) {
           // Stocker les informations sur le deuxième message visible comme point de référence
           // (pas le premier qui pourrait disparaître)
-          const messages = container.querySelectorAll('.chat-message');
+          const messages = container.querySelectorAll(".chat-message");
           // Utiliser le second message si disponible, sinon le premier
           const targetMessageIndex = messages.length > 1 ? 1 : 0;
           const targetMessage = messages[targetMessageIndex];
-          
+
           if (!targetMessage) return;
-          
+
           // Stocker l'ID du message et sa position relative par rapport au viewport
           const targetId = targetMessage.dataset.messageId;
           const targetTop = targetMessage.getBoundingClientRect().top;
           const viewportTop = container.getBoundingClientRect().top;
           const targetOffset = targetTop - viewportTop; // Position relative dans le viewport
-          
-          console.log(`📜 Chargement déclenché, message de référence: ${targetId}`);
+
+          console.log(
+            `📜 Chargement déclenché, message de référence: ${targetId}`
+          );
           console.log(`Position relative du message: ${targetOffset}px`);
-          
+
           // Préparer pour le chargement
           setIsLoadingOlderMessages(true);
-          if (typeof setIsPrependingMessages === 'function') {
+          if (typeof setIsPrependingMessages === "function") {
             setIsPrependingMessages(true);
           }
-          
+
           // Charger les messages
           loadMoreMessages();
-          
+
           // Après chargement, restaurer la position
           setTimeout(() => {
             if (!chatContainerRef.current) return;
-            
+
             // Retrouver le même élément après chargement
-            const sameMessageElement = document.querySelector(`[data-message-id="${targetId}"]`);
+            const sameMessageElement = document.querySelector(
+              `[data-message-id="${targetId}"]`
+            );
             if (sameMessageElement) {
               // Calculer la nouvelle position et réappliquer le même offset
               const newTop = sameMessageElement.getBoundingClientRect().top;
               const newViewportTop = container.getBoundingClientRect().top;
               const newOffset = newTop - newViewportTop;
               const adjustment = newOffset - targetOffset;
-              
+
               console.log(`Ajustement de scroll: ${adjustment}px`);
               container.scrollTop += adjustment;
-              
+
               console.log(`Position maintenue pour le message ${targetId}`);
             }
-            
+
             // Réinitialiser les états après un court délai
             setTimeout(() => {
               setIsLoadingOlderMessages(false);
-              if (typeof setIsPrependingMessages === 'function') {
+              if (typeof setIsPrependingMessages === "function") {
                 setIsPrependingMessages(false);
               }
             }, 200);
@@ -178,14 +194,21 @@ function ChatContainer({
         }
       }, 50); // Court debounce pour une réponse rapide
     };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+
     return () => {
       clearTimeout(debounceTimer);
-      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener("scroll", handleScroll);
     };
-  }, [chatContainerRef, hasMoreMessages, isLoadingOlderMessages, loadingMoreMessages, loadMoreMessages, setIsPrependingMessages]);
+  }, [
+    chatContainerRef,
+    hasMoreMessages,
+    isLoadingOlderMessages,
+    loadingMoreMessages,
+    loadMoreMessages,
+    setIsPrependingMessages,
+  ]);
 
   // Styles CSS pour l'indicateur de chargement
   const cssStyles = `
@@ -279,7 +302,7 @@ function ChatContainer({
     <div className="workspace-content-area">
       {/* Injecter les styles CSS */}
       <style>{cssStyles}</style>
-      
+
       <div className="glow-circle-right top-right"></div>
       <div className="glow-circle-left bottom-left"></div>
       {!activeChannel ? (
@@ -319,25 +342,28 @@ function ChatContainer({
           </div>
           <div className="chat-messages" ref={chatContainerRef}>
             {/* Indicateur de chargement simple */}
-            {(loadingMoreMessages || isLoadingOlderMessages) && hasMoreMessages && (
-              <div className="infinite-scroll-loader">
-                Chargement des messages anciens<span className="loading-dots"></span>
-              </div>
-            )}
-            
+            {(loadingMoreMessages || isLoadingOlderMessages) &&
+              hasMoreMessages && (
+                <div className="infinite-scroll-loader">
+                  Chargement des messages anciens
+                  <span className="loading-dots"></span>
+                </div>
+              )}
+
             {/* Le div invisible pour déclencher le chargement est ajouté dynamiquement */}
-            
+
             {loadingMessages ? (
               <div className="chat-loading">Chargement des messages...</div>
             ) : messages.length > 0 ? (
               messages.map((message, index) => {
                 // Générer une clé vraiment unique en combinant l'id du message avec son index
                 const messageKey = `${message.id_message}-${index}`;
-                
+
                 const systemMsg =
                   message.is_system_message ||
-                  message.fk_utilisateur === "00000000-0000-0000-0000-000000000003";
-                
+                  message.fk_utilisateur ===
+                    "00000000-0000-0000-0000-000000000003";
+
                 return (
                   <div
                     key={messageKey} // Utiliser notre nouvelle clé unique
@@ -483,14 +509,22 @@ function ChatContainer({
                               >
                                 {message.nom}
                               </strong>
-                            )}                          </span>
+                            )}{" "}
+                          </span>
                           <span className="message-time">
                             {formatMessageDate(message.date_creation)}
-                            {message.updated_at && message.created_at !== message.updated_at && (
-                              <span className="message-edited" title={`Modifié le ${formatMessageDate(message.updated_at)}`}>
-                                {" "}(modifié)
-                              </span>
-                            )}
+                            {message.updated_at &&
+                              message.created_at !== message.updated_at && (
+                                <span
+                                  className="message-edited"
+                                  title={`Modifié le ${formatMessageDate(
+                                    message.updated_at
+                                  )}`}
+                                >
+                                  {" "}
+                                  (modifié)
+                                </span>
+                              )}
                           </span>
                         </div>
                       )}
@@ -516,41 +550,43 @@ function ChatContainer({
                             );
                           }
                           return (
-                            <div className="message-file">
-                              <div className="file-info-container">
-                                <div className="file-details">
-                                  <span className="file-name">
-                                    {fileData.fileName}
+                            <div className="message-file-compact">
+                              <div className="file-icon-wrapper">
+                                {getFileIcon(
+                                  fileData.fileName,
+                                  fileData.fileType
+                                )}
+                              </div>
+                              <div className="file-details">
+                                <div
+                                  className="file-name"
+                                  title={fileData.fileName}
+                                >
+                                  {fileData.fileName}
+                                </div>
+                                <div className="file-meta">
+                                  <span className="file-type">
+                                    {getFileType(fileData.fileName)}
                                   </span>
                                   <span className="file-size">
-                                    {fileData.fileSize}
+                                    {formatFileSize(
+                                      parseInt(fileData.fileSize) || 0
+                                    )}
                                   </span>
                                 </div>
-                                <div className="file-actions">
-                                  <button
-                                    className="file-view-button"
-                                    onClick={() =>
-                                      handleOpenFileViewer({
-                                        ...fileData,
-                                        fullFileUrl,
-                                      })
-                                    }
-                                  >
-                                    Ouvrir
-                                  </button>
-                                  <button
-                                    className="file-download-button"
-                                    onClick={() =>
-                                      handleDownloadFile(
-                                        fileData.fileUrl,
-                                        fileData.fileName
-                                      )
-                                    }
-                                  >
-                                    Télécharger
-                                  </button>
-                                </div>
                               </div>
+                              <button
+                                className="file-download-btn"
+                                onClick={() =>
+                                  handleDownloadFile(
+                                    fileData.fileUrl,
+                                    fileData.fileName
+                                  )
+                                }
+                                title="Télécharger le fichier"
+                              >
+                                {getDownloadIcon("16px")}
+                              </button>
                             </div>
                           );
                         } else {
@@ -846,18 +882,20 @@ function ChatContainer({
 
               <form
                 className="chat-input-container"
-                onSubmit={editingMessage ? (e) => {
-                  e.preventDefault();
-                  handleUpdateMessage();
-                } : handleSendMessageWithMistralCheck}
+                onSubmit={
+                  editingMessage
+                    ? (e) => {
+                        e.preventDefault();
+                        handleUpdateMessage();
+                      }
+                    : handleSendMessageWithMistralCheck
+                }
               >
                 {editingMessage && (
                   <div className="editing-message">
                     <div className="edit-info">
                       <FaEdit className="edit-icon" />
-                      <span>
-                        Modification d'un message
-                      </span>
+                      <span>Modification d'un message</span>
                     </div>
                     <button
                       type="button"
@@ -911,7 +949,8 @@ function ChatContainer({
                         : "Message..."
                     }
                     value={displayMessage}
-                    onChange={(e) => handleNewMessageChange(e.target.value)}                    onKeyDown={(e) => {
+                    onChange={(e) => handleNewMessageChange(e.target.value)}
+                    onKeyDown={(e) => {
                       if (showChannelSuggestions) {
                         if (e.key === "ArrowDown") {
                           e.preventDefault();
@@ -962,7 +1001,11 @@ function ChatContainer({
                     type="submit"
                     className="chat-send-btn"
                     disabled={!displayMessage.trim()}
-                    aria-label={editingMessage ? "Modifier le message" : "Envoyer le message"}
+                    aria-label={
+                      editingMessage
+                        ? "Modifier le message"
+                        : "Envoyer le message"
+                    }
                   >
                     {editingMessage ? (
                       <>
@@ -976,8 +1019,7 @@ function ChatContainer({
                       </>
                     )}
                   </button>
-                </div>
-
+                </div>{" "}
                 {showToolbox && (
                   <div className="chat-toolbox-menu">
                     <button
@@ -988,6 +1030,13 @@ function ChatContainer({
                       <span className="toolbox-item-text">
                         Créer un sondage
                       </span>
+                    </button>
+                    <button
+                      className="chat-toolbox-item"
+                      onClick={handleOpenGoogleDrive}
+                    >
+                      <FaGoogle className="toolbox-item-icon" />
+                      <span className="toolbox-item-text">Google Drive</span>
                     </button>
                     {/* Les boutons "Rechercher une image" et "Formater du code" ont été supprimés */}
                   </div>
@@ -1035,6 +1084,16 @@ function ChatContainer({
           )}
         </div>
       )}
+
+      {/* Google Drive Modal */}
+      <GoogleDriveModal
+        show={showGoogleDriveModal}
+        onClose={handleCloseGoogleDrive}
+        onFileSelect={(files) => {
+          handleFileUpload(files);
+          handleCloseGoogleDrive();
+        }}
+      />
     </div>
   );
 }
