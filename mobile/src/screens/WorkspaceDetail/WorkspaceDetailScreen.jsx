@@ -165,6 +165,68 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         message: 'Testing from WorkspaceDetail mobile' 
       });
       
+      // DIAGNOSTIC COMPLET - Écouter TOUS les événements possibles de suppression
+      const handleDeleteMessage = (data) => {
+        console.log("🗑️ [DIAGNOSTIC] WorkspaceDetail: deleteMessage event received", {
+          eventData: data,
+          channelId: channelId,
+          currentMessages: messages.length,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (data && data.messageId) {
+          console.log("🗑️ [DIAGNOSTIC] Processing deletion for messageId:", data.messageId);
+          
+          // Vérifier si le message existe dans nos messages actuels
+          const messageExists = messages.find(msg => msg.id_message === data.messageId);
+          console.log("🗑️ [DIAGNOSTIC] Message exists in current state:", !!messageExists);
+          
+          if (messageExists) {
+            console.log("🗑️ [DIAGNOSTIC] Message found:", {
+              id: messageExists.id_message,
+              content: messageExists.contenu?.substring(0, 50),
+              author: messageExists.nom
+            });
+          }
+          
+          setMessages(prev => {
+            const beforeCount = prev.length;
+            const filteredMessages = prev.filter(msg => {
+              const shouldKeep = msg.id_message !== data.messageId;
+              if (!shouldKeep) {
+                console.log("🗑️ [DIAGNOSTIC] Removing message:", {
+                  id: msg.id_message,
+                  content: msg.contenu?.substring(0, 50)
+                });
+              }
+              return shouldKeep;
+            });
+            const afterCount = filteredMessages.length;
+            
+            console.log("🗑️ [DIAGNOSTIC] Messages count:", {
+              before: beforeCount,
+              after: afterCount,
+              removed: beforeCount - afterCount
+            });
+            
+            return filteredMessages;
+          });
+        } else {
+          console.log("🗑️ [DIAGNOSTIC] No messageId in data or data is null:", data);
+        }
+      };
+
+      // Écouter aussi d'autres variantes possibles de l'événement
+      const handleMessageDeleted = (data) => {
+        console.log("🗑️ [DIAGNOSTIC] messageDeleted event received", data);
+        handleDeleteMessage(data);
+      };
+
+      const handleRemoveMessage = (data) => {
+        console.log("🗑️ [DIAGNOSTIC] removeMessage event received", data);
+        handleDeleteMessage(data);
+      };
+
       // Écouter les événements de ce canal spécifiquement
       const handleMessage = (data) => {
         console.log("📨 WorkspaceDetail: Message received in channel", channelId, data);
@@ -190,23 +252,45 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         }
       };
 
+      // Test de diagnostic - Écouter TOUS les événements socket pour voir ce qui arrive
+      const originalOn = socket.on.bind(socket);
+      const diagnosticOn = (event, handler) => {
+        const wrappedHandler = (...args) => {
+          if (event.includes('delete') || event.includes('remove') || event.includes('Message')) {
+            console.log(`🔍 [DIAGNOSTIC] Socket event '${event}' received:`, args);
+          }
+          return handler(...args);
+        };
+        return originalOn(event, wrappedHandler);
+      };
+
+      // Enregistrer tous les handlers avec diagnostic
       socket.on('message', handleMessage);
+      socket.on('deleteMessage', handleDeleteMessage);
+      socket.on('messageDeleted', handleMessageDeleted);
+      socket.on('removeMessage', handleRemoveMessage);
       socket.on('typing', handleTyping);
       socket.on('stopTyping', handleStopTyping);
       socket.on('connect', handleReconnect);
       socket.on('disconnect', handleDisconnect);
       
+      // Log de confirmation
+      console.log("🔍 [DIAGNOSTIC] All event listeners registered for channel", channelId);
+      
       return () => {
         console.log("🚪 WorkspaceDetail: Leaving channel", channelId);
         socket.emit('leaveCanal', { canalId: channelId, workspaceId });
         socket.off('message', handleMessage);
+        socket.off('deleteMessage', handleDeleteMessage);
+        socket.off('messageDeleted', handleMessageDeleted);
+        socket.off('removeMessage', handleRemoveMessage);
         socket.off('typing', handleTyping);
         socket.off('stopTyping', handleStopTyping);
         socket.off('connect', handleReconnect);
         socket.off('disconnect', handleDisconnect);
       };
     }
-  }, [socket, workspaceId, channelId, currentUserId]);
+  }, [socket, workspaceId, channelId, currentUserId, messages.length]); // Ajouter messages.length pour le diagnostic
 
   const getCurrentUser = async () => {
     try {
@@ -427,7 +511,6 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           id: message.id_message,
           userId: SYSTEM_USER_ID,
           userName: SYSTEM_USERNAME,
-          userAvatar: null,
           messages: [message],
           lastMessageTime: new Date(message.date_creation),
           isOwn: false,
@@ -1037,20 +1120,14 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           text: "Supprimer",
           style: "destructive",
           onPress: () => {
-            // Émettre l'événement de suppression via socket
-            socket.emit("deleteChannelMessage", {
+            // Utiliser l'événement 'deleteMessage' que le serveur écoute
+            socket.emit("deleteMessage", {
               messageId: contextMenu.message.id_message,
-              canalId: channelId,
-              workspaceId: workspaceId
             });
             
             // Mise à jour optimiste de l'UI
             setMessages(prev => 
-              prev.map(msg => 
-                msg.id_message === contextMenu.message.id_message
-                  ? { ...msg, is_deleted: true, contenu: "[Message supprimé]" }
-                  : msg
-              )
+              prev.filter(msg => msg.id_message !== contextMenu.message.id_message)
             );
             
             handleCloseContextMenu();
@@ -1058,7 +1135,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         },
       ]
     );
-  }, [contextMenu.message, contextMenu.isOwnMessage, socket, channelId, workspaceId, handleCloseContextMenu]);
+  }, [contextMenu.message, contextMenu.isOwnMessage, socket, handleCloseContextMenu]);
 
   // Fonction pour ouvrir le sélecteur d'emoji
   const handleAddReaction = useCallback(() => {

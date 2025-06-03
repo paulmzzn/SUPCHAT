@@ -970,29 +970,72 @@ const socketManager = (io) => {
     // Suppression d'un message de canal (WebSocket)
     socket.on("deleteMessage", async ({ messageId }) => {
       try {
+        console.log("🗑️ [SERVER DIAGNOSTIC] deleteMessage event received:", {
+          messageId,
+          userId: socket.user?.id,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+
         if (!messageId) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] No messageId provided");
           socket.emit("error", { message: "ID du message manquant" });
           return;
         }
+        
         const userId = socket.user.id;
+        console.log("🗑️ [SERVER DIAGNOSTIC] Processing deletion for user:", userId);
+        
         const message = await MessageModel.getById(messageId);
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message found in DB:", !!message);
+        
         if (!message) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] Message not found in database");
           socket.emit("error", { message: "Message non trouvé" });
           return;
         }
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message details:", {
+          id: message.id_message,
+          author: message.fk_utilisateur,
+          channel: message.fk_canal,
+          content: message.contenu?.substring(0, 50)
+        });
+        
         if (message.fk_utilisateur !== userId) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] User not authorized to delete message");
           socket.emit("error", {
             message: "Vous ne pouvez supprimer que vos propres messages",
           });
           return;
         }
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Deleting message from database");
         await MessageModel.delete(messageId);
-        io.to(`${message.fk_canal}`).emit("deleteMessage", { messageId });
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message deleted, emitting to channel:", message.fk_canal);
+        
+        // Émettre vers tous les clients connectés au canal
+        const emitData = { messageId };
+        io.to(`${message.fk_canal}`).emit("deleteMessage", emitData);
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] deleteMessage event emitted:", {
+          channel: message.fk_canal,
+          data: emitData,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Vérifier combien de clients sont connectés à ce canal
+        const room = io.sockets.adapter.rooms.get(`${message.fk_canal}`);
+        const clientCount = room ? room.size : 0;
+        console.log("🗑️ [SERVER DIAGNOSTIC] Clients connected to channel:", {
+          channel: message.fk_canal,
+          clientCount: clientCount,
+          clients: room ? Array.from(room) : []
+        });
+        
       } catch (error) {
-        console.error(
-          "Erreur lors de la suppression du message via WebSocket:",
-          error
-        );
+        console.error("🗑️ [SERVER DIAGNOSTIC] Error during message deletion:", error);
         socket.emit("error", {
           message: "Erreur lors de la suppression du message",
         });
