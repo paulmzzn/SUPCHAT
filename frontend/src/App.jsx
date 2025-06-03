@@ -29,6 +29,8 @@ import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import NotificationPermissionRequest from "./components/NotificationPermissionRequest/NotificationPermissionRequest"; // Nouveau composant
 // Importer le ToastProvider pour l'utiliser au niveau de l'app
 import ToastProvider from "./components/Toast/ToastProvider";
+// Importer le GoogleDriveAuthProvider pour l'authentification persistante Google Drive
+import { GoogleDriveAuthProvider } from "./contexts/GoogleDriveAuthContext";
 import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
 import { isMobileDevice } from "./utils/deviceDetection";
 

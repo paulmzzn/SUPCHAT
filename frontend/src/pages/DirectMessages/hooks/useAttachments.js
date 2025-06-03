@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.72:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
@@ -136,9 +136,7 @@ export const useAttachments = (options = {}) => {
             presignedUrl:
               data.presignedUrl || (data.fichier && data.fichier.presignedUrl),
           });
-        }
-
-        // Après l'upload de tous les fichiers, envoyer DIRECTEMENT le message par socket
+        } // Après l'upload de tous les fichiers, envoyer DIRECTEMENT le message par socket
         if (socket && uploads.length > 0 && recipientId) {
           console.log("[useAttachments] Envoi direct via WebSocket:", {
             socket: !!socket,
@@ -188,7 +186,47 @@ export const useAttachments = (options = {}) => {
   );
 
   /**
-   * Déclenche le sélecteur de fichier
+   * Récupère les pièces jointes d'un message
+   * @param {string} messageId - ID du message
+   * @returns {Array} - Liste des pièces jointes
+   */
+  const fetchMessageAttachments = useCallback(async (messageId) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API_URL}/api/private-messages/${messageId}/attachments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la récupération des pièces jointes");
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Erreur:", error);
+      return [];
+    }
+  }, []);
+
+  /**
+   * Déclenche le sélecteur de fichier local
+   */
+  const handleLocalFileSelect = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  /**
+   * DEPRECATED: Utilisez handleLocalFileSelect ou handleGoogleDriveFiles
+   * Maintenu pour compatibilité, mais déclenche maintenant la sélection de source
    */
   const handleAttachmentClick = useCallback(() => {
     if (fileInputRef.current) {
@@ -303,43 +341,12 @@ export const useAttachments = (options = {}) => {
       );
     }
   }, []);
-
   /**
    * Supprime une pièce jointe
    * @param {number} index - Index de la pièce jointe à supprimer
    */
   const removeAttachment = useCallback((index) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  /**
-   * Récupère les pièces jointes d'un message
-   * @param {string} messageId - ID du message
-   * @returns {Array} - Liste des pièces jointes
-   */
-  const fetchMessageAttachments = useCallback(async (messageId) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `${API_URL}/api/private-messages/${messageId}/attachments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des pièces jointes");
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Erreur:", error);
-      return [];
-    }
   }, []);
 
   /**
@@ -355,6 +362,7 @@ export const useAttachments = (options = {}) => {
     fileInputRef,
     handleFileSelect,
     handleAttachmentClick,
+    handleLocalFileSelect,
     handleDownloadFile,
     removeAttachment,
     fetchMessageAttachments,
