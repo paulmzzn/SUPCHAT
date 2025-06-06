@@ -1,12 +1,20 @@
 import nodemailer from "nodemailer";
+import { getEmailConfig } from "./secrets.js";
+
+// Configuration sécurisée de l'email
+const emailConfig = getEmailConfig();
+
+console.log(
+  `📧 Configuration email: ${emailConfig.user}@${emailConfig.host}:${emailConfig.port}`
+);
 
 const transporter = nodemailer.createTransport({
-  host: "mail86.lwspanel.com",
-  port: 465,
-  secure: true,
+  host: emailConfig.host,
+  port: emailConfig.port,
+  secure: emailConfig.secure,
   auth: {
-    user: "noreply@supchat.fr",
-    pass: "Supchat!2025",
+    user: emailConfig.user,
+    pass: emailConfig.password,
   },
   tls: {
     rejectUnauthorized: false,
@@ -19,11 +27,9 @@ const sendInvitation = async (
   workspaceName,
   senderName = "Un membre de SUPCHAT"
 ) => {
-
   // URL de base dynamique basée sur l'environnement
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3001";
   const inviteLink = `${baseUrl}/join-workspace?id=${workspaceId}&email=${encodeURIComponent(
-
     toEmail
   )}`;
   const currentYear = new Date().getFullYear();

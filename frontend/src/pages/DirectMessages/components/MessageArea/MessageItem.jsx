@@ -256,8 +256,7 @@ const MessageItem = ({
                             onError={(e) => {
                               // Essayer de charger l'image via proxy/backend au lieu de S3 direct
                               const backendUrl = `${
-                                process.env.REACT_APP_API_URL ||
-                                "http://192.168.1.72:3000"
+                                process.env.REACT_APP_API_URL
                               }/api/files/proxy?url=${encodeURIComponent(
                                 fileUrl
                               )}`;

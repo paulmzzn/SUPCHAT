@@ -3,26 +3,28 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
-import dotenv from "dotenv";
+import { getS3Config } from "./secrets.js";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 
-// Charger les variables d'environnement
-dotenv.config();
+// Configuration sécurisée du client S3
+const s3Config = getS3Config();
 
-// Configuration du client S3
+console.log(
+  `🔧 Configuration S3: ${s3Config.endpoint} - Région: ${s3Config.region}`
+);
+
 const s3Client = new S3Client({
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
+  region: s3Config.region,
+  endpoint: s3Config.endpoint,
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID,
-    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY,
+    accessKeyId: s3Config.accessKeyId,
+    secretAccessKey: s3Config.secretAccessKey,
   },
   forcePathStyle: true,
 });
 
-// Nom du bucket depuis les variables d'environnement ou valeur par défaut
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "supchat-files";
+const BUCKET_NAME = s3Config.bucketName;
 
 // Fonction pour uploader un fichier vers S3
 export const uploadToS3 = async (file, directory = "") => {
@@ -31,29 +33,6 @@ export const uploadToS3 = async (file, directory = "") => {
     if (!file) {
       console.log("❌ Aucun fichier fourni à uploadToS3");
       throw new Error("Aucun fichier fourni");
-    }
-
-    // Vérification des variables d'environnement critiques
-    console.log("🔑 Vérification des identifiants S3");
-    if (!process.env.SCW_ACCESS_KEY_ID || !process.env.SCW_SECRET_ACCESS_KEY) {
-      console.error("❌ Variables d'environnement S3 manquantes");
-      console.log(
-        "SCW_ACCESS_KEY_ID présent:",
-        !!process.env.SCW_ACCESS_KEY_ID
-      );
-      console.log(
-        "SCW_SECRET_ACCESS_KEY présent:",
-        !!process.env.SCW_SECRET_ACCESS_KEY
-      );
-
-      // Utiliser les valeurs par défaut du code si les variables d'env sont manquantes
-      process.env.SCW_ACCESS_KEY_ID =
-        process.env.SCW_ACCESS_KEY_ID || "SCW2E3VS5F51RVG9WQJA";
-      process.env.SCW_SECRET_ACCESS_KEY =
-        process.env.SCW_SECRET_ACCESS_KEY ||
-        "9dee615d-2a3e-4f47-aabd-728a5eec1438";
-
-      console.log("🔄 Utilisation des identifiants par défaut");
     }
 
     console.log(

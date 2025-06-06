@@ -171,6 +171,33 @@ app.get("/api/ping", (req, res) => {
   res.status(200).send("pong");
 });
 
+// Endpoint de santé complet pour Docker
+app.get("/health", async (req, res) => {
+  try {
+    // Vérifier la connexion à la base de données
+    const dbResult = await pool.query("SELECT 1");
+
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      services: {
+        database: dbResult ? "connected" : "disconnected",
+        server: "running",
+      },
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: process.env.npm_package_version || "unknown",
+    });
+  } catch (error) {
+    logger.error("Health check failed:", error);
+    res.status(503).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      error: error.message,
+    });
+  }
+});
+
 // Configuration plus détaillée de Socket.IO
 const io = new Server(httpServer, {
   cors: {
@@ -186,6 +213,7 @@ const io = new Server(httpServer, {
 
 // Définir le port à utiliser
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Assurez-vous que cette ligne est AVANT l'initialisation de socketManager
 app.set("io", io);
@@ -198,9 +226,9 @@ try {
   logger.error("Error initializing Socket.IO manager:", error);
 }
 
-httpServer.listen(PORT, "0.0.0.0", () => {
-  logger.info(`Serveur démarré sur http://192.168.1.72:${PORT}`);
-  logger.info(`WebSocket URL: ws://192.168.1.72:${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+  logger.info(`Serveur démarré sur http://${HOST}:${PORT}`);
+  logger.info(`WebSocket URL: ws://${HOST}:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool
