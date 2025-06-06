@@ -5,12 +5,12 @@
 -- Dumped from database version 16.8
 -- Dumped by pg_dump version 17.2
 
--- Started on 2025-05-30 10:32:43
+-- Started on 2025-06-02 14:43:43
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
+-- SET transaction_timeout = 0;  -- supprimé car non supporté par PostgreSQL 16
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -27,14 +27,14 @@ SET row_security = off;
 CREATE DATABASE postgres WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en_US.utf8';
 
 
-ALTER DATABASE postgres OWNER TO azure_pg_admin;
+-- ALTER DATABASE postgres OWNER TO azure_pg_admin;  -- supprimé car le rôle n'existe pas sur cette instance
 
 \connect postgres
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
+-- SET transaction_timeout = 0;  -- supprimé car non supporté par PostgreSQL 16
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -726,8 +726,8 @@ CREATE TABLE public.reminders (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     is_sent boolean DEFAULT false,
     email_sent_at timestamp with time zone,
-    workspace_id integer,
-    canal_id integer,
+    workspace_id uuid,
+    canal_id uuid,
     email_failed boolean DEFAULT false,
     error_message text
 );
@@ -1050,32 +1050,36 @@ fa94bcbf-c844-5a0a-b699-37f59efa1916	canal privé	t	2025-05-18 14:52:05.894512	6
 COPY public.canal_lecture (id_canal_lecture, fk_utilisateur, fk_canal, derniere_lecture) FROM stdin;
 47	a5c1b268-937f-af11-4ca2-2c96634fbe2e	9e115ae6-6b12-5f07-99a8-3497de2fef25	2025-05-28 15:06:15.286929+00
 41	bb6a4d43-70d3-5e36-d943-dfdfc747491f	5d159045-e695-98e8-8462-5f5108f021ee	2025-05-17 16:03:18.485621+00
-23	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-05-26 14:26:45.423911+00
-16	c8eb671d-f3b4-41f6-7364-0f292619dfdc	07d1837c-59fe-d357-906a-acd22d3e162a	2025-05-28 15:10:13.418843+00
-31	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-05-26 14:26:46.22716+00
-18	c8eb671d-f3b4-41f6-7364-0f292619dfdc	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-05-28 15:10:21.053575+00
+49	a5c1b268-937f-af11-4ca2-2c96634fbe2e	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	2025-06-02 12:14:15.28828+00
 42	a5c1b268-937f-af11-4ca2-2c96634fbe2e	fa94bcbf-c844-5a0a-b699-37f59efa1916	2025-05-28 15:16:39.898751+00
-49	a5c1b268-937f-af11-4ca2-2c96634fbe2e	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	2025-05-28 15:35:21.959495+00
+26	a5c1b268-937f-af11-4ca2-2c96634fbe2e	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-02 12:18:32.846505+00
+16	c8eb671d-f3b4-41f6-7364-0f292619dfdc	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-02 12:25:14.862619+00
 46	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fa94bcbf-c844-5a0a-b699-37f59efa1916	2025-05-19 08:27:25.274939+00
-26	a5c1b268-937f-af11-4ca2-2c96634fbe2e	07d1837c-59fe-d357-906a-acd22d3e162a	2025-05-28 15:36:19.472037+00
-21	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	07d1837c-59fe-d357-906a-acd22d3e162a	2025-05-20 13:29:50.191767+00
+21	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-01 14:41:00.880736+00
+12	bb6a4d43-70d3-5e36-d943-dfdfc747491f	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-02 12:33:04.643332+00
+31	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-06-02 12:35:26.596165+00
 37	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	de06e22f-9eeb-4a6d-351c-9e5143b4edbf	2025-05-17 15:55:45.990634+00
+53	bb6a4d43-70d3-5e36-d943-dfdfc747491f	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	2025-06-01 15:59:08.821726+00
+50	343f33f0-7f91-a104-c028-fc867feeffbd	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-01 10:02:10.388117+00
+23	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-06-01 11:34:27.801277+00
 45	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	5d159045-e695-98e8-8462-5f5108f021ee	2025-05-19 11:03:27.133895+00
 40	bb6a4d43-70d3-5e36-d943-dfdfc747491f	de06e22f-9eeb-4a6d-351c-9e5143b4edbf	2025-05-17 14:08:22.645749+00
-12	bb6a4d43-70d3-5e36-d943-dfdfc747491f	07d1837c-59fe-d357-906a-acd22d3e162a	2025-05-26 07:43:53.852678+00
-17	c8eb671d-f3b4-41f6-7364-0f292619dfdc	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-05-28 15:10:17.014304+00
-27	a5c1b268-937f-af11-4ca2-2c96634fbe2e	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-05-28 15:35:16.636039+00
+18	c8eb671d-f3b4-41f6-7364-0f292619dfdc	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-06-01 16:08:19.03334+00
+51	343f33f0-7f91-a104-c028-fc867feeffbd	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-06-01 11:34:39.181151+00
+27	a5c1b268-937f-af11-4ca2-2c96634fbe2e	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-06-02 12:00:33.830322+00
+17	c8eb671d-f3b4-41f6-7364-0f292619dfdc	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-06-01 16:08:14.935044+00
 48	c8eb671d-f3b4-41f6-7364-0f292619dfdc	9e115ae6-6b12-5f07-99a8-3497de2fef25	2025-05-28 15:06:07.231318+00
 43	c8eb671d-f3b4-41f6-7364-0f292619dfdc	fa94bcbf-c844-5a0a-b699-37f59efa1916	2025-05-28 15:06:07.738734+00
 22	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-05-20 13:38:47.619683+00
-28	a5c1b268-937f-af11-4ca2-2c96634fbe2e	5d159045-e695-98e8-8462-5f5108f021ee	2025-05-28 15:04:53.106845+00
-44	c8eb671d-f3b4-41f6-7364-0f292619dfdc	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	2025-05-28 15:10:04.431686+00
-25	a5c1b268-937f-af11-4ca2-2c96634fbe2e	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-05-28 15:35:17.787545+00
-13	bb6a4d43-70d3-5e36-d943-dfdfc747491f	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-05-27 13:23:08.177049+00
-19	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	07d1837c-59fe-d357-906a-acd22d3e162a	2025-05-26 13:33:42.992685+00
+25	a5c1b268-937f-af11-4ca2-2c96634fbe2e	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-06-02 12:00:24.440522+00
+28	a5c1b268-937f-af11-4ca2-2c96634fbe2e	5d159045-e695-98e8-8462-5f5108f021ee	2025-06-02 12:10:04.444759+00
+52	343f33f0-7f91-a104-c028-fc867feeffbd	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-06-01 11:35:53.332375+00
+19	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	07d1837c-59fe-d357-906a-acd22d3e162a	2025-06-02 12:28:03.03163+00
+13	bb6a4d43-70d3-5e36-d943-dfdfc747491f	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-06-02 12:32:27.051339+00
+44	c8eb671d-f3b4-41f6-7364-0f292619dfdc	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	2025-06-02 11:57:45.375223+00
+14	bb6a4d43-70d3-5e36-d943-dfdfc747491f	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-06-02 12:32:28.995642+00
 20	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	84f03094-c2df-24d7-6257-8bf9e1993b58	2025-05-27 14:03:21.651842+00
 30	c8eb671d-f3b4-41f6-7364-0f292619dfdc	5d159045-e695-98e8-8462-5f5108f021ee	2025-05-28 14:46:06.083761+00
-14	bb6a4d43-70d3-5e36-d943-dfdfc747491f	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	2025-05-20 14:48:30.923488+00
 \.
 
 
@@ -1115,6 +1119,30 @@ e6649839-2a53-b9fe-19db-91260a01e454	github.png	private-messages/files/2667a1d0-
 e27f453f-1cb4-b58e-3bb4-0ef7e44f3c94	8fea42c8-7f58-45fc-a98a-3d3377024f31 (2).csv	private-messages/files/cc6d9004-628b-403f-b734-e1179a8ee8ea.csv	text/csv	2025-05-20 13:59:19.672795	99	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
 32b13ecb-75be-06dc-e328-55b5bdd90e02	8fea42c8-7f58-45fc-a98a-3d3377024f31 (9).csv	private-messages/files/5c4fc14e-8a4a-4214-bbec-5347f12f0697.csv	text/csv	2025-05-26 08:06:32.317075	99	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
 0d757be7-dd73-7774-e2f6-908331b3de80	cout-rat-domestique-093828-650-400.jpg	private-messages/files/ff72ca03-5e66-4dab-ab06-dc30030f4db5.jpg	image/jpeg	2025-05-26 08:47:44.993307	188480	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+0ab34186-5372-8d4c-c5a3-5b91ad01541e	Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png	private-messages/files/3cf88727-6abd-4f4e-8208-63bdda42f0c0.png	image/png	2025-06-01 11:28:34.712632	46933	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+d4bac316-72e3-ae59-56b0-cfa10d2c3f07	IMG_6590.png	private-messages/files/c5f6974e-47b6-48c4-a481-f50d379effc4.png	image/png	2025-06-01 11:29:00.407233	148969	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+35bb7962-3c00-a36e-9bed-e6f5c3e468de	Aspi_Config_AutoRempli.xlsm	private-messages/files/fea4928e-0743-413d-a766-f2984f48d8de.xlsm	application/vnd.ms-excel.sheet.macroenabled.12	2025-06-01 11:30:23.190991	7233	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+36e2fbe9-1652-6759-e020-e61bae8704e5	IMG_6590.png	private-messages/files/261cb811-0712-4be3-9514-9edbd2f71ed6.png	image/png	2025-06-01 11:31:36.865573	148969	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+21be307c-37d6-af07-eefa-045d49803e2d	IMG_6582.jpg	private-messages/files/98484b43-74d3-4e07-b10d-dbb2985019df.jpg	image/jpeg	2025-06-01 11:34:09.231134	1555331	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+62cd8cc4-2f95-8790-5125-2d7c78b2d4aa	Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png	private-messages/files/86e881b5-4584-4235-96a9-109d2c51f1d2.png	image/png	2025-06-01 11:35:03.8123	46933	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+af86b82a-0095-3aaf-af2a-d979ff115d33	IMG_6590.png	attachments/6953dd4b-20ec-4444-baa1-637a639fc708.png	image/png	2025-06-01 11:40:12.682115	148969	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+7dfd5143-6281-18ef-f472-6556a6d96bc9	Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png	attachments/c51a8aaa-282d-4159-85f2-4dd0d7b32c32.png	image/png	2025-06-01 11:40:25.171921	46933	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+7c48efdb-b0e1-7d46-a928-6afc3f43b1b0	IMG_6583.png	private-messages/files/34ac8250-5587-4a68-b1bc-3c57d0b16076.png	image/png	2025-06-01 11:41:53.36295	547124	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+a6faed1a-5a3a-b542-ec1d-c650766df6fa	IMG_6590.png	private-messages/files/1691beec-8db0-426b-88b5-437749021550.png	image/png	2025-06-01 13:01:24.071749	148969	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+0dbc7054-f35f-a79c-80d7-d739a9022737	Capture dâÃ©cran 2025-05-27 100624.png	private-messages/files/cb5ac371-22fc-43c0-b628-786c8ffcf161.png	image/png	2025-06-01 13:45:50.473655	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+6366c47a-259a-2a6b-c62f-f9abb2bb1d24	Droits-et-devoirs-apprentis-2024.pdf	private-messages/files/9a73b799-b717-47f7-80b0-3e028e378c5e.pdf	application/pdf	2025-06-01 13:46:08.137114	123977	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+3676722e-26ba-dd6c-7cb5-305c79a9d379	Capture dâÃ©cran 2025-05-27 100624.png	private-messages/files/b6d26140-7f7e-4bb6-ab07-4865ec1a6573.png	image/png	2025-06-01 13:51:15.723303	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+f0118d87-9fc1-6cb2-193e-9b7184b5faf9	Capture dâÃ©cran 2025-05-27 100624.png	private-messages/files/8862d995-15a9-48c1-90ed-d966783f83b5.png	image/png	2025-06-01 13:52:31.514545	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+9c118022-99a6-2baa-52e0-2d6c018065f4	Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png	private-messages/files/ad6b5092-7c52-4c6c-8120-0d636a29085f.png	image/png	2025-06-01 13:56:16.752393	46933	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
+bd29e50f-3db1-aaca-db5e-42fced78bf41	cout-rat-domestique-093828-650-400 (1).jpg	private-messages/files/aac0ac05-c1d9-4438-8d02-d55fd4e95262.jpg	image/jpeg	2025-06-01 13:56:55.539593	188480	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+4e47e988-889c-5b56-6693-24bf8b67bb05	Capture dâÃ©cran 2025-05-27 100624.png	private-messages/files/62c8a636-f79a-4fb4-8fc0-31c4386e5b2f.png	image/png	2025-06-01 14:00:36.823257	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+88eb3d38-e96d-adef-605d-e2919a7e7d7e	Ragondin-et-sa-dent..jpg	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/e13e1d69-0e4d-4195-bb55-153b367a902d.jpg	image/jpeg	2025-06-01 14:13:44.794973	516080	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+5fc064a9-5d9f-b85d-528d-ab6ef517c962	Capture dâÃ©cran 2025-05-27 100624.png	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/0adf070a-d8ba-4f7c-8472-2481e8c9e050.png	image/png	2025-06-01 14:14:29.29925	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+2f5e9895-26b9-25ab-607a-950f6bc8293f	8fea42c8-7f58-45fc-a98a-3d3377024f31 (9) (1).csv	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/14e21b19-ee0d-46bd-b62d-16e72bdb8c66.csv	text/csv	2025-06-01 14:16:02.062915	99	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+7633a54d-21f3-25ed-e242-fc55d3735a11	Capture dâÃ©cran 2025-05-27 100624.png	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/9e828054-283b-45ad-95dd-d4afdbf70605.png	image/png	2025-06-01 14:17:27.376184	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+0a07ccd6-9e73-d6cc-37ef-db2527ea1ec3	Capture dâÃ©cran 2025-05-27 100624.png	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/efdeace0-f4f4-4c7c-8287-cebff8abfad2.png	image/png	2025-06-01 14:22:40.88129	128139	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+ffae8ff5-2759-201c-eb07-c4b1b4217c77	ip_routeur 1.xls	https://s3.fr-par.scw.cloud/s3-supchat/private-messages/files/b206ab3e-78fe-4a18-afbd-df7e98cc5d04.xls	application/vnd.ms-excel	2025-06-01 14:36:08.418236	117760	\N	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63
+edb87065-a979-17a4-ff3b-97d4ee049b00	Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png	private-messages/files/bb0af12c-b2a2-46e5-b193-bd38aa4efad1.png	image/png	2025-06-02 12:32:47.231897	46933	\N	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e
 \.
 
 
@@ -1153,6 +1181,7 @@ c8eb671d-f3b4-41f6-7364-0f292619dfdc	c6d5d602-9fd0-99c7-1654-65c23b0cd792	3	0
 a5c1b268-937f-af11-4ca2-2c96634fbe2e	c6d5d602-9fd0-99c7-1654-65c23b0cd792	3	0
 a5c1b268-937f-af11-4ca2-2c96634fbe2e	6eeddc21-d56a-e978-b0c1-384e3f6cf186	3	0
 d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	6eeddc21-d56a-e978-b0c1-384e3f6cf186	3	0
+343f33f0-7f91-a104-c028-fc867feeffbd	d4f1cff0-3ef5-7ab1-e654-c05894915c31	3	0
 c8eb671d-f3b4-41f6-7364-0f292619dfdc	d4f1cff0-3ef5-7ab1-e654-c05894915c31	1	0
 d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	d4f1cff0-3ef5-7ab1-e654-c05894915c31	2	0
 bb6a4d43-70d3-5e36-d943-dfdfc747491f	d4f1cff0-3ef5-7ab1-e654-c05894915c31	2	0
@@ -1964,6 +1993,133 @@ d49408a3-83ea-c760-2158-d5eef8d0c666	@mistral détaille moi le fonctionnement d�
 fa951b30-674c-7b4e-acc6-0cc0f5c16a21	Le fonctionnement d'une fusée repose sur plusieurs principes de la physique, notamment la troisième loi de Newton (action-réaction) et la conservation de la quantité de mouvement. Voici un aperçu détaillé de son fonctionnement :\n\n### 1. **Principe de Base : La Troisième Loi de Newton**\nLa troisième loi de Newton stipule que pour toute action, il existe une réaction égale et opposée. Lorsqu'une fusée expulse du gaz par ses moteurs, ce gaz exerce une force sur la fusée dans la direction opposée, propulsant ainsi la fusée vers l'avant.\n\n### 2. **Structure de la Fusée**\nUne fusée typique est composée de plusieurs parties principales :\n- **Réservoirs de carburant** : Contiennent le carburant et le comburant nécessaires pour la combustion.\n- **Moteurs** : Transforment l'énergie chimique du carburant en énergie cinétique pour propulser la fusée.\n- **Structure** : Assure la stabilité et la rigidité de la fusée.\n- **Système de guidage et de contrôle** : Permet de diriger la fusée et de maintenir sa trajectoire.\n- **Charge utile** : Peut être un satellite, une sonde spatiale, ou des astronautes dans une capsule.\n\n### 3. **Moteurs de Fusée**\nLes moteurs de fusée fonctionnent en brûlant un mélange de carburant et de comburant dans une chambre de combustion. Le gaz chaud résultant est ensuite expulsé à travers une tuyère, créant une poussée.\n\n#### a. **Chambre de Combustion**\nLe carburant et le comburant sont injectés dans la chambre de combustion où ils sont mélangés et enflammés. La combustion produit des gaz chauds à haute pression.\n\n#### b. **Tuyère**\nLa tuyère convertit la pression des gaz chauds en vitesse. Elle est conçue pour maximiser la vitesse d'expulsion des gaz, ce qui augmente la poussée. La tuyère est souvent de forme conique pour diriger les gaz de manière optimale.\n\n### 4. **Poussée**\nLa poussée est la force qui propulse la fusée. Elle est générée par l'expulsion des gaz de combustion par la tuyère. La force de poussée (F) peut être calculée par la formule :\n\\[ F = \\dot{m} \\cdot V_e + A_e \\cdot (P_e - P_a) \\]\noù :\n- \\(\\dot{m}\\) est le débit massique des gaz expulsés.\n- \\(V_e\\) est la vitesse d'expulsion des gaz.\n- \\(A_e\\) est l'aire de la sortie de la tuyère.\n- \\(P_e\\) est la pression des gaz à la sortie de la tuyère.\n- \\(P_a\\) est la pression atmosphérique.\n\n### 5. **Étapes de Lancement**\n1. **Allumage et Décollage	\N	2025-05-28 15:17:27.293947	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	00000000-0000-0000-0000-000000000001	2025-05-28 15:17:27.293947	\N	\N
 3d12d331-fdf0-51c7-2af4-3e98641ac92e	Test	\N	2025-05-28 15:35:29.858429	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-05-28 15:35:29.858429	\N	\N
 3d7eb31a-6dc0-870d-52a6-321c57653fe7	Test	\N	2025-05-28 15:36:19.945967	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-05-28 15:36:19.945967	\N	\N
+e0b47e23-930a-1d7c-253a-54b571591f3e	caca	\N	2025-06-01 09:37:33.182139	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 09:37:33.182139	\N	\N
+f60c96ee-3605-a924-69c8-b9ef681aa9e7	caca	\N	2025-06-01 09:37:56.851756	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 09:37:56.851756	\N	\N
+4b36d1a0-3c19-6598-17ad-8cb86c57a636	caca	\N	2025-06-01 09:38:15.719323	84f03094-c2df-24d7-6257-8bf9e1993b58	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 09:38:15.719323	\N	\N
+03c5937f-a0b4-de0d-0f49-65ad952dc1ca	hello	\N	2025-06-01 09:52:54.652348	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 09:52:54.652348	\N	\N
+3b8be94c-5afa-2aa9-c44c-80cda30d026f	yo	\N	2025-06-01 09:53:15.595484	07d1837c-59fe-d357-906a-acd22d3e162a	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 09:53:15.595484	\N	\N
+25bd17da-69e7-6bdc-b513-36b72eb48f2c	hello	\N	2025-06-01 09:53:48.391969	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 09:53:48.391969	\N	\N
+94864809-4296-ba08-2497-b3a55143ee68	yo	\N	2025-06-01 10:00:54.744749	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 10:00:54.744749	\N	\N
+6288c34d-db35-ef47-78d7-f4049f44c58f	yo	\N	2025-06-01 10:02:27.728618	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 10:02:27.728618	\N	\N
+a30dd3e0-eaf0-7200-aa1f-3e6139655fee	Test	\N	2025-06-01 10:19:10.725187	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 10:19:10.725187	\N	\N
+23c0e29e-b327-a948-3b26-5f90b1621950	Test	\N	2025-06-01 10:19:21.069377	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 10:19:21.069377	\N	\N
+a6be1aec-733a-7818-0eab-4a03b54b2683	frezre	\N	2025-06-01 10:19:37.862656	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 10:19:37.862656	\N	\N
+eec0a602-ddc0-81ca-511b-8c98af031086	cd	\N	2025-06-01 10:19:56.384571	84f03094-c2df-24d7-6257-8bf9e1993b58	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 10:19:56.384571	\N	\N
+8376316c-005e-5772-1272-38dbbd1221f4	deza	\N	2025-06-01 10:20:24.083843	84f03094-c2df-24d7-6257-8bf9e1993b58	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 10:20:24.083843	\N	\N
+8c1d3870-9e7b-a619-e82c-bcc62168d4ff	Il sait pas parler le gros nullos	\N	2025-06-01 10:39:08.391343	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 10:39:08.391343	\N	\N
+2d4ca3f5-1f0c-53a4-053d-040560d74547	jh	\N	2025-06-01 11:07:44.015335	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 11:07:44.015335	\N	\N
+cb12478a-86d2-92be-35a0-1620ac2546e8	mmm	\N	2025-06-01 11:07:48.232854	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 11:07:48.232854	\N	\N
+6c534c27-03da-2145-d466-0b59c0240a68	aaaa	\N	2025-06-01 11:08:14.653669	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 11:08:14.653669	\N	cb12478a-86d2-92be-35a0-1620ac2546e8
+14f0fe22-2428-99dd-b193-07f392b004e3	@[Paul 2](c8eb671d-f3b4-41f6-7364-0f292619dfdc) aaaa	\N	2025-06-01 11:08:32.800583	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 11:08:32.800583	\N	\N
+f7e92b2e-6abb-efb3-ef02-dcb600b5a499	frez	\N	2025-06-01 11:13:58.882223	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 11:13:58.882223	\N	\N
+8e052a6c-395c-fe4d-79da-543b3ca49f9d	dceaz	\N	2025-06-01 11:14:14.980914	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 11:14:14.980914	\N	\N
+991c142a-10e9-218e-dc6c-a5236deb760b	dzaed	\N	2025-06-01 11:14:22.692258	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 11:14:22.692258	\N	\N
+5328ea93-cb88-21d7-265a-f0d6fbc5f1b4	ceafz	\N	2025-06-01 11:34:31.742012	84f03094-c2df-24d7-6257-8bf9e1993b58	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 11:34:31.742012	\N	\N
+031e8125-96d6-963b-400a-8c5a826f7a33	cdead	\N	2025-06-01 11:34:48.374168	84f03094-c2df-24d7-6257-8bf9e1993b58	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 11:34:48.374168	\N	\N
+27f1e7d9-ebda-5483-a669-83b6ea5ca19f	cdcd	\N	2025-06-01 11:35:54.343233	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 11:35:54.343233	\N	\N
+afcde8ed-82bc-ff25-cf3a-c8c3a8304f99	c dezcdf	\N	2025-06-01 11:36:02.058274	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 11:36:02.058274	\N	\N
+e03600b9-260b-a025-ceef-f0ce3bbdfcac	cezrfre	\N	2025-06-01 11:37:40.858944	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	343f33f0-7f91-a104-c028-fc867feeffbd	2025-06-01 11:37:40.858944	\N	\N
+7f7cf287-c4c7-00f8-dddc-ddfa2ee94de1	{"type":"file","fileUrl":"messages/files/458e0225-e155-442c-81e7-a4fd6298a98d.png","fileName":"Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png","fileSize":46933,"fileType":"image/png","isImage":true}	\N	2025-06-01 11:56:30.315323	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 11:56:30.315323	\N	\N
+ff4da593-488a-9908-1dc7-10bc68ccb4a2	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) coucou	\N	2025-06-01 12:00:10.032729	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:00:10.032729	\N	\N
+ef2085a5-e519-7a9e-ca45-7d32e33b287b	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) kiki	\N	2025-06-01 12:00:39.472454	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:00:39.472454	\N	\N
+2a39d8b4-141f-ad5c-08f7-d7d56e693ffb	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) cc	\N	2025-06-01 12:01:08.471566	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:01:08.471566	\N	\N
+51909944-b354-283e-7c23-3a2c9a57d090	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) mm	\N	2025-06-01 12:04:05.530408	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:04:05.530408	\N	\N
+16a23c7d-28b0-985d-4159-fb308621891c	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) 	\N	2025-06-01 12:48:25.186842	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:48:25.186842	\N	\N
+5fe00c09-24b2-1905-0327-203513eadb11	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) caca	\N	2025-06-01 12:50:36.974894	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:50:36.974894	\N	\N
+09ff2846-cd82-5f59-c4aa-9ddee528a6f1	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) mamamam	\N	2025-06-01 12:52:16.302945	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:52:16.302945	\N	\N
+9d93ba1e-5816-87d7-b58f-0c7f00797bbc	aaa	\N	2025-06-01 12:52:28.132508	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:52:28.132508	\N	\N
+346fbdb9-8c9f-701a-b2f3-27064d8eae56	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) elfkelmk	\N	2025-06-01 12:52:42.60483	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:52:42.60483	\N	\N
+2b4dbb86-d9bb-12d3-7a2b-c11646da1d5e	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) jkqdshsjkqdh	\N	2025-06-01 12:53:27.501462	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:53:27.501462	\N	\N
+9da2a9c7-3ed9-8d92-49ba-bf8098fbfad7	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) aaa	\N	2025-06-01 12:53:34.881068	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:53:34.881068	\N	\N
+d1ab7be4-2797-05e8-d16d-32e24464330f	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) qsidq	\N	2025-06-01 12:54:40.747731	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:54:40.747731	\N	\N
+210ac388-eb77-fb8f-8478-e4b89e1e2134	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aaaaa	\N	2025-06-01 12:55:05.331533	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:55:05.331533	\N	\N
+0ea7041a-cc76-34e7-2407-f33897b4bf41	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) aaaa	\N	2025-06-01 12:57:20.463021	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:57:20.463021	\N	\N
+f1dcff49-325b-cf19-3046-000d9837ed35	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) aaa	\N	2025-06-01 12:57:33.819553	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:57:33.819553	\N	\N
+fb99112e-aaab-62bf-a977-d25a5b74377f	f	\N	2025-06-01 12:57:35.773772	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:57:35.773772	\N	\N
+0048301b-3352-a5c2-b017-0dc72d833b2f	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) gay	\N	2025-06-01 12:58:15.042264	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 12:58:15.042264	\N	\N
+ef723dac-36f7-8c05-1d08-8ce48f4ca6d0	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) qd	\N	2025-06-01 12:59:03.397296	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:59:03.397296	\N	\N
+f24f8cc0-e927-982b-bc3a-ab7ddecf7331	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) qsdsdq	\N	2025-06-01 12:59:25.342521	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:59:25.342521	\N	\N
+6544d603-9da0-129b-eaaa-c69a92d48c71	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) azaza	\N	2025-06-01 12:59:38.12031	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 12:59:38.12031	\N	\N
+58311d75-cace-2276-7fc3-7117267c932d	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) a	\N	2025-06-01 13:00:19.818845	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:00:19.818845	\N	\N
+3d0578c8-25a8-7ff5-8ae3-eaece66d7d0b	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aaa	\N	2025-06-01 13:01:20.422207	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:01:20.422207	\N	\N
+a533a813-64ae-f59c-e8cd-77291eb1f029	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aaa	\N	2025-06-01 13:02:14.255948	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:02:14.255948	\N	\N
+10a27182-1258-fa1d-8fee-6edbc3e19986	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aaaa	\N	2025-06-01 13:07:06.636733	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:07:06.636733	\N	\N
+5c2f05e5-0e8e-6e74-1ca6-35ee3e768780	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aa	\N	2025-06-01 13:52:20.221121	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:52:20.221121	\N	\N
+1c5df4fc-57e6-a6ad-0edf-bebbb06753d7	aaa@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) 	\N	2025-06-01 13:53:41.766066	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:53:41.766066	\N	\N
+3da07855-1c4a-84ce-6774-6cf6b9918a72	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aaaaa	\N	2025-06-01 13:54:24.480344	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:54:24.480344	\N	\N
+c494035e-4f37-e7f2-7252-46d1bf7861d6	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) bb	\N	2025-06-01 13:56:16.988702	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:56:16.988702	\N	\N
+c42a2c28-edd1-e63a-8a35-02645b0324df	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) bg	\N	2025-06-01 13:58:25.36576	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:58:25.36576	\N	\N
+34d7f661-79d1-5c11-470f-b0110a37775c	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) caca	\N	2025-06-01 13:59:43.925262	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:59:43.925262	\N	\N
+df749883-fdc9-5e48-9ee6-5a77ec1ca2ef	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aa	\N	2025-06-01 13:59:58.161048	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 13:59:58.161048	\N	\N
+d31045fd-51bb-4cd5-d0ea-f95e186473f2	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) zz	\N	2025-06-01 14:00:59.310237	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:00:59.310237	\N	\N
+544452a6-c8c9-726e-f53f-8bdd73f4f240	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) CC	\N	2025-06-01 14:02:41.829734	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:02:41.829734	\N	\N
+8f19c4b1-7068-13a4-763f-073f142f09ef	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) mm	\N	2025-06-01 14:03:51.028084	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:03:51.028084	\N	\N
+4601e29a-4388-e7ac-f8f9-4f6f8d697bbe	{"type":"file","fileUrl":"messages/files/c42e63e5-fccd-4bda-8d4f-bee9df6f9b08.png","fileName":"Capture%20d%E2%80%99e%CC%81cran%202025-05-27%20a%CC%80%2011.10.36.png","fileSize":46933,"fileType":"image/png","isImage":true}	\N	2025-06-01 14:05:15.007693	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:05:15.007693	\N	\N
+763e61eb-b078-3208-66b5-d363aa66c669	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) nbnb	\N	2025-06-01 14:05:41.60328	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:05:41.60328	\N	\N
+31744c85-3e99-ecd9-1b8b-07d5e6fbcd31	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) ppapapa	\N	2025-06-01 14:08:49.552392	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:08:49.552392	\N	\N
+e01eaa88-b40f-99ba-15e9-0877c2f43cda	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) mm	\N	2025-06-01 14:10:55.327343	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:10:55.327343	\N	\N
+75dd0169-cf0c-f430-e2fd-1d27bc4b75f3	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) tt	\N	2025-06-01 14:11:54.782447	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:11:54.782447	\N	\N
+0fa171a8-7f93-0f99-530c-d079184fda68	{"type":"file","fileUrl":"messages/files/be1fb6c3-93a3-4681-8049-c9bd180f5e96.xlsx","fileName":"Commandes_Aspirateurs_Optimise.xlsx","fileSize":5476,"fileType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","isImage":false}	\N	2025-06-01 14:12:23.058071	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:12:23.058071	\N	\N
+422976ed-6029-6815-1b18-13ea2fe75c8a	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) qs	\N	2025-06-01 14:13:43.410415	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:13:43.410415	\N	\N
+4400fadf-fb56-4c97-be44-cfc9b36bbdda	qs	\N	2025-06-01 14:13:48.642881	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:13:48.642881	\N	\N
+9463cb94-497e-d52b-3277-a3342728a3b4	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) qs	\N	2025-06-01 14:14:00.369703	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:14:00.369703	\N	\N
+02b161db-b692-bbc7-30d9-6d8ce310afda	qs	\N	2025-06-01 14:14:04.588788	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:14:04.588788	\N	\N
+ee8bc2f9-9fc5-842d-6e9b-96ab264e1101	qs	\N	2025-06-01 14:14:04.982001	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:14:04.982001	\N	\N
+48e86ebe-a480-d12f-5378-960101ff567f	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) GAYYYYYYYYYY	\N	2025-06-01 14:14:19.815441	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:14:19.815441	\N	\N
+b63f0daf-1a29-bfc6-c852-615ef5df3255	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) aa	\N	2025-06-01 14:22:03.438838	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:22:03.438838	\N	\N
+c3b8ad5b-996c-b499-3863-2b15a4dfa0a6	@[Paul MAZZON](a5c1b268-937f-af11-4ca2-2c96634fbe2e) inoxtag	\N	2025-06-01 14:23:52.689678	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:23:52.689678	\N	\N
+4f976150-babc-1696-6ecb-7c9ed88cc2e8	@[Paul MAZZON](a5c1b268-937f-af11-4ca2-2c96634fbe2e) caca	\N	2025-06-01 14:25:10.922172	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:25:10.922172	\N	\N
+6f42a05b-8f22-6702-ddc8-b24ec775446d	prout	\N	2025-06-01 14:25:36.054193	84f03094-c2df-24d7-6257-8bf9e1993b58	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:25:36.054193	\N	\N
+d4e96f81-e8f8-e47a-89ed-fcf93208a500	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) prout	\N	2025-06-01 14:25:44.243567	84f03094-c2df-24d7-6257-8bf9e1993b58	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:25:44.243567	\N	\N
+f8a60ce3-3b4e-66f3-e573-f201b6644242	caca	\N	2025-06-01 14:28:18.235804	84f03094-c2df-24d7-6257-8bf9e1993b58	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:28:18.235804	\N	\N
+30cb4404-f8e8-d129-1bc3-bd5771312b77	caca	\N	2025-06-01 14:28:24.512033	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:28:24.512033	\N	\N
+998975ac-eb22-de64-89ad-a88fe73724c1	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) caca	\N	2025-06-01 14:28:36.407315	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:28:36.407315	\N	\N
+392d9e8c-e3f9-01f7-79dd-9b1654f275ba	{"type":"file","fileUrl":"messages/files/185050c0-a457-4c9c-a780-a6574d98c663.jpg","fileName":"cout-rat-domestique-093828-650-400 (1) (1).jpg","fileSize":188480,"fileType":"image/jpeg","isImage":true}	\N	2025-06-01 14:31:40.947168	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 14:31:40.947168	\N	\N
+45506f65-220f-f65d-52f4-b7a652bdfab9	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) prout 2	\N	2025-06-01 14:37:30.846771	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:37:30.846771	\N	\N
+8af9073a-e602-b072-81b6-bd420652b4f7	@[Paul MAZZON](a5c1b268-937f-af11-4ca2-2c96634fbe2e) CACA	\N	2025-06-01 14:37:49.506006	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:37:49.506006	\N	\N
+131b4d1f-4d41-bdfd-5a3a-40b9a8baf073	oui	\N	2025-06-01 14:38:25.525293	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 14:38:25.525293	\N	\N
+d663db93-d019-092d-d1dc-bf2e993ab67d	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) prout2	\N	2025-06-01 14:37:05.45114	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:37:05.45114	2025-06-01 14:38:26.282057	\N
+b130082f-d925-6945-1db5-d14f09b50600	@[Rudy](d37b1d6b-aa6a-8423-d6b3-d5f22abffc63) azeazeeza	\N	2025-06-01 14:41:07.258817	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:41:07.258817	\N	\N
+150af1ab-ab4e-88af-3d77-899a2e5a055d	@[Rudy](d37b1d6b-aa6a-8423-d6b3-d5f22abffc63) coucou	\N	2025-06-01 14:41:41.123716	07d1837c-59fe-d357-906a-acd22d3e162a	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	2025-06-01 14:41:41.123716	\N	\N
+983591ec-dba4-ac44-0a8c-be3f8ade379c	@[Rudy](d37b1d6b-aa6a-8423-d6b3-d5f22abffc63) aaa	\N	2025-06-01 14:43:36.658377	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:43:36.658377	\N	\N
+aa7e63ff-ffd1-8360-a52e-d85eed879940	@[Rudy](d37b1d6b-aa6a-8423-d6b3-d5f22abffc63) mmmm	\N	2025-06-01 14:44:36.144559	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:44:36.144559	\N	\N
+e5788a33-92c5-880e-79d1-96868f8c9e27	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) 	\N	2025-06-01 14:45:16.235632	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 14:45:16.235632	\N	\N
+d253a4cc-1b24-3d38-aac0-42f939e62bd6	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) caca	\N	2025-06-01 14:45:17.421381	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:45:17.421381	\N	\N
+aef28729-2cf8-7040-3962-300f91c54ab4	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) caca	\N	2025-06-01 14:45:25.663933	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 14:45:25.663933	\N	\N
+2ac027ab-5551-89a3-8ef6-ec050c0e8b04	@[Math Homo](fd6ff12d-384e-055e-6e7c-f9a06b7e9af0) 	\N	2025-06-01 14:45:27.843217	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 14:45:27.843217	\N	\N
+856f00b5-147d-9f5d-fe62-aaa4b2d53f5c	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) 	\N	2025-06-01 14:45:57.89156	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 14:45:57.89156	\N	\N
+945e2af4-e497-b324-c7d0-29394d29d7c0	{"type":"file","fileUrl":"messages/files/f5adc8f3-bdbd-4d29-aa56-719d56dadb41.jpg","fileName":"EeqsHZHXgAM3CJP.jpg","fileSize":82866,"fileType":"image/jpeg","isImage":true}	\N	2025-06-01 14:48:38.36419	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 14:48:38.36419	\N	\N
+9403aec5-bf75-9aa9-6ef3-b3804e667d23	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) cca Prout 	\N	2025-06-01 15:00:03.954485	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:00:03.954485	\N	\N
+3b49d2fe-9de2-d3c6-4fb5-0c01288b0285	proutesque	\N	2025-06-01 15:00:09.411737	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:00:09.411737	\N	\N
+1d5ee729-e622-e371-04f5-4df7e7077106	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) proutesque	\N	2025-06-01 15:00:24.873127	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:00:24.873127	\N	\N
+51748e57-9ac8-5033-ad89-c00ab8c69709	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) proutesque	\N	2025-06-01 15:01:20.695604	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:01:20.695604	\N	\N
+a4764b59-a57f-7bb4-d92c-fcfebcf6a3d1	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) proutesque	\N	2025-06-01 15:01:49.718898	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:01:49.718898	\N	\N
+a86e08e1-e37b-bde7-afdf-4da2b7885a6f	prout	\N	2025-06-01 15:02:24.267264	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:02:24.267264	\N	\N
+fe3aa0ad-7a1f-6150-869d-9cefa611d79e	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) prout	\N	2025-06-01 15:02:28.919173	07d1837c-59fe-d357-906a-acd22d3e162a	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-01 15:02:28.919173	\N	\N
+2efc6c96-20c9-ffec-0932-f27f14751cf7	test	\N	2025-06-01 15:24:24.780672	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 15:24:24.780672	\N	\N
+6a0a5f61-7bbc-d172-f301-5aabbd0b8ef6	@Mistral AI comment va tu ?	\N	2025-06-01 15:54:11.645305	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 15:54:11.645305	\N	\N
+bf4a7413-bbdc-4d30-1f64-245759c8c1a8	Je suis une intelligence artificielle, donc je n'ai pas de sentiments ou d'états émotionnels. Cependant, je suis ici pour t'aider et répondre à tes questions. Comment puis-je t'assister aujourd'hui ?	\N	2025-06-01 15:54:13.003042	07d1837c-59fe-d357-906a-acd22d3e162a	00000000-0000-0000-0000-000000000001	2025-06-01 15:54:13.003042	\N	\N
+6e3f3f09-4424-b27c-70d6-b4c08e02d4e7	Je m'appelle Mathis et j'aime sucer des grosses teubs de blackos	\N	2025-06-01 15:58:39.548813	07d1837c-59fe-d357-906a-acd22d3e162a	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 15:58:39.548813	\N	\N
+a05677f1-cd58-749b-2436-2c63999890a8	@Mistral AI Quel est le nom du président américain	\N	2025-06-01 15:59:25.717638	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 15:59:25.717638	\N	\N
+67464bf7-a354-1e66-9ec1-87ba0ff52575	Je suis désolé, mais je ne peux pas fournir d'informations en temps réel. Mon dernier entraînement date de 2023, donc je ne peux pas vous donner le nom du président américain actuel si cela a changé depuis cette date. Pour obtenir l'information la plus récente, je vous recommande de consulter une source d'actualités fiable.	\N	2025-06-01 15:59:27.182282	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	00000000-0000-0000-0000-000000000001	2025-06-01 15:59:27.182282	\N	\N
+4124609e-04fd-2a60-f1bc-85afd7e93049	@Mistral AI  Le président américain en 2022	\N	2025-06-01 16:00:08.136021	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 16:00:08.136021	\N	\N
+1c129835-4692-2d61-5f2a-bf26205fd1f8	En 2022, le président des États-Unis était Joe Biden. Il a pris ses fonctions le 20 janvier 2021, succédant à Donald Trump. Joe Biden est le 46e président des États-Unis.	\N	2025-06-01 16:00:09.107861	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	00000000-0000-0000-0000-000000000001	2025-06-01 16:00:09.107861	\N	\N
+93aa11d0-0d91-3b28-ae9d-0f039b989e02	hello chef	\N	2025-06-01 16:05:17.489076	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 16:05:17.489076	\N	\N
+97697a90-c202-6d59-408b-37f02ee50919	@[Math'BigDick](bb6a4d43-70d3-5e36-d943-dfdfc747491f) bg	\N	2025-06-01 16:05:57.307241	07d1837c-59fe-d357-906a-acd22d3e162a	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	2025-06-01 16:05:57.307241	\N	\N
+9bf72b11-b41d-ee94-972a-2c2ed6697600	Rudy a démarré un appel vidéo	\N	2025-06-01 16:06:10.682297	07d1837c-59fe-d357-906a-acd22d3e162a	00000000-0000-0000-0000-000000000003	2025-06-01 16:06:10.682297	\N	\N
+7636e49e-cc9c-0051-b49b-9cf039c403ba	Math'BigDick a démarré un appel vidéo	\N	2025-06-01 16:06:16.983125	07d1837c-59fe-d357-906a-acd22d3e162a	00000000-0000-0000-0000-000000000003	2025-06-01 16:06:16.983125	\N	\N
+df8d86bc-b9e7-8cea-2b2b-4fce9a7d15b8	coucou mes vies bisous 	\N	2025-06-01 16:08:41.151735	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 16:08:41.151735	\N	\N
+1d6161c0-c448-26de-fb94-703fe06dc570	@Mistral AI coucou	\N	2025-06-01 16:09:00.712217	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 16:09:00.712217	\N	\N
+42e45ebc-3b48-7cbf-2317-d4c52e432267	Coucou ! Comment puis-je t'aider aujourd'hui ?	\N	2025-06-01 16:09:01.50448	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	00000000-0000-0000-0000-000000000001	2025-06-01 16:09:01.50448	\N	\N
+bef2af6e-ba4d-68a1-f6e3-34d4cae685a7	@Mistral AI  non pas besoin d'aide je vis d'amour et d'eau fraiche ma couille 	\N	2025-06-01 16:10:09.472524	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 16:10:09.472524	\N	\N
+45dd87f6-84b1-7941-9b71-fd32f10add04	Je comprends que tu puisses avoir des sentiments forts ou des frustrations. Si tu as besoin de parler ou de discuter de quelque chose, je suis là pour t'écouter et t'aider du mieux que je peux.	\N	2025-06-01 16:10:10.786216	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	00000000-0000-0000-0000-000000000001	2025-06-01 16:10:10.786216	\N	\N
+eea1fe56-d1e1-cd6e-6a95-16dd797cd51b	Sondage créé : [iohiouou](https://strawpoll.com/XOgOV9vo3n3) [strawpoll:XOgOV9vo3n3]	\N	2025-06-01 16:10:56.572867	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	bb6a4d43-70d3-5e36-d943-dfdfc747491f	2025-06-01 16:10:56.572867	\N	\N
+8adea169-0f75-d23c-aa24-6d03829b2510	@Mistral AI c'est qui Paul 	\N	2025-06-01 16:11:03.058364	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 16:11:03.058364	\N	\N
+7bf837bc-004c-78ee-b352-5be5ede7b433	Paul est un nom très commun, donc il peut se référer à de nombreuses personnes différentes selon le contexte. Voici quelques exemples notables :\n\n1. **Saint Paul** : Un des apôtres les plus influents du christianisme, auteur de plusieurs épîtres du Nouveau Testament.\n2. **Paul McCartney** : Un célèbre musicien, membre des Beatles et compositeur prolifique.\n3. **Paul Valéry** : Un poète et écrivain français du XXe siècle.\n4. **Paul Cézanne** : Un peintre français post-impressionniste.\n5. **Paul Kagame** : Le président du Rwanda depuis 2000.\n\nSi vous avez un contexte spécifique ou une personne particulière en tête, n'hésitez pas à préciser pour que je puisse vous donner des informations plus précises.	\N	2025-06-01 16:11:06.776288	b2c05146-9ffa-349d-f3bf-1bea6cc7a6b2	00000000-0000-0000-0000-000000000001	2025-06-01 16:11:06.776288	\N	\N
+b4ecc47d-0bac-5a6f-6883-f9c7f2828bc5	Sondage créé : [caca](https://strawpoll.com/ajnE1ko7jnW) [strawpoll:ajnE1ko7jnW]	\N	2025-06-01 16:11:33.621627	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-01 16:11:33.621627	\N	\N
+fae7073a-b77e-89ce-756a-11c0f33e77d7	Sondage créé : Caca [Voter](https://strawpoll.com/7rnzVeJAlnO) [strawpoll:7rnzVeJAlnO]	\N	2025-06-02 09:47:31.669043	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-02 09:47:31.669043	\N	\N
+ed2bb799-7a73-b0e7-bf40-a854e1f939bc	Sondage créé : Test [Voter](https://strawpoll.com/Dwyo35Y8eyA) [strawpoll:Dwyo35Y8eyA]	\N	2025-06-02 11:45:47.91444	167bf6dc-b1d2-8d1a-e9c7-00e50b2916cb	a5c1b268-937f-af11-4ca2-2c96634fbe2e	2025-06-02 11:45:47.91444	\N	\N
+90d17d99-9419-8547-cc7c-a6c7dbb46ce1	dqdsqs	\N	2025-06-02 12:25:16.285961	07d1837c-59fe-d357-906a-acd22d3e162a	c8eb671d-f3b4-41f6-7364-0f292619dfdc	2025-06-02 12:25:16.285961	\N	\N
 \.
 
 
@@ -2031,14 +2187,18 @@ bd4e602f-dd52-1948-b771-4cdbdf2094cc	qsfqs	2025-05-17 15:11:17.220953	2025-05-17
 83e810be-3c10-e2ab-4a3b-aa0580650528	gdf	2025-05-26 11:10:32.672826	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 11:10:32.672826	\N	f	\N
 35b016da-0091-29d6-3391-8a95fc19ef08		2025-05-26 08:47:45.060007	2025-05-26 11:46:21.11141	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"0d757be7-dd73-7774-e2f6-908331b3de80\\"}]"	2025-05-26 08:47:45.060007	\N	f	\N
 89949a5f-b3c7-8076-990f-a26615113d9a	caca	2025-05-26 12:52:10.80031	2025-05-26 13:40:04.655299	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 12:52:10.80031	\N	f	\N
+9d04d4e4-b727-c621-f4a1-03bf01705e83	hello	2025-06-01 09:58:25.931872	2025-06-01 09:59:49.385516	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 09:58:25.931872	\N	f	\N
 a3b7f0c3-0842-f7d8-250e-0c91fe066537	bien	2025-05-20 13:16:29.804852	2025-05-26 13:21:30.498726	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 13:16:29.804852	\N	f	\N
 9a1cd878-7cf0-d19f-e479-346fafaf694a	h	2025-05-20 12:54:52.292413	2025-05-26 13:21:30.498995	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 12:54:52.292413	\N	f	\N
 ddb6ef63-9465-dd9b-8b10-4894327cb8f5		2025-05-20 13:59:19.709874	2025-05-26 13:21:30.499243	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"e27f453f-1cb4-b58e-3bb4-0ef7e44f3c94\\"}]"	2025-05-20 13:59:19.709874	\N	f	\N
 7ba83df2-367b-08d9-9928-1ed68e563440	Test\n	2025-05-13 08:07:02.995242	2025-05-13 09:00:00.545667	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 08:07:02.995242	\N	f	\N
 f4532c97-28a6-6088-6dee-6adba7dcda11	Salut 	2025-05-13 08:18:13.498526	2025-05-13 09:00:00.547545	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 08:18:13.498526	\N	f	\N
+7c668f81-4abd-0a89-fc91-970a36cd8146	cecfs	2025-06-01 10:30:42.574876	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:30:42.574876	\N	f	\N
 97556963-45dd-f950-383a-d2942140e026	gfd	2025-05-13 11:24:33.019101	2025-05-13 11:33:06.285817	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:24:33.019101	\N	f	\N
 a4376d6f-b675-b665-12b8-fb67d6eedf57	sdf	2025-05-13 11:24:30.839788	2025-05-13 11:33:06.284911	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:24:30.839788	\N	f	\N
 cdb7c7d6-0431-9dcf-9969-27b2136a4100	efez	2025-05-13 11:27:28.58524	2025-05-13 11:33:06.446457	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:27:28.58524	\N	f	\N
+35d8467b-9dbb-761d-9af7-e2d2f5c68add	cdadqs	2025-06-01 11:20:08.354601	2025-06-01 11:23:32.314109	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:20:08.354601	\N	f	\N
+9806bac6-f79a-4110-35e2-57c5562989b2	[message supprimé]	2025-06-01 11:38:03.501321	2025-06-01 11:38:03.596703	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 11:38:03.501321	2025-06-01 12:30:54.694696	t	\N
 1aa8c3f9-8845-1da3-cd89-cde7d561d68e	test	2025-05-13 11:44:23.554789	2025-05-17 13:18:33.052559	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-13 11:44:23.554789	\N	f	\N
 866322be-9e1e-1091-44b6-46e2eee22b01	sqdsqdsq	2025-05-17 16:12:32.077729	2025-05-18 12:58:21.812872	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 16:12:32.077729	\N	f	\N
 d7571025-1dba-c335-31d5-c0f8da00a882	mmmmm	2025-05-18 14:18:03.190792	2025-05-18 15:26:40.703752	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 14:18:03.190792	\N	f	\N
@@ -2101,9 +2261,15 @@ c566a813-ee11-6162-4a51-eff7a53bdfdf	zefzef	2025-05-13 11:24:05.600845	2025-05-1
 e215e1ab-0002-2978-2321-d63c20651f83	qds	2025-05-13 14:30:40.062715	2025-05-13 14:39:59.683129	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:30:40.062715	\N	f	\N
 9675df1c-fd3d-b3c3-3640-ebda3cf716e6	qsf	2025-05-13 14:22:08.348961	2025-05-13 14:25:14.787459	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:08.348961	\N	f	\N
 79a432c4-9023-8943-8f59-95dcffcb786d	ds	2025-05-13 14:30:48.160056	2025-05-13 14:39:59.685987	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:30:48.160056	\N	f	\N
+279e0f30-7163-72a6-34db-2b558616b6ae	de	2025-06-01 09:59:28.584945	2025-06-01 09:59:49.385516	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 09:59:28.584945	\N	f	\N
 821ef307-b71c-5f71-e6f6-68489748dc3c	[message supprimé]	2025-05-13 11:32:39.287718	2025-05-13 11:33:19.483886	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:32:39.287718	2025-05-26 08:02:33.031179	t	\N
 92239247-6469-ba6b-31b1-e9cdac011031	s,gsfd	2025-05-13 11:45:17.152454	2025-05-17 13:18:33.054417	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-13 11:45:17.152454	\N	f	\N
 8e027c31-13b4-f8fd-70c2-e07d0d696807	tes	2025-05-17 14:19:35.427395	2025-05-17 14:55:11.069258	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 14:19:35.427395	\N	f	\N
+11cad8af-c507-9183-7cc6-649cecf9a2cd	frezfrse	2025-06-01 10:30:45.249541	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:30:45.249541	\N	f	\N
+2ca31c04-c130-de5e-3b47-c17ae1b7322f	dezafrze	2025-06-01 11:23:39.531934	2025-06-01 11:23:47.526285	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:23:39.531934	\N	f	\N
+469d1a34-1570-5ed2-8ac5-4ccb07e95648	hh	2025-06-01 11:38:10.625301	2025-06-01 11:38:10.759274	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:38:10.625301	\N	f	9806bac6-f79a-4110-35e2-57c5562989b2
+461a1ff7-f7e1-07dd-c693-2e8d7b108468		2025-06-01 13:45:50.498776	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"0dbc7054-f35f-a79c-80d7-d739a9022737\\"}]"	2025-06-01 13:45:50.498776	\N	f	\N
+c45a1d36-6d09-4df9-4a3c-bff3fbdfb67e	comment va ? 	2025-06-01 16:05:29.58156	2025-06-01 16:12:01.647943	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 16:05:29.58156	\N	f	\N
 b43b7e18-d04f-f8cd-9d15-e07191af414a	qedfqsf	2025-05-13 11:58:11.953489	2025-05-13 12:09:29.373886	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 11:58:11.953489	\N	f	\N
 d92e19d1-095d-ad7d-2184-2e930d662f81	Test	2025-05-17 09:44:46.093329	2025-05-17 11:24:02.432615	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-17 09:44:46.093329	\N	f	\N
 9356e827-6fd8-7034-48b1-806a780f29e7	Bb	2025-05-17 09:44:50.889108	2025-05-17 11:24:02.435851	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-17 09:44:50.889108	\N	f	\N
@@ -2130,6 +2296,10 @@ b93cb808-2d76-9b10-00c9-1508b9d66c43	ze	2025-05-13 09:47:43.86932	2025-05-13 09:
 8fd7bb4e-84ee-296c-e07b-8991b12ee2cf	merci	2025-05-08 10:29:36.578464	2025-05-08 10:32:24.254588	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-08 10:29:36.578464	\N	f	\N
 f7a19e82-afac-fec5-5d48-e1696370c021	Haha	2025-05-13 09:53:26.602736	2025-05-13 11:04:13.184795	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 09:53:26.602736	\N	f	\N
 fc8fb666-2fbd-af27-c93d-4d1be8420aec	Test	2025-05-13 09:57:49.05053	2025-05-13 11:04:13.189512	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 09:57:49.05053	\N	f	\N
+d40d975a-4e8e-32bd-8021-d1a496e904cb	hello	2025-06-01 10:01:38.147427	2025-06-01 10:02:13.587565	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:01:38.147427	\N	f	\N
+e6970558-dc83-2ce4-1f86-31d10db0bb7d	vfrvfrs	2025-06-01 10:31:22.050997	2025-06-01 10:31:32.560036	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:31:22.050997	\N	f	\N
+0ca895fa-3df8-ec4a-72e6-1e7d66a7b499	,kn	2025-06-01 11:26:37.448909	2025-06-01 11:26:51.697115	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:26:37.448909	\N	f	\N
+bc9c3cd2-8e4c-cfd8-0a40-997f59a67ddc	yes	2025-06-01 11:38:51.554163	\N	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:38:51.554163	\N	f	\N
 415d8bc4-56fa-ac98-630b-6d3137c15dda	lll	2025-05-17 12:46:20.8847	2025-05-17 13:58:07.167659	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 12:46:20.8847	\N	f	\N
 c4d2123f-b12e-6cc2-7fb0-77202dfe283d	test	2025-05-13 11:27:44.27392	2025-05-13 11:33:06.444424	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:27:44.27392	\N	f	\N
 0264e59b-16cc-fcb3-8e17-07f2a75e4ddc	test	2025-05-13 11:27:39.233412	2025-05-13 11:33:06.444836	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 11:27:39.233412	\N	f	\N
@@ -2181,6 +2351,9 @@ f55894a9-da50-e9ee-91f7-00824647642e	test	2025-05-13 11:27:49.690915	2025-05-13 
 7f4358d3-70ce-d717-dbe6-ce2a224e0e94	sf	2025-05-13 13:40:12.848572	2025-05-13 13:41:12.114053	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:40:12.848572	\N	f	\N
 e5b231fe-7d34-1aa7-23e4-034548bc1c10	s	2025-05-13 13:40:14.68857	2025-05-13 13:41:12.132147	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:40:14.68857	\N	f	\N
 14901abe-c656-3454-a393-434e4a19c015	[message supprimé]	2025-05-08 13:24:38.894581	2025-05-08 14:25:11.638227	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-08 13:24:38.894581	2025-05-19 10:59:42.859294	t	\N
+ee87efdb-7079-8a2a-b053-f6a0ba8b6674	deaz	2025-06-01 10:01:50.262941	2025-06-01 10:02:13.587565	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:01:50.262941	\N	f	\N
+fc57eeae-3127-29e3-c018-329f5fed7342	fref	2025-06-01 10:38:48.084635	2025-06-01 10:38:52.113942	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:38:48.084635	\N	f	\N
+bc935312-4a84-f93c-7b30-9ec21269a308	deazfzer	2025-06-01 11:27:53.998737	2025-06-01 11:27:57.204684	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:27:53.998737	\N	f	\N
 c28363b0-af45-6de8-a759-9fd2d1956ddb	s	2025-05-13 13:42:10.598841	2025-05-13 13:59:55.117683	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:42:10.598841	\N	f	\N
 14315b1a-85db-b359-e3f4-dd4ce38c862b	sdsd	2025-05-13 13:42:03.168294	2025-05-13 13:59:55.119738	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:42:03.168294	\N	f	\N
 a8f65d30-27cb-421c-4266-17d2254e9f4e	Salut 	2025-05-13 12:02:56.409613	2025-05-13 12:19:07.938547	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 12:02:56.409613	\N	f	\N
@@ -2195,7 +2368,10 @@ ec3132cb-9a1f-c9c6-4dad-3c00299a8a8d	ssdg	2025-05-13 13:39:05.830892	2025-05-13 
 e9892c86-a8a7-5946-287c-10a808ed0d65	sd	2025-05-13 14:50:17.314772	2025-05-13 14:51:06.870536	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:50:17.314772	\N	f	\N
 4902f7fa-de99-923a-4623-97138530ca63	qs	2025-05-13 14:22:09.244146	2025-05-13 14:25:14.787586	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:09.244146	\N	f	\N
 a28dfa3a-d714-5136-2fcc-de77969d0a77	fs	2025-05-13 14:50:40.294756	2025-05-13 14:51:06.870271	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:50:40.294756	\N	f	\N
+80a29011-90a1-e71c-f295-7c800e84d2f9	test	2025-06-01 19:48:28.535279	2025-06-02 12:06:06.316739	bb6a4d43-70d3-5e36-d943-dfdfc747491f	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 19:48:28.535279	\N	f	\N
+7bc091ed-208a-6d6f-a7f0-3f226b853634	ihihloihoh	2025-06-01 11:41:33.906914	2025-06-01 12:48:15.776495	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 11:41:33.906914	\N	f	\N
 369915cb-c435-0f34-fc4c-70c3701765f8	d	2025-05-13 14:30:48.283314	2025-05-13 14:39:59.680819	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:30:48.283314	\N	f	\N
+c6dd214c-7c30-3db6-643f-f2fd586090b8		2025-06-01 13:51:15.755751	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"3676722e-26ba-dd6c-7cb5-305c79a9d379\\"}]"	2025-06-01 13:51:15.755751	\N	f	\N
 d9c929ae-2e5d-ca4b-ab01-6943449c1d05	kk	2025-05-18 14:29:53.482749	2025-05-18 15:26:40.709253	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 14:29:53.482749	\N	f	\N
 01ba1603-fc68-0051-4472-99c8e6fa668d	a	2025-05-18 16:44:55.124192	2025-05-18 20:45:00.747773	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-18 16:44:55.124192	\N	f	\N
 4f053202-b10f-97f2-2dd6-48903c85f699	gay	2025-05-19 10:59:20.002106	2025-05-19 11:42:14.151928	bb6a4d43-70d3-5e36-d943-dfdfc747491f	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-19 10:59:20.002106	\N	f	f642bbdf-5566-1100-8217-331e5f0a6980
@@ -2226,6 +2402,7 @@ baa2cd64-de38-b2c3-2479-a894c867903d	yo	2025-05-13 12:05:38.101862	2025-05-13 12
 75079d54-6151-a845-d4b9-281e932f6e91	caca prout	2025-05-26 13:31:46.882521	2025-05-26 13:40:04.690949	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:31:46.882521	\N	f	\N
 f97fdf8f-dc75-4ce5-41db-33cc3d0821cc	fs	2025-05-13 13:40:13.494155	2025-05-13 13:41:12.119202	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:40:13.494155	\N	f	\N
 f4bb07e8-78d1-86a3-f087-39a19af2467b	qsd	2025-05-13 14:33:14.881867	2025-05-13 14:39:10.515662	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:33:14.881867	\N	f	\N
+6e69d8c8-78cd-1c18-1d05-8e25150f590d	cdza	2025-06-01 10:02:25.160056	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:02:25.160056	\N	f	\N
 d7630217-f633-4283-4ff3-214ef67b181b	qsd	2025-05-13 14:50:27.937348	2025-05-13 14:51:06.869677	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:50:27.937348	\N	f	\N
 35483b60-3329-e772-c324-0eaf44647bcd	fqs	2025-05-13 14:22:10.93147	2025-05-13 14:25:14.79437	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:10.93147	\N	f	\N
 c87d4093-11f5-bb5c-f7d7-65189c559d51	fqsfsq	2025-05-13 14:22:14.493591	2025-05-13 14:25:14.797208	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:14.493591	\N	f	\N
@@ -2238,7 +2415,12 @@ e5a9bc7d-34fd-7419-b459-a9d1a5f5ca79	sg	2025-05-13 13:39:06.949818	2025-05-13 13
 d3fc0394-27a4-1e48-d04d-210c56bf803f	adazda	2025-05-13 13:22:45.665473	2025-05-13 13:24:00.963873	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 13:22:45.665473	\N	f	\N
 31010ff9-2745-3ef8-ecd0-7762f5045b6e	d	2025-05-13 13:39:15.967928	2025-05-13 13:51:15.783593	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 13:39:15.967928	\N	f	\N
 ee9f18b1-1d97-6a1e-39fb-ffd435acc875	dd	2025-05-13 13:39:12.329379	2025-05-13 13:51:15.7865	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 13:39:12.329379	\N	f	\N
+6a74198a-8db7-f339-7fab-a85f768aef02	ferq	2025-06-01 10:38:55.417171	2025-06-01 10:39:45.174449	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:38:55.417171	\N	f	\N
+ede15ee7-e81f-fedd-8348-9965b1a9b8db	dzeadxd zfv gf ytnbh	2025-06-01 11:28:03.491279	2025-06-01 11:30:21.515319	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:28:03.491279	\N	f	\N
 dad0292a-f162-c0d7-f2de-df3fc2578aed	s	2025-05-13 13:42:15.702154	2025-05-13 13:59:55.155798	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:42:15.702154	\N	f	\N
+35220e9e-8e82-d755-161f-77c6ffd3787c		2025-06-01 13:52:31.542111	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"f0118d87-9fc1-6cb2-193e-9b7184b5faf9\\"}]"	2025-06-01 13:52:31.542111	\N	f	\N
+b4fbcce9-034e-8073-7994-e23f0691afb1	qsdqs	2025-06-02 12:25:22.014952	2025-06-02 12:29:34.561577	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-02 12:25:22.014952	\N	f	\N
+3f822531-5eca-16b4-d0e5-d225d3187b57		2025-06-01 11:41:53.385374	2025-06-01 15:58:52.062298	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"7c48efdb-b0e1-7d46-a928-6afc3f43b1b0\\"}]"	2025-06-01 11:41:53.385374	\N	f	\N
 2c634c02-47f9-bf2b-af8b-1b893bb3ba8e	[message supprimé]	2025-05-08 13:47:27.628617	2025-05-08 14:25:11.63396	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-08 13:47:27.628617	2025-05-19 10:59:42.859294	t	\N
 fd4ec554-34de-a2d0-12c8-53500bd73871	[message supprimé]	2025-04-29 13:54:50.507655	2025-04-30 12:08:40.918184	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:50.507655	2025-05-26 08:02:33.031179	t	\N
 73392a2a-6a50-b0d9-e2f0-06180db2c3e4	[message supprimé]	2025-05-17 11:13:56.473773	2025-05-17 11:15:41.00201	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 11:13:56.473773	2025-05-26 08:02:33.031179	t	\N
@@ -2247,7 +2429,7 @@ d0f6ee8c-0944-81ae-8911-c345ec617395	sdqd	2025-05-17 14:36:08.885318	2025-05-17 
 819595dd-be67-c622-0b6c-b94aa0247705	[message supprimé]	2025-05-13 09:23:36.65074	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	25c01514-5c67-6921-1cfa-6261c29e5d88	[]	2025-05-13 09:23:36.65074	2025-05-13 11:48:13.651445	t	\N
 8f8d096e-b15b-6aed-35b2-8ead306eee87	smldmdsfsf	2025-05-26 09:25:41.575225	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:25:41.575225	\N	f	\N
 6e40ebd1-741f-9802-c250-40306ac196b3	yo	2025-05-26 11:46:46.67888	2025-05-26 11:47:11.80927	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-26 11:46:46.67888	\N	f	\N
-79619f60-ca70-3b29-3e07-728dce83c4ab	caca	2025-05-26 13:44:12.118161	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:44:12.118161	\N	f	\N
+79619f60-ca70-3b29-3e07-728dce83c4ab	caca	2025-05-26 13:44:12.118161	2025-06-01 09:39:24.209523	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:44:12.118161	\N	f	\N
 1f39d863-2c37-5286-e0f9-73da3e9dae12	[message supprimé]	2025-04-29 12:32:07.97541	2025-04-29 12:48:42.175116	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 12:32:07.97541	2025-05-19 10:59:42.859294	t	\N
 934c7058-3474-ad2d-0dac-88a22c213a21	[message supprimé]	2025-05-13 12:53:22.95961	2025-05-13 13:22:23.631858	bb6a4d43-70d3-5e36-d943-dfdfc747491f	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 12:53:22.95961	2025-05-19 07:34:59.606768	t	\N
 b9a25355-c3a3-ca25-0ba8-a09ec5942e77	g	2025-05-17 15:11:48.727419	2025-05-17 15:16:13.087851	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 15:11:48.727419	\N	f	\N
@@ -2271,6 +2453,7 @@ df65d883-d9a2-9f92-bf81-513d6f99aee5	[message supprimé]	2025-04-29 13:54:51.185
 2642a529-9fd8-9935-c494-e6f0d58689b3	[message supprimé]	2025-04-29 13:54:51.446683	2025-04-30 12:08:40.918618	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:51.446683	2025-05-26 08:02:33.031179	t	\N
 e939f59d-ee4b-ad4f-6f88-8025bd9e73ce	[message supprimé]	2025-04-29 13:54:51.79028	2025-04-30 12:08:40.919563	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:51.79028	2025-05-26 08:02:33.031179	t	\N
 a2f29295-6fba-a537-20d6-08c375c44027	[message supprimé]	2025-04-29 13:54:51.943264	2025-04-30 12:08:40.920556	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:51.943264	2025-05-26 08:02:33.031179	t	\N
+5dd401a9-8eb3-115b-e376-bfa914bcec4d	gre	2025-06-01 10:04:52.405471	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:04:52.405471	\N	f	\N
 4bdb705c-b3d6-75da-ceb9-cfbff53f1bf9	Salut 	2025-05-13 09:47:59.318058	2025-05-13 11:04:13.179328	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 09:47:59.318058	\N	f	\N
 f9837908-a516-0309-8306-59b3cc6066ca	k	2025-05-13 14:33:17.812705	2025-05-13 14:39:10.520996	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:33:17.812705	\N	f	\N
 d780e008-a90a-7be7-3d82-e8eb8d3898e5	p	2025-05-13 14:50:32.298115	2025-05-13 14:51:06.870014	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:50:32.298115	\N	f	\N
@@ -2280,6 +2463,11 @@ e73f40e8-4f27-3675-12d8-e526c50ee135	qs	2025-05-13 14:22:15.356418	2025-05-13 14
 11f351f3-24e5-7f0e-59df-4dd264f933b2	d	2025-05-13 13:39:21.102657	2025-05-13 13:51:15.784956	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 13:39:21.102657	\N	f	\N
 227cb7f5-b8b0-713b-7492-a3fbab71f33f	ss	2025-05-13 13:42:20.210015	2025-05-13 13:59:55.1578	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:42:20.210015	\N	f	\N
 2dc4939a-b112-c4ed-16ad-96f96548aa66	s	2025-05-13 13:42:20.723078	2025-05-13 13:59:55.158353	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:42:20.723078	\N	f	\N
+1dac488c-e741-5388-617b-d49741ba934f	grseg	2025-06-01 10:39:51.374532	2025-06-01 10:40:03.839173	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:39:51.374532	\N	f	\N
+2c373441-a4c6-e757-4b50-94ba363ef76c		2025-06-01 13:56:16.775526	2025-06-01 15:58:52.144829	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"9c118022-99a6-2baa-52e0-2d6c018065f4\\"}]"	2025-06-01 13:56:16.775526	\N	f	\N
+8b217c75-b39f-3d55-63f2-42fc60c37e47	[message supprimé]	2025-06-01 11:48:58.819972	2025-06-01 12:41:49.154792	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 11:48:58.819972	2025-06-01 12:22:28.991218	t	\N
+569ef44d-3d70-0845-fc1f-c55ca4a1337d		2025-06-01 11:28:34.737376	2025-06-01 11:52:03.944758	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	"[{\\"id\\":\\"0ab34186-5372-8d4c-c5a3-5b91ad01541e\\"}]"	2025-06-01 11:28:34.737376	\N	f	\N
+90360510-4058-6099-b554-65ead14e0d7b	Test	2025-06-02 12:31:40.857477	2025-06-02 12:39:55.068435	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-06-02 12:31:40.857477	\N	f	\N
 6dd551fe-f885-8031-2525-11c26ddf852c	[message supprimé]	2025-05-13 09:24:13.581958	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	00000000-0000-0000-0000-000000000001	[]	2025-05-13 09:24:13.581958	2025-05-13 11:48:29.959963	t	\N
 334cd564-97a7-7cb0-a615-d7d6a6d3cb94	pipi	2025-05-19 14:56:14.915709	2025-05-26 11:45:38.088094	bb6a4d43-70d3-5e36-d943-dfdfc747491f	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-19 14:56:14.915709	\N	f	\N
 a909b2b0-24cf-68e6-74b1-d64b450aefac	ojkjkok^pk	2025-05-26 09:26:06.284901	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:26:06.284901	\N	f	\N
@@ -2296,11 +2484,15 @@ aa900129-cebd-9278-2db5-c2c238684a52	tesqxt	2025-05-13 13:29:31.519063	2025-05-1
 06b7b031-5911-9340-0238-9da97b7cc2e6	trhr	2025-05-26 11:47:01.288763	2025-05-26 11:47:11.80927	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-26 11:47:01.288763	\N	f	\N
 d8b5af07-40e1-7090-7375-25ed3cb46b2a	diff	2025-05-13 14:35:26.488583	2025-05-13 14:39:10.518757	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:35:26.488583	\N	f	\N
 571ee35d-a9d2-322a-4075-3bbe119e0e01	m	2025-05-17 12:50:42.302899	2025-05-17 13:58:07.170113	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 12:50:42.302899	\N	f	\N
-6ae2e17c-028f-9800-5612-15518c373277	caca	2025-05-26 13:45:48.4736	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:45:48.4736	\N	f	\N
+6ae2e17c-028f-9800-5612-15518c373277	caca	2025-05-26 13:45:48.4736	2025-06-01 09:39:24.521541	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:45:48.4736	\N	f	\N
+f116179d-f08f-d29d-7bf7-18d725321448	cdece	2025-06-01 10:05:14.698002	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:05:14.698002	\N	f	\N
+c1672a3c-9d3b-2ab5-988f-8468521647c2	grse	2025-06-01 10:40:13.473636	2025-06-01 10:59:48.609296	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:40:13.473636	\N	f	\N
 8e13959c-17f0-f1dc-5dd5-133df6a1a778	Test	2025-05-13 08:02:41.682562	2025-05-13 08:59:59.62045	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 08:02:41.682562	\N	f	\N
+6f7b9106-7cde-1d76-9956-402d96576822		2025-06-01 13:56:55.57463	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"bd29e50f-3db1-aaca-db5e-42fced78bf41\\"}]"	2025-06-01 13:56:55.57463	\N	f	\N
 640bda70-fdc1-b12a-a67d-67b08da3999e	dsf	2025-05-17 15:11:21.229803	2025-05-17 15:16:13.091659	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 15:11:21.229803	\N	f	\N
 6efb3d05-572d-1683-8a6a-57a6b1153305	lklk	2025-05-17 14:20:27.029072	2025-05-17 14:55:11.069363	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 14:20:27.029072	\N	f	\N
 0428a2f6-4524-db60-cea0-428ae8cef77f	qfsqs	2025-05-17 14:20:33.622772	2025-05-17 14:20:34.595593	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:20:33.622772	\N	f	\N
+4d075136-68a3-2251-7f52-0cbf32f26162	a	2025-06-01 11:54:26.958085	2025-06-01 14:59:00.064039	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 11:54:26.958085	\N	f	\N
 45e9bbe8-2d01-ec5d-718b-daca03dd65b2	dq	2025-05-13 14:22:14.852623	2025-05-13 14:25:14.802369	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:14.852623	\N	f	\N
 9176f37c-7cfc-5eb5-1f41-31c43f5977f2	d	2025-05-13 14:22:15.66772	2025-05-13 14:25:14.807594	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:15.66772	\N	f	\N
 77447078-b5b1-3a94-a5ec-232111bf41f7	fqfqs	2025-05-17 14:20:13.357743	2025-05-17 14:20:14.14044	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:20:13.357743	\N	f	\N
@@ -2314,11 +2506,13 @@ ae994af1-aee2-c37a-02c2-a2464d35cd0a	[message supprimé]	2025-05-13 11:56:56.006
 27afe61b-68d4-5b70-7647-8a67f8514509	mmm	2025-05-18 13:46:04.938675	2025-05-18 15:26:40.665271	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 13:46:04.938675	\N	f	\N
 2b0774ce-7f24-6f30-2618-57bae540bb0d	sdqsq	2025-05-18 13:52:07.414287	2025-05-18 15:26:40.673856	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 13:52:07.414287	\N	f	\N
 6c94d1ff-98f6-bc6e-4846-05fa3278adfb	mmmm	2025-05-18 13:54:50.696679	2025-05-18 15:26:40.683774	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 13:54:50.696679	\N	f	\N
+3ade204d-b8f7-3d4f-40d1-2e7240d1e5be		2025-06-01 11:29:00.430188	2025-06-01 15:58:52.061905	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"d4bac316-72e3-ae59-56b0-cfa10d2c3f07\\"}]"	2025-06-01 11:29:00.430188	\N	f	\N
 b019508f-18a0-2181-799f-86507af7eedb	[message supprimé]	2025-04-29 12:38:00.442888	2025-04-29 12:48:42.177452	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 12:38:00.442888	2025-05-19 10:59:42.859294	t	\N
 6784fbd0-3d4d-2114-e1bc-6bbefdf77f45	[message supprimé]	2025-05-04 14:48:43.961763	2025-05-04 14:49:25.435461	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-04 14:48:43.961763	2025-05-19 10:59:42.859294	t	\N
 31adc5f2-13b3-d6c9-bd53-d9027cfb1580	b	2025-05-19 10:58:59.82015	2025-05-19 11:42:14.151601	bb6a4d43-70d3-5e36-d943-dfdfc747491f	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-19 10:58:59.82015	2025-05-19 10:59:35.094509	f	\N
 c57a52dd-2987-e1cd-efd9-cd686920c3db	a	2025-05-19 11:57:20.8966	2025-05-19 12:08:57.783902	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:57:20.8966	\N	f	\N
 ffc08e1e-1f0e-c79b-2420-8940a5fb3017	K	2025-05-19 11:49:50.872732	2025-05-19 12:08:57.749264	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:49:50.872732	\N	f	\N
+f7d1ffd0-c79a-70a4-e951-9b12cfbfed29	Caca	2025-06-02 12:31:46.437058	2025-06-02 12:39:55.03527	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-06-02 12:31:46.437058	\N	f	\N
 755e99d2-e6bd-e65f-bf01-2b3035e43931	jdz	2025-05-19 12:37:32.962918	2025-05-19 13:25:05.409755	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:37:32.962918	\N	f	\N
 9698b6d1-7374-b102-ff7f-6c6f1881409c	[message supprimé]	2025-04-29 13:54:51.5969	2025-04-30 12:08:40.918996	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:51.5969	2025-05-26 08:02:33.031179	t	\N
 fcf89989-16bb-0e0d-d0be-6712f062333b	dsdfqdfdqfq	2025-05-26 09:33:04.142501	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:33:04.142501	\N	f	\N
@@ -2350,12 +2544,14 @@ eda919af-6ecf-d616-0da4-c4c610675c28	zdfpjzpofhzpfjpzzjfpzjfpjzfpizefpzepFzefzef
 b400b3f5-93e3-02bd-55c2-94dd2e333018	sgsg	2025-05-17 15:11:35.294022	2025-05-17 15:16:13.092698	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 15:11:35.294022	\N	f	\N
 44bb22f0-7205-0b86-f294-a4f38dea3ef8	fqsf	2025-05-13 13:29:34.886512	2025-05-13 13:30:03.787561	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:29:34.886512	\N	f	\N
 5cec789b-35a8-215d-5a22-43be494e4e8e	oui	2025-05-13 12:11:08.478186	2025-05-13 12:19:07.952836	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 12:11:08.478186	\N	f	eda919af-6ecf-d616-0da4-c4c610675c28
-4307ed41-f1de-8a0c-6b2c-1224ecec3a58	caca	2025-05-26 13:46:38.588982	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:46:38.588982	\N	f	\N
+4307ed41-f1de-8a0c-6b2c-1224ecec3a58	caca	2025-05-26 13:46:38.588982	2025-06-01 09:39:24.526624	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:46:38.588982	\N	f	\N
 06856c99-38dc-5e72-4ec7-e046144e384b	[message supprimé]	2025-05-13 11:35:42.629727	2025-05-13 11:42:46.639891	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-13 11:35:42.629727	2025-05-19 10:59:42.859294	t	\N
 c7e62e1a-0260-3262-d8cb-885b303453d8	sssss	2025-05-17 13:21:10.463386	2025-05-17 13:58:07.169856	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 13:21:10.463386	\N	f	\N
 e5b74a5a-60e7-7fe1-7506-7d33cc34747d	fdgfdg	2025-05-17 16:10:01.806714	2025-05-18 12:27:25.212757	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 16:10:01.806714	\N	f	\N
+99c1c5b2-1a4f-162e-0723-e7054db7d3c6	gtre	2025-06-01 10:07:33.794682	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:07:33.794682	\N	f	\N
 b3987861-89af-d2f2-3e66-52630c04076f	ezf	2025-05-17 09:52:39.226122	2025-05-17 11:24:02.445026	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-17 09:52:39.226122	\N	f	\N
 c9ed2ab3-d175-1cea-96d7-71f490367ff7	Salut	2025-05-13 14:16:23.53274	2025-05-13 14:51:35.424085	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 14:16:23.53274	\N	f	\N
+7b2df884-228d-6828-724f-0d4db3971555	frze	2025-06-01 10:59:50.712075	2025-06-01 11:09:21.840823	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:59:50.712075	\N	f	\N
 c55c84c6-94e7-4964-a97d-4a7cb4a196ae	aezfeza	2025-05-17 09:52:33.453816	2025-05-17 11:24:02.445352	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-17 09:52:33.453816	\N	f	\N
 3b6a9a24-f769-7376-c83f-11491d9860f8	[message supprimé]	2025-05-13 11:35:07.798397	2025-05-13 11:38:25.528598	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-13 11:35:07.798397	2025-05-19 07:34:59.606768	t	\N
 3ef54608-bbe0-302b-15c2-c96c8f6749ed	[message supprimé]	2025-05-13 13:32:26.181742	2025-05-17 13:58:07.188194	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-13 13:32:26.181742	2025-05-19 07:34:59.606768	t	\N
@@ -2372,6 +2568,8 @@ b6065911-79f8-36f6-faf9-459ffcad909c	[message supprimé]	2025-04-30 12:51:14.986
 8315531c-f97c-4054-213a-4993f4317b24	ll	2025-05-19 11:51:15.503527	2025-05-19 12:08:57.775901	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:51:15.503527	\N	f	\N
 e0c74cec-7665-34ab-6b84-22f23785e75e	A	2025-05-19 12:00:02.581943	2025-05-19 13:25:05.156749	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:00:02.581943	\N	f	\N
 d5960bbe-8c8b-14b0-7bf6-22538a32aaaf	[message supprimé]	2025-04-29 13:54:51.803665	2025-04-30 12:08:40.919801	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:51.803665	2025-05-26 08:02:33.031179	t	\N
+774a91ca-5bdf-d820-62bf-c3e40ff52de2	a	2025-06-01 11:54:32.304171	2025-06-01 14:59:00.064039	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 11:54:32.304171	\N	f	\N
+d3398083-0c89-335b-6ca4-d0334c30c9fc		2025-06-01 11:30:23.215852	2025-06-01 15:58:52.061145	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"35bb7962-3c00-a36e-9bed-e6f5c3e468de\\"}]"	2025-06-01 11:30:23.215852	\N	f	\N
 ef1dfad4-0fa6-9b57-290f-b0ccb2a69860	s	2025-05-13 13:40:09.297244	2025-05-13 13:41:12.111204	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:40:09.297244	\N	f	\N
 a226a8e1-f416-e2f9-fd19-f8683010cd9c	g	2025-05-13 08:36:52.112021	2025-05-13 09:34:48.833954	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 08:36:52.112021	\N	f	\N
 cfa620cb-75ae-9d7e-a79b-19335eb7999c	sfs	2025-05-13 13:40:03.243755	2025-05-13 13:41:12.107172	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 13:40:03.243755	\N	f	\N
@@ -2413,7 +2611,6 @@ cd78376a-3a55-fd79-f1bb-25880ab9c1b4	coucouc beau gosse	2025-05-17 10:24:02.0290
 93435da1-576f-d446-8ead-79d486fb94ec	Test	2025-05-17 13:49:21.831238	2025-05-17 13:49:45.341577	a5c1b268-937f-af11-4ca2-2c96634fbe2e	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	[]	2025-05-17 13:49:21.831238	\N	f	70b58d51-04af-1629-be97-ac85a439837d
 d65a3282-46bf-cc46-a741-2f9e1fe9e583	sqdqd	2025-05-17 14:36:23.308277	2025-05-17 15:19:07.396395	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 14:36:23.308277	\N	f	\N
 e903e63c-6779-6bc0-c32d-a56f6754e004	jjj	2025-05-17 14:55:00.250056	2025-05-17 15:19:07.403729	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 14:55:00.250056	\N	f	\N
-f7c9af46-ca85-983a-a314-7b14a8dc846f	test	2025-05-26 13:48:56.979607	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:48:56.979607	\N	f	\N
 a533c7bd-e61e-5dc6-0b3a-0758063e813a	qs	2025-05-17 14:20:16.754552	2025-05-17 14:20:19.669877	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:20:16.754552	\N	f	\N
 35e72e78-484b-a5ce-6a83-aa640163b689	aaa	2025-05-17 13:21:18.977905	2025-05-17 13:58:07.171105	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 13:21:18.977905	\N	f	\N
 8cdff91d-4d65-9c31-1ef8-630a0e45db18	dfdsfdsfsdf	2025-05-17 09:53:00.740653	2025-05-17 11:24:02.447233	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-17 09:53:00.740653	\N	f	\N
@@ -2478,6 +2675,7 @@ a59fbad2-bed8-f4e6-0666-a2e77f43f822	[message supprimé]	2025-04-29 12:18:35.837
 eaf16bb0-9c32-3b17-63f7-3b5d9783f1f4	[message supprimé]	2025-04-29 13:51:58.562737	2025-04-29 14:02:46.778713	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 13:51:58.562737	2025-05-19 10:59:42.859294	t	\N
 a63afbae-3945-e8cc-02e3-bef08aa9095e	[message supprimé]	2025-04-29 14:13:46.61287	2025-04-29 14:16:25.978534	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 14:13:46.61287	2025-05-19 10:59:42.859294	t	\N
 113f25d2-aae8-8666-a8b8-1ac042094fc8	JVHJV	2025-05-26 11:55:24.781505	2025-05-26 12:09:24.393825	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 11:55:24.781505	\N	f	\N
+b11c5890-6e4f-d856-93e3-34073084ef4a	greg	2025-06-01 10:10:49.965277	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:10:49.965277	\N	f	\N
 00a1f569-34c2-3e07-d357-3c45e66491e9	mmmm	2025-05-17 15:31:22.339456	2025-05-17 15:58:15.136556	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-17 15:31:22.339456	\N	f	\N
 eaa525d0-3d73-7d5c-4810-98705885cc0d	[message supprimé]	2025-04-29 12:29:44.563262	2025-04-29 12:37:36.615153	00000000-0000-0000-0000-000000000003	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-04-29 12:29:44.563262	2025-05-19 10:59:42.859294	t	\N
 64e52a1d-971c-d0cc-413f-86e9ce14edfa	qfzdsf	2025-05-17 13:42:57.592236	2025-05-17 14:32:36.055284	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 13:42:57.592236	\N	f	013950dd-13e8-43f8-ec2f-410acf45ea91
@@ -2524,10 +2722,14 @@ cd1fb00f-7f79-dd0a-93c5-28e9424bba0f	klkjlkj	2025-05-26 12:07:35.121533	2025-05-
 10a0dbbd-4bef-c9ce-c6d2-dfb5e30ef862	kk	2025-05-26 14:00:01.155751	2025-05-26 14:13:54.841479	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 14:00:01.155751	\N	f	\N
 e6ef0a81-54e8-4c46-3f04-4e863027aac1	mlk	2025-05-19 12:59:26.11888	2025-05-19 13:35:34.886733	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:59:26.11888	\N	f	\N
 544af20d-2c12-24f5-fbfe-094c9390ee18	ll	2025-05-19 13:41:30.965858	2025-05-20 12:13:35.575265	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-19 13:41:30.965858	\N	f	340e65de-9f34-aa8d-4ce1-aa1da4b29d18
+18608fcd-0e38-0628-d9a5-c97ebcf51cd8	ezrvre	2025-06-01 10:08:02.097478	2025-06-01 10:11:23.087788	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:08:02.097478	\N	f	\N
 9d85b514-75cc-ccd1-fb6d-2ece11ffe7ee		2025-05-20 11:37:54.654949	2025-05-20 12:33:27.593835	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"1293cf8e-405e-fcf1-d0e4-424288c0b4ea\\"}]"	2025-05-20 11:37:54.654949	\N	f	\N
+c716ee02-40cf-2fad-89a8-b4cc904a4623	yo	2025-06-01 10:11:25.043111	2025-06-01 10:12:45.362412	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 10:11:25.043111	\N	f	\N
+09f8f1e5-1413-41fc-050e-da14d9ff54bd	vrez	2025-06-01 11:06:04.147284	2025-06-01 11:09:21.840823	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:06:04.147284	\N	f	\N
 91bd6bcb-6ac1-8f1a-23a3-a174ec9d6488		2025-05-20 11:59:24.572997	2025-05-22 09:53:12.041327	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	"[{\\"id\\":\\"26dd04b2-eafc-7844-e3b6-9cd4aa1e9f43\\"}]"	2025-05-20 11:59:24.572997	\N	f	\N
 ffbd5343-294a-a924-8a3e-b2737112f006	[message supprimé]	2025-05-17 11:13:35.939341	2025-05-17 11:32:31.086667	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-17 11:13:35.939341	2025-05-26 08:02:33.031179	t	\N
 e5fa1170-4d18-c6a8-ef35-2b723a73ca3f	[message supprimé]	2025-05-19 12:07:06.661172	2025-05-19 12:42:59.845603	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-19 12:07:06.661172	2025-05-26 08:02:33.031179	t	\N
+bcf2beb9-e63a-893e-9bd3-0217756e1fc2	jbbkbio  ;;;	2025-06-01 11:30:30.589297	2025-06-01 11:30:38.307344	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:30:30.589297	2025-06-01 12:34:43.525415	f	\N
 f9af1219-4059-36bd-a1d0-f27451554302	zrter	2025-05-13 14:37:48.346648	2025-05-13 14:39:10.522228	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:37:48.346648	\N	f	\N
 013950dd-13e8-43f8-ec2f-410acf45ea91	qdfqsd	2025-05-17 12:29:31.411857	2025-05-17 12:29:44.082416	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 12:29:31.411857	\N	f	\N
 14481fbf-db7e-7ba4-458e-1b4950fe9b2d	test	2025-05-17 12:29:39.153721	2025-05-17 12:29:44.220501	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 12:29:39.153721	\N	f	013950dd-13e8-43f8-ec2f-410acf45ea91
@@ -2557,28 +2759,36 @@ ac7e5a15-bf4f-4676-fad2-f5e23b138349	[message supprimé]	2025-05-17 15:06:38.035
 871986ab-bb25-e336-6e68-07524f79629d	Gay	2025-05-19 11:42:14.011618	2025-05-19 11:44:59.333447	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:42:14.011618	\N	f	\N
 f68adf65-9b92-4490-7475-abe3e5e9f872	test	2025-05-18 14:37:30.696049	2025-05-18 15:26:40.724426	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 14:37:30.696049	\N	f	\N
 dd0110a9-87a7-edf7-e860-ddb4171411d0	dgh	2025-05-17 14:20:18.583892	2025-05-17 14:20:18.868541	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:20:18.583892	\N	f	\N
-650d4df6-b802-97aa-4617-09a79879f30d	est	2025-05-26 14:15:09.370645	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:09.370645	\N	f	\N
+650d4df6-b802-97aa-4617-09a79879f30d	est	2025-05-26 14:15:09.370645	2025-06-01 09:39:24.527183	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:09.370645	\N	f	\N
 ecc4d734-acfa-06f5-977f-d9d9389cc548	n	2025-05-19 11:53:53.463444	2025-05-19 12:08:57.759322	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:53:53.463444	\N	f	\N
 0c69d78d-536b-59fb-952f-d886077e5ed6	test	2025-05-26 12:08:08.575914	2025-05-26 12:08:41.083135	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 12:08:08.575914	\N	f	\N
 f0de7bc3-15b0-f4d0-70ed-28a91af7a924	d	2025-05-26 12:08:12.170792	2025-05-26 12:08:41.08372	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 12:08:12.170792	\N	f	\N
 99981883-14a3-1568-030e-f82bd0147c48	oui	2025-05-20 10:12:59.734634	2025-05-22 09:53:12.038832	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-20 10:12:59.734634	\N	f	\N
 b8e012ab-c59e-749e-cc23-3a75e9041fcd	yo	2025-05-20 10:09:29.306047	2025-05-20 12:33:27.453116	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 10:09:29.306047	\N	f	\N
 93ca9e45-2bf4-21c8-6ee1-64c8f01acb01	a	2025-05-19 14:08:03.89937	2025-05-20 12:13:35.576097	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-19 14:08:03.89937	\N	f	\N
+f260d2fa-4a48-9a31-ab80-75b1ec0514aa	fervre	2025-06-01 10:12:47.235765	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:12:47.235765	\N	f	\N
+42686db1-8b28-0d1c-968b-b61f7948a116	dezaea	2025-06-01 11:00:08.780227	2025-06-01 11:09:21.840823	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:00:08.780227	\N	f	\N
 93713525-9d39-1b7a-4d3e-3f825b6a0c52		2025-05-20 12:09:41.870671	2025-05-22 09:53:12.040992	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	"[{\\"id\\":\\"49f56282-a0e6-5e66-1fcb-a06dcf322aa6\\"}]"	2025-05-20 12:09:41.870671	\N	f	\N
 0f1f23f4-6a97-af15-c0a3-3f9a7c4c4d17	hello	2025-05-20 14:36:58.885508	2025-05-26 13:21:30.566631	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 14:36:58.885508	\N	f	\N
 b2f3a1f5-c7c9-61d1-3ae1-5da4efc95fcb	hello	2025-05-20 14:36:51.704496	2025-05-26 13:21:30.570257	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 14:36:51.704496	\N	f	\N
 eb5905ee-d387-b28a-3aaf-3b3a571d1846	roihgerhig	2025-05-22 09:48:06.626635	2025-05-22 09:53:15.868275	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-22 09:48:06.626635	\N	f	26837983-c01e-5ba0-209e-977278705c07
+76ea43db-8a3c-5155-fb90-d51d5eddbd3b	n,k	2025-06-01 11:30:40.71096	2025-06-01 11:32:31.075434	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:30:40.71096	\N	f	\N
 73f3774d-28d2-42a7-e717-549f31e76c8f	[message supprimé]	2025-05-17 13:30:47.920602	2025-05-17 13:52:23.314882	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-17 13:30:47.920602	2025-05-26 08:02:33.031179	t	\N
 eea8ad7b-cddf-b994-b3e3-b0bad0a69b2a	[message supprimé]	2025-05-20 12:50:03.41295	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	"[{\\"id\\":\\"5d527ee9-3dc4-7aa6-4874-2eaed5c37d34\\"}]"	2025-05-20 12:50:03.41295	2025-05-26 08:02:33.031179	t	\N
 823c63c8-da52-6c3c-c6bc-7a71c950a29b	LLL	2025-05-20 12:10:51.690234	2025-05-22 09:53:11.951085	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-20 12:10:51.690234	\N	f	\N
 42eaa66d-9a0a-2735-7929-4c0483f4939d	[message supprimé]	2025-05-20 12:55:17.37773	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-20 12:55:17.37773	2025-05-26 08:02:33.031179	t	\N
 7d836ce3-cd44-8a40-759c-f5183d247936	[message supprimé]	2025-05-19 14:48:13.814968	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-19 14:48:13.814968	2025-05-26 08:02:33.031179	t	\N
 3d6c89a6-ac4b-16b3-16d8-969a9dd49e3d	[message supprimé]	2025-05-20 13:17:52.708674	2025-05-22 07:54:38.793291	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-20 13:17:52.708674	2025-05-26 08:02:33.031179	t	\N
+57387ea0-e289-4a16-c311-452a81033d55	[message supprimé]	2025-06-01 12:35:02.822368	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 12:35:02.822368	2025-06-01 12:35:44.562792	t	\N
+2ddc3707-f6d0-38c1-169d-ff9fbb2685c8		2025-06-01 14:13:44.825115	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"88eb3d38-e96d-adef-605d-e2919a7e7d7e\\"}]"	2025-06-01 14:13:44.825115	\N	f	\N
+f5c8c0a7-012c-d19e-9ef0-cc96767097f3	Test	2025-06-02 12:39:40.875158	2025-06-02 12:40:47.238617	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-06-02 12:39:40.875158	\N	f	\N
 f53c988f-0c93-c963-9b3a-b3b8a131838e	sfdfzf	2025-05-26 09:44:31.624555	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:44:31.624555	\N	f	\N
 d105f2bc-cabe-b24c-0a22-41e4927df37f	Fitd	2025-05-17 14:22:15.289669	2025-05-17 14:22:17.651202	a5c1b268-937f-af11-4ca2-2c96634fbe2e	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	[]	2025-05-17 14:22:15.289669	\N	f	\N
 2e0cf27d-933f-fa78-908e-5dcf8ede949b	Test 	2025-05-13 14:15:40.756968	2025-05-13 14:51:35.421618	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-13 14:15:40.756968	\N	f	\N
 7a778ce7-721e-65c5-d36d-f1b4676f9b83	qs	2025-05-17 14:28:52.346535	2025-05-17 14:28:55.092099	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:28:52.346535	\N	f	\N
 e6437ffc-6712-8b8e-01d0-9827bdf820b8	d	2025-05-26 12:08:18.474305	2025-05-26 12:08:41.084076	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 12:08:18.474305	\N	f	\N
+32928ea6-b94e-2796-a574-3f1ca62492fc	frfez	2025-06-01 11:09:23.573752	2025-06-01 11:09:39.613955	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:09:23.573752	\N	f	\N
+47090aea-5574-0aa7-426e-8345702db199	Test	2025-06-02 12:32:04.972581	2025-06-02 12:39:54.714978	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-06-02 12:32:04.972581	\N	f	\N
 3f3b61be-2471-e39a-bcb5-04b97d801bf5	wv	2025-05-17 14:28:51.978661	2025-05-17 14:28:52.336547	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:28:51.978661	\N	f	\N
 8749a4e1-c1ff-bc42-d588-e655a9ed0c61	f	2025-05-13 14:22:09.42235	2025-05-13 14:25:14.789555	c8eb671d-f3b4-41f6-7364-0f292619dfdc	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:22:09.42235	\N	f	\N
 3b0efd3e-99f9-1398-a55b-35a63f6c113f	test	2025-05-17 13:52:31.430306	2025-05-17 13:52:31.673626	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 13:52:31.430306	\N	f	82502c48-40b3-729f-bbae-0cb4e83fd111
@@ -2588,12 +2798,11 @@ f6a93d10-4021-d694-c110-2d0bb8f06720	test	2025-05-17 12:38:46.920017	2025-05-17 
 797abf3b-39f2-c96f-2917-50fb6ff369f4	hello	2025-05-20 14:37:13.117195	2025-05-26 13:21:30.566785	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 14:37:13.117195	\N	f	\N
 8dc81401-ae0e-7914-7c6a-ab57bbea3258	fgd	2025-05-17 14:20:16.774908	2025-05-17 14:20:18.302032	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:20:16.774908	\N	f	\N
 b576952c-210c-b3d5-bf75-396740db511c	sdqdsqdq	2025-05-17 16:04:11.582493	2025-05-18 12:27:25.210157	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 16:04:11.582493	\N	f	\N
-62b70624-5bf4-9826-eef6-3c6f38cb7248	ds	2025-05-26 14:15:11.370273	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:11.370273	\N	f	\N
-25cac6ce-9bfb-58a2-0230-f2bb299840b9	est	2025-05-26 14:15:26.260642	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:26.260642	\N	f	\N
 9debb43a-3395-cd3f-f86f-f237bf73e151	test	2025-05-13 14:39:21.667728	2025-05-13 14:39:21.713914	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-13 14:39:21.667728	\N	f	\N
 f07b7806-0dd9-4a3b-9201-dff9b5e7271c	j	2025-05-20 11:25:45.946934	2025-05-20 12:33:27.598804	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-20 11:25:45.946934	\N	f	\N
 3297a4b8-5343-8561-3b1a-37f7bf1f968a	a	2025-05-19 12:09:44.110073	2025-05-19 13:25:05.157615	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:09:44.110073	\N	f	\N
 332d797f-e231-77fb-7f40-1e553c79619a	aaaaa	2025-05-18 13:38:14.132036	2025-05-18 15:26:40.615877	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 13:38:14.132036	\N	f	\N
+25cac6ce-9bfb-58a2-0230-f2bb299840b9	est	2025-05-26 14:15:26.260642	2025-06-01 09:39:24.528709	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:26.260642	\N	f	\N
 628bf56c-99db-6fc2-2d35-8f22e7da0bce	kkkkk	2025-05-18 14:07:46.44655	2025-05-18 15:26:40.702553	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 14:07:46.44655	\N	f	\N
 de2804c9-85fd-121e-8ba6-048e2017f1df	sf	2025-05-17 14:31:50.817836	2025-05-17 14:31:52.438684	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:31:50.817836	\N	f	\N
 cc7b5dd3-8400-4b0b-6eff-d7903fccb158	lklklklk	2025-05-18 14:07:16.190898	2025-05-18 15:26:40.703074	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-18 14:07:16.190898	\N	f	\N
@@ -2607,9 +2816,15 @@ f97712c6-a02a-cbf2-5dd2-6a021192b5c1	[message supprimé]	2025-05-13 14:16:31.294
 a2354d92-34c9-4d95-aed3-519fee8ef61d	[message supprimé]	2025-05-13 12:53:11.67602	2025-05-13 13:22:23.614998	bb6a4d43-70d3-5e36-d943-dfdfc747491f	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 12:53:11.67602	2025-05-19 07:34:59.606768	t	\N
 58066262-38e9-e31c-5b60-ce51d1ad6506	Test	2025-05-19 11:47:37.681625	2025-05-19 12:06:39.20415	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-05-19 11:47:37.681625	\N	f	\N
 f455803b-836c-69e5-40e6-ddb6bba73e3c		2025-05-20 11:25:30.303503	2025-05-20 12:33:27.61671	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"d46a8bd2-4951-8b8a-f6a8-84c8669bf2bb\\"}]"	2025-05-20 11:25:30.303503	\N	f	\N
+62b70624-5bf4-9826-eef6-3c6f38cb7248	ds	2025-05-26 14:15:11.370273	2025-06-01 09:39:24.527371	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:15:11.370273	\N	f	\N
 6df1cc33-887b-0171-0d2d-c80a77a40ca7	ll	2025-05-19 13:30:33.601809	2025-05-19 13:34:33.457943	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-19 13:30:33.601809	\N	f	\N
+c2ff33e6-f2d9-1c4a-870e-89f2ff526712	[message supprimé]	2025-06-01 12:37:30.536033	\N	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 12:37:30.536033	2025-06-01 12:37:43.291352	t	\N
 7dc90178-bd92-4632-d1ae-7b1e85a5d5dd	mm	2025-05-19 13:38:53.966326	2025-05-20 12:13:35.558968	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-19 13:38:53.966326	\N	f	\N
+e169b6e4-dc09-9326-72af-22f8e9b1a4a1	gre	2025-06-01 10:14:44.333661	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:14:44.333661	\N	f	\N
+040f84fc-e37f-7ebd-6e9a-c80678ff198f	caca	2025-06-02 12:40:17.9071	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-02 12:40:17.9071	\N	f	\N
+df35f665-49bf-e8a0-8f4b-122e1a10091c		2025-06-01 14:14:29.337457	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"5fc064a9-5d9f-b85d-528d-ab6ef517c962\\"}]"	2025-06-01 14:14:29.337457	\N	f	\N
 4293fb10-13f1-740e-b85a-deb637b778d4		2025-05-20 11:47:47.412605	2025-05-20 12:33:27.60077	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"5d4be682-4105-0d0b-7b2e-859e61e1be9d\\"}]"	2025-05-20 11:47:47.412605	\N	f	\N
+68f518e7-f4d3-298a-641b-c9368b6bcd3a		2025-06-01 11:31:36.891388	2025-06-01 15:58:52.061547	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"36e2fbe9-1652-6759-e020-e61bae8704e5\\"}]"	2025-06-01 11:31:36.891388	\N	f	\N
 79712134-c960-1e3d-2824-b5fe8f3b7ff3	[message supprimé]	2025-05-13 14:14:51.012639	2025-05-13 14:39:59.709588	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:14:51.012639	2025-05-26 08:02:33.031179	t	\N
 0155f756-87ef-cf1d-5439-67e98a8450b3		2025-05-20 11:56:03.170091	2025-05-22 09:53:12.040251	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	"[{\\"id\\":\\"f7aa8292-cee8-3330-80c8-3b17a035812a\\"}]"	2025-05-20 11:56:03.170091	\N	f	\N
 f3934cb7-2137-b706-3b3c-be810627e0b6	hello	2025-05-20 10:09:56.474377	2025-05-22 09:53:12.004351	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-20 10:09:56.474377	\N	f	\N
@@ -2634,8 +2849,10 @@ bb6e5bca-9384-215c-bc9a-8f25300c0ac1	nn	2025-05-19 11:54:34.916392	2025-05-19 12
 fbe38b9e-b5a2-76c1-4e56-86521b05cc19	kk	2025-05-19 11:54:33.022486	2025-05-19 12:08:57.781571	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 11:54:33.022486	\N	f	\N
 340e65de-9f34-aa8d-4ce1-aa1da4b29d18	opjpj	2025-05-19 13:41:20.607409	2025-05-20 12:13:35.574228	bb6a4d43-70d3-5e36-d943-dfdfc747491f	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-19 13:41:20.607409	\N	f	\N
 a3e9cc03-9de8-6f37-8e75-88ea2b783645	fqdfq	2025-05-17 14:27:04.786535	2025-05-17 14:27:05.134755	ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-17 14:27:04.786535	\N	f	\N
+b9177470-996c-8614-5e61-d9d87298d5cb	czeqcze	2025-06-01 10:15:11.707596	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:15:11.707596	\N	f	\N
 ee5dcc27-9ae6-2a0b-79ce-80fd342f7d34	b	2025-05-19 12:09:45.975277	2025-05-19 13:25:05.385885	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:09:45.975277	\N	f	\N
 8cdfc076-f965-0900-487e-113c901a1e6d	kk	2025-05-19 12:32:02.475319	2025-05-19 13:25:05.406068	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-19 12:32:02.475319	\N	f	\N
+0721fe6f-87a4-0d32-a1eb-3d46dafc9643	f	2025-06-01 11:09:41.764896	2025-06-01 11:10:35.325803	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:09:41.764896	\N	f	\N
 4930ff47-d650-3429-a8a8-68b4de3aaa30	qsfqs	2025-05-17 12:41:13.919765	2025-05-17 13:58:07.119184	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 12:41:13.919765	\N	f	\N
 12357f94-3918-109a-2bbd-6830b1e0dad7	sdfsdf	2025-05-17 13:35:21.426725	2025-05-17 13:58:07.119059	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 13:35:21.426725	\N	f	\N
 c9db0266-0a80-7eb9-d101-8aa58e410362	jjj	2025-05-17 15:05:24.105022	2025-05-17 15:58:12.620661	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-17 15:05:24.105022	\N	f	\N
@@ -2657,18 +2874,52 @@ eaa4b9d4-941b-c626-b4c7-78bd74ee8b02	hello	2025-05-20 14:37:31.411347	2025-05-26
 c16638e5-c7d6-676b-89aa-649b3f19a681		2025-05-20 11:48:47.541696	2025-05-22 09:53:12.038911	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	"[{\\"id\\":\\"541360e0-a8ff-4cdb-5ca9-a25794f02d6b\\"}]"	2025-05-20 11:48:47.541696	\N	f	\N
 1b565044-fb16-eb4c-7824-8b98ea38a223	[message supprimé]	2025-05-17 10:01:20.025285	2025-05-17 10:39:05.059049	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-17 10:01:20.025285	2025-05-26 08:02:33.031179	t	\N
 18414e04-ef10-756b-1d99-af2fd124d117	[message supprimé]	2025-05-17 10:01:44.256261	2025-05-17 10:39:05.06253	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-17 10:01:44.256261	2025-05-26 08:02:33.031179	t	\N
+0b6ec3be-cf19-5476-283f-f34d6062e742	[message supprimé]	2025-06-01 11:33:33.084761	2025-06-01 11:33:40.057532	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 11:33:33.084761	2025-06-01 12:31:42.766124	t	\N
 2c3a300d-3167-679a-f1bb-bef3e00e6606	[message supprimé]	2025-05-19 14:29:36.718443	2025-05-19 14:45:46.167522	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-19 14:29:36.718443	2025-05-26 08:02:33.031179	t	\N
 8175f25c-d4a1-4a4c-b458-1c8b6be7d361	[message supprimé]	2025-05-20 13:15:45.04514	2025-05-22 07:54:38.79117	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-20 13:15:45.04514	2025-05-26 08:02:33.031179	t	\N
 22b0ac22-a072-8b92-45a8-f5dc0b0168f2	[message supprimé]	2025-05-20 14:41:01.456344	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-20 14:41:01.456344	2025-05-26 08:02:33.031179	t	\N
+6eff6ac5-254f-7b7d-e21d-fdec7a797aa8		2025-06-02 12:32:47.252504	2025-06-02 12:40:46.706884	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"edb87065-a979-17a4-ff3b-97d4ee049b00\\"}]"	2025-06-02 12:32:47.252504	\N	f	\N
+b6f8ed56-1ddd-7840-a655-c3144bb4778f	[message supprimé]	2025-06-01 12:40:47.773189	2025-06-01 12:41:49.154792	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 12:40:47.773189	2025-06-01 13:44:42.367871	t	\N
+cf996b40-9cfd-d2aa-eed1-f80398678b69	kkk	2025-06-01 14:23:09.042155	2025-06-01 14:28:15.637306	bb6a4d43-70d3-5e36-d943-dfdfc747491f	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-01 14:23:09.042155	\N	f	\N
+de928f14-7721-1ef2-1c7c-caae66252340		2025-06-01 14:16:02.090586	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"2f5e9895-26b9-25ab-607a-950f6bc8293f\\"}]"	2025-06-01 14:16:02.090586	\N	f	\N
+c4a11a49-d5ac-1c07-f7c0-b51f5dd80098	[message supprimé]	2025-06-01 14:23:42.332709	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"39972531-e6d3-dad0-a52f-405b655c781a\\"}]"	2025-06-01 14:23:42.332709	2025-06-01 14:36:42.459457	t	\N
+c2d53338-b2ae-ee17-08d8-76968fc78e83	hello	2025-06-01 14:36:32.681825	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 14:36:32.681825	\N	f	\N
+db9dfa2b-4663-1dde-f179-df0954c17b1c	dazzdqsqd	2025-06-01 14:41:53.107769	2025-06-01 14:41:54.469447	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 14:41:53.107769	\N	f	\N
 0d3ce314-1050-b948-4f03-3aa3045a18bc	dgdfgdgd	2025-05-26 09:49:31.58461	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:49:31.58461	\N	f	\N
 f9bdd69f-ef7b-070b-f235-6f3bd777bb38	fdsfsdf	2025-05-26 12:14:47.717365	2025-05-26 12:15:07.473421	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 12:14:47.717365	\N	f	\N
-c9caf665-acfc-7b1d-33a2-7e5a829c3791	test	2025-05-26 14:49:08.628135	\N	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:49:08.628135	\N	f	\N
+c9caf665-acfc-7b1d-33a2-7e5a829c3791	test	2025-05-26 14:49:08.628135	2025-06-01 09:39:24.527547	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 14:49:08.628135	\N	f	\N
+d7de183c-de25-0334-3789-a9321b74f05c	ferz	2025-06-01 10:18:38.776192	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:18:38.776192	\N	f	\N
+9997af6b-912d-acb6-41b0-c03464e953b6	deza	2025-06-01 11:10:05.529619	2025-06-01 11:10:35.325803	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:10:05.529619	\N	f	\N
+a1ba9f7e-7942-bae5-2355-c8ded37f1140	[message supprimé]	2025-06-01 12:41:50.473373	2025-06-01 12:41:50.583505	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 12:41:50.473373	2025-06-01 12:42:02.146609	t	\N
+ca177ee9-102e-eb61-6654-d5c12c212159	gvb	2025-06-01 14:42:50.222185	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:50.222185	\N	f	\N
+16fe6679-7dcc-a108-2a5f-dfe38c0bf14c	gay	2025-06-01 12:58:00.669823	2025-06-01 14:28:05.702483	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 12:58:00.669823	\N	f	\N
+3994ff5f-89c6-efc3-1d77-5fbaaafd8a5b		2025-06-01 14:17:27.416396	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"7633a54d-21f3-25ed-e242-fc55d3735a11\\"}]"	2025-06-01 14:17:27.416396	\N	f	\N
+ce1c5657-bdf4-5dfe-690e-891c315080ba	sv	2025-06-01 14:42:50.38839	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:50.38839	\N	f	\N
+31ab4b0a-63cf-1a48-3ded-7f6843132340		2025-06-01 11:34:09.254392	2025-06-01 15:58:52.060746	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"21be307c-37d6-af07-eefa-045d49803e2d\\"}]"	2025-06-01 11:34:09.254392	\N	f	\N
 bd2dda62-b872-1ed7-fdd0-efe4d470e6f2	fghfghfghgf	2025-05-26 09:52:00.0337	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:52:00.0337	\N	f	\N
 fc82fd9e-82e1-280b-1e5f-92f89295506f	f	2025-05-26 12:14:58.555887	2025-05-26 12:15:07.473421	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 12:14:58.555887	\N	f	\N
+0e9e6f40-d365-1cad-cfad-a39183aadfe5	caca	2025-06-01 09:38:24.957876	2025-06-01 09:39:24.528091	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-01 09:38:24.957876	\N	f	\N
+fc34b31c-8dc0-965e-23b9-317d39f96ac2	cez	2025-06-01 10:20:36.639811	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:20:36.639811	\N	f	\N
+77837900-0743-24f9-8256-f3b574557609	cezrfer	2025-06-01 11:10:36.654086	2025-06-01 11:12:17.611194	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:10:36.654086	\N	f	\N
+30a09aca-395e-74d3-32b6-ab954ac78181	hell	2025-06-01 11:34:17.261838	2025-06-01 11:34:20.780363	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:34:17.261838	\N	f	\N
+918f1004-4553-2c85-0c4d-eeda798d5c61	caca	2025-06-01 14:28:28.167871	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:28:28.167871	\N	f	\N
+d6e76b9a-8fa2-d5b4-8348-b45b0a561805	mm	2025-06-01 14:22:16.402237	2025-06-01 14:59:00.064039	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:22:16.402237	\N	f	\N
 80c33801-736f-bd53-0516-056faabf0735	fsfsdfdsdsfsd	2025-05-26 09:54:25.436158	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:54:25.436158	\N	f	\N
 396fa9d7-0501-6e66-a902-9604ec0708fd	KJKJPJ	2025-05-26 12:16:00.133041	2025-05-26 12:16:20.887448	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 12:16:00.133041	\N	f	\N
+f7c9af46-ca85-983a-a314-7b14a8dc846f	test	2025-05-26 13:48:56.979607	2025-06-01 09:39:24.527696	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-26 13:48:56.979607	\N	f	\N
+9a23401d-4d7a-c7f2-8167-a7efa889f5dd	nkn	2025-06-01 10:22:11.717135	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:22:11.717135	\N	f	\N
+5123a8dc-c4c8-ba5a-19b1-b9ae51b6b9d2	hello	2025-06-01 11:12:55.930137	2025-06-01 11:13:20.78013	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:12:55.930137	\N	f	\N
+c9afb155-1ea0-1dd2-15c7-39544dd26f72		2025-06-01 14:22:40.917894	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"0a07ccd6-9e73-d6cc-37ef-db2527ea1ec3\\"}]"	2025-06-01 14:22:40.917894	\N	f	\N
+421322fd-64f9-23c7-912f-3c05b3176169		2025-06-01 11:35:03.836537	2025-06-01 15:58:52.062627	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"62cd8cc4-2f95-8790-5125-2d7c78b2d4aa\\"}]"	2025-06-01 11:35:03.836537	\N	f	\N
+1dbb4fef-d1c9-9caf-505a-7a2c8c94e918		2025-06-01 13:01:24.095791	2025-06-01 15:58:52.13268	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	"[{\\"id\\":\\"a6faed1a-5a3a-b542-ec1d-c650766df6fa\\"}]"	2025-06-01 13:01:24.095791	\N	f	\N
 7bf04be8-ae90-6a6d-5308-79f30a112a01	sf	2025-05-26 09:54:28.101357	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:54:28.101357	\N	f	\N
 bccb1935-a5d2-a86f-f26d-566c9c8bff4d	lllllllllllllllllll	2025-05-26 12:22:52.219544	2025-05-26 12:23:06.887543	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 12:22:52.219544	\N	f	\N
+ded947be-dfb9-3dcf-db0a-8601560decfb	grgtre	2025-06-01 10:26:48.714317	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:26:48.714317	\N	f	\N
+0f38a715-e0b2-0357-e5dc-f1508386d98f	dzacd	2025-06-01 11:14:32.4808	2025-06-01 11:14:37.963427	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 11:14:32.4808	\N	f	\N
+30fcc6dc-a2f3-8227-96e5-3a44a3293cc1	heloo	2025-06-01 11:35:07.65885	2025-06-01 11:35:07.798579	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:35:07.65885	\N	f	\N
+5e76a5ff-cd92-e053-f5e7-07e6cee4ed97	[message supprimé]	2025-06-01 13:42:34.511483	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 13:42:34.511483	2025-06-01 13:43:04.593894	t	\N
+3f8bd6f3-478d-c988-3eae-e63487c78a2b	caca	2025-06-01 14:25:20.020858	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:25:20.020858	\N	f	\N
+a3643cd5-504d-6063-83a4-feab68878f5d	caca	2025-06-01 14:25:28.442667	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:25:28.442667	\N	f	\N
 0a371a79-598a-8d4b-2031-faf9b4ff6ae5	amamamam	2025-05-22 09:50:33.466302	2025-05-22 09:53:14.264773	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-22 09:50:33.466302	\N	f	\N
 bd2a217e-caac-4d11-d860-d4ab389e7eb9	[message supprimé]	2025-05-13 07:52:26.032021	2025-05-13 08:09:29.479214	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 07:52:26.032021	2025-05-26 08:02:33.031179	t	\N
 a263c8da-7f56-78b9-58fd-7a7493d5f9f6	[message supprimé]	2025-05-13 14:09:59.20211	2025-05-13 14:13:24.521525	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 14:09:59.20211	2025-05-26 08:02:33.031179	t	\N
@@ -2700,6 +2951,7 @@ acfc972a-9306-0606-7ba7-c5a979fe36e8	[message supprimé]	2025-05-13 08:32:43.008
 00410183-ef20-9e5d-e693-b7834079ad22	[message supprimé]	2025-05-13 11:05:04.635208	2025-05-13 11:32:12.026123	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 11:05:04.635208	2025-05-26 08:02:33.031179	t	\N
 e4fac9ea-498a-d8a1-959c-042685d83fbe	[message supprimé]	2025-05-13 11:24:08.851126	2025-05-13 11:33:19.479903	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	"[{\\"id\\":\\"52680330-d909-a40c-34be-777b7c4b125e\\"}]"	2025-05-13 11:24:08.851126	2025-05-26 08:02:33.031179	t	\N
 1bce0cfa-9ce2-12d9-3abf-c692a26d3613	[message supprimé]	2025-04-29 13:54:49.445603	2025-04-30 12:08:40.828436	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:49.445603	2025-05-26 08:02:33.031179	t	\N
+cbd6fe98-af47-8fc6-1c6c-29d40923f76e	Salut bdndndjsjdjdjdjndndndjdjdjndndndnndndjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjejejejjejejdjdjjdjdjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjdjdjd\n\nbdndndjsjdjdjdjndndndjdjdjndndndnndndjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjejejejjejejdjdjjdjdjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjdjdjd\n\nbdndndjsjdjdjdjndndndjdjdjndndndnndndjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjejejejjejejdjdjjdjdjdjdjdjdjjdjdjdjdjjdjdjdjdjdjjdjdjdjdjdjd	2025-06-01 09:46:57.640017	2025-06-01 15:58:52.053885	a5c1b268-937f-af11-4ca2-2c96634fbe2e	c8eb671d-f3b4-41f6-7364-0f292619dfdc	[]	2025-06-01 09:46:57.640017	\N	f	\N
 6d4f8a8a-6f46-0bd2-dda5-dfe03a46b92c	[message supprimé]	2025-04-29 13:54:49.787921	2025-04-30 12:08:40.828652	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:49.787921	2025-05-26 08:02:33.031179	t	\N
 9f180bbc-f6b6-44ec-2ec4-c28824fbf6d7	[message supprimé]	2025-04-29 13:54:49.986266	2025-04-30 12:08:40.827612	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-04-29 13:54:49.986266	2025-05-26 08:02:33.031179	t	\N
 bf55643a-7c7c-45ed-b9aa-d132868f7c92	[message supprimé]	2025-05-13 08:32:46.20053	2025-05-13 08:33:10.187049	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-13 08:32:46.20053	2025-05-26 08:02:33.031179	t	\N
@@ -2770,12 +3022,105 @@ fe963918-d018-dc97-7db2-f592798480da	[message supprimé]	2025-05-20 14:46:25.007
 f56ed0f2-d89c-f598-7e67-26479cb7154f	[message supprimé]	2025-05-20 14:46:35.49461	\N	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-20 14:46:35.49461	2025-05-26 08:02:33.031179	t	fe963918-d018-dc97-7db2-f592798480da
 84d76545-9a70-6fc0-8f26-723bb33a575f	[message supprimé]	2025-05-20 14:10:19.580955	2025-05-22 07:54:38.79469	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-05-20 14:10:19.580955	2025-05-26 08:02:33.031179	t	\N
 f23f52dd-ffbb-d8e8-d524-32481990f001	[message supprimé]	2025-05-17 13:44:31.15372	2025-05-17 16:19:08.434805	a5c1b268-937f-af11-4ca2-2c96634fbe2e	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-17 13:44:31.15372	2025-05-26 08:02:33.031179	t	\N
+164dd56f-a4c1-fb58-c1f9-99be6a283403	zedez	2025-06-01 09:59:55.886084	2025-06-01 10:02:13.587565	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 09:59:55.886084	\N	f	\N
+4b756e0f-764f-7225-2f2f-1aaa18e129fd	[message supprimé]	2025-06-01 09:58:09.115894	2025-06-01 09:58:37.78288	343f33f0-7f91-a104-c028-fc867feeffbd	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 09:58:09.115894	2025-06-01 10:02:19.682832	t	\N
+c9e269a0-973d-47e6-954e-decb17fb3f71	hter	2025-06-01 10:28:02.043024	2025-06-01 10:31:20.616453	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	343f33f0-7f91-a104-c028-fc867feeffbd	[]	2025-06-01 10:28:02.043024	\N	f	\N
+37e3983c-4aa8-24af-322d-c2fcfc688a68	deza	2025-06-01 11:18:46.055423	2025-06-01 11:19:11.089073	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:18:46.055423	\N	f	\N
+382b2c95-4f37-e32e-0921-0769abda219b	xcdza	2025-06-01 11:35:38.413988	2025-06-01 11:36:21.489374	343f33f0-7f91-a104-c028-fc867feeffbd	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 11:35:38.413988	\N	f	\N
 233ea14d-c489-9b6e-322c-6d93031d9840	ft	2025-05-26 08:05:16.596454	2025-05-26 08:08:52.50001	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-05-26 08:05:16.596454	\N	f	\N
 57b09cf4-ac35-7514-ea04-e2df579178ed		2025-05-26 08:06:32.339057	2025-05-26 08:08:52.501851	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"32b13ecb-75be-06dc-e328-55b5bdd90e02\\"}]"	2025-05-26 08:06:32.339057	\N	f	\N
 6d850e48-0739-be47-ffdf-97d5a00f0f2b	aa	2025-05-26 08:05:31.341387	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 08:05:31.341387	\N	f	\N
 02480272-259d-0d35-b139-64d457d8851d	kkkk	2025-05-26 09:54:47.469081	2025-05-26 11:46:01.436057	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 09:54:47.469081	\N	f	\N
 0bdb5e77-8cb6-a0e1-fc8e-60951f358050	ghfgfghfgg	2025-05-26 12:39:16.735564	2025-05-26 12:40:01.275328	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-05-26 12:39:16.735564	\N	f	\N
+80eb2278-2a59-a883-40fa-5e83a9768bf7		2025-06-01 13:46:08.161265	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"6366c47a-259a-2a6b-c62f-f9abb2bb1d24\\"}]"	2025-06-01 13:46:08.161265	\N	f	\N
 008e1216-557e-196a-6e98-af1f1567807d	yu	2025-05-26 08:05:00.389293	2025-05-27 13:20:26.130004	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-05-26 08:05:00.389293	\N	f	\N
+cf0bfa2a-ab66-c35c-1abc-231316e7c6d7		2025-06-01 14:00:36.847594	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"4e47e988-889c-5b56-6693-24bf8b67bb05\\"}]"	2025-06-01 14:00:36.847594	\N	f	\N
+c69176a6-be9c-3070-f70e-2ead0172498d	[message supprimé]	2025-06-01 13:45:35.152693	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	[]	2025-06-01 13:45:35.152693	2025-06-01 13:45:44.279363	t	\N
+60532437-ffd6-34c9-406a-281c11af4daf		2025-06-01 14:36:08.459844	2025-06-01 14:37:08.430015	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	"[{\\"id\\":\\"ffae8ff5-2759-201c-eb07-c4b1b4217c77\\"}]"	2025-06-01 14:36:08.459844	\N	f	\N
+fbbf4663-812c-12db-a92c-baf8e97eaf99	srgv	2025-06-01 14:42:38.86877	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:38.86877	\N	f	\N
+5388f9ca-5946-042e-f1a7-6301637fb404	zaeze	2025-06-01 14:40:51.75086	2025-06-01 14:40:52.211089	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 14:40:51.75086	\N	f	\N
+a679acad-6499-7075-1e3d-f46e536685fb	yo	2025-06-01 14:45:00.653971	2025-06-01 14:58:56.746606	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:45:00.653971	\N	f	\N
+6f454a0f-ee0b-51ce-a456-ba29e10d34ad	qsf	2025-06-01 14:44:55.974404	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:44:55.974404	\N	f	\N
+78737f70-0ff0-3e04-7381-c42cf0791af4	qs	2025-06-01 14:44:56.140372	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:44:56.140372	\N	f	\N
+c69495a4-dffd-644a-950f-a45aa54260fb	ppp	2025-06-01 14:23:00.61998	2025-06-01 14:55:10.124679	bb6a4d43-70d3-5e36-d943-dfdfc747491f	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-01 14:23:00.61998	\N	f	\N
+c5edd700-eae5-4ad5-f1f6-134fbeca0987	yo	2025-06-01 14:46:17.674146	2025-06-01 14:58:56.746606	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:46:17.674146	\N	f	\N
+9fd34608-eca9-11f6-e513-45cc7a228e1c	aaaa	2025-06-01 14:44:07.338887	2025-06-01 15:19:52.32169	bb6a4d43-70d3-5e36-d943-dfdfc747491f	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	[]	2025-06-01 14:44:07.338887	\N	f	\N
+2e96ea07-c446-6f72-d6e6-95884f5d5362	mmm	2025-06-01 14:22:52.626931	2025-06-01 14:55:10.122636	bb6a4d43-70d3-5e36-d943-dfdfc747491f	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-01 14:22:52.626931	\N	f	\N
+f9611e56-d228-b6b8-6463-1f0dcf9d9c97	fd	2025-06-01 14:42:30.03693	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:30.03693	\N	f	\N
+6d4c0cc1-206e-bccd-a9e5-1849bcb10d96	g	2025-06-01 14:42:30.508617	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:30.508617	\N	f	\N
+e51de034-36a2-112c-4b9b-f89ccbb0e8a7	dsg	2025-06-01 14:42:30.728834	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:30.728834	\N	f	\N
+f80b3b51-d25f-a99a-7326-f4c6382567f6	dv	2025-06-01 14:42:50.580291	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:50.580291	\N	f	\N
+0b6ce135-d28e-a585-3ca0-17f10dff26ed	sdv	2025-06-01 14:42:50.91739	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:50.91739	\N	f	\N
+c7e875e1-222e-37e3-7876-9c7c5ae2ceda	s	2025-06-01 14:42:51.091401	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:51.091401	\N	f	\N
+d0c2a14d-ff91-984f-2fe0-542c1b798dcc	sd	2025-06-01 14:42:51.415258	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:51.415258	\N	f	\N
+097ed43f-37aa-1176-477f-55e894ee38e9	prout 	2025-06-01 14:36:52.85326	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:36:52.85326	\N	f	\N
+1e344710-5614-37d2-3692-ebc07b39fd9f	cacacacaca	2025-06-01 14:42:10.07894	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:10.07894	\N	f	\N
+4c64288e-569a-7443-86da-7fe6522deaf6	adafa	2025-06-01 14:42:26.1003	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:26.1003	\N	f	\N
+1f30ec05-87e4-e2a9-6e18-c0f186262e3e	sc	2025-06-01 14:42:31.008845	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:31.008845	\N	f	\N
+2cdac02b-ce8f-9631-ee2a-026042d0f1be	qse	2025-06-01 14:42:31.248799	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:31.248799	\N	f	\N
+8c3a57ff-fd9f-48ce-abd2-c20fdcebccdb	fvsBbz	2025-06-01 14:42:32.004079	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:32.004079	\N	f	\N
+80921ed2-ce36-9c25-53e0-c01f52e3d1ba	sgbh	2025-06-01 14:42:32.249428	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:32.249428	\N	f	\N
+0fef8298-f3f4-e695-c70f-c7bcdc9c5504	sd	2025-06-01 14:42:32.482163	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:32.482163	\N	f	\N
+b3710f92-f840-fe41-fff4-240e9dccc4f4	qsdf	2025-06-01 14:42:32.737476	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:32.737476	\N	f	\N
+3677166b-f106-f5ed-c99e-c8838cca2832	fgs	2025-06-01 14:42:33.771802	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:33.771802	\N	f	\N
+774d5d4c-b7c7-7ec4-003d-d646decf65ed	sdg	2025-06-01 14:42:34.305106	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:34.305106	\N	f	\N
+65c27661-a829-0630-1e55-335f175ac8b1	v	2025-06-01 14:42:34.896618	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:34.896618	\N	f	\N
+2f7c669b-c45b-f833-1501-e623b0f17476	gvds	2025-06-01 14:42:35.430958	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:35.430958	\N	f	\N
+9b9d35ce-629a-1745-579a-114f0b0464ed	szb	2025-06-01 14:42:36.315272	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:36.315272	\N	f	\N
+8a00eed3-582f-d8ab-7e74-5fb3a48da568	sz	2025-06-01 14:42:36.596717	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:36.596717	\N	f	\N
+f565db5f-0a55-9373-9854-607a2d0977cc	sdgv	2025-06-01 14:42:36.856919	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:36.856919	\N	f	\N
+4c13378a-9d87-7e44-5a77-cdc2ac8c890d	sc	2025-06-01 14:42:37.132224	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:37.132224	\N	f	\N
+20c5ad6e-b20b-dde9-8f98-04173134e3b8	seg	2025-06-01 14:42:37.750255	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:37.750255	\N	f	\N
+cb9413bd-4622-e66d-41d8-0462ec632ae6	sqd	2025-06-01 14:42:38.319849	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:38.319849	\N	f	\N
+53787af3-2a96-78fb-65ba-e6451329aa9e	gvgzs	2025-06-01 14:42:39.753759	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:39.753759	\N	f	\N
+1f980764-b290-b2cc-9a4e-8c4be6751c93	dv	2025-06-01 14:42:40.29753	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:40.29753	\N	f	\N
+05759a3e-b797-a648-dd18-4f8506b4c72e	sefgv	2025-06-01 14:42:41.672902	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:41.672902	\N	f	\N
+cf58e8dd-091c-5e85-2145-93809d99a21b	qds	2025-06-01 14:42:41.972952	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:41.972952	\N	f	\N
+3cb2e863-7f37-87a8-d322-3df3c3af2885	gv	2025-06-01 14:42:42.605916	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:42.605916	\N	f	\N
+a4702723-4935-4f69-942a-5dbc37cefcbd	qsdfv	2025-06-01 14:42:42.921833	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:42.921833	\N	f	\N
+806dfdcb-4a04-e11f-de07-00d84e41353b	df	2025-06-01 14:42:43.892114	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:43.892114	\N	f	\N
+e5d136cf-6172-0e33-9e1d-5562c1f53241	qd	2025-06-01 14:42:44.136692	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:44.136692	\N	f	\N
+08ffc9f9-a01c-fb25-127f-ddac80f30c4e	vqd	2025-06-01 14:42:44.344159	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:44.344159	\N	f	\N
+9223d54f-0d65-6282-99df-1d537cb9677a	g	2025-06-01 14:42:44.536856	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:44.536856	\N	f	\N
+1f08bff9-cce4-efbc-7b3e-7f430bf9acc4	qdg	2025-06-01 14:42:44.744443	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:44.744443	\N	f	\N
+303e2ccb-cbc0-8057-9186-c4bd3a5740ae	wcb	2025-06-01 14:42:45.880303	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:45.880303	\N	f	\N
+c8737570-663a-f81a-2808-9990114916c7	sd	2025-06-01 14:42:46.072622	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:46.072622	\N	f	\N
+42ec1239-c102-7a25-d7aa-e33b7f614d3e	vs	2025-06-01 14:42:46.320523	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:46.320523	\N	f	\N
+1b2870ae-5f10-6a5f-1dff-019dcd237f5c	ds	2025-06-01 14:42:46.760115	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:46.760115	\N	f	\N
+6b147b87-79fe-8e58-a66f-d82111b56482	dgw	2025-06-01 14:42:47.197872	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:47.197872	\N	f	\N
+af6b70e7-c251-4014-1f8a-0b5127624bff	dg	2025-06-01 14:42:47.817468	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:47.817468	\N	f	\N
+295ba3c4-8e59-0b15-90a3-e4625cef135c	g	2025-06-01 14:42:51.584281	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:51.584281	\N	f	\N
+f987865b-5474-a697-a98e-a5b950250faf	vsdg	2025-06-01 14:42:48.264255	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:48.264255	\N	f	\N
+e26f0af0-facc-68c1-b8eb-b60ec6f74062	gsqd	2025-06-01 14:42:48.651889	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:48.651889	\N	f	\N
+733452a3-d658-44f5-e539-3eb463596b22	gs	2025-06-01 14:42:49.873935	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:49.873935	\N	f	\N
+a0d751b2-c5fa-d602-e896-98a16b70472b	d	2025-06-01 14:42:50.058974	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:50.058974	\N	f	\N
+86c934db-6119-0629-4d8a-748e8c9c01d9	sdg	2025-06-01 14:42:53.116264	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:53.116264	\N	f	\N
+18d1cf77-8f77-82d7-fcf8-42be7aba6aa1	gsd	2025-06-01 14:42:53.964768	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:53.964768	\N	f	\N
+ab65374c-1423-3876-3ee0-5b73fa8225f2	qsfqs	2025-06-01 14:44:55.502267	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:44:55.502267	\N	f	\N
+bf76e96d-479a-9e65-854a-29a79a55cc8f	f	2025-06-01 14:44:55.825941	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:44:55.825941	\N	f	\N
+933c0291-f1d5-d586-32e7-3a32addc46df	fdqs	2025-06-01 14:44:55.700764	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:44:55.700764	\N	f	\N
+37c19fac-cd15-187c-dde2-8811ceef3bbe	scg	2025-06-01 14:42:39.156414	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:39.156414	\N	f	\N
+c3e31f1a-36e2-51ac-7d58-d5bec179c157	dfdf	2025-06-01 14:42:28.888891	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:28.888891	\N	f	\N
+1e9b9e19-5e42-c5b5-697d-45bf03d858f4	df	2025-06-01 14:42:29.183078	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:29.183078	\N	f	\N
+7c20c3ba-0389-27f8-eefa-c8c1b6147700	dfd	2025-06-01 14:42:29.770853	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:29.770853	\N	f	\N
+d7005e84-210a-01c4-0dc3-dbbf16caf654	faq	2025-06-01 14:42:31.521257	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:31.521257	\N	f	\N
+ddf35a4f-93d6-c1f0-98a6-081de032b6e5	gs	2025-06-01 14:42:33.50344	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:33.50344	\N	f	\N
+88f921a1-7ac5-a993-08c9-aab605597812	dg	2025-06-01 14:42:33.996303	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:33.996303	\N	f	\N
+5616855f-dd71-0c81-12a5-8e655f99faac	s	2025-06-01 14:42:34.634939	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:34.634939	\N	f	\N
+0da2a5fc-72ad-5698-5909-52cd61379480	sze	2025-06-01 14:42:35.152476	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:35.152476	\N	f	\N
+1b68ddb9-011c-d87d-94a0-d0616f4b5495	vdsz	2025-06-01 14:42:39.444887	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:39.444887	\N	f	\N
+f7a728f6-4b04-a966-4e63-391bde62ee0c	regs	2025-06-01 14:42:40.014285	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:40.014285	\N	f	\N
+8aa5b292-26ef-b19b-f53f-0a4200f16f65	vz	2025-06-01 14:42:37.425394	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:37.425394	\N	f	\N
+5c7f5fbe-a426-0db9-26cf-1c21edd7ff3e	zdsgf	2025-06-01 14:42:40.581304	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:40.581304	\N	f	\N
+32c8673a-52b2-61cb-2c64-848da7965697	gfqsd	2025-06-01 14:42:41.098422	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:41.098422	\N	f	\N
+0a91ee10-9e62-4110-246c-d43740de0f90	gvz	2025-06-01 14:42:41.409344	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:41.409344	\N	f	\N
+c05ddb8e-050a-b4cb-e4bb-e862f16928fc	vsd	2025-06-01 14:42:42.279105	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:42.279105	\N	f	\N
+e42c0021-3494-5b73-19ad-90c3169af4ff	fq	2025-06-01 14:42:43.152394	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:43.152394	\N	f	\N
+6ef5faa0-4d52-6b7f-798e-a5620d602588	qbgh	2025-06-01 14:42:45.66027	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:45.66027	\N	f	\N
+867b3b63-6c1f-d686-2435-49f689bc7c1f	rdv	2025-06-01 14:42:46.548965	2025-06-01 14:58:58.506016	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:42:46.548965	\N	f	\N
+62c01ba1-8761-2482-5d63-985ccc4bcb89	caca prout	2025-06-01 14:59:50.788993	2025-06-01 15:00:00.969937	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 14:59:50.788993	\N	f	\N
+41fc3756-6247-6709-d656-cf6b4b756745	prout	2025-06-01 15:02:14.899432	2025-06-01 16:12:01.654549	a5c1b268-937f-af11-4ca2-2c96634fbe2e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	[]	2025-06-01 15:02:14.899432	\N	f	\N
+f45ebae7-46d1-2478-8584-001f6c7e7fef	test	2025-06-01 15:24:16.719796	2025-06-02 12:19:18.551347	c8eb671d-f3b4-41f6-7364-0f292619dfdc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	[]	2025-06-01 15:24:16.719796	\N	f	\N
 \.
 
 
@@ -2815,6 +3160,28 @@ eea8ad7b-cddf-b994-b3e3-b0bad0a69b2a	5d527ee9-3dc4-7aa6-4874-2eaed5c37d34
 ddb6ef63-9465-dd9b-8b10-4894327cb8f5	e27f453f-1cb4-b58e-3bb4-0ef7e44f3c94
 57b09cf4-ac35-7514-ea04-e2df579178ed	32b13ecb-75be-06dc-e328-55b5bdd90e02
 35b016da-0091-29d6-3391-8a95fc19ef08	0d757be7-dd73-7774-e2f6-908331b3de80
+569ef44d-3d70-0845-fc1f-c55ca4a1337d	0ab34186-5372-8d4c-c5a3-5b91ad01541e
+3ade204d-b8f7-3d4f-40d1-2e7240d1e5be	d4bac316-72e3-ae59-56b0-cfa10d2c3f07
+d3398083-0c89-335b-6ca4-d0334c30c9fc	35bb7962-3c00-a36e-9bed-e6f5c3e468de
+68f518e7-f4d3-298a-641b-c9368b6bcd3a	36e2fbe9-1652-6759-e020-e61bae8704e5
+31ab4b0a-63cf-1a48-3ded-7f6843132340	21be307c-37d6-af07-eefa-045d49803e2d
+421322fd-64f9-23c7-912f-3c05b3176169	62cd8cc4-2f95-8790-5125-2d7c78b2d4aa
+3f822531-5eca-16b4-d0e5-d225d3187b57	7c48efdb-b0e1-7d46-a928-6afc3f43b1b0
+1dbb4fef-d1c9-9caf-505a-7a2c8c94e918	a6faed1a-5a3a-b542-ec1d-c650766df6fa
+461a1ff7-f7e1-07dd-c693-2e8d7b108468	0dbc7054-f35f-a79c-80d7-d739a9022737
+80eb2278-2a59-a883-40fa-5e83a9768bf7	6366c47a-259a-2a6b-c62f-f9abb2bb1d24
+c6dd214c-7c30-3db6-643f-f2fd586090b8	3676722e-26ba-dd6c-7cb5-305c79a9d379
+35220e9e-8e82-d755-161f-77c6ffd3787c	f0118d87-9fc1-6cb2-193e-9b7184b5faf9
+2c373441-a4c6-e757-4b50-94ba363ef76c	9c118022-99a6-2baa-52e0-2d6c018065f4
+6f7b9106-7cde-1d76-9956-402d96576822	bd29e50f-3db1-aaca-db5e-42fced78bf41
+cf0bfa2a-ab66-c35c-1abc-231316e7c6d7	4e47e988-889c-5b56-6693-24bf8b67bb05
+2ddc3707-f6d0-38c1-169d-ff9fbb2685c8	88eb3d38-e96d-adef-605d-e2919a7e7d7e
+df35f665-49bf-e8a0-8f4b-122e1a10091c	5fc064a9-5d9f-b85d-528d-ab6ef517c962
+de928f14-7721-1ef2-1c7c-caae66252340	2f5e9895-26b9-25ab-607a-950f6bc8293f
+3994ff5f-89c6-efc3-1d77-5fbaaafd8a5b	7633a54d-21f3-25ed-e242-fc55d3735a11
+c9afb155-1ea0-1dd2-15c7-39544dd26f72	0a07ccd6-9e73-d6cc-37ef-db2527ea1ec3
+60532437-ffd6-34c9-406a-281c11af4daf	ffae8ff5-2759-201c-eb07-c4b1b4217c77
+6eff6ac5-254f-7b7d-e21d-fdec7a797aa8	edb87065-a979-17a4-ff3b-97d4ee049b00
 \.
 
 
@@ -2905,6 +3272,10 @@ COPY public.private_message_reaction (id_reaction, fk_message_prive, fk_utilisat
 47	6bab5f8d-c5c6-39b5-c016-520c7c1774bd	a5c1b268-937f-af11-4ca2-2c96634fbe2e	🎉	2025-05-20 14:45:00.579798
 48	94bb6dff-a129-29af-eeac-e43be5e600dc	a5c1b268-937f-af11-4ca2-2c96634fbe2e	👍	2025-05-20 14:45:11.481163
 49	823c63c8-da52-6c3c-c6bc-7a71c950a29b	bb6a4d43-70d3-5e36-d943-dfdfc747491f	😢	2025-05-22 09:48:12.067137
+50	cbd6fe98-af47-8fc6-1c6c-29d40923f76e	a5c1b268-937f-af11-4ca2-2c96634fbe2e	❤️	2025-06-01 09:52:25.929602
+51	9806bac6-f79a-4110-35e2-57c5562989b2	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	✅	2025-06-01 11:38:15.110865
+52	382b2c95-4f37-e32e-0921-0769abda219b	d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	🔥	2025-06-01 11:38:49.21977
+53	c45a1d36-6d09-4df9-4a3c-bff3fbdfb67e	bb6a4d43-70d3-5e36-d943-dfdfc747491f	👍	2025-06-01 19:46:49.921464
 \.
 
 
@@ -2941,6 +3312,7 @@ COPY public.reaction (id_reaction, fk_message, fk_utilisateur, reaction_type, cr
 30	c924cbc4-2e5e-ec12-e13a-d28980db9d1b	c8eb671d-f3b4-41f6-7364-0f292619dfdc	sad	2025-05-05 11:53:21.772548
 31	d3986fb3-632c-8c4a-2b09-e1a4e1dc483f	c8eb671d-f3b4-41f6-7364-0f292619dfdc	angry	2025-05-06 11:41:46.335981
 32	128d8f6a-9ba8-0c5c-1fa4-4a2ad58b9289	fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	thumbsUp	2025-05-20 12:22:55.610703
+33	6e3f3f09-4424-b27c-70d6-b4c08e02d4e7	bb6a4d43-70d3-5e36-d943-dfdfc747491f	thumbsUp	2025-06-01 16:09:54.636821
 \.
 
 
@@ -2951,6 +3323,9 @@ COPY public.reaction (id_reaction, fk_message, fk_utilisateur, reaction_type, cr
 --
 
 COPY public.reminders (id, user_id, title, description, reminder_date, created_at, updated_at, is_sent, email_sent_at, workspace_id, canal_id, email_failed, error_message) FROM stdin;
+703f27a4-1126-44c9-8b40-10341d05eb1e	a5c1b268-937f-af11-4ca2-2c96634fbe2e	test	caca prout	2025-06-01 10:20:00+00	2025-06-01 10:17:54.410189+00	2025-06-01 10:17:54.410189+00	f	\N	d4f1cff0-3ef5-7ab1-e654-c05894915c31	07d1837c-59fe-d357-906a-acd22d3e162a	f	\N
+c3fe0b7a-82ae-4478-a230-d69f0754c1da	bb6a4d43-70d3-5e36-d943-dfdfc747491f	KFJJF	SFS	2025-06-18 14:54:00+00	2025-06-01 10:54:19.358609+00	2025-06-01 10:54:19.358609+00	f	\N	\N	\N	f	\N
+5425d880-eb6a-45db-b5fe-cab134a5380d	a5c1b268-937f-af11-4ca2-2c96634fbe2e	test	caca	2025-06-01 10:59:00+00	2025-06-01 10:58:25.004566+00	2025-06-01 10:58:25.004566+00	f	\N	\N	\N	f	\N
 \.
 
 
@@ -3000,16 +3375,16 @@ COPY public.statut (id_statut, label) FROM stdin;
 
 COPY public.utilisateur (id_utilisateur, nom, email, mot_de_passe, photo_de_profil, date_creation, fk_statut, google_id, is_activated, validation_code, reset_password_code, reset_password_expires, date_naissance, bio, status_text) FROM stdin;
 00000000-0000-0000-0000-000000000001	Mistral AI	bot@mistral.ai	dummy_password	https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp	2025-04-08 13:32:15.598295	1	\N	t	\N	\N	\N	\N	\N	\N
-c8eb671d-f3b4-41f6-7364-0f292619dfdc	Paul 2	paul.mazzon@icloud.com	$2a$10$husIr5kZtQDeVE44nNAz1eCZMM5w/74Cgu3RDzVQ8VAT4XNfnyLqi	\N	2025-04-01 12:32:20.707977	4	\N	t	\N	\N	\N	2004-01-06		\N
-bb6a4d43-70d3-5e36-d943-dfdfc747491f	Math'BigDick	mathis.malzac@supinfo.com	$2a$10$Ga1TJtB5.ufn0C9h8hs1YuQ39emibG9WS9ow/o5GczMeFOWwM.W2a	\N	2025-02-27 13:47:22.59845	1	\N	t	\N	\N	\N	2010-02-16		\N
 25c01514-5c67-6921-1cfa-6261c29e5d88	Paul Mazzon 2	paul.mazzon@supinfo.com	$2a$10$Q1/HrF0MUVJ2m/gFfAfo1eOddB78xzfJuscFr.fO4mEhqMjL/gjBG	\N	2025-05-12 11:07:01.643263	1	\N	t	\N	\N	\N	2004-01-06	\N	\N
-343f33f0-7f91-a104-c028-fc867feeffbd	RUDY2	rudy.gault@supinfo.com	$2a$10$xwa2WBaTpcbMLkHFozQzPuamnt5SMWUrRlm2JR8E5mrnivxH1n4O2	\N	2025-05-17 12:51:28.560495	1	\N	f	499562	\N	\N	2001-08-27	\N	\N
+a5c1b268-937f-af11-4ca2-2c96634fbe2e	Paul MAZZON	paul.mazzon@gmail.com	$2a$10$.ikIVHLztRKsTWBG2gRPgeszkqImsSq95gkCklLm0bD.xAlJuZOk6	https://avatars.githubusercontent.com/u/63354977?v=4	2025-02-26 13:35:29.993728	1	\N	t	\N	\N	\N	2004-01-06	Salut !	\N
+bb6a4d43-70d3-5e36-d943-dfdfc747491f	Math'BigDick	mathis.malzac@supinfo.com	$2a$10$Ga1TJtB5.ufn0C9h8hs1YuQ39emibG9WS9ow/o5GczMeFOWwM.W2a	\N	2025-02-27 13:47:22.59845	4	\N	t	\N	\N	\N	2010-02-16		\N
 00000000-0000-0000-0000-000000000003	System	system	dummy_password_ocr		2025-04-18 11:46:23.860732	1	\N	t	\N	\N	\N	\N	System	\N
+343f33f0-7f91-a104-c028-fc867feeffbd	RUDY2	rudy.gault@supinfo.com	$2a$10$xwa2WBaTpcbMLkHFozQzPuamnt5SMWUrRlm2JR8E5mrnivxH1n4O2	\N	2025-05-17 12:51:28.560495	1	\N	t	\N	\N	\N	2001-08-27	\N	\N
+c8eb671d-f3b4-41f6-7364-0f292619dfdc	Paul 2	paul.mazzon@icloud.com	$2a$10$husIr5kZtQDeVE44nNAz1eCZMM5w/74Cgu3RDzVQ8VAT4XNfnyLqi	\N	2025-04-01 12:32:20.707977	1	\N	t	\N	\N	\N	2004-01-06		\N
 00000000-0000-0000-0000-000000000002	MistralOCR	bot-ocr@mistral.ai	dummy_password_ocr	https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp	2025-04-18 11:46:23.860732	1	\N	t	\N	\N	\N	\N	Je suis l'assistant OCR de Mistral AI.	\N
 d37b1d6b-aa6a-8423-d6b3-d5f22abffc63	Rudy	gault.rudy@gmail.com	$2a$10$KwpeHvkEQHur5hFUPhngEezuvRDMAB5EPMotu1xb/SE20ZL5YK0ki	https://s3.fr-par.scw.cloud/s3-supchat/avatars/1c7ca609-2f45-4277-a75d-f81aeb91beb6.jpg	2025-02-27 13:11:18.704602	4	\N	t	\N	\N	\N	2010-02-27	j'aime la crotte	\N
-fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	Math Homo	a@a.com	$2a$10$2W17CqGmWTtYGMk63c.iueIy9cg2VLxKqFU9nD3d1T1q3I6HyxKWK	https://s3.fr-par.scw.cloud/s3-supchat/avatars/8b52616b-df43-41e0-80f3-37b78f292e7a.jpg	2025-05-08 10:24:15.013714	1	\N	t	\N	\N	\N	2010-05-06		\N
+fd6ff12d-384e-055e-6e7c-f9a06b7e9af0	Math Homo	a@a.com	$2a$10$2W17CqGmWTtYGMk63c.iueIy9cg2VLxKqFU9nD3d1T1q3I6HyxKWK	https://s3.fr-par.scw.cloud/s3-supchat/avatars/8b52616b-df43-41e0-80f3-37b78f292e7a.jpg	2025-05-08 10:24:15.013714	4	\N	t	\N	\N	\N	2010-05-06		\N
 ab31a4a3-437a-6ff4-d96f-bf97eabba0c6	Paul 4	admin@admin.com	$2a$10$nImjzyJUwRLbSaqfKu2CT.dKod3NblFYNmrBaePCdpD4kV.KUBcbK	\N	2025-05-17 13:07:31.124052	1	\N	t	\N	\N	\N	2010-05-17	\N	\N
-a5c1b268-937f-af11-4ca2-2c96634fbe2e	Paul MAZZON	paul.mazzon@gmail.com	$2a$10$.ikIVHLztRKsTWBG2gRPgeszkqImsSq95gkCklLm0bD.xAlJuZOk6	https://avatars.githubusercontent.com/u/63354977?v=4	2025-02-26 13:35:29.993728	4	\N	t	\N	\N	\N	2004-01-06	Salut !	\N
 \.
 
 
@@ -3098,7 +3473,7 @@ SELECT pg_catalog.setval('cron.runid_seq', 1, false);
 -- Name: canal_lecture_id_canal_lecture_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
 
-SELECT pg_catalog.setval('public.canal_lecture_id_canal_lecture_seq', 49, true);
+SELECT pg_catalog.setval('public.canal_lecture_id_canal_lecture_seq', 53, true);
 
 
 --
@@ -3125,7 +3500,7 @@ SELECT pg_catalog.setval('public.message_read_id_seq', 87, true);
 -- Name: private_message_reaction_id_reaction_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
 
-SELECT pg_catalog.setval('public.private_message_reaction_id_reaction_seq', 49, true);
+SELECT pg_catalog.setval('public.private_message_reaction_id_reaction_seq', 53, true);
 
 
 --
@@ -3143,7 +3518,7 @@ SELECT pg_catalog.setval('public.push_subscriptions_id_seq', 1, false);
 -- Name: reaction_id_reaction_seq; Type: SEQUENCE SET; Schema: public; Owner: rootmath
 --
 
-SELECT pg_catalog.setval('public.reaction_id_reaction_seq', 32, true);
+SELECT pg_catalog.setval('public.reaction_id_reaction_seq', 33, true);
 
 
 --
@@ -5236,7 +5611,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE rootmath IN SCHEMA public GRANT SELECT,INSERT,
 ALTER DEFAULT PRIVILEGES FOR ROLE rootmath IN SCHEMA public GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLES TO "REDACTED";
 
 
--- Completed on 2025-05-30 10:32:47
+-- Completed on 2025-06-02 14:43:46
 
 --
 -- PostgreSQL database dump complete

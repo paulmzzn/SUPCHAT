@@ -1,0 +1,49 @@
+﻿version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: supchat-postgres-test
+    environment:
+      POSTGRES_DB: supchat
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: REDACTED
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - supchat-test-network
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: supchat-backend-test
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=supchat
+      - DB_USER=admin
+      - DB_PASSWORD=REDACTED
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=REDACTED
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: tail -f /dev/null
+    depends_on:
+      - postgres
+    networks:
+      - supchat-test-network
+
+networks:
+  supchat-test-network:
+    driver: bridge
+
+volumes:
+  postgres_test_data:
+    driver: local

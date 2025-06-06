@@ -5,15 +5,21 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
+import { getOAuthConfig } from "./secrets.js";
 import UserModel from "../models/User.js";
+
+// Configuration sécurisée OAuth
+const oauthConfig = getOAuthConfig();
+
+console.log("🔐 Configuration OAuth chargée avec succès");
 
 export const googleStrategy = new GoogleStrategy(
   {
-    clientID:
-      "REDACTED",
-    clientSecret: "REDACTED",
-
-    callbackURL: "http://localhost:3000/api/users/auth/google/callback",
+    clientID: oauthConfig.google.clientId,
+    clientSecret: oauthConfig.google.clientSecret,
+    callbackURL:
+      process.env.GOOGLE_CALLBACK_URL ||
+      "http://localhost:3000/api/users/auth/google/callback",
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -48,10 +54,11 @@ export const googleStrategy = new GoogleStrategy(
 
 export const githubStrategy = new GitHubStrategy(
   {
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-
-    callbackURL: "http://localhost:3000/api/users/auth/github/callback",
+    clientID: oauthConfig.github.clientId,
+    clientSecret: oauthConfig.github.clientSecret,
+    callbackURL:
+      process.env.GITHUB_CALLBACK_URL ||
+      "http://localhost:3000/api/users/auth/github/callback",
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
