@@ -71,6 +71,15 @@ function WorkspaceDetails() {
   const [showMemberAccessModal, setShowMemberAccessModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isPrependingMessages, setIsPrependingMessages] = useState(false); // Nouvel état pour gérer le préchargement des messages
+  // Flag pour navigation vers un message précis (recherche)
+  const [pendingScrollToMessageId, setPendingScrollToMessageId] = useState(null);
+  // Expose setter globally for search result navigation (hacky but effective)
+  useEffect(() => {
+    window.setPendingScrollToMessageId = setPendingScrollToMessageId;
+    return () => {
+      window.setPendingScrollToMessageId = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     async function checkWorkspaceMembership() {
@@ -895,6 +904,8 @@ function WorkspaceDetails() {
           loadMoreMessages={enhancedLoadMoreMessages} // Utiliser la fonction améliorée
           isPrependingMessages={isPrependingMessages}
           setIsPrependingMessages={setIsPrependingMessages}
+          pendingScrollToMessageId={pendingScrollToMessageId}
+          setPendingScrollToMessageId={setPendingScrollToMessageId}
         />
         <WorkspaceDetailsSidebar
           showMembers={showMembers}

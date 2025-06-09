@@ -3178,10 +3178,11 @@ span.channel-mention:hover,
 .supchat-channel-desc {
   font-size: 0.85em;
   color: #aaa;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
+white-space: normal;
+overflow: visible;
+text-overflow: initial;
+max-width: none;
+word-break: break-all;
 }
 
 /* S'assurer que la zone de saisie est correctement positionnée */
@@ -3624,4 +3625,28 @@ span.channel-mention:hover,
 
 .theme-light .chat-message.other-message .message-author {
   color: #23272f;
+}
+
+/* Fix for user avatars being too large in sidebar search results */
+.workspace-sidebar .user-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+.workspace-sidebar .user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Also fix avatars in user search results specifically */
+.workspace-sidebar .channel-item .user-avatar,
+.workspace-sidebar .search-results .user-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
 }
