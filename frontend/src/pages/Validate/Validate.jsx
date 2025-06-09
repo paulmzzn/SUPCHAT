@@ -60,12 +60,26 @@ function Validate() {
           localStorage.setItem("userEmail", email);
           // Ajouter un indicateur de validation pour la sécurité
           localStorage.setItem("isValidated", "true");
-            // If we have a pending invitation, save it to sessionStorage for the login flow
+          // If we have a pending invitation, save it to sessionStorage for the login flow
           if (pendingInvitation) {
             sessionStorage.setItem("pendingInvitation", JSON.stringify(pendingInvitation));
           }
         }
-        navigate("/login");
+        // Ajout : redirection automatique vers join-workspace si invitation en attente
+        const invitation = pendingInvitation || (() => {
+          try {
+            return JSON.parse(sessionStorage.getItem("pendingInvitation"));
+          } catch {
+            return null;
+          }
+        })();
+        if (invitation && invitation.workspaceId) {
+          // Nettoyer l'invitation du sessionStorage
+          sessionStorage.removeItem("pendingInvitation");
+          navigate(`/join-workspace?id=${invitation.workspaceId}${invitation.email ? `&email=${encodeURIComponent(invitation.email)}` : ""}`);
+        } else {
+          navigate("/login");
+        }
       } else {
         setError(data.message || "Code invalide");
       }
