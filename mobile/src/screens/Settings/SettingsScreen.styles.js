@@ -162,6 +162,23 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  deleteAccountButton: {
+    backgroundColor: theme.criticalDangerBackground || '#FF3B30',
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: theme.criticalDangerBorder || '#CC0000',
+    marginTop: 40,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteAccountButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.textOnDanger || '#FFFFFF',
+  },
   logoutButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
