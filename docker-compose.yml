@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: supchat-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: supchat
       POSTGRES_USER_FILE: /run/secrets/db_user
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
@@ -14,42 +14,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # - ./backend/db/dump-postgres-202505301032.sql:/docker-entrypoint-initdb.d/dump-postgres-202505301032.sql:ro
       - ./backend/db/init-docker.sql:/docker-entrypoint-initdb.d/init-docker.sql:ro
     networks:
       - supchat-network
     restart: unless-stopped
     healthcheck:
       test:
-        [
-          "CMD-SHELL",
-          "pg_isready -h localhost -U $$(cat /run/secrets/db_user) -d ${POSTGRES_DB}",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  redis:
-    image: redis:7-alpine
-    container_name: supchat-redis
-    secrets:
-      - redis_password
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - supchat-network
-    restart: unless-stopped
-    command: sh -c 'redis-server --appendonly yes --requirepass "$$(cat /run/secrets/redis_password)"'
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          "redis-cli --no-auth-warning -a $$(cat /run/secrets/redis_password) ping",
-        ]
+        ["CMD-SHELL", "pg_isready -U $(cat /run/secrets/db_user) -d supchat"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -59,26 +30,14 @@ services:
       dockerfile: Dockerfile.backend
     container_name: supchat-backend
     environment:
-      - NODE_ENV=${NODE_ENV}
-      - PORT=${BACKEND_PORT}
+      - NODE_ENV=production
+      - PORT=3000
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=${POSTGRES_DB}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=SuperSecretPassword2024!
-      - SCW_ENDPOINT=${SCW_ENDPOINT}
-      - SCW_REGION=${SCW_REGION}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - EMAIL_HOST=mail86.lwspanel.com
-      - EMAIL_PORT=465
-      - GOOGLE_CALLBACK_URL=http://localhost:3000/api/users/auth/google/callback
-      - GITHUB_CALLBACK_URL=http://localhost:3000/api/users/auth/github/callback
+      - DB_NAME=supchat
+      - POSTGRES_DB=supchat
       - FRONTEND_URL=http://localhost
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FILE_PATH=${LOG_FILE_PATH}
+      - LOG_LEVEL=info
     secrets:
       - db_user
       - db_password
@@ -93,7 +52,6 @@ services:
       - email_password
       - strawpoll_api_key
       - mistral_api_key
-      - redis_password
     ports:
       - "3000:3000"
     volumes:
@@ -103,8 +61,6 @@ services:
       - supchat-network
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -120,31 +76,25 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: supchat-frontend
     environment:
-      - REACT_APP_API_URL=http://localhost:3000/api
       - REACT_APP_SOCKET_URL=http://localhost:3000
     ports:
       - "80:80"
     networks:
       - supchat-network
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 30s
       timeout: 10s
       retries: 3
-
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: supchat-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@supchat.fr
       PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_password
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
-
     secrets:
       - pgadmin_password
     ports:
@@ -154,8 +104,7 @@ services:
     networks:
       - supchat-network
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
 
 secrets:
@@ -185,15 +134,11 @@ secrets:
     file: ./secrets/strawpoll_api_key.txt
   mistral_api_key:
     file: ./secrets/mistral_api_key.txt
-  redis_password:
-    file: ./secrets/redis_password.txt
   pgadmin_password:
     file: ./secrets/pgadmin_password.txt
 
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
     driver: local
   pgadmin_data:
     driver: local

@@ -6,6 +6,7 @@ import sendInvitation from "../config/emailService.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
 import fs from "fs/promises";
 import path from "path";
+import { getS3Config } from "../config/secrets.js";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -221,13 +222,14 @@ export const sendWorkspaceInvitation = async (req, res) => {
     }
 
     // Générer un token unique pour l'invitation
-    const token = Math.random().toString(36).substring(2, 15) + 
-                 Math.random().toString(36).substring(2, 15);
-    
+    const token =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
+
     // Calcul de la date d'expiration (24h à partir de maintenant)
     const expirationDate = new Date();
     expirationDate.setHours(expirationDate.getHours() + 24);
-    
+
     // Enregistrer l'invitation dans la base de données
     await pool.query(
       `INSERT INTO workspace_invitations 
@@ -235,12 +237,12 @@ export const sendWorkspaceInvitation = async (req, res) => {
        VALUES ($1, $2, $3, $4)`,
       [workspaceId, email, token, expirationDate]
     );
-    
+
     console.log("[DEBUG] Invitation enregistrée dans la base de données:", {
       workspace: workspaceId,
       email,
       token,
-      expirationDate
+      expirationDate,
     });
 
     // Envoyer l'invitation par email
@@ -308,12 +310,10 @@ export const getWorkspaceMembers = async (req, res) => {
         }
         // Si c'est une clé S3, construire l'URL complète
         else {
-          const s3Endpoint =
-            process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-          const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
+          const { endpoint, bucketName } = getS3Config();
           // S'assurer que l'URL est correctement formatée
           member.photo_url =
-            `${s3Endpoint}${bucketName}/${member.photo_de_profil}`.replace(
+            `${endpoint}${bucketName}/${member.photo_de_profil}`.replace(
               /([^:])\/\/+/g,
               "$1/"
             );
@@ -364,21 +364,27 @@ export const joinWorkspace = async (req, res) => {
         "SELECT email FROM utilisateur WHERE id_utilisateur = $1",
         [userId]
       );
-      
+
       if (userResult.rows.length === 0) {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
       }
-      
+
       const userEmail = userResult.rows[0].email;
-      
+
       // Vérifier d'abord avec l'email fourni dans la requête (si disponible)
       let invitationEmail = invitedEmail || userEmail;
-      
-      console.log("[DEBUG] Vérification d'invitation pour workspaceId:", workspaceId);
+
+      console.log(
+        "[DEBUG] Vérification d'invitation pour workspaceId:",
+        workspaceId
+      );
       console.log("[DEBUG] Email d'invitation:", invitedEmail);
       console.log("[DEBUG] Email utilisateur:", userEmail);
-      console.log("[DEBUG] Email utilisé pour la vérification:", invitationEmail);
-      
+      console.log(
+        "[DEBUG] Email utilisé pour la vérification:",
+        invitationEmail
+      );
+
       // Vérifier si l'utilisateur a une invitation valide (insensible à la casse) ou une demande acceptée
       const invitationCheck = await pool.query(
         `SELECT * FROM workspace_invitations 
@@ -393,11 +399,19 @@ export const joinWorkspace = async (req, res) => {
       // Si la première tentative échoue, essayer une recherche plus large avec l'email utilisateur
       let invitationFound = invitationCheck.rows.length > 0;
       let invitationRow = invitationFound ? invitationCheck.rows[0] : null;
-      
+
       // Si aucune invitation n'est trouvée avec l'email fourni, mais qu'un email utilisateur existe,
       // essayer avec l'email utilisateur si différent de celui fourni
-      if (!invitationFound && userEmail && invitedEmail && userEmail.toLowerCase() !== invitedEmail.toLowerCase()) {
-        console.log("[DEBUG] Tentative supplémentaire avec l'email utilisateur:", userEmail);
+      if (
+        !invitationFound &&
+        userEmail &&
+        invitedEmail &&
+        userEmail.toLowerCase() !== invitedEmail.toLowerCase()
+      ) {
+        console.log(
+          "[DEBUG] Tentative supplémentaire avec l'email utilisateur:",
+          userEmail
+        );
         const fallbackCheck = await pool.query(
           `SELECT * FROM workspace_invitations 
            WHERE fk_workspace = $1 
@@ -405,10 +419,13 @@ export const joinWorkspace = async (req, res) => {
            AND date_expiration > NOW()`,
           [workspaceId, userEmail]
         );
-        
+
         invitationFound = fallbackCheck.rows.length > 0;
         invitationRow = invitationFound ? fallbackCheck.rows[0] : null;
-        console.log("[DEBUG] Invitations trouvées avec email utilisateur:", fallbackCheck.rows.length);
+        console.log(
+          "[DEBUG] Invitations trouvées avec email utilisateur:",
+          fallbackCheck.rows.length
+        );
       }
 
       const requestCheck = await pool.query(
@@ -418,17 +435,23 @@ export const joinWorkspace = async (req, res) => {
         [workspaceId, userId]
       );
 
-      console.log("[DEBUG] Demandes acceptées trouvées:", requestCheck.rows.length);
+      console.log(
+        "[DEBUG] Demandes acceptées trouvées:",
+        requestCheck.rows.length
+      );
 
       if (!invitationFound && requestCheck.rows.length === 0) {
         return res.status(403).json({
           message: "Ce workspace est privé. Une invitation est requise.",
         });
       }
-      
+
       // Si l'invitation existe, la supprimer après utilisation
       if (invitationFound && invitationRow) {
-        console.log("[DEBUG] Suppression de l'invitation utilisée avec email:", invitationRow.email_invite);
+        console.log(
+          "[DEBUG] Suppression de l'invitation utilisée avec email:",
+          invitationRow.email_invite
+        );
         await pool.query(
           "DELETE FROM workspace_invitations WHERE id_invitation = $1",
           [invitationRow.id_invitation]
@@ -640,16 +663,21 @@ export const requestJoinWorkspace = async (req, res) => {
     }
 
     if (!workspaceCheck.rows[0].is_private) {
-      return res.status(400).json({ 
-        message: "Ce workspace est public. Vous pouvez le rejoindre directement." 
+      return res.status(400).json({
+        message:
+          "Ce workspace est public. Vous pouvez le rejoindre directement.",
       });
     }
 
     // Vérifier si une demande existe déjà avec la nouvelle table
-    const hasPendingRequest = await WorkspaceJoinRequest.hasPendingRequest(workspaceId, userId);
+    const hasPendingRequest = await WorkspaceJoinRequest.hasPendingRequest(
+      workspaceId,
+      userId
+    );
     if (hasPendingRequest) {
-      return res.status(400).json({ 
-        message: "Vous avez déjà envoyé une demande pour rejoindre ce workspace" 
+      return res.status(400).json({
+        message:
+          "Vous avez déjà envoyé une demande pour rejoindre ce workspace",
       });
     }
 
@@ -657,9 +685,9 @@ export const requestJoinWorkspace = async (req, res) => {
     const requestData = {
       fk_workspace: workspaceId,
       fk_utilisateur: userId,
-      message: message || null
+      message: message || null,
     };
-    
+
     await WorkspaceJoinRequest.create(requestData);
 
     // Notifier les propriétaires/admins du workspace via websocket si possible
@@ -670,22 +698,23 @@ export const requestJoinWorkspace = async (req, res) => {
          WHERE fk_workspace = $1 AND fk_role IN (1, 2)`,
         [workspaceId]
       );
-      
-      const admins = adminsResult.rows.map(row => row.fk_utilisateur);
-      
+
+      const admins = adminsResult.rows.map((row) => row.fk_utilisateur);
+
       // Émettre une notification aux admins connectés
       const io = req.app.get("io");
-      admins.forEach(adminId => {
+      admins.forEach((adminId) => {
         io.to(`user:${adminId}`).emit("workspaceJoinRequest", {
           workspaceId,
           userId,
-          message: "Nouvelle demande d'adhésion"
+          message: "Nouvelle demande d'adhésion",
         });
       });
     }
 
     res.status(200).json({
-      message: "Votre demande a été envoyée. Vous serez notifié lorsqu'elle sera traitée."
+      message:
+        "Votre demande a été envoyée. Vous serez notifié lorsqu'elle sera traitée.",
     });
   } catch (error) {
     console.error("Erreur requestJoinWorkspace:", error);
@@ -705,9 +734,13 @@ export const respondToJoinRequest = async (req, res) => {
       [workspaceId, adminId]
     );
 
-    if (roleCheck.rows.length === 0 || (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)) {
-      return res.status(403).json({ 
-        message: "Vous n'avez pas les droits pour gérer les demandes d'adhésion" 
+    if (
+      roleCheck.rows.length === 0 ||
+      (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)
+    ) {
+      return res.status(403).json({
+        message:
+          "Vous n'avez pas les droits pour gérer les demandes d'adhésion",
       });
     }
 
@@ -719,11 +752,15 @@ export const respondToJoinRequest = async (req, res) => {
     }
 
     if (request.fk_workspace != workspaceId) {
-      return res.status(400).json({ message: "Cette demande n'appartient pas à ce workspace" });
+      return res
+        .status(400)
+        .json({ message: "Cette demande n'appartient pas à ce workspace" });
     }
 
-    if (request.statut !== 'en_attente') {
-      return res.status(400).json({ message: "Cette demande a déjà été traitée" });
+    if (request.statut !== "en_attente") {
+      return res
+        .status(400)
+        .json({ message: "Cette demande a déjà été traitée" });
     }
 
     const userId = request.fk_utilisateur;
@@ -734,24 +771,34 @@ export const respondToJoinRequest = async (req, res) => {
 
       // Notifier l'utilisateur si possible via websocket
       if (req.app && req.app.get("io")) {
-        req.app.get("io").to(`user:${userId}`).emit("workspaceJoinRequestAccepted", {
-          workspaceId,
-          message: "Votre demande d'adhésion a été acceptée"
-        });
+        req.app
+          .get("io")
+          .to(`user:${userId}`)
+          .emit("workspaceJoinRequestAccepted", {
+            workspaceId,
+            message: "Votre demande d'adhésion a été acceptée",
+          });
       }
 
-      res.status(200).json({ message: "Demande acceptée. L'utilisateur a été ajouté au workspace." });
+      res
+        .status(200)
+        .json({
+          message: "Demande acceptée. L'utilisateur a été ajouté au workspace.",
+        });
     } else {
       // Rejeter la demande
       await WorkspaceJoinRequest.reject(requestId, adminId, rejectReason);
 
       // Notifier l'utilisateur si possible via websocket
       if (req.app && req.app.get("io")) {
-        req.app.get("io").to(`user:${userId}`).emit("workspaceJoinRequestRejected", {
-          workspaceId,
-          message: "Votre demande d'adhésion a été rejetée",
-          reason: rejectReason
-        });
+        req.app
+          .get("io")
+          .to(`user:${userId}`)
+          .emit("workspaceJoinRequestRejected", {
+            workspaceId,
+            message: "Votre demande d'adhésion a été rejetée",
+            reason: rejectReason,
+          });
       }
 
       res.status(200).json({ message: "Demande rejetée." });
@@ -773,29 +820,37 @@ export const getWorkspaceJoinRequests = async (req, res) => {
       [workspaceId, adminId]
     );
 
-    if (roleCheck.rows.length === 0 || (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)) {
-      return res.status(403).json({ 
-        message: "Vous n'avez pas les droits pour voir les demandes d'adhésion" 
+    if (
+      roleCheck.rows.length === 0 ||
+      (roleCheck.rows[0].fk_role !== 1 && roleCheck.rows[0].fk_role !== 2)
+    ) {
+      return res.status(403).json({
+        message: "Vous n'avez pas les droits pour voir les demandes d'adhésion",
       });
     }
 
     // Récupérer toutes les demandes en attente avec la nouvelle table
-    const pendingRequests = await WorkspaceJoinRequest.getPendingByWorkspace(workspaceId);
+    const pendingRequests = await WorkspaceJoinRequest.getPendingByWorkspace(
+      workspaceId
+    );
 
     // Formater les données
-    const formattedRequests = pendingRequests.map(request => {
+    const formattedRequests = pendingRequests.map((request) => {
       // Formatage de la photo de profil si nécessaire
-      if (request.photo_de_profil && !request.photo_de_profil.startsWith('http')) {
-        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-        const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
-        request.photo_url = `${s3Endpoint}${bucketName}/${request.photo_de_profil}`.replace(
-          /([^:])\/\/+/g,
-          "$1/"
-        );
+      if (
+        request.photo_de_profil &&
+        !request.photo_de_profil.startsWith("http")
+      ) {
+        const { endpoint, bucketName } = getS3Config();
+        request.photo_url =
+          `${endpoint}${bucketName}/${request.photo_de_profil}`.replace(
+            /([^:])\/\/+/g,
+            "$1/"
+          );
       } else {
         request.photo_url = request.photo_de_profil;
       }
-      
+
       return request;
     });
 
@@ -814,25 +869,25 @@ export const getUserJoinRequests = async (req, res) => {
     const requests = await WorkspaceJoinRequest.getByUser(userId);
 
     // Formater les données pour les URLs
-    const formattedRequests = requests.map(request => {
-      if (request.banner_url && !request.banner_url.startsWith('http')) {
-        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-        const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
-        request.banner_url_formatted = `${s3Endpoint}${bucketName}/${request.banner_url}`.replace(
-          /([^:])\/\/+/g,
-          "$1/"
-        );
+    const formattedRequests = requests.map((request) => {
+      if (request.banner_url && !request.banner_url.startsWith("http")) {
+        const { endpoint, bucketName } = getS3Config();
+        request.banner_url_formatted =
+          `${endpoint}${bucketName}/${request.banner_url}`.replace(
+            /([^:])\/\/+/g,
+            "$1/"
+          );
       }
 
-      if (request.icon_url && !request.icon_url.startsWith('http')) {
-        const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-        const bucketName = process.env.S3_BUCKET_NAME || "supchat-files";
-        request.icon_url_formatted = `${s3Endpoint}${bucketName}/${request.icon_url}`.replace(
-          /([^:])\/\/+/g,
-          "$1/"
-        );
+      if (request.icon_url && !request.icon_url.startsWith("http")) {
+        const { endpoint, bucketName } = getS3Config();
+        request.icon_url_formatted =
+          `${endpoint}${bucketName}/${request.icon_url}`.replace(
+            /([^:])\/\/+/g,
+            "$1/"
+          );
       }
-      
+
       return request;
     });
 

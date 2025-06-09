@@ -456,9 +456,9 @@ DO
 $$
 BEGIN
    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'admin') THEN
-      ALTER ROLE admin WITH PASSWORD 'admin' SUPERUSER;
+      ALTER ROLE admin WITH PASSWORD 'SuperSecretPassword2024!' SUPERUSER;
    ELSE
-      CREATE ROLE admin LOGIN PASSWORD 'admin' SUPERUSER;
+      CREATE ROLE admin LOGIN PASSWORD 'SuperSecretPassword2024!' SUPERUSER;
    END IF;
 END
 $$;

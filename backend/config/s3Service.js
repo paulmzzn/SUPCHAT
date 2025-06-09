@@ -2,19 +2,21 @@ import AWS from "aws-sdk";
 import dotenv from "dotenv";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { getS3Config } from "./secrets.js";
 
 // Load environment variables
 dotenv.config();
 
+// Récupérer la configuration S3 depuis les secrets Docker
+const s3ConfigSecrets = getS3Config();
+
 // Configure AWS SDK with explicit credentials for Scaleway
 const s3Config = {
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
+  region: "https://s3.fr-par.scw.cloud/",
+  endpoint: s3ConfigSecrets.endpoint,
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID || "SCW2E3VS5F51RVG9WQJA",
-    secretAccessKey:
-      process.env.SCW_SECRET_ACCESS_KEY ||
-      "9dee615d-2a3e-4f47-aabd-728a5eec1438",
+    accessKeyId: s3ConfigSecrets.accessKeyId,
+    secretAccessKey: s3ConfigSecrets.secretAccessKey,
   },
   s3ForcePathStyle: true, // Required for Scaleway S3 compatibility
 };
@@ -23,7 +25,7 @@ const s3Config = {
 const s3 = new AWS.S3(s3Config);
 
 // S3 bucket name
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "supchat-bucket";
+const BUCKET_NAME = s3ConfigSecrets.bucketName;
 
 // Types de fichiers autorisés par catégorie
 const ALLOWED_FILE_TYPES = {
