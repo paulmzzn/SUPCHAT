@@ -216,6 +216,9 @@ export const SocketProvider = ({ children }) => {
           // Rejoindre automatiquement la room privée
           newSocket.emit("joinPrivate");
           
+          // Charger et rejoindre les workspaces de l'utilisateur
+          loadWorkspaces(newSocket, token);
+          
           // Délai court pour s'assurer que la connexion est stable
           setTimeout(() => {
             refreshUnreadCounts();
