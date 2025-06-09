@@ -336,6 +336,63 @@
   color: var(--workspace-details-text-hover, #ffffff);
 }
 
+/* Files container and show more button styles */
+.files-container {
+  width: 100%;
+}
+
+.show-more-files {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 0 10px;
+}
+
+.show-more-btn {
+  background: rgba(147, 72, 183, 0.15);
+  border: 1px solid rgba(147, 72, 183, 0.3);
+  color: var(--workspace-details-text, #bbbcc4);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.show-more-btn:hover {
+  background: rgba(147, 72, 183, 0.25);
+  border-color: rgba(147, 72, 183, 0.5);
+  color: var(--workspace-details-text-hover, #ffffff);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(147, 72, 183, 0.2);
+}
+
+.show-more-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(147, 72, 183, 0.2);
+}
+
+.show-more-btn svg {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+/* Improved file name display for long titles */
+.file-name {
+white-space: normal;
+overflow: visible;
+text-overflow: initial;
+max-width: none;
+word-break: break-all;
+  cursor: help; /* Indicates hover will show more info */
+}
+
 /* Corrections pour le thème clair */
 .theme-light .member-action-btn {
   color: #6b7280;
@@ -363,4 +420,16 @@
 
 .theme-light .context-menu-divider {
   background-color: rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .show-more-btn {
+  background: rgba(147, 72, 183, 0.08);
+  border-color: rgba(147, 72, 183, 0.2);
+  color: #6b7280;
+}
+
+.theme-light .show-more-btn:hover {
+  background: rgba(147, 72, 183, 0.15);
+  border-color: rgba(147, 72, 183, 0.35);
+  color: #374151;
 }
