@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import { useSocket } from '../../context/SocketContext';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { getStyles } from './WorkspaceDetailScreen.styles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import env from '../../config/env';
 
 // Components
 import MessageInput from '../../components/MessageInput';
@@ -26,6 +28,7 @@ import EditMessageModal from '../../components/Messages/EditMessageModal';
 import MessageList from '../../components/Workspace/MessageList';
 import ToolboxModal from '../../components/Workspace/ToolboxModal';
 import TypingIndicator from '../../components/Workspace/TypingIndicator';
+import VideoCallModal from '../../components/VideoCall/VideoCallModal';
 
 // Hooks
 import { useWorkspaceChat } from '../../hooks/useWorkspaceChat';
@@ -45,6 +48,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   const [strawpollModalVisible, setStrawpollModalVisible] = useState(false);
   const [strawpollResultsModalVisible, setStrawpollResultsModalVisible] = useState(false);
   const [selectedPollId, setSelectedPollId] = useState(null);
+  const [videoCallVisible, setVideoCallVisible] = useState(false);
 
   const messageInputRef = useRef(null);
 
@@ -65,6 +69,29 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     handleLoadMore,
     initializeChat,
   } = useWorkspaceChat(workspaceId, channelId, socket, markChannelAsRead);
+
+  const [currentUserName, setCurrentUserName] = useState('Utilisateur');
+
+  // Récupérer le nom d'utilisateur actuel
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(`${env.API_URL}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserName(userData.nom || userData.username || 'Utilisateur');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du profil:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const {
     newMessage,
@@ -225,6 +252,12 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           <Text style={styles.activeChannelName} numberOfLines={1}>{workspaceName}</Text>
         </View>
         <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.videoCallButton} 
+            onPress={() => setVideoCallVisible(true)}
+          >
+            <Ionicons name="videocam" size={22} color="white" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.headerActionButton} onPress={handleViewFiles}>
             <Ionicons name="folder-outline" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
@@ -332,6 +365,17 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         onChangeText={setEditMessageContent}
         onSave={handleSaveEdit}
         onCancel={handleCancelEdit}
+      />
+
+      <VideoCallModal
+        visible={videoCallVisible}
+        onClose={() => setVideoCallVisible(false)}
+        workspaceId={workspaceId}
+        channelId={channelId}
+        channelName={channelName}
+        currentUserName={currentUserName}
+        socket={socket}
+        themeColors={themeColors}
       />
     </KeyboardAvoidingView>
   );
