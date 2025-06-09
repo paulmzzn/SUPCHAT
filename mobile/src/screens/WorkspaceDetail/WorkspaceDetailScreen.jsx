@@ -266,9 +266,13 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.headerActionButton}
-            onPress={() => navigation.navigate('WorkspaceSettings', { workspaceId, workspaceName })}
+            onPress={() => navigation.navigate('Reminders', {
+              channelId,
+              workspaceId,
+              channelName
+            })}
           >
-            <Ionicons name="settings-outline" size={24} color={themeColors.textPrimary} />
+            <Ionicons name="calendar-outline" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
