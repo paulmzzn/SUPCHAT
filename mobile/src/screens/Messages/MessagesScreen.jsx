@@ -27,6 +27,120 @@ import { useMediaPreview } from "../../components/Messages/hooks/useMediaPreview
 import { useContextMenu } from "../../components/Messages/hooks/useContextMenu";
 import { useFileUpload } from "../../components/Messages/hooks/useFileUpload";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
+const S3_BASE_URL =
+  env.S3_BASE_URL || "https://s3-supchat.s3.fr-par.scw.cloud/";
+
+// Helper for formatting message dates
+const formatMessageDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return (
+    date.toLocaleDateString() +
+    " " +
+    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
+// Helper for formatting file sizes
+const formatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes)) return "Unknown size";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+};
+
+// Helper for determining file icons
+const getFileIcon = (fileType) => {
+  switch (fileType) {
+    case "application/pdf":
+      return "document-text";
+    case "application/msword":
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return "document";
+    case "application/vnd.ms-excel":
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      return "calculator";
+    case "application/vnd.ms-powerpoint":
+    case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+      return "easel";
+    case "application/zip":
+    case "application/x-zip-compressed":
+      return "archive";
+    case "audio/mpeg":
+    case "audio/mp3":
+    case "audio/wav":
+      return "musical-notes";
+    case "video/mp4":
+    case "video/quicktime":
+      return "videocam";
+    default:
+      if (fileType?.startsWith("image/")) return "image";
+      if (fileType?.startsWith("audio/")) return "musical-notes";
+      if (fileType?.startsWith("video/")) return "videocam";
+      return "document";
+  }
+};
+
+// Helper for constructing file URLs - Updated to properly handle S3 paths
+const getFileURL = (url) => {
+  if (!url) return null;
+
+  // Si l'URL est déjà complète, la retourner telle quelle
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+  // Si le chemin commence par 'private-messages/files/', construire une URL S3
+  if (
+    url.startsWith("private-messages/files/") ||
+    url.startsWith("private-messages/")
+  ) {
+    console.log(`Using S3 base URL for file: ${url}`);
+    return `${S3_BASE_URL}${url}`;
+  }
+
+  // Si l'URL est relative mais commence déjà avec /api/files, ajouter uniquement l'URL de base
+  if (url.startsWith("/api/files/")) return `${API_URL}${url}`;
+
+  // Pour toutes les autres URLs, considérer qu'elles sont relatives à /api/files/
+  return `${API_URL}/api/files/${url}`;
+};
+
+const ImageComponent = ({ uri, style, resizeMode, fileName }) => {
+  const [hasError, setHasError] = useState(false);
+
+  return hasError ? (
+    <View
+      style={[
+        style,
+        {
+          backgroundColor: "#f0f0f0",
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 1,
+          borderColor: "#ddd",
+          borderStyle: "dashed",
+        },
+      ]}
+    >
+      <Ionicons name="image-outline" size={32} color="#999" />
+      <Text style={{ color: "#999", marginTop: 8, textAlign: "center" }}>
+        Image non disponible
+      </Text>
+    </View>
+  ) : (
+    <Image
+      source={{ uri }}
+      style={style}
+      resizeMode={resizeMode}
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
 const MessagesScreen = ({ navigation, route }) => {
   const { colors: themeColors, mode } = useTheme();
   const styles = getStyles(themeColors);

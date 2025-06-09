@@ -3,8 +3,10 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getStyles } from "./ConversationsListScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
-import SearchBar from "../../components/Messages/SearchBar";
-import ConversationsList from "../../components/Messages/ConversationsList";
+import { useFocusEffect } from "@react-navigation/native";
+import { useSocket } from "../../context/SocketContext";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
 
 const ConversationsListScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();

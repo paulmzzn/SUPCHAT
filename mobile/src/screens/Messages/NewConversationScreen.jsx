@@ -15,7 +15,7 @@ import { getStyles } from "./NewConversationScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
 import env from "../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.31:3000";
 
 const NewConversationScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();
