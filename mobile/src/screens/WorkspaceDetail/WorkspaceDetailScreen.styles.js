@@ -605,6 +605,25 @@ export const getStyles = (theme) => StyleSheet.create({
     marginLeft: 8,
   },
 
+  videoCallButton: {
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: theme.accentPrimary,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.accentPrimary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+
   // STYLES POUR LES MESSAGES SYSTÈME
   systemMessageContainer: {
     alignItems: 'center',
