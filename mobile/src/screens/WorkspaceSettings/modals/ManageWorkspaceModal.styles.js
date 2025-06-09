@@ -1,0 +1,197 @@
+import { StyleSheet } from 'react-native';
+
+export const getStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.primaryBackground,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+    backgroundColor: theme.cardBackground,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+    flex: 1,
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: theme.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: theme.textMuted,
+  },
+  saveButtonText: {
+    color: theme.textOnAccent,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  saveButtonTextDisabled: {
+    color: theme.textSecondary,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  section: {
+    marginVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 12,
+  },
+  textInput: {
+    backgroundColor: theme.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: theme.textPrimary,
+    minHeight: 50,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  imageContainer: {
+    alignItems: 'center',
+  },
+  imagePreview: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  iconImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.cardBackground,
+  },
+  bannerImage: {
+    width: 200,
+    height: 112,
+    borderRadius: 12,
+    backgroundColor: theme.cardBackground,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: theme.primaryBackground,
+    borderRadius: 12,
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.cardBackground,
+    borderWidth: 2,
+    borderColor: theme.borderColor,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  iconPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  bannerPlaceholder: {
+    width: 200,
+    height: 112,
+  },
+  placeholderText: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginTop: 4,
+  },
+  selectImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  selectImageText: {
+    color: theme.textOnAccent,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  imageHint: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  visibilityContainer: {
+    gap: 12,
+  },
+  visibilityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+    borderRadius: 12,
+    padding: 16,
+  },
+  visibilityOptionSelected: {
+    borderColor: theme.accentPrimary,
+    backgroundColor: theme.accentBackground,
+  },
+  visibilityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.accentBackground,
+    marginRight: 12,
+  },
+  visibilityContent: {
+    flex: 1,
+  },
+  visibilityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  visibilityTitleSelected: {
+    color: theme.accentPrimary,
+  },
+  visibilityDescription: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    lineHeight: 18,
+  },
+});

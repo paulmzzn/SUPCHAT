@@ -18,13 +18,18 @@ import CodeVerificationScreen from './src/screens/Auth/CodeVerificationScreen';
 
 // Main app screens
 import WorkspacesScreen from './src/screens/Workspaces/WorkspacesScreen';
+import CreateWorkspaceScreen from './src/screens/CreateWorkspace/CreateWorkspaceScreen';
 import WorkspaceScreen from './src/screens/WorkspaceDetail/WorkspaceDetailScreen';
+import WorkspaceChannelsScreen from './src/screens/WorkspaceChannels/WorkspaceChannelsScreen';
+import WorkspaceMembersScreen from './src/screens/WorkspaceMembers/WorkspaceMembersScreen';
+import ChannelFilesScreen from './src/screens/ChannelFiles/ChannelFilesScreen';
 import MessagesScreen from './src/screens/Messages/MessagesScreen';
 import ConversationsListScreen from './src/screens/Messages/ConversationsListScreen';
 import NewConversationScreen from './src/screens/Messages/NewConversationScreen';
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
+import WorkspaceSettingsScreen from './src/screens/WorkspaceSettings/WorkspaceSettingsScreen'; // Import du nouvel écran
 
 // Custom TabBar
 import TabBar from './src/components/TabBar/TabBar'; 
@@ -34,6 +39,7 @@ const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const MessagesStack = createNativeStackNavigator(); // Create a stack for messages
+const WorkspacesStack = createNativeStackNavigator(); // Create a stack for workspaces
 
 // Messages Stack Navigator
 function MessagesNavigator() {
@@ -43,6 +49,21 @@ function MessagesNavigator() {
       <MessagesStack.Screen name="Conversation" component={MessagesScreen} />
       <MessagesStack.Screen name="NewConversation" component={NewConversationScreen} />
     </MessagesStack.Navigator>
+  );
+}
+
+// Workspaces Stack Navigator
+function WorkspacesNavigator() {
+  return (
+    <WorkspacesStack.Navigator screenOptions={{ headerShown: false }}>
+      <WorkspacesStack.Screen name="WorkspacesList" component={WorkspacesScreen} />
+      <WorkspacesStack.Screen name="WorkspaceChannels" component={WorkspaceChannelsScreen} />
+      <WorkspacesStack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} />
+      <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
+      <WorkspacesStack.Screen name="ChannelFiles" component={ChannelFilesScreen} />
+      <WorkspacesStack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
+      <WorkspacesStack.Screen name="CreateWorkspace" component={CreateWorkspaceScreen} />
+    </WorkspacesStack.Navigator>
   );
 }
 
@@ -62,16 +83,19 @@ function AppTabs() {
   }, [refreshUnreadCounts]);
   
   return (
-    <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
-      <Tab.Screen name="Workspaces" component={WorkspacesScreen} options={{ headerShown: false }} />
-      <Tab.Screen 
-        name="Messages" 
-        component={MessagesNavigator} 
-        options={{ headerShown: false }}
-      />
-      <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
-    </Tab.Navigator>
+    <>
+
+      <Tab.Navigator tabBar={(props) => <TabBar {...props} />}>
+        <Tab.Screen name="Workspaces" component={WorkspacesNavigator} options={{ headerShown: false }} />
+        <Tab.Screen 
+          name="Messages" 
+          component={MessagesNavigator} 
+          options={{ headerShown: false }}
+        />
+        <Tab.Screen name="Discover" component={DiscoverScreen} options={{ headerShown: false }} />
+        <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      </Tab.Navigator>
+    </>
   );
 }
 
@@ -93,7 +117,6 @@ function MainAppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="HomeTabs" component={AppTabs} />
       <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-      <AppStack.Screen name="Workspace" component={WorkspaceScreen} />
     </AppStack.Navigator>
   );
 }
