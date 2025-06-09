@@ -4,10 +4,10 @@ import Search from "../models/Search.js";
 export const searchInWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { query } = req.query;
+    const { query, limit } = req.query;
 
     console.log(
-      `[SearchController] Requête reçue pour workspace ${workspaceId} avec query "${query}"`
+      `[SearchController] Requête reçue pour workspace ${workspaceId} avec query "${query}" et limite ${limit || 'par défaut'}`
     );
 
     // Vérifier que la requête de recherche n'est pas vide
@@ -44,7 +44,8 @@ export const searchInWorkspace = async (req, res) => {
     );
 
     // Effectuer la recherche unifiée
-    const results = await Search.searchInWorkspace(workspaceId, query, userId);
+    const searchLimit = parseInt(limit) || 100; // Utiliser la limite fournie ou 100 par défaut
+    const results = await Search.searchInWorkspace(workspaceId, query, userId, searchLimit);
 
     // Afficher un résumé des résultats
     console.log(`[SearchController] Résultats de recherche:

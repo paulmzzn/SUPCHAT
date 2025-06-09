@@ -8,6 +8,7 @@ import env from '../../config/env';
 import { getStyles } from './SettingsScreen.styles'; // Import getStyles
 import { useTheme } from '../../theme/ThemeContext'; // Import useTheme
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Import useNavigation and useFocusEffect
+import { Buffer } from 'buffer'; // Import Buffer pour décodage base64
 
 const SettingsScreen = () => {
   const { themeMode, toggleTheme, colors: themeColors } = useTheme(); // Use theme context
@@ -74,7 +75,7 @@ const SettingsScreen = () => {
     }, [])
   );
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       "Déconnexion",
       "Êtes-vous sûr de vouloir vous déconnecter ?",
@@ -87,6 +88,68 @@ const SettingsScreen = () => {
           text: "Déconnecter", 
           onPress: async () => {
             await signOut();
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
+  // Fonction pour supprimer le compte de l'utilisateur
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Supprimer le compte",
+      "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données seront perdues.",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        { 
+          text: "Supprimer", 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) {
+                Alert.alert("Erreur", "Impossible de supprimer le compte. Veuillez vous reconnecter.");
+                return;
+              }
+              
+              // Décodage du token pour obtenir l'ID utilisateur
+              const tokenParts = token.split('.');
+              const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+              const userId = payload.id;
+              
+              // Appel à l'API pour supprimer le compte
+              const response = await fetch(`${env.API_URL}/api/users/delete/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (response.ok) {
+                Alert.alert(
+                  "Compte supprimé",
+                  "Votre compte a été supprimé avec succès.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: async () => {
+                        await signOut();
+                      }
+                    }
+                  ]
+                );
+              } else {
+                const errorData = await response.json();
+                Alert.alert("Erreur", errorData.message || "Une erreur est survenue lors de la suppression du compte.");
+              }
+            } catch (error) {
+              console.error("Erreur lors de la suppression du compte:", error);
+              Alert.alert("Erreur", "Une erreur est survenue lors de la suppression du compte.");
+            }
           },
           style: "destructive"
         }
@@ -221,6 +284,12 @@ const SettingsScreen = () => {
             <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
         </View>
+
+        {/* Supprimer le compte */}
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={22} color={themeColors.textOnDanger || "#FFFFFF"} style={{ marginRight: 10 }} />
+          <Text style={styles.deleteAccountButtonText}>Supprimer mon compte</Text>
+        </TouchableOpacity>
 
         {/* Log Out Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -303,16 +303,51 @@ class Fichier {
    */
   static async getByCanalId(canalId) {
     try {
+      console.log('🔍 Fichier.getByCanalId called with canalId:', canalId);
       const query = `
-        SELECT DISTINCT f.*
-        FROM fichier f
-        JOIN message_fichier mf ON f.id_fichier = mf.fk_fichier
-        JOIN message m ON m.id_message = mf.fk_message
-        WHERE m.fk_canal = $1
-        ORDER BY f.date_upload DESC
+        SELECT 
+          m.id_message,
+          m.contenu,
+          m.date_envoi as createdAt,
+          u.nom as senderName,
+          u.email as senderEmail
+        FROM message m
+        LEFT JOIN utilisateur u ON m.fk_utilisateur = u.id_utilisateur
+        WHERE m.fk_canal = $1 
+        AND m.contenu IS NOT NULL 
+        AND m.contenu != ''
+        AND m.contenu::text LIKE '%"type":"file"%'
+        ORDER BY m.date_envoi DESC
       `;
+      console.log('📋 Query:', query);
+      console.log('📋 Params:', [canalId]);
       const result = await pool.query(query, [canalId]);
-      return result.rows;
+      console.log('📊 Query result rows count:', result.rows.length);
+      
+      // Transformer les résultats pour extraire les fichiers du contenu JSON
+      const files = [];
+      result.rows.forEach(row => {
+        try {
+          const contenu = JSON.parse(row.contenu);
+          if (contenu && contenu.type === 'file') {
+            files.push({
+              id: row.id_message, // Utiliser l'ID du message comme ID du fichier
+              fileName: contenu.fileName,
+              fileUrl: contenu.fileUrl,
+              fileType: contenu.fileType,
+              fileSize: contenu.fileSize,
+              createdAt: row.createdat,
+              senderName: row.sendername,
+              isImage: contenu.isImage
+            });
+          }
+        } catch (parseError) {
+          console.error('Error parsing contenu JSON:', parseError, 'for row:', row.contenu);
+        }
+      });
+      
+      console.log('📊 Files extracted:', files.length, 'files:', files);
+      return files;
     } catch (error) {
       console.error("Erreur dans Fichier.getByCanalId:", error);
       throw error;

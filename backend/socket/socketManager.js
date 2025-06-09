@@ -103,6 +103,10 @@ const socketManager = (io) => {
       // Mettre à jour le statut dans la BD (1 = en ligne)
       updateUserStatus(userId, 1);
 
+      // *** NOUVEAU : Rejoindre la room personnelle pour recevoir les mises à jour de compteurs ***
+      socket.join(`user:${userId}`);
+      console.log(`🔔 Socket.IO: Utilisateur ${userId} rejoint sa room personnelle user:${userId}`);
+
       // Informer tous les workspaces de l'utilisateur qu'il est en ligne
       socket.on("userJoinedWorkspaces", ({ workspaces }) => {
         if (Array.isArray(workspaces)) {
@@ -811,6 +815,55 @@ const socketManager = (io) => {
             });
           }
           // --- FIN AJOUT ---
+
+          // *** NOUVELLE FONCTIONNALITÉ : Mise à jour des compteurs non lus ***
+          // Récupérer tous les membres du workspace SAUF l'expéditeur du message
+          try {
+            if (finalWorkspaceId) {
+              console.log(`🔔 Socket.IO: Mise à jour des compteurs pour workspace ${finalWorkspaceId}, canal ${canal_id}`);
+              
+              const workspaceMembersQuery = await pool.query(
+                `SELECT mw.fk_utilisateur as user_id 
+                 FROM membre_workspace mw 
+                 WHERE mw.fk_workspace = $1 AND mw.fk_utilisateur != $2`,
+                [finalWorkspaceId, socket.user.id]
+              );
+
+              const workspaceMembers = workspaceMembersQuery.rows;
+              console.log(`🔔 Socket.IO: ${workspaceMembers.length} membres à notifier dans le workspace ${finalWorkspaceId}`);
+
+              // Pour chaque membre du workspace (sauf l'expéditeur)
+              for (const member of workspaceMembers) {
+                const memberId = member.user_id;
+                
+                try {
+                  // Récupérer les compteurs mis à jour pour ce membre
+                  const updatedCounts = await MessageModel.getUnreadCountByChannel(memberId);
+                  
+                  // Calculer le total des messages non lus
+                  let total = 0;
+                  if (updatedCounts && updatedCounts.channels) {
+                    Object.values(updatedCounts.channels).forEach((channel) => {
+                      total += channel.count || 0;
+                    });
+                  }
+
+                  // Émettre la mise à jour des compteurs vers ce membre spécifique
+                  // Utiliser l'ID utilisateur comme room pour cibler précisément chaque membre
+                  io.to(`user:${memberId}`).emit("unreadChannelMessagesUpdated", {
+                    channels: updatedCounts.channels || {},
+                    total: total,
+                  });
+
+                  console.log(`🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total}`);
+                } catch (memberError) {
+                  console.error(`🔔 Socket.IO: Erreur mise à jour compteurs pour membre ${memberId}:`, memberError);
+                }
+              }
+            }
+          } catch (workspaceError) {
+            console.error("🔔 Socket.IO: Erreur lors de la mise à jour des compteurs workspace:", workspaceError);
+          }
         } else {
           console.warn(
             "Socket.IO: Message utilisateur enregistré mais non émis (non trouvé)"
@@ -1122,29 +1175,72 @@ const socketManager = (io) => {
     // Suppression d'un message de canal (WebSocket)
     socket.on("deleteMessage", async ({ messageId }) => {
       try {
+        console.log("🗑️ [SERVER DIAGNOSTIC] deleteMessage event received:", {
+          messageId,
+          userId: socket.user?.id,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+
         if (!messageId) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] No messageId provided");
           socket.emit("error", { message: "ID du message manquant" });
           return;
         }
+        
         const userId = socket.user.id;
+        console.log("🗑️ [SERVER DIAGNOSTIC] Processing deletion for user:", userId);
+        
         const message = await MessageModel.getById(messageId);
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message found in DB:", !!message);
+        
         if (!message) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] Message not found in database");
           socket.emit("error", { message: "Message non trouvé" });
           return;
         }
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message details:", {
+          id: message.id_message,
+          author: message.fk_utilisateur,
+          channel: message.fk_canal,
+          content: message.contenu?.substring(0, 50)
+        });
+        
         if (message.fk_utilisateur !== userId) {
+          console.log("🗑️ [SERVER DIAGNOSTIC] User not authorized to delete message");
           socket.emit("error", {
             message: "Vous ne pouvez supprimer que vos propres messages",
           });
           return;
         }
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Deleting message from database");
         await MessageModel.delete(messageId);
-        io.to(`${message.fk_canal}`).emit("deleteMessage", { messageId });
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] Message deleted, emitting to channel:", message.fk_canal);
+        
+        // Émettre vers tous les clients connectés au canal
+        const emitData = { messageId };
+        io.to(`${message.fk_canal}`).emit("deleteMessage", emitData);
+        
+        console.log("🗑️ [SERVER DIAGNOSTIC] deleteMessage event emitted:", {
+          channel: message.fk_canal,
+          data: emitData,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Vérifier combien de clients sont connectés à ce canal
+        const room = io.sockets.adapter.rooms.get(`${message.fk_canal}`);
+        const clientCount = room ? room.size : 0;
+        console.log("🗑️ [SERVER DIAGNOSTIC] Clients connected to channel:", {
+          channel: message.fk_canal,
+          clientCount: clientCount,
+          clients: room ? Array.from(room) : []
+        });
+        
       } catch (error) {
-        console.error(
-          "Erreur lors de la suppression du message via WebSocket:",
-          error
-        );
+        console.error("🗑️ [SERVER DIAGNOSTIC] Error during message deletion:", error);
         socket.emit("error", {
           message: "Erreur lors de la suppression du message",
         });
@@ -1515,156 +1611,56 @@ const socketManager = (io) => {
       }
     });
 
-    // Ajouter des handlers pour différents événements d'erreur de socket
-    socket.on("error", (err) => {
-      console.error("Socket.IO: Erreur socket individuelle:", err);
-    });
-
-    // Nouvel événement pour gérer les réactions aux messages privés
-    socket.on("addPrivateMessageReaction", async (data) => {
+    // Nouvel événement pour récupérer les fichiers d'un canal
+    socket.on("getChannelFiles", async ({ channelId }, callback) => {
       try {
-        console.log("Socket.IO: Réaction à message privé reçue", data);
-        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const {
-          id: messageId,
-          reaction: reactionFromMobile,
-          reaction_type,
-        } = data;
-        const reaction_type_final = reactionFromMobile || reaction_type;
+        const userId = socket.user.id;
 
-        if (!messageId || !reaction_type_final) {
-          console.error("Socket.IO: Données de réaction incomplètes");
-          socket.emit("error", { message: "Données de réaction incomplètes" });
+        if (!channelId) {
+          const error = { message: "ID du canal manquant" };
+          if (callback) callback({ success: false, error });
+          else socket.emit("error", error);
           return;
         }
 
-        // Récupérer le message privé
-        const message = await MessagePrive.getById(messageId);
-        if (!message) {
-          socket.emit("error", { message: "Message privé non trouvé" });
+        console.log(`Socket.IO: Récupération des fichiers pour le canal ${channelId} par l'utilisateur ${userId}`);
+
+        // Vérifier que l'utilisateur a accès à ce canal
+        const accessCheck = await Canal.checkUserAccess(channelId, userId);
+        if (!accessCheck.hasAccess) {
+          const error = { message: "Accès refusé à ce canal" };
+          if (callback) callback({ success: false, error });
+          else socket.emit("error", error);
           return;
         }
 
-        // Vérifier que l'utilisateur est soit l'expéditeur soit le destinataire du message
-        if (
-          message.fk_expediteur !== socket.user.id &&
-          message.fk_destinataire !== socket.user.id
-        ) {
-          socket.emit("error", {
-            message: "Non autorisé à réagir à ce message",
+        // Récupérer les fichiers du canal
+        const files = await Fichier.getByCanalId(channelId);
+        
+        console.log(`Socket.IO: ${files.length} fichiers trouvés pour le canal ${channelId}`);
+
+        // Répondre avec les fichiers
+        if (callback) {
+          callback({ 
+            success: true, 
+            files: files || [] 
           });
-          return;
-        }
-
-        // Ajouter la réaction en base de données
-        await ReactionPrive.create({
-          fk_message_prive: messageId,
-          fk_utilisateur: socket.user.id,
-          reaction_type: reaction_type_final,
-        });
-
-        // Récupérer toutes les réactions mises à jour pour ce message
-        const updatedReactions = await ReactionPrive.getByMessage(
-          messageId,
-          socket.user.id
-        );
-
-        // Diffuser aux deux utilisateurs concernés par le message privé
-        io.to(`dm:${message.fk_expediteur}`)
-          .to(`dm:${message.fk_destinataire}`)
-          .emit("privateMessageReaction", {
-            messageId,
-            reactions: updatedReactions,
-          });
-      } catch (error) {
-        // Gérer l'erreur si la réaction existe déjà (contrainte unique)
-        if (error.code === "23505") {
-          // Code d'erreur PostgreSQL pour violation d'unicité
-          console.log(
-            `L'utilisateur ${socket.user.id} a déjà réagi au message privé ${data.id}`
-          );
-          // Optionnel: renvoyer les réactions actuelles pour synchroniser le client
-          const message = await MessagePrive.getById(data.id);
-          if (message) {
-            const currentReactions = await ReactionPrive.getByMessage(
-              data.id,
-              socket.user.id
-            );
-            socket.emit("privateMessageReaction", {
-              messageId: data.id,
-              reactions: currentReactions,
-            });
-          }
         } else {
-          console.error(
-            "Socket.IO: Erreur de traitement de réaction au message privé",
-            error
-          );
-          socket.emit("error", {
-            message: "Erreur lors du traitement de la réaction",
+          socket.emit("channelFiles", { 
+            channelId, 
+            files: files || [] 
           });
         }
-      }
-    });
 
-    // Nouvel événement pour gérer la suppression des réactions aux messages privés
-    socket.on("removePrivateMessageReaction", async (data) => {
-      try {
-        console.log(
-          "Socket.IO: Suppression de réaction de message privé",
-          data
-        );
-        // Supporter à la fois 'reaction' et 'reaction_type' pour la compatibilité
-        const {
-          id: messageId,
-          reaction: reactionFromMobile,
-          reaction_type,
-        } = data;
-        const reaction_type_final = reactionFromMobile || reaction_type;
-
-        if (!messageId || !reaction_type_final) {
-          console.error(
-            "Socket.IO: Données de suppression de réaction incomplètes"
-          );
-          socket.emit("error", { message: "Données incomplètes" });
-          return;
-        }
-
-        // Récupérer le message privé
-        const message = await MessagePrive.getById(messageId);
-        if (!message) {
-          socket.emit("error", { message: "Message privé non trouvé" });
-          return;
-        }
-
-        // Supprimer la réaction en base de données
-        await ReactionPrive.delete(
-          messageId,
-          socket.user.id,
-          reaction_type_final
-        );
-
-        // Récupérer toutes les réactions mises à jour pour ce message
-        const updatedReactions = await ReactionPrive.getByMessage(
-          messageId,
-          socket.user.id
-        );
-
-        // Diffuser aux deux utilisateurs concernés par le message privé
-        io.to(`dm:${message.fk_expediteur}`)
-          .to(`dm:${message.fk_destinataire}`)
-          .emit("privateMessageReaction", {
-            messageId,
-            reactions: updatedReactions,
-          });
       } catch (error) {
-        console.error(
-          "Socket.IO: Erreur de suppression de réaction de message privé",
-          error
-        );
-        socket.emit("error", {
-          message: "Erreur lors de la suppression de la réaction",
-        });
+        console.error("Socket.IO: Erreur lors de la récupération des fichiers du canal:", error);
+        const errorResponse = { message: "Erreur lors de la récupération des fichiers" };
+        
+        if (callback) {
+          callback({ success: false, error: errorResponse });
+        } else {
+          socket.emit("error", errorResponse);
+        }
       }
     });
 

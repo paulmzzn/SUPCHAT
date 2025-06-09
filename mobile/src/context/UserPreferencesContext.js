@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Création du contexte
@@ -15,6 +16,11 @@ const DEFAULT_PREFERENCES = {
 export const UserPreferencesProvider = ({ children }) => {
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Filtrer les enfants pour s'assurer qu'aucun texte brut n'est rendu
+  const filteredChildren = React.Children.toArray(children).filter(
+    child => React.isValidElement(child)
+  );
 
   // Chargement des préférences depuis le stockage local
   useEffect(() => {
@@ -56,6 +62,10 @@ export const UserPreferencesProvider = ({ children }) => {
     await updatePreference('notificationSoundEnabled', !preferences.notificationSoundEnabled);
   };
 
+  if (isLoading) {
+    return <Text>Loading preferences...</Text>;
+  }
+
   // Valeurs exposées par le contexte
   const value = {
     preferences,
@@ -66,7 +76,7 @@ export const UserPreferencesProvider = ({ children }) => {
 
   return (
     <UserPreferencesContext.Provider value={value}>
-      {children}
+      {filteredChildren}
     </UserPreferencesContext.Provider>
   );
 };

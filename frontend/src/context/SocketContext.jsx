@@ -35,8 +35,7 @@ export function SocketProvider({ children }) {
   const [userStatuses, setUserStatuses] = useState({});
   const socketRef = useRef(null);
 
-  // Permettre l'utilisation de la variable d'environnement ou une valeur de secours
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
 
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = async () => {
