@@ -6,7 +6,7 @@ import { useMessageContextMenu } from "./useMessageContextMenu";
 import { useMessageReactions } from "./useMessageReactions";
 import { useRef, useState, useCallback, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://REDACTED:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.31:3000";
 
 /**
  * Hook pour gérer les messages entre utilisateurs
