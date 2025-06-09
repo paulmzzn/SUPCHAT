@@ -34,7 +34,7 @@ import { GoogleDriveAuthProvider } from "./contexts/GoogleDriveAuthContext";
 import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
 import { isMobileDevice } from "./utils/deviceDetection";
 
-import CGUPage from "./pages/CGUPage";
+import CGU from "./pages/Settings/CGU"; // Importer la page CGU
 
 // Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
 if (process.env.NODE_ENV === "development") {
@@ -339,6 +339,8 @@ function App() {
                     )
                   }
                 />
+              {/* Route CGU accessible publiquement */}
+              <Route path="/cgu" element={<CGU />} />
               </Routes>{" "}
             </Router>
           </NotificationProvider>
