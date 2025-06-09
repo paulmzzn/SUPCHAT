@@ -517,14 +517,6 @@
   font-size: 0.875rem;
 }
 
-/* Container des fichiers */
-.files-container {
-  flex: 1;
-  padding: 20px 24px;
-  overflow-y: auto;
-  background: #f8fafc;
-}
-
 .files-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

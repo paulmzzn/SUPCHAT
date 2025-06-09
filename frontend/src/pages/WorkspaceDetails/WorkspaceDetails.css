@@ -3178,10 +3178,11 @@ span.channel-mention:hover,
 .supchat-channel-desc {
   font-size: 0.85em;
   color: #aaa;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
+white-space: normal;
+overflow: visible;
+text-overflow: initial;
+max-width: none;
+word-break: break-all;
 }
 
 /* S'assurer que la zone de saisie est correctement positionnée */
