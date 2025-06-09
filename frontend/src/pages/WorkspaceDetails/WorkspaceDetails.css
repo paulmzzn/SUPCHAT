@@ -556,23 +556,47 @@
 .file-item {
   display: flex;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  min-height: 44px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(176, 95, 223, 0.08);
+  min-height: 38px;
+  border-radius: 6px;
+  margin-bottom: 1px;
+  transition: all 0.2s ease;
+  background: rgba(176, 95, 223, 0.02);
+  cursor: pointer;
+}
+
+.file-item:hover {
+  background: rgba(176, 95, 223, 0.1);
+  border-color: rgba(176, 95, 223, 0.25);
+  transform: translateX(2px);
+  box-shadow: 0 2px 6px rgba(176, 95, 223, 0.15);
+}
+
+.file-item:last-child {
+  border-bottom: none;
 }
 
 .file-icon {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  margin-right: 12px;
-  background-color: var(--workspace-details-file-icon-bg);
-  color: var(--workspace-details-file-icon-color);
-  font-size: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  margin-right: 8px;
+  background: linear-gradient(135deg, #b05fdf, #9348b7);
+  color: white;
+  font-size: 11px;
   flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(176, 95, 223, 0.2);
+  transition: all 0.2s ease;
+}
+
+.file-item:hover .file-icon {
+  background: linear-gradient(135deg, #c06ef0, #a459c8);
+  box-shadow: 0 3px 6px rgba(176, 95, 223, 0.3);
+  transform: scale(1.05);
 }
 
 .file-info {
@@ -586,26 +610,51 @@
 .file-name {
   font-weight: 500;
   color: var(--workspace-details-file-name);
-  font-size: 0.97rem;
-  margin-bottom: 2px;
+  font-size: 0.82rem;
+  margin-bottom: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 130px;
+  line-height: 1.2;
 }
 
 .file-meta {
-  color: var(--workspace-details-file-meta);
-  font-size: 0.75rem;
+  color: #b05fdf;
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .file-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  margin-left: 10px;
-  min-width: 38px;
+  gap: 6px;
+  margin-left: 8px;
+  min-width: 32px;
+}
+
+.file-actions .file-download-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(176, 95, 223, 0.1);
+  color: #b05fdf;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.file-actions .file-download-button:hover {
+  background: rgba(176, 95, 223, 0.2);
+  color: #c06ef0;
+  transform: scale(1.1);
 }
 
 /* Grille d'images */
@@ -1927,7 +1976,11 @@
   color: #9348b7;
 }
 .theme-light .message-context-menu {
-  background: linear-gradient(145deg, #fff, #f5f5f7);
+  background: linear-gradient(
+    145deg,
+    #fff,
+    #f5f5f7
+  );
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 0 0 1px #e0e0e0;
 }
 .theme-light .message-context-menu .context-menu-item {
@@ -2490,49 +2543,151 @@ span.channel-mention:hover,
 .message-file {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin: 10px 0 6px 0;
-  gap: 18px;
-  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.07);
+  background: linear-gradient(
+    135deg,
+    rgba(176, 95, 223, 0.08),
+    rgba(147, 72, 183, 0.05)
+  );
+  border: 1px solid rgba(176, 95, 223, 0.2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 12px 0 8px 0;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(176, 95, 223, 0.1);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.message-file:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(176, 95, 223, 0.12),
+    rgba(147, 72, 183, 0.08)
+  );
+  border-color: rgba(176, 95, 223, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(176, 95, 223, 0.2);
+  transform: translateY(-1px);
 }
 
 .file-info-container {
   display: flex;
   align-items: center;
-  gap: 18px;
+  justify-content: space-between;
+  width: 100%;
   min-width: 0;
+  gap: 16px;
+}
+
+.file-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #b05fdf, #9348b7);
+  color: white;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(176, 95, 223, 0.3);
+  transition: all 0.2s ease;
+}
+
+.message-file:hover .file-icon-wrapper {
+  background: linear-gradient(135deg, #c06ef0, #a459c8);
+  box-shadow: 0 4px 12px rgba(176, 95, 223, 0.4);
+  transform: scale(1.05);
 }
 
 .file-details {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  max-width: 180px;
+  flex: 1;
+}
+
+.file-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.file-type {
+  color: #b05fdf;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(176, 95, 223, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .file-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #fff;
-  font-size: 0.97rem;
-  margin-bottom: 2px;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 200px;
 }
 
 .file-size {
   color: #b05fdf;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .file-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 10px;
+  gap: 10px;
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.file-view-button,
+.file-download-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  height: 32px;
+}
+
+.file-view-button {
+  background: linear-gradient(135deg, #b05fdf, #9348b7);
+  color: white;
+  box-shadow: 0 2px 4px rgba(176, 95, 223, 0.3);
+}
+
+.file-view-button:hover {
+  background: linear-gradient(135deg, #c06ef0, #a459c8);
+  box-shadow: 0 3px 8px rgba(176, 95, 223, 0.4);
+  transform: translateY(-1px);
+}
+
+.file-download-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #b05fdf;
+  border: 1px solid rgba(176, 95, 223, 0.3);
+}
+
+.file-download-button:hover {
+  background: rgba(176, 95, 223, 0.15);
+  border-color: rgba(176, 95, 223, 0.5);
+  color: #c06ef0;
+  transform: translateY(-1px);
 }
 
 /* Styles améliorés pour les sondages dans les messages */
@@ -2961,7 +3116,7 @@ span.channel-mention:hover,
   margin-bottom: 10px;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  animation: fadeInDropdown 0.2s ease-out;
+  animation: fadeInDropdown 0.2s ease;
 }
 
 @keyframes fadeInDropdown {
@@ -3202,7 +3357,7 @@ span.channel-mention:hover,
 }
 
 .sidebar-tab.active::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -3px;
   left: 0;
@@ -3271,4 +3426,202 @@ span.channel-mention:hover,
 
 .theme-light .sidebar-tab:not(.active):hover {
   border-bottom: 3px solid rgba(147, 72, 183, 0.2);
+}
+
+/* Styles pour les fichiers compacts dans les messages */
+.message-file-compact {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(
+    135deg,
+    rgba(176, 95, 223, 0.08),
+    rgba(147, 72, 183, 0.05)
+  );
+  border: 1px solid rgba(176, 95, 223, 0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 8px 0 6px 0;
+  gap: 12px;
+  max-width: 400px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.message-file-compact:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(176, 95, 223, 0.12),
+    rgba(147, 72, 183, 0.08)
+  );
+  border-color: rgba(176, 95, 223, 0.25);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.message-file-compact .file-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #b05fdf, #9348b7);
+  color: white;
+  font-size: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(176, 95, 223, 0.25);
+  transition: all 0.2s ease;
+}
+
+.message-file-compact:hover .file-icon-wrapper {
+  background: linear-gradient(135deg, #c06ef0, #a459c8);
+  box-shadow: 0 3px 8px rgba(176, 95, 223, 0.35);
+  transform: scale(1.05);
+}
+
+.message-file-compact .file-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.message-file-compact .file-name {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  line-height: 1.2;
+}
+
+.message-file-compact .file-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-file-compact .file-type {
+  color: #b05fdf;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(176, 95, 223, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.message-file-compact .file-size {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+
+.file-download-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #b05fdf, #9348b7);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(176, 95, 223, 0.25);
+}
+
+.file-download-btn:hover {
+  background: linear-gradient(135deg, #c06ef0, #a459c8);
+  box-shadow: 0 3px 10px rgba(176, 95, 223, 0.4);
+  transform: scale(1.05);
+}
+
+.file-download-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(176, 95, 223, 0.3);
+}
+
+/* Corrections pour le thème clair - Contraste amélioré */
+.theme-light .workspace-name {
+  color: #1f2937;
+}
+
+.theme-light .message-file-compact .file-size {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Light theme corrections for member info components */
+.theme-light .member-name {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.theme-light .role-icon {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .channel-member-name {
+  color: #1f2937;
+}
+
+.theme-light .channel-member-role {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Corrections pour le thème clair - status-context-menu */
+.theme-light .status-context-menu {
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Corrections pour le thème clair - channel-item */
+.theme-light .channel-item {
+  color: #b0b3b8;
+}
+
+.theme-light .channel-item:hover {
+  background: rgba(147, 72, 183, 0.08);
+}
+
+.theme-light .channel-item.active {
+  background: #9348b7;
+  color: white;
+}
+
+.theme-light .channel-item.active .channel-name {
+  color: white;
+}
+
+.theme-light .channel-item.active .channel-icon {
+  color: white;
+}
+
+.theme-light .channel-icon {
+  color: #b0b3b8;
+}
+
+.theme-light .channel-name {
+  color: #b0b3b8;
+}
+
+/* Light theme corrections for message author text */
+.theme-light .message-author {
+  color: #23272f;
+}
+
+.theme-light .chat-message.own-message .message-author {
+  color: #23272f;
+}
+
+.theme-light .chat-message.other-message .message-author {
+  color: #23272f;
 }

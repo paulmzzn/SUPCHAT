@@ -29,7 +29,71 @@
 .context-menu-divider {
   height: 1px;
   background-color: rgba(255, 255, 255, 0.1);
-  margin: 6px 0;
+}
+
+/* Reminder Section Styles */
+.reminder-actions {
+  display: flex !important;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+  opacity: 1;
+  visibility: visible;
+}
+
+.reminder-create-btn {
+  background: rgba(147, 72, 183, 0.8) !important;
+  border: 1px solid rgba(147, 72, 183, 0.6) !important;
+  color: #ffffff !important;
+  font-size: 14px;
+  cursor: pointer;
+  display: none !important; /* Masqué par défaut */
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  min-width: auto;
+  min-height: 32px;
+  gap: 4px;
+  opacity: 0 !important; /* Invisible par défaut */
+  visibility: hidden !important; /* Caché par défaut */
+  position: relative;
+  z-index: 10;
+}
+
+/* N'afficher le bouton que lorsqu'un canal est actif */
+.reminder-create-btn.channel-active {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.reminder-create-btn.channel-active:hover {
+  background: rgba(147, 72, 183, 1) !important;
+  border-color: rgba(147, 72, 183, 0.8) !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(147, 72, 183, 0.3);
+}
+
+.reminder-create-btn.channel-active:active {
+  transform: scale(0.98);
+}
+
+.reminder-create-btn svg {
+  font-size: 14px;
+  color: #ffffff !important;
+}
+
+.reminder-create-btn span {
+  font-weight: 500;
+  white-space: nowrap;
+  color: #ffffff !important;
+}
+
+/* Pour forcer l'affichage si masqué par d'autres styles */
+.reminder-actions .reminder-create-btn {
+  display: flex !important;
 }
 
 .context-menu-section {
@@ -206,4 +270,97 @@
 .join-request-reject:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Reminder Section Styles */
+.reminder-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.reminder-create-btn {
+  background: rgba(124, 58, 237, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.6);
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.reminder-create-btn:hover {
+  background: rgba(124, 58, 237, 1);
+  border-color: rgba(124, 58, 237, 0.8);
+  transform: scale(1.05);
+}
+
+.reminders-content {
+  padding: 8px 0;
+}
+
+.reminders-loading {
+  text-align: center;
+  color: var(--workspace-details-text-muted, #9b9ba8);
+  padding: 20px;
+  font-style: italic;
+}
+
+.reminders-error {
+  text-align: center;
+  color: #ff6b6b;
+  padding: 20px;
+  font-size: 14px;
+}
+
+.retry-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--workspace-details-text, #bbbcc4);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--workspace-details-text-hover, #ffffff);
+}
+
+/* Corrections pour le thème clair */
+.theme-light .member-action-btn {
+  color: #6b7280;
+}
+
+.theme-light .member-action-btn:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .reminder-create-btn {
+  background: rgba(147, 72, 183, 0.9) !important;
+  border: 1px solid rgba(147, 72, 183, 0.7) !important;
+  color: #ffffff !important;
+}
+
+.theme-light .reminder-create-btn.channel-active:hover {
+  background: rgba(147, 72, 183, 1) !important;
+  border-color: rgba(147, 72, 183, 0.9) !important;
+}
+
+.theme-light .context-menu-section {
+  color: #6b7280;
+}
+
+.theme-light .context-menu-divider {
+  background-color: rgba(0, 0, 0, 0.1);
 }

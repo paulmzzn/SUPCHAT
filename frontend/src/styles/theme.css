@@ -417,12 +417,11 @@
     to right,
     #9348b7,
     transparent
-  );
-  --color-label: #23272f;
+  );  --color-label: #23272f;
   --color-form-focus-shadow: 0 0 0 2px rgba(147, 72, 183, 0.15);
-  --color-bg-form-readonly: rgba(0, 0, 0, 0.01);
-  --color-bg-form: rgb(63, 63, 63);
-  --color-form-readonly-color: #b0b3b8;
+  --color-bg-form-readonly: rgba(0, 0, 0, 0.03);
+  --color-bg-form: #ffffff;
+  --color-form-readonly-color: #6b7280;
   --color-btn-save-gradient: linear-gradient(135deg, #9348b7, #b05fdf);
   --color-btn-save-hover-shadow: 0 6px 20px rgba(147, 72, 183, 0.18);
   --color-btn-save-disabled-gradient: linear-gradient(135deg, #b0b3b8, #d1d5db);

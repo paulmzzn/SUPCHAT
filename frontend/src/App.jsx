@@ -16,7 +16,7 @@ import Discover from "./pages/Discover/Discover";
 import WorkspaceDetails from "./pages/WorkspaceDetails/WorkspaceDetails";
 import Settings from "./pages/Settings/Settings";
 import Profile from "./pages/Profile/Profile";
-import DirectMessages from "./pages/DirectMessages/DirectMessages";
+import DirectMessages from "./pages/DirectMessages"; // Utilisation du composant refactorisé via l'index.js
 import JoinWorkspace from "./pages/JoinWorkspace/JoinWorkspace";
 import { SocketProvider } from "./context/SocketContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -24,6 +24,15 @@ import { NotificationSettingsProvider } from "./context/NotificationSettingsCont
 import SoundTest from "./pages/SoundTest/SoundTest";
 import { AuthProvider } from "./context/AuthContext";
 import Notifications from "./components/Notifications/Notifications";
+import { ThemeProvider } from "./context/ThemeContext";
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import NotificationPermissionRequest from "./components/NotificationPermissionRequest/NotificationPermissionRequest"; // Nouveau composant
+// Importer le ToastProvider pour l'utiliser au niveau de l'app
+import ToastProvider from "./components/Toast/ToastProvider";
+// Importer le GoogleDriveAuthProvider pour l'authentification persistante Google Drive
+import { GoogleDriveAuthProvider } from "./contexts/GoogleDriveAuthContext";
+import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
+import { isMobileDevice } from "./utils/deviceDetection";
 
 import CGUPage from "./pages/CGUPage";
 
@@ -50,14 +59,19 @@ if (process.env.NODE_ENV === "development") {
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Vérifier l'état de l'authentification au chargement de l'application
+  // Vérifier l'état de l'authentification et la détection mobile au chargement de l'application
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log(
       "[App.jsx] useEffect - Token dans localStorage:",
       token ? token.substring(0, 15) + "..." : "non trouvé"
     );
+    
+    // Détecter si c'est un appareil mobile
+    setIsMobile(isMobileDevice());
+    
     setAuthChecked(true);
   }, []);
 
@@ -100,7 +114,7 @@ function App() {
     console.log("[App.jsx] isFullyAuthenticated() appelé");
     console.log("- Token présent:", token ? "Oui" : "Non");
     console.log("- Code validé:", isValidated ? "Oui" : "Non");
-    return (token !== null && token !== undefined) && isValidated;
+    return token !== null && token !== undefined && isValidated;
   };
 
   // Composant amélioré pour les routes protégées
@@ -138,22 +152,28 @@ function App() {
     );
     return children;
   };
-
   // Ne rien afficher jusqu'à ce que l'état de l'authentification soit vérifié
   if (!authChecked) {
     console.log("[App.jsx] Rendu global - authChecked pas encore prêt");
     return <div>Chargement...</div>; // Ou un spinner de chargement
   }
 
+  // Redirection mobile
+  if (isMobile) {
+    console.log("[App.jsx] Appareil mobile détecté - affichage de la page de redirection");
+    return <MobileRedirect />;
+  }
+
   console.log("[App.jsx] Rendu global - authChecked prêt, rendu des routes");
   return (
-    <SocketProvider>
-      <AuthProvider>
-        <NotificationSettingsProvider>
+    <ThemeProvider>
+      <NotificationSettingsProvider>
+        <SocketProvider>
           <NotificationProvider>
             <Router>
               {/* Ajout du composant Notifications ici pour qu'il soit disponible sur toutes les pages */}
               <Notifications />
+              <NotificationPermissionRequest /> {/* Nouveau composant global */}
               <Routes>
                 <Route
                   path="/login"
@@ -322,9 +342,9 @@ function App() {
               </Routes>{" "}
             </Router>
           </NotificationProvider>
-        </NotificationSettingsProvider>
-      </AuthProvider>
-    </SocketProvider>
+        </SocketProvider>
+      </NotificationSettingsProvider>
+    </ThemeProvider>
   );
 }
 

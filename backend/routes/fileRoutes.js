@@ -7,6 +7,7 @@ import { getObjectFromS3 } from "../config/s3Service.js"; // Suppression de l'im
 import AWS from "aws-sdk";
 import dotenv from "dotenv";
 import { verifyToken } from "../middleware/authMiddleware.js";
+import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -32,6 +33,9 @@ const __dirname = dirname(__filename);
 
 const router = express.Router();
 
+// Route pour proxy des images S3 (résout les problèmes de CORS)
+router.get("/proxy", proxyS3Image);
+
 // Nouvelle route pour télécharger des fichiers depuis S3
 router.get("/download/:filePath(*)", verifyToken, async (req, res) => {
   try {
@@ -39,26 +43,69 @@ router.get("/download/:filePath(*)", verifyToken, async (req, res) => {
     const filePath = req.params.filePath;
     console.log(`[FileRoutes] Téléchargement de fichier S3: ${filePath}`);
 
+    if (!filePath) {
+      return res.status(400).json({ error: "Chemin de fichier manquant" });
+    }
+
+    // Vérifier si le chemin est une URL complète ou un chemin relatif
+    let fileKey = filePath;
+    if (filePath.startsWith("http")) {
+      // Extraire la clé du fichier de l'URL
+      const urlParts = new URL(filePath);
+      fileKey = urlParts.pathname.substring(1); // Enlever le premier slash
+      console.log(
+        `[FileRoutes] URL détectée, extraction du chemin: ${fileKey}`
+      );
+    }
+
     // Obtenir le fichier depuis S3
-    const fileData = await getObjectFromS3(filePath);
+    try {
+      const fileData = await getObjectFromS3(fileKey);
 
-    // Extraire le nom du fichier depuis le chemin
-    const fileName = path.basename(filePath);
+      // Extraire le nom du fichier depuis le chemin
+      const fileName = path.basename(fileKey);
 
-    // Définir l'en-tête Content-Disposition pour forcer le téléchargement
-    res.set({
-      "Content-Disposition": `attachment; filename="${fileName}"`,
-      "Content-Type": fileData.ContentType || "application/octet-stream",
-    });
+      // Définir l'en-tête Content-Disposition pour forcer le téléchargement
+      res.set({
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Type": fileData.ContentType || "application/octet-stream",
+      });
 
-    // Envoyer le fichier au client
-    return res.send(fileData.Body);
+      // Envoyer le fichier au client
+      return res.send(fileData.Body);
+    } catch (s3Error) {
+      console.error(`[FileRoutes] Erreur S3:`, s3Error);
+
+      // Si le fichier n'est pas trouvé dans S3, essayer le chemin direct
+      if (s3Error.code === "NoSuchKey" || s3Error.code === "NotFound") {
+        console.log(
+          `[FileRoutes] Fichier non trouvé dans S3, essai du chemin local: ${filePath}`
+        );
+
+        // Essayer d'accéder au fichier localement
+        const localPath = path.join(__dirname, "../uploads", filePath);
+        if (fs.existsSync(localPath)) {
+          return res.download(localPath);
+        } else {
+          return res.status(404).json({
+            error: "Fichier non trouvé",
+            details: "Le fichier n'existe ni sur S3 ni localement",
+          });
+        }
+      }
+
+      throw s3Error;
+    }
   } catch (error) {
     console.error(
       `[FileRoutes] Erreur lors du téléchargement du fichier:`,
       error
     );
-    return res.status(404).send("Fichier non trouvé ou inaccessible");
+    return res.status(500).json({
+      error: "Erreur lors du téléchargement",
+      message: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
   }
 });
 
@@ -145,12 +192,10 @@ router.get("/content/:path(*)", verifyToken, async (req, res) => {
       "[FileRoutes] Erreur lors de la récupération du contenu du fichier:",
       err
     );
-    res
-      .status(500)
-      .json({
-        message: "Erreur lors de la récupération du contenu du fichier",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "Erreur lors de la récupération du contenu du fichier",
+      error: err.message,
+    });
   }
 });
 

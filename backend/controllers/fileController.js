@@ -66,3 +66,75 @@ export const getFileFromS3 = async (req, res) => {
     res.status(500).send("Erreur lors de la récupération du fichier");
   }
 };
+
+// Fonction pour servir les images S3 via un proxy (résout les problèmes de CORS)
+export const proxyS3Image = async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).json({ error: "URL non fournie" });
+    }
+
+    console.log(`[fileController] Proxy pour l'image S3: ${url}`);
+
+    // Vérifier que l'URL est bien une URL S3 autorisée
+    if (!url.includes("s3.fr-par.scw.cloud") && !url.includes("s3-supchat")) {
+      return res.status(403).json({ error: "URL non autorisée" });
+    }
+
+    // Extraire la clé du fichier depuis l'URL S3
+    let fileKey;
+    if (url.includes("s3-supchat.s3.fr-par.scw.cloud/")) {
+      fileKey = url.split("s3-supchat.s3.fr-par.scw.cloud/")[1];
+    } else if (url.includes("s3.fr-par.scw.cloud/s3-supchat/")) {
+      fileKey = url.split("s3.fr-par.scw.cloud/s3-supchat/")[1];
+    } else {
+      return res.status(400).json({ error: "Format d'URL S3 non reconnu" });
+    }
+
+    console.log(`[fileController] Clé extraite: ${fileKey}`);
+
+    // Créer la commande pour récupérer l'objet depuis S3
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME || "s3-supchat",
+      Key: fileKey,
+    });
+
+    // Récupérer l'objet depuis S3
+    const { Body, ContentType, ContentLength } = await s3Client.send(command);
+
+    if (!Body) {
+      return res.status(404).json({ error: "Fichier non trouvé" });
+    }
+
+    // Définir les en-têtes pour l'affichage d'image
+    res.setHeader("Content-Type", ContentType || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=3600"); // Cache 1 heure
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (ContentLength) {
+      res.setHeader("Content-Length", ContentLength);
+    }
+
+    // Convertir le corps de la réponse en stream lisible et l'envoyer au client
+    const readableStream =
+      Body instanceof Readable ? Body : Readable.from(Body);
+    readableStream.pipe(res);
+
+    console.log(
+      `[fileController] ✅ Image proxy servie avec succès: ${fileKey}`
+    );
+  } catch (error) {
+    console.error(
+      "[fileController] ❌ Erreur lors du proxy de l'image S3:",
+      error
+    );
+    res.status(500).json({
+      error: "Erreur lors de la récupération de l'image",
+      details: error.message,
+    });
+  }
+};

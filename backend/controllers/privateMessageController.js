@@ -1,6 +1,6 @@
 import MessagePrive from "../models/MessagePrive.js";
-import Fichier from "../models/Fichier.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
+import Fichier from "../models/Fichier.js";
 import path from "path";
 import pool from "../config/dbConnection.js";
 
@@ -18,7 +18,7 @@ export const sendPrivateMessage = async (req, res) => {
       fk_expediteur: expediteurId,
       fk_destinataire: destinataireId,
     };
-    
+
     // Ajouter l'ID du message auquel on répond, si présent
     if (replyTo) {
       messageData.replyTo = replyTo;
@@ -82,24 +82,42 @@ export const getPrivateConversation = async (req, res) => {
   }
 };
 
+// Dans privateMessageController.js
 export const updatePrivateMessage = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const { contenu } = req.body;
-    const updated = await MessagePrive.updateMessage(id, userId, contenu);
-    if (!updated)
-      return res.status(403).json({ message: "Modification refusée" });
-    // Notifier l'autre utilisateur via socket.io
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`dm:${updated.fk_expediteur}`)
-        .to(`dm:${updated.fk_destinataire}`)
-        .emit("privateMessageUpdated", updated);
+    const { id } = req.params; // id_message_prive de l'URL
+    const { contenu } = req.body; // Nouveau contenu
+    const userId = req.user.id; // ID de l'utilisateur authentifié
+
+    // Vérifier que l'utilisateur est bien l'expéditeur du message
+    const message = await prisma.messagesPrive.findUnique({
+      where: { id_message_prive: id },
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: "Message non trouvé" });
     }
-    res.json(updated);
+
+    if (message.fk_expediteur !== userId) {
+      return res.status(403).json({ message: "Non autorisé" });
+    }
+
+    // Mettre à jour le message
+    const updatedMessage = await prisma.messagesPrive.update({
+      where: { id_message_prive: id },
+      data: { contenu },
+    });
+
+    // Émettre un événement WebSocket pour informer les autres utilisateurs
+    io.to(`user:${message.fk_destinataire}`).emit(
+      "messageUpdated",
+      updatedMessage
+    );
+
+    res.json(updatedMessage);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Erreur lors de la mise à jour du message:", error);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
@@ -182,22 +200,20 @@ export const uploadAttachment = async (req, res) => {
     console.log("[PrivateMessage] Début de l'upload d'un fichier"); // Vérifier si nous avons un fichier et le destinataire    if (!req.file) {      return res.status(400).json({ message: "Aucun fichier fourni" });    }    const { recipientId, message } = req.body;    const expediteurId = req.user.id;    if (!recipientId) {      return res.status(400).json({ message: "recipientId requis" });    }    console.log("[PrivateMessage] Données reçues:", {      file: req.file.originalname,      recipientId,      expediteurId,      message: message || "(vide)"    });
     // Préparer les informations du fichier
     const file = req.file;
-    const fileExt = path.extname(file.originalname).substring(1);
-
-    // Upload vers S3 ou un autre service de stockage
+    const fileExt = path.extname(file.originalname).substring(1); // Upload vers S3 ou un autre service de stockage
     console.log("[PrivateMessage] Upload vers S3 en cours...");
-    const fileKey = await uploadToS3(file, "private-messages/files");
-    console.log("[PrivateMessage] Fichier uploadé avec succès:", fileKey);
+    const s3Result = await uploadToS3(file, "private-messages/files");
+    console.log("[PrivateMessage] Fichier uploadé avec succès:", s3Result);
 
     // Construire l'URL complète pour le front-end
     const baseUrl =
       process.env.BASE_URL || req.protocol + "://" + req.get("host");
-    const fullUrl = fileKey; // Ou construisez une URL complète si nécessaire
+    const fullUrl = s3Result.url; // URL complète S3
 
     // Créer l'entrée fichier dans la base de données
     const fichierData = {
       nom_fichier: file.originalname,
-      url: fileKey,
+      url: s3Result.url, // URL complète S3 au lieu de seulement la clé
       type: file.mimetype,
       taille_fichier: file.size,
       extension: fileExt,
@@ -275,6 +291,178 @@ export const uploadAttachment = async (req, res) => {
   }
 };
 
+// Fonction pour gérer l'upload de fichiers Google Drive pour les messages privés
+export const uploadGoogleDriveFile = async (req, res) => {
+  try {
+    console.log("[PrivateMessage] Début de l'upload Google Drive");
+
+    const { googleDriveFileId, fileName, mimeType, size, recipientId } =
+      req.body;
+    const expediteurId = req.user.id;
+
+    console.log("[PrivateMessage] Données Google Drive reçues:", {
+      googleDriveFileId,
+      fileName,
+      mimeType,
+      size,
+      recipientId,
+      expediteurId,
+    });
+
+    if (!googleDriveFileId || !fileName || !recipientId) {
+      return res.status(400).json({
+        message:
+          "Données manquantes: googleDriveFileId, fileName et recipientId requis",
+      });
+    }
+
+    // Récupérer le token Google Drive de l'utilisateur
+    const userResult = await pool.query(
+      `SELECT google_drive_access_token FROM utilisateur WHERE id_utilisateur = $1`,
+      [expediteurId]
+    );
+
+    if (
+      userResult.rows.length === 0 ||
+      !userResult.rows[0].google_drive_access_token
+    ) {
+      return res.status(400).json({
+        message: "Token Google Drive non trouvé pour cet utilisateur",
+      });
+    }
+
+    const accessToken = userResult.rows[0].google_drive_access_token;
+
+    // Télécharger le fichier depuis Google Drive
+    console.log("[PrivateMessage] Téléchargement depuis Google Drive...");
+
+    let downloadUrl;
+    if (mimeType.startsWith("application/vnd.google-apps.")) {
+      // Pour les fichiers Google Workspace, utiliser l'export
+      const exportMimeTypes = {
+        "application/vnd.google-apps.document":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.google-apps.spreadsheet":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.google-apps.presentation":
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      };
+      const exportMimeType = exportMimeTypes[mimeType] || "application/pdf";
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}/export?mimeType=${encodeURIComponent(
+        exportMimeType
+      )}`;
+    } else {
+      // Pour les fichiers normaux
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}?alt=media`;
+    }
+
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!downloadResponse.ok) {
+      throw new Error(
+        `Erreur lors du téléchargement depuis Google Drive: ${downloadResponse.status}`
+      );
+    }
+
+    const fileBuffer = await downloadResponse.arrayBuffer();
+    const fileBlob = new Uint8Array(fileBuffer);
+
+    // Préparer le fichier pour S3
+    const fileExt = path.extname(fileName).substring(1) || "bin";
+
+    const fileForS3 = {
+      buffer: Buffer.from(fileBlob),
+      originalname: fileName,
+      mimetype: mimeType || "application/octet-stream",
+      size: fileBlob.length,
+    };
+
+    // Upload vers S3
+    console.log("[PrivateMessage] Upload vers S3...");
+    const s3Result = await uploadToS3(
+      fileForS3,
+      "private-messages/google-drive"
+    );
+    console.log(
+      "[PrivateMessage] Fichier Google Drive uploadé vers S3:",
+      s3Result
+    );
+
+    // Créer l'entrée fichier dans la base de données
+    const fichierData = {
+      nom_fichier: fileName,
+      url: s3Result.url,
+      type: mimeType || "application/octet-stream",
+      taille_fichier: fileBlob.length,
+      extension: fileExt,
+      mime_type: mimeType || "application/octet-stream",
+      fk_utilisateur: expediteurId,
+    };
+
+    console.log("[PrivateMessage] Création du fichier en BDD:", fichierData);
+    const newFichier = await Fichier.create(fichierData);
+    console.log("[PrivateMessage] Fichier créé:", newFichier);
+
+    // Créer le message privé
+    const messageData = {
+      contenu: "",
+      fk_expediteur: expediteurId,
+      fk_destinataire: recipientId,
+    };
+
+    console.log("[PrivateMessage] Création du message privé:", messageData);
+    const newMessage = await MessagePrive.create(messageData);
+    console.log("[PrivateMessage] Message créé:", newMessage);
+
+    // Associer le fichier au message privé
+    await Fichier.addToPrivateMessage(
+      newMessage.id_message_prive,
+      newFichier.id_fichier
+    );
+    console.log("[PrivateMessage] Association fichier-message réussie");
+
+    // Récupérer le message complet avec pièces jointes
+    const completeMessage = await MessagePrive.getById(
+      newMessage.id_message_prive
+    );
+
+    // Envoyer une notification en temps réel via WebSocket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`dm:${recipientId}`).emit("privateMessage", {
+        ...completeMessage,
+        sender: {
+          id: req.user.id,
+          nom: req.user.nom,
+          photo_de_profil: req.user.photo_de_profil,
+        },
+      });
+      console.log("[PrivateMessage] Notification WebSocket envoyée");
+    }
+
+    res.status(201).json({
+      message: "Fichier Google Drive uploadé et message privé créé",
+      fichier: {
+        ...newFichier,
+        presignedUrl: s3Result.url,
+      },
+      message_prive: newMessage,
+    });
+  } catch (error) {
+    console.error("[PrivateMessage] Erreur upload Google Drive:", error);
+    console.error("[PrivateMessage] Stack trace:", error.stack);
+
+    res.status(500).json({
+      message: "Erreur lors de l'upload Google Drive",
+      error: error.message,
+    });
+  }
+};
+
 // Récupérer le nombre de messages non lus par expéditeur
 export const getUnreadCounts = async (req, res) => {
   try {
@@ -314,7 +502,7 @@ export const deleteConversation = async (req, res) => {
   try {
     const userId = req.user.id; // L'utilisateur qui fait la demande
     const otherUserId = req.params.userId; // L'autre utilisateur dans la conversation
-    
+
     // Vérifier si les IDs sont valides
     if (!userId || !otherUserId) {
       return res.status(400).json({ message: "IDs utilisateurs requis" });
@@ -322,23 +510,24 @@ export const deleteConversation = async (req, res) => {
 
     // Appeler le modèle pour effectuer la suppression
     const result = await MessagePrive.deleteConversation(userId, otherUserId);
-    
+
     // Notifier les deux utilisateurs via socket.io si disponible
     const io = req.app.get("io");
     if (io) {
-      io.to(`dm:${userId}`).to(`dm:${otherUserId}`)
-        .emit("conversationDeleted", { 
+      io.to(`dm:${userId}`)
+        .to(`dm:${otherUserId}`)
+        .emit("conversationDeleted", {
           participants: [userId, otherUserId],
-          deletedBy: userId
+          deletedBy: userId,
         });
     }
-    
-    res.json({ 
-      message: "Conversation supprimée", 
-      deletedCount: result.deletedCount
+
+    res.json({
+      message: "Conversation supprimée",
+      deletedCount: result.deletedCount,
     });
   } catch (error) {
-    console.error('Erreur lors de la suppression de la conversation:', error);
+    console.error("Erreur lors de la suppression de la conversation:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -350,32 +539,35 @@ export const markAllMessagesAsRead = async (req, res) => {
   try {
     const destinataireId = req.user.id; // L'utilisateur qui marque comme lu
     const expediteurId = req.params.userId; // L'expéditeur des messages
-    
+
     // Vérifier si les IDs sont valides
     if (!destinataireId || !expediteurId) {
       return res.status(400).json({ message: "IDs utilisateurs requis" });
     }
 
     // Appeler le modèle pour marquer les messages comme lus
-    const result = await MessagePrive.markAllAsRead(expediteurId, destinataireId);
-    
+    const result = await MessagePrive.markAllAsRead(
+      expediteurId,
+      destinataireId
+    );
+
     // Notifier l'expéditeur via socket.io si disponible
     const io = req.app.get("io");
     if (io && result.messages.length > 0) {
       io.to(`dm:${expediteurId}`).emit("allMessagesRead", {
         readBy: destinataireId,
         count: result.markedCount,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
-    
-    res.json({ 
-      message: "Messages marqués comme lus", 
+
+    res.json({
+      message: "Messages marqués comme lus",
       count: result.markedCount,
-      messageIds: result.messages.map(m => m.id_message_prive)
+      messageIds: result.messages.map((m) => m.id_message_prive),
     });
   } catch (error) {
-    console.error('Erreur lors du marquage des messages comme lus:', error);
+    console.error("Erreur lors du marquage des messages comme lus:", error);
     res.status(500).json({ message: error.message });
   }
-}
+};

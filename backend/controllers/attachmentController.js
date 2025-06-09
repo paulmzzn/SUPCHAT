@@ -10,21 +10,48 @@ export const getPrivateMessageAttachments = async (req, res) => {
 
     const attachments = await Fichier.getPrivateMessageAttachments(messageId);
 
-    // Correction : ne pas préfixer si déjà une URL S3
+    // Nettoyer et normaliser les URLs des attachments
     const attachmentsWithUrls = attachments.map((attachment) => {
-      if (attachment.url && attachment.url.startsWith("http")) {
-        return attachment;
+      let cleanUrl = attachment.url || "";
+
+      // Nettoyer les URLs dupliquées
+      if (
+        cleanUrl.includes("https://s3.fr-par.scw.cloud/s3-supchat/https://")
+      ) {
+        cleanUrl = cleanUrl.substring(cleanUrl.lastIndexOf("https://"));
+        console.log(
+          `[Attachments] URL nettoyée (duplication détectée): ${cleanUrl}`
+        );
+      } else if (
+        cleanUrl.includes("https://s3-supchat.s3.fr-par.scw.cloud/https://")
+      ) {
+        cleanUrl = cleanUrl.substring(cleanUrl.lastIndexOf("https://"));
+        console.log(
+          `[Attachments] URL nettoyée (duplication détectée): ${cleanUrl}`
+        );
       }
-      // Sinon, préfixer avec l'URL S3 si possible, sinon garder l'URL brute
+
+      // Si l'URL est déjà complète, la retourner telle quelle
+      if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+        return { ...attachment, url: cleanUrl };
+      }
+
+      // Si ce n'est qu'une clé S3, construire l'URL complète
       const s3Base =
         process.env.SCW_ENDPOINT && process.env.S3_BUCKET_NAME
           ? `${process.env.SCW_ENDPOINT.replace(/\/$/, "")}/${
               process.env.S3_BUCKET_NAME
             }`
-          : null;
-      if (s3Base && attachment.url) {
-        return { ...attachment, url: `${s3Base}/${attachment.url}` };
+          : "https://s3.fr-par.scw.cloud/s3-supchat";
+
+      if (cleanUrl) {
+        const fullUrl = cleanUrl.startsWith("/")
+          ? `${s3Base}${cleanUrl}`
+          : `${s3Base}/${cleanUrl}`;
+        console.log(`[Attachments] URL construite: ${fullUrl}`);
+        return { ...attachment, url: fullUrl };
       }
+
       return attachment;
     });
 

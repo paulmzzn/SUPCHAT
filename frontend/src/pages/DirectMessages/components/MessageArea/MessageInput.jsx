@@ -1,5 +1,5 @@
 // Composant pour la saisie de messages
-import React from "react";
+import React, { useEffect } from "react";
 import { FaPaperPlane, FaPaperclip, FaTimes } from "react-icons/fa";
 import MentionSuggestions from "./MentionSuggestions";
 
@@ -17,6 +17,7 @@ const MessageInput = ({
   removeAttachment,
   uploadingFile,
   fileInputRef,
+  handleFileSelect,
   onAttachmentClick,
   onSubmit,
   handleInputChange,
@@ -26,6 +27,26 @@ const MessageInput = ({
   activeMentionIndex,
   onMentionSelect,
 }) => {
+  // Dans un useEffect de MessageInput
+  useEffect(() => {
+    const handleForceReply = () => {
+      try {
+        const replyData = localStorage.getItem("dm_reply_to");
+        if (replyData) {
+          const message = JSON.parse(replyData);
+          // Simuler l'affichage de la réponse localement
+          setLocalReplyingTo(message);
+          localStorage.removeItem("dm_reply_to");
+        }
+      } catch (e) {
+        console.error("Erreur lors du forçage de la réponse:", e);
+      }
+    };
+
+    window.addEventListener("dm_force_reply", handleForceReply);
+    return () => window.removeEventListener("dm_force_reply", handleForceReply);
+  }, []);
+
   return (
     <form className="dm-input-form" onSubmit={onSubmit}>
       {/* Zone de réponse */}
@@ -70,29 +91,30 @@ const MessageInput = ({
       )}
 
       <div className="dm-input-wrapper">
-        {/* Input file caché */}
         <input
-          ref={fileInputRef}
           type="file"
-          onChange={(e) =>
-            e.target.files && e.target.files.length > 0
-              ? handleInputChange(e)
-              : null
-          }
+          ref={fileInputRef}
           style={{ display: "none" }}
-        />
-
+          onChange={handleFileSelect}
+          multiple
+        />{" "}
         {/* Bouton d'attachement */}
         <button
           type="button"
           className={`dm-attachment-btn ${uploadingFile ? "uploading" : ""}`}
-          onClick={onAttachmentClick}
+          onClick={() => {
+            console.log("[MessageInput] Clic sur bouton d'attachement");
+            console.log(
+              "[MessageInput] onAttachmentClick:",
+              typeof onAttachmentClick
+            );
+            onAttachmentClick();
+          }}
           disabled={uploadingFile}
         >
           <FaPaperclip />
           {uploadingFile && <span className="upload-spinner"></span>}
         </button>
-
         {/* Champ de saisie */}
         <input
           type="text"
@@ -102,7 +124,6 @@ const MessageInput = ({
           className="dm-input"
           disabled={uploadingFile}
         />
-
         {/* Bouton d'envoi */}
         <button
           type="submit"
