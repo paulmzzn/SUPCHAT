@@ -27,6 +27,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../config/dbConnection.js"; // Ajout de l'import de pool
 import { uploadToS3 } from "../config/s3Config.js"; // Import de la fonction d'upload S3
+import { getJwtSecret } from "../config/secrets.js";
 
 // Configuration de multer pour le stockage en mémoire (pour S3)
 const storage = multer.memoryStorage();
@@ -52,9 +53,8 @@ const upload = multer({
 dotenv.config();
 
 const router = express.Router();
-// Utiliser une variable d'environnement ou une valeur par défaut
-
-const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
+// Utiliser le secret JWT depuis les secrets Docker
+const SECRET_KEY = getJwtSecret();
 
 router.post("/register", registerUser);
 router.get("/", getAllUsers);

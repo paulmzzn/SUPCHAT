@@ -8,14 +8,15 @@ import Fichier from "../models/Fichier.js";
 import Canal from "../models/Canal.js"; // Importation directe du modèle Canal
 import { deleteFromS3 } from "../config/s3Config.js";
 import pool from "../config/dbConnection.js";
+import { getJwtSecret, getMistralApiKey } from "../config/secrets.js";
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
 // Charger les variables d'environnement
 dotenv.config();
 
-const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY; // Charger la clé API Mistral
+const SECRET_KEY = getJwtSecret();
+const MISTRAL_API_KEY = getMistralApiKey(); // Charger la clé API Mistral
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"; // URL de l'API Mistral
 
 const MISTRAL_USER_ID = "00000000-0000-0000-0000-000000000001"; // <<< UTILISER L'UUID FIXE
@@ -767,32 +768,39 @@ const socketManager = (io) => {
                 "SELECT nom FROM workspace WHERE id_workspace = $1",
                 [finalWorkspaceId]
               );
-              
+
               if (workspaceQuery.rows.length > 0) {
                 workspaceName = workspaceQuery.rows[0].nom;
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du nom du workspace pour mention:", err);
+              console.error(
+                "Erreur lors de la récupération du nom du workspace pour mention:",
+                err
+              );
             }
 
             // Récupérer les informations de l'utilisateur qui fait la mention
             let senderProfile = null;
             let photoUrl = null;
             let senderName = "Utilisateur";
-            
+
             try {
               const userQuery = await pool.query(
                 "SELECT nom, username, photo_de_profil FROM utilisateur WHERE id_utilisateur = $1",
                 [socket.user.id]
               );
-              
+
               if (userQuery.rows.length > 0) {
                 senderProfile = userQuery.rows[0];
                 photoUrl = senderProfile.photo_de_profil;
-                senderName = senderProfile.nom || senderProfile.username || "Utilisateur";
+                senderName =
+                  senderProfile.nom || senderProfile.username || "Utilisateur";
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du profil pour mention:", err);
+              console.error(
+                "Erreur lors de la récupération du profil pour mention:",
+                err
+              );
             }
 
             // Envoyer la notification sur la room privée de l'utilisateur

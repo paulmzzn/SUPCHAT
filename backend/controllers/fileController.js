@@ -1,25 +1,21 @@
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getS3Config } from "../config/secrets.js";
+import path from "path";
 import { Readable } from "stream";
 import dotenv from "dotenv";
-import path from "path";
-import pool from "../config/dbConnection.js";
-
-// Charger les variables d'environnement
 dotenv.config();
 
-// Configuration du client S3
+const s3Config = getS3Config();
 const s3Client = new S3Client({
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
+  region: s3Config.region,
+  endpoint: s3Config.endpoint,
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID,
-    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY,
+    accessKeyId: s3Config.accessKeyId,
+    secretAccessKey: s3Config.secretAccessKey,
   },
   forcePathStyle: true,
 });
-
-// Nom du bucket depuis les variables d'environnement ou valeur par défaut
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "REDACTED";
+const BUCKET_NAME = s3Config.bucketName;
 
 // Fonction pour récupérer un fichier depuis S3 et le servir au client
 export const getFileFromS3 = async (req, res) => {

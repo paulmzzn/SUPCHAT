@@ -1,12 +1,11 @@
 import express from "express";
 import axios from "axios";
-import { getApiKeys } from "../config/secrets.js";
+import { getStrawpollApiKey } from "../config/secrets.js";
 
 const router = express.Router();
 
 // Configuration sécurisée
-const apiKeys = getApiKeys();
-const STRAWPOLL_API_KEY = apiKeys.strawpoll;
+const STRAWPOLL_API_KEY = getStrawpollApiKey();
 const ENDPOINT = "https://api.strawpoll.com/v3/polls";
 
 console.log("🍓 API Strawpoll configurée avec succès");
@@ -62,12 +61,10 @@ router.post("/", async (req, res) => {
     return res.json({ url: strawRes.data.url || strawRes.data.content_url });
   } catch (err) {
     console.error(err.response?.data || err.message);
-    return res
-      .status(500)
-      .json({
-        message: "Erreur Strawpoll",
-        details: err.response?.data || err.message,
-      });
+    return res.status(500).json({
+      message: "Erreur Strawpoll",
+      details: err.response?.data || err.message,
+    });
   }
 });
 
@@ -85,12 +82,10 @@ router.get("/:id", async (req, res) => {
     return res.json(strawRes.data);
   } catch (err) {
     console.error(err.response?.data || err.message);
-    return res
-      .status(500)
-      .json({
-        message: "Erreur Strawpoll",
-        details: err.response?.data || err.message,
-      });
+    return res.status(500).json({
+      message: "Erreur Strawpoll",
+      details: err.response?.data || err.message,
+    });
   }
 });
 

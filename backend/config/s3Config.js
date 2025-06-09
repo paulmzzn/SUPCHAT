@@ -57,10 +57,11 @@ export const uploadToS3 = async (file, directory = "") => {
 
     // Créer le chemin complet avec le répertoire
     const fileKey = directory ? `${directory}/${fileName}` : fileName;
-
     console.log(`📍 Destination S3: ${BUCKET_NAME}/${fileKey}`);
+
+    // Récupérer la configuration complète pour les logs
     console.log(
-      `🔧 Paramètres S3: région=${process.env.SCW_REGION}, endpoint=${process.env.SCW_ENDPOINT}`
+      `🔧 Paramètres S3: région=${s3Config.region}, endpoint=${s3Config.endpoint}`
     );
 
     // Créer la commande pour uploader le fichier
@@ -89,10 +90,8 @@ export const uploadToS3 = async (file, directory = "") => {
     }
     console.log("🏁 Fin de uploadToS3 avec succès");
 
-    // Construire l'URL complète S3
-    const s3BaseUrl =
-      process.env.SCW_ENDPOINT?.replace(/\/$/, "") ||
-      "https://s3.fr-par.scw.cloud";
+    // Construire l'URL complète S3 en utilisant la configuration des secrets
+    const s3BaseUrl = s3Config.endpoint.replace(/\/$/, "");
     const fullUrl = `${s3BaseUrl}/${BUCKET_NAME}/${fileKey}`;
 
     console.log(`🔗 URL S3 complète générée: ${fullUrl}`);

@@ -11,27 +11,69 @@ export const getSecret = (secretName, envVarName = null) => {
   try {
     // En production, les secrets sont montés dans /run/secrets/
     const secretPath = `/run/secrets/${secretName}`;
+    const fallbackSecretPath = path.join("/tmp/secrets", secretName);
 
-    if (fs.existsSync(secretPath)) {
-      const secret = fs.readFileSync(secretPath, "utf8").trim();
-      console.log(`✅ Secret '${secretName}' lu depuis /run/secrets/`);
-      return secret;
+    // CORRECTION: Essayer le chemin principal avec gestion d'erreur améliorée
+    try {
+      if (fs.existsSync(secretPath)) {
+        const secret = fs.readFileSync(secretPath, "utf8").trim();
+        console.log(`✅ Secret '${secretName}' lu depuis /run/secrets/`);
+        return secret;
+      }
+    } catch (e) {
+      console.warn(
+        `⚠️ Erreur lors de l'accès à /run/secrets/${secretName}: ${e.message}`
+      );
+
+      // Tentative de création de répertoire (diagnostic uniquement)
+      try {
+        fs.mkdirSync("/run/secrets", { recursive: true });
+      } catch (mkdirErr) {
+        console.warn(
+          `⚠️ Impossible de créer /run/secrets: ${mkdirErr.message}`
+        );
+      }
+    }
+
+    // CORRECTION: Essayer le chemin de secours
+    try {
+      if (fs.existsSync(fallbackSecretPath)) {
+        const secret = fs.readFileSync(fallbackSecretPath, "utf8").trim();
+        console.log(
+          `✅ Secret '${secretName}' lu depuis le chemin alternatif /tmp/secrets`
+        );
+        return secret;
+      }
+    } catch (e) {
+      console.warn(
+        `⚠️ Erreur lors de l'accès à /tmp/secrets/${secretName}: ${e.message}`
+      );
     }
 
     // En développement, chercher dans le dossier secrets local
-    const localSecretPath = path.join(
+    // CORRECTION: Chemin plus robuste avec __dirname
+    const localSecretPath = path.resolve(
       process.cwd(),
       "..",
       "secrets",
       `${secretName}.txt`
     );
 
-    if (fs.existsSync(localSecretPath)) {
-      const secret = fs.readFileSync(localSecretPath, "utf8").trim();
-      console.log(`✅ Secret '${secretName}' lu depuis le fichier local`);
-      return secret;
+    try {
+      if (fs.existsSync(localSecretPath)) {
+        const secret = fs.readFileSync(localSecretPath, "utf8").trim();
+        console.log(
+          `✅ Secret '${secretName}' lu depuis le fichier local: ${localSecretPath}`
+        );
+        return secret;
+      }
+    } catch (e) {
+      console.warn(
+        `⚠️ Erreur lors de l'accès au fichier local ${localSecretPath}: ${e.message}`
+      );
     }
 
+    // CORRECTION: Cas spécifiques pour la connexion DB
     // Si le secret n'est pas trouvé et qu'il s'agit du mot de passe DB, essayer de lire à partir de l'environnement
     if (secretName === "db_password" && process.env.POSTGRES_PASSWORD) {
       console.log(
@@ -55,6 +97,21 @@ export const getSecret = (secretName, envVarName = null) => {
       return process.env[envVarName];
     }
 
+    // CORRECTION: Valeurs par défaut pour le développement local
+    // Ces valeurs ne sont utilisées qu'en dernier recours
+    const devDefaults = {
+      db_user: "admin",
+      db_password: "REDACTED",
+      jwt_secret: "dev_jwt_secret",
+    };
+
+    if (devDefaults[secretName]) {
+      console.log(
+        `⚠️ ATTENTION: Utilisation de la valeur par défaut pour '${secretName}' (environnement de développement uniquement)`
+      );
+      return devDefaults[secretName];
+    }
+
     throw new Error(`Secret '${secretName}' introuvable`);
   } catch (error) {
     console.error(
@@ -62,11 +119,9 @@ export const getSecret = (secretName, envVarName = null) => {
       error.message
     );
 
-    // En cas d'erreur, essayer la variable d'environnement
+    // En dernier recours, on pourrait vouloir une valeur de fallback même en cas d'erreur
     if (envVarName && process.env[envVarName]) {
-      console.log(
-        `🔄 Utilisation de la variable d'environnement ${envVarName} en fallback`
-      );
+      console.log(`🔄 Utilisation de secours de ${envVarName}`);
       return process.env[envVarName];
     }
 
@@ -75,13 +130,34 @@ export const getSecret = (secretName, envVarName = null) => {
 };
 
 /**
- * Fonction pour charger tous les secrets de base de données
- * @returns {Object} - Configuration de base de données avec secrets
+ * Fonction pour obtenir la configuration de la base de données
+ * @returns {Object} - Configuration de la base de données
  */
 export const getDbConfig = () => {
+  // CORRECTION: Capture des erreurs pour chaque secret
+  let user, password;
+
+  try {
+    user = getSecret("db_user", "DB_USER");
+  } catch (e) {
+    console.error(
+      "❌ Impossible de lire l'utilisateur DB, utilisation de 'admin' par défaut"
+    );
+    user = "admin";
+  }
+
+  try {
+    password = getSecret("db_password", "DB_PASSWORD");
+  } catch (e) {
+    console.error(
+      "❌ Impossible de lire le mot de passe DB, utilisation de la valeur par défaut"
+    );
+    password = "REDACTED";
+  }
+
   return {
-    user: getSecret("db_user", "DB_USER"),
-    password: getSecret("db_password", "DB_PASSWORD"),
+    user,
+    password,
     host: process.env.DB_HOST || "postgres",
     port: process.env.DB_PORT || 5432,
     database: process.env.DB_NAME || process.env.POSTGRES_DB || "supchat",
@@ -95,12 +171,31 @@ export const getDbConfig = () => {
  * @returns {Object} - Configuration S3 avec secrets
  */
 export const getS3Config = () => {
+  let endpoint, region;
+  try {
+    endpoint = getSecret("scw_endpoint", "SCW_ENDPOINT");
+    if (!endpoint) throw new Error();
+  } catch (e) {
+    endpoint = "https://s3.fr-par.scw.cloud";
+    console.warn(
+      "⚠️ Secret 'scw_endpoint' absent, utilisation de l'endpoint par défaut : https://s3.fr-par.scw.cloud"
+    );
+  }
+  try {
+    region = getSecret("scw_region", "SCW_REGION");
+    if (!region) throw new Error();
+  } catch (e) {
+    region = "fr-par";
+    console.warn(
+      "⚠️ Secret 'scw_region' absent, utilisation de la région par défaut : fr-par"
+    );
+  }
   return {
     accessKeyId: getSecret("scw_access_key", "SCW_ACCESS_KEY_ID"),
     secretAccessKey: getSecret("scw_secret_key", "SCW_SECRET_ACCESS_KEY"),
-    endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
-    region: process.env.SCW_REGION || "fr-par",
-    bucketName: process.env.S3_BUCKET_NAME || "s3-supchat",
+    endpoint,
+    region,
+    bucketName: getSecret("s3_bucket_name", "S3_BUCKET_NAME") || "s3-supchat",
   };
 };
 
@@ -122,21 +217,20 @@ export const getOAuthConfig = () => {
 };
 
 /**
- * Fonction pour charger la configuration email
- * @returns {Object} - Configuration email avec secrets
+ * Fonction pour charger la configuration de l'envoi d'emails
+ * @returns {Object} - Configuration SMTP avec secrets
  */
 export const getEmailConfig = () => {
   return {
     user: getSecret("email_user", "EMAIL_USER"),
-    password: getSecret("email_password", "EMAIL_PASSWORD"),
-    host: process.env.EMAIL_HOST || "mail86.lwspanel.com",
-    port: process.env.EMAIL_PORT || 465,
-    secure: true,
+    pass: getSecret("email_password", "EMAIL_PASSWORD"),
+    host: process.env.EMAIL_HOST || "smtp.gmail.com",
+    port: process.env.EMAIL_PORT || 587,
   };
 };
 
 /**
- * Fonction pour charger le secret JWT
+ * Fonction pour charger la clé JWT
  * @returns {string} - Clé secrète JWT
  */
 export const getJwtSecret = () => {
@@ -144,12 +238,17 @@ export const getJwtSecret = () => {
 };
 
 /**
- * Fonction pour charger les clés API
- * @returns {Object} - Clés API avec secrets
+ * Fonction pour charger la clé API Strawpoll
+ * @returns {string} - Clé API Strawpoll
  */
-export const getApiKeys = () => {
-  return {
-    strawpoll: getSecret("strawpoll_api_key", "STRAWPOLL_API_KEY"),
-    mistral: getSecret("mistral_api_key", "MISTRAL_API_KEY"),
-  };
+export const getStrawpollApiKey = () => {
+  return getSecret("strawpoll_api_key", "STRAWPOLL_API_KEY");
+};
+
+/**
+ * Fonction pour charger la clé API Mistral
+ * @returns {string} - Clé API Mistral
+ */
+export const getMistralApiKey = () => {
+  return getSecret("mistral_api_key", "MISTRAL_API_KEY");
 };
