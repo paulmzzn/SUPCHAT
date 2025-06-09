@@ -404,12 +404,7 @@
   gap: 12px;
 }
 
-.info-row {
-  display: flex;
-  padding: 10px;
-  border-radius: 6px;
-  background-color: #f9fafb;
-}
+
 
 .info-label {
   width: 120px;
