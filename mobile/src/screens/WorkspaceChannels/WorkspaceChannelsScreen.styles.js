@@ -273,4 +273,210 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.textMuted,
     marginTop: 12,
   },
+
+  // Bouton de recherche dans le header
+  searchButton: {
+    padding: 8,
+    marginRight: 8,
+    borderRadius: 20,
+  },
+
+  // Styles pour la modal de recherche
+  searchModal: {
+    flex: 1,
+    backgroundColor: theme.primaryBackground,
+  },
+
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: theme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+
+  searchModalCloseButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+
+  searchModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    flex: 1,
+  },
+
+  searchInputContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: theme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primaryBackground,
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: theme.borderColor,
+  },
+
+  searchIcon: {
+    marginRight: 12,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: theme.textPrimary,
+    paddingVertical: 0,
+  },
+
+  searchSpinner: {
+    marginLeft: 8,
+  },
+
+  // Onglets de recherche
+  searchTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: theme.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+
+  searchTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 12,
+    borderRadius: 20,
+    backgroundColor: theme.primaryBackground,
+  },
+
+  searchTabActive: {
+    backgroundColor: theme.accentPrimary + '20',
+  },
+
+  searchTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.textSecondary,
+    marginLeft: 6,
+  },
+
+  searchTabTextActive: {
+    color: theme.accentPrimary,
+  },
+
+  // Résultats de recherche
+  searchResults: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+
+  searchEmptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+
+  searchEmptyText: {
+    fontSize: 16,
+    color: theme.textMuted,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 40,
+  },
+
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderColor,
+  },
+
+  searchResultIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  searchResultHashtag: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textSecondary,
+  },
+
+  searchResultAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+
+  searchResultAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  searchResultAvatarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  searchResultContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+
+  searchResultTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    lineHeight: 20,
+  },
+
+  searchMessageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  searchMessageChannel: {
+    fontSize: 14,
+    color: theme.accentPrimary,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+
+  searchMessageDate: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginTop: 4,
+  },
 });

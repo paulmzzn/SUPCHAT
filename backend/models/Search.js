@@ -2,9 +2,9 @@ import pool from "../config/dbConnection.js";
 
 class Search {
   // Recherche unifiée dans un workspace : canaux, utilisateurs et messages
-  static async searchInWorkspace(workspaceId, searchQuery, userId) {
+  static async searchInWorkspace(workspaceId, searchQuery, userId, messageLimit = 100) {
     console.log(
-      `[Search] Recherche pour utilisateur ${userId} dans workspace ${workspaceId} avec requête "${searchQuery}"`
+      `[Search] Recherche pour utilisateur ${userId} dans workspace ${workspaceId} avec requête "${searchQuery}" (limite messages: ${messageLimit})`
     );
 
     try {
@@ -22,14 +22,14 @@ class Search {
       }
 
       try {
-        // Recherche de canaux (sans filtrage par canaux privés car la structure est différente)
+        // Recherche de canaux (augmentation de la limite à 50)
         const canauxQuery = `
           SELECT c.* 
           FROM canal c
           WHERE c.fk_workspace = $1
           AND c.nom ILIKE $2
           ORDER BY c.nom
-          LIMIT 10
+          LIMIT 50
         `;
         const canauxResult = await pool.query(canauxQuery, [
           workspaceId,
@@ -43,7 +43,7 @@ class Search {
       }
 
       try {
-        // Recherche d'utilisateurs dans ce workspace
+        // Recherche d'utilisateurs dans ce workspace (augmentation de la limite à 50)
         const utilisateursQuery = `
           SELECT u.id_utilisateur, u.nom, u.email, u.photo_de_profil
           FROM utilisateur u
@@ -54,7 +54,7 @@ class Search {
             OR u.email ILIKE $2
           )
           ORDER BY u.nom
-          LIMIT 10
+          LIMIT 50
         `;
         const utilisateursResult = await pool.query(utilisateursQuery, [
           workspaceId,
@@ -85,12 +85,13 @@ class Search {
             OR u.nom ILIKE $2
           )
           ORDER BY m.created_at DESC
-          LIMIT 20
+          LIMIT $3
         `;
 
         const messagesResult = await pool.query(messagesQuery, [
           workspaceId,
           `%${searchQuery}%`,
+          messageLimit
         ]);
         results.messages = messagesResult.rows;
         console.log(`[Search] ${results.messages.length} messages trouvés`);
