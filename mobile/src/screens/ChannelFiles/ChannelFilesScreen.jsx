@@ -9,16 +9,18 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../theme/ThemeContext';
-import { useSocket } from '../../context/SocketContext';
 import AttachmentViewer from '../../components/AttachmentViewer/AttachmentViewer';
 import Toast from 'react-native-toast-message';
 import { getStyles } from './ChannelFilesScreen.styles';
+import env from '../../config/env';
 
 const ChannelFilesScreen = ({ route, navigation }) => {
   const { workspaceId, channelId, channelName, workspaceName } = route.params;
+  console.log('🎯 ChannelFilesScreen initialized with params:', { workspaceId, channelId, channelName, workspaceName });
+  
   const { colors: themeColors } = useTheme();
-  const { socket } = useSocket();
   const styles = getStyles(themeColors);
 
   const [files, setFiles] = useState([]);
@@ -29,32 +31,72 @@ const ChannelFilesScreen = ({ route, navigation }) => {
   const [selectedAttachment, setSelectedAttachment] = useState(null);
 
   useEffect(() => {
+    console.log('🔄 useEffect called, about to fetch channel files');
     fetchChannelFiles();
   }, [channelId]);
 
   const fetchChannelFiles = useCallback(async () => {
+    console.log('🔍 fetchChannelFiles called with channelId:', channelId);
     try {
       setLoading(true);
       
-      if (socket) {
-        socket.emit('getChannelFiles', { channelId, workspaceId }, (response) => {
-          if (response.success) {
-            setFiles(response.files || []);
-          } else {
-            Toast.show({
-              type: 'error',
-              text1: 'Erreur',
-              text2: 'Impossible de charger les fichiers'
-            });
-          }
-          setLoading(false);
+      // Récupérer le token d'authentification
+      const token = await AsyncStorage.getItem('token');
+      console.log('🔑 Token récupéré:', token ? 'Token présent' : 'Token manquant');
+      
+      if (!token) {
+        console.error('❌ Token d\'authentification manquant');
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Token d\'authentification manquant'
+        });
+        setLoading(false);
+        return;
+      }
+
+      const apiUrl = `${env.API_URL}/api/canals/${channelId}/files`;
+      console.log('📡 URL API appelée:', apiUrl);
+      console.log('🌐 env.API_URL:', env.API_URL);
+
+      // Appel à l'API REST pour récupérer les fichiers du canal
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Données reçues:', data);
+        console.log('📁 Nombre de fichiers:', data.length || 0);
+        setFiles(data || []);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erreur API:', errorData);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: errorData.message || 'Impossible de charger les fichiers'
         });
       }
     } catch (error) {
-      console.error('Error fetching channel files:', error);
+      console.error('❌ Error fetching channel files:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Erreur de réseau'
+      });
+    } finally {
       setLoading(false);
+      console.log('🏁 fetchChannelFiles terminé');
     }
-  }, [socket, channelId, workspaceId]);
+  }, [channelId]);
 
   const filteredFiles = files.filter(file => {
     const matchesSearch = file.fileName.toLowerCase().includes(searchQuery.toLowerCase());

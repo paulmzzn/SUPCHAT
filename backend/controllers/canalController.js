@@ -198,13 +198,17 @@ export const getCanalFiles = async (req, res) => {
     const { canalId } = req.params;
     const userId = req.user.id;
     
+    console.log('🔍 getCanalFiles called with canalId:', canalId, 'userId:', userId);
+    
     // Vérifier que l'utilisateur a accès à ce canal
     const accessCheck = await Canal.checkUserAccess(canalId, userId);
+    console.log('🔐 Access check result:', accessCheck);
     if (!accessCheck.hasAccess) {
       return res.status(403).json({ message: "Accès refusé à ce canal privé" });
     }
     
     const files = await Fichier.getByCanalId(canalId);
+    console.log('📁 Files found:', files.length, 'files:', files);
     res.status(200).json(files);
   } catch (error) {
     console.error(
