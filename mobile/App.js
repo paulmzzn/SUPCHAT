@@ -29,6 +29,7 @@ import NewConversationScreen from './src/screens/Messages/NewConversationScreen'
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
+import CGUScreen from './src/screens/Settings/CGUScreen';
 import WorkspaceSettingsScreen from './src/screens/WorkspaceSettings/WorkspaceSettingsScreen'; // Import du nouvel écran
 import RemindersScreen from './src/screens/Reminders/RemindersScreen';
 
@@ -119,6 +120,7 @@ function MainAppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="HomeTabs" component={AppTabs} />
       <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+      <AppStack.Screen name="CGU" component={CGUScreen} />
     </AppStack.Navigator>
   );
 }
