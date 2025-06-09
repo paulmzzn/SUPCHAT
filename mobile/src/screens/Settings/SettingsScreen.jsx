@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, Image, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../context/AuthContext'; // Updated import path
 import { useUserPreferences } from '../../context/UserPreferencesContext'; // Import du contexte de préférences utilisateur
 import env from '../../config/env'; 
@@ -162,6 +164,70 @@ const SettingsScreen = () => {
     navigation.navigate('ProfileEdit');
   };
 
+  // Fonction pour exporter les données RGPD
+  const handleRgpdExport = async () => {
+    Alert.alert(
+      "Export RGPD",
+      "Télécharger toutes vos données personnelles au format JSON ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        { 
+          text: "Télécharger", 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) {
+                Alert.alert("Erreur", "Vous devez être connecté pour exporter vos données.");
+                return;
+              }
+
+              const response = await fetch(`${env.API_URL}/api/users/rgpd-export`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                throw new Error("Erreur lors de l'export RGPD");
+              }
+
+              const responseText = await response.text();
+              const fileName = 'mes_donnees_rgpd.json';
+              const fileUri = FileSystem.documentDirectory + fileName;
+
+              await FileSystem.writeAsStringAsync(fileUri, responseText);
+
+              if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri, {
+                  mimeType: 'application/json',
+                  dialogTitle: 'Partager vos données RGPD',
+                });
+              } else {
+                Alert.alert(
+                  "Export terminé", 
+                  `Vos données ont été sauvegardées dans : ${fileUri}`
+                );
+              }
+            } catch (error) {
+              console.error("Erreur lors de l'export RGPD:", error);
+              Alert.alert("Erreur", "Erreur lors de l'export RGPD : " + error.message);
+            }
+          },
+        }
+      ]
+    );
+  };
+
+  // Fonction pour ouvrir les CGU
+  const handleOpenCGU = () => {
+    navigation.navigate('CGU');
+  };
+
   if (loadingProfile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -280,6 +346,28 @@ const SettingsScreen = () => {
             <View style={styles.settingButtonContent}>
               <Ionicons name="finger-print-outline" size={22} color={themeColors.textPrimary} />
               <Text style={styles.settingButtonText}>Authentification biométrique</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
+          </TouchableOpacity>
+          
+          <View style={styles.divider} />
+          
+          <TouchableOpacity style={styles.settingButton} onPress={handleRgpdExport}>
+            <View style={styles.settingButtonContent}>
+              <Ionicons name="download-outline" size={22} color={themeColors.textPrimary} />
+              <Text style={styles.settingButtonText}>Exporter mes données RGPD</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section Légal */}
+        <Text style={styles.sectionTitle}>Légal</Text>
+        <View style={styles.settingsCard}>
+          <TouchableOpacity style={styles.settingButton} onPress={handleOpenCGU}>
+            <View style={styles.settingButtonContent}>
+              <Ionicons name="document-text-outline" size={22} color={themeColors.textPrimary} />
+              <Text style={styles.settingButtonText}>Conditions Générales d'Utilisation</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
