@@ -3,13 +3,13 @@ import { StyleSheet } from 'react-native';
 export const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.primaryBackground,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.primaryBackground,
   },
   loadingText: {
     color: colors.textSecondary,
@@ -22,7 +22,7 @@ export const getStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     paddingTop: 50,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
   },
@@ -46,15 +46,17 @@ export const getStyles = (colors) => StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardBackground,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.inputBackground,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
   },
   searchInput: {
     flex: 1,
@@ -66,7 +68,7 @@ export const getStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
   },
@@ -75,7 +77,7 @@ export const getStyles = (colors) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     marginRight: 8,
-    backgroundColor: colors.backgroundPrimary,
+    backgroundColor: colors.secondaryCardBackground,
   },
   filterButtonActive: {
     backgroundColor: colors.accentPrimary,
@@ -85,25 +87,27 @@ export const getStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   filterButtonTextActive: {
-    color: colors.backgroundPrimary,
+    color: colors.textOnAccent,
     fontWeight: '500',
   },
   filesCount: {
     paddingHorizontal: 15,
     paddingVertical: 8,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.cardBackground,
   },
   filesCountText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   filesList: {
     flex: 1,
+    backgroundColor: colors.primaryBackground,
   },
   filesListContent: {
     paddingVertical: 5,
+    backgroundColor: colors.primaryBackground,
   },
   fileItem: {
     flexDirection: 'row',
@@ -112,13 +116,14 @@ export const getStyles = (colors) => StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
+    backgroundColor: colors.primaryBackground,
   },
   fileIcon: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.secondaryCardBackground,
     borderRadius: 8,
     marginRight: 12,
   },
@@ -149,6 +154,7 @@ export const getStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingTop: 100,
+    backgroundColor: colors.primaryBackground,
   },
   emptyText: {
     fontSize: 18,
