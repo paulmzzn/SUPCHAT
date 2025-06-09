@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
@@ -33,6 +35,18 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
   const [isCreateChannelModalVisible, setCreateChannelModalVisible] = useState(false);
   const [userRole, setUserRole] = useState('member');
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  
+  // États pour la recherche unifiée
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({
+    channels: [],
+    users: [],
+    messages: []
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [activeSearchTab, setActiveSearchTab] = useState('channels');
+  const [lastSearchQuery, setLastSearchQuery] = useState(''); // Pour éviter les recherches en double
 
   useEffect(() => {
     loadWorkspaceData();
@@ -194,6 +208,93 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
     }
   }, [userRole, workspaceId]);
 
+  // Fonction de recherche unifiée avec debouncing
+  const searchInWorkspace = useCallback(async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults({ channels: [], users: [], messages: [] });
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      // Ajout du paramètre limit pour les messages (par défaut 100)
+      const response = await fetch(
+        `${env.API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(query.trim())}&limit=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Formater les résultats pour React Native
+        const formattedResults = {
+          channels: data.canaux?.map((channel) => ({
+            id: channel.id_canal,
+            name: channel.nom,
+            description: channel.description || '',
+            isPrivate: channel.is_private || false,
+          })) || [],
+          users: data.utilisateurs?.map((user) => ({
+            id: user.id_utilisateur,
+            name: user.nom,
+            email: user.email,
+            avatar: user.photo_de_profil,
+          })) || [],
+          messages: data.messages?.map((message) => ({
+            id: message.id_message,
+            content: message.contenu,
+            date: message.date_creation || message.created_at,
+            userName: message.nom_utilisateur,
+            userId: message.id_utilisateur,
+            channelId: message.id_canal,
+            channelName: message.nom_canal,
+          })) || [],
+        };
+
+        setSearchResults(formattedResults);
+        
+        // Déterminer l'onglet actif en fonction des résultats
+        if (formattedResults.users.length > 0) {
+          setActiveSearchTab('users');
+        } else if (formattedResults.messages.length > 0) {
+          setActiveSearchTab('messages');
+        } else if (formattedResults.channels.length > 0) {
+          setActiveSearchTab('channels');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      setSearchResults({ channels: [], users: [], messages: [] });
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur de recherche',
+        text2: 'Impossible d\'effectuer la recherche'
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [workspaceId]);
+
+  // Debouncing pour la recherche
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        searchInWorkspace(searchQuery);
+      } else {
+        setSearchResults({ channels: [], users: [], messages: [] });
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, searchInWorkspace]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadWorkspaceData();
@@ -333,6 +434,66 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
     });
   };
 
+  // Fonctions de gestion des résultats de recherche
+  const handleSearchResultSelect = (type, item) => {
+    setShowSearchModal(false);
+    setSearchQuery('');
+    
+    if (type === 'channel') {
+      navigation.navigate('Workspace', {
+        workspaceId,
+        channelId: item.id,
+        channelName: item.name,
+        workspaceName: workspace?.nom
+      });
+    } else if (type === 'message') {
+      // Naviguer vers le canal du message
+      navigation.navigate('Workspace', {
+        workspaceId,
+        channelId: item.channelId,
+        channelName: item.channelName,
+        workspaceName: workspace?.nom,
+        highlightMessageId: item.id
+      });
+    } else if (type === 'user') {
+      // Ici on pourrait naviguer vers le profil utilisateur ou démarrer une conversation
+      Toast.show({
+        type: 'info',
+        text1: 'Profil utilisateur',
+        text2: `Profil de ${item.name} sélectionné`
+      });
+    }
+  };
+
+  const handleCloseSearchModal = () => {
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults({ channels: [], users: [], messages: [] });
+  };
+
+  const formatSearchDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
+  const hasSearchResults = () => {
+    return searchResults.channels.length > 0 || 
+           searchResults.users.length > 0 || 
+           searchResults.messages.length > 0;
+  };
+
   const renderChannel = ({ item }) => (
     <TouchableOpacity
       style={styles.channelItem}
@@ -399,6 +560,14 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
             {workspace?.nom || 'Workspace'}
           </Text>
         </View>
+        
+        {/* Bouton de recherche */}
+        <TouchableOpacity 
+          style={styles.searchButton}
+          onPress={() => setShowSearchModal(true)}
+        >
+          <Ionicons name="search" size={24} color={themeColors.textPrimary} />
+        </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.headerAction}
@@ -555,6 +724,215 @@ const WorkspaceChannelsScreen = ({ route, navigation }) => {
         workspaceId={workspaceId}
         onChannelCreated={handleChannelCreated}
       />
+
+      {/* Modal de recherche unifiée */}
+      <Modal
+        visible={showSearchModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseSearchModal}
+      >
+        <View style={styles.searchModal}>
+          {/* Header de la modal de recherche */}
+          <View style={styles.searchModalHeader}>
+            <TouchableOpacity
+              style={styles.searchModalCloseButton}
+              onPress={handleCloseSearchModal}
+            >
+              <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.searchModalTitle}>Rechercher dans {workspace?.nom}</Text>
+          </View>
+
+          {/* Barre de recherche */}
+          <View style={styles.searchInputContainer}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search" size={20} color={themeColors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Rechercher canaux, utilisateurs, messages..."
+                placeholderTextColor={themeColors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus={true}
+              />
+              {isSearching && (
+                <ActivityIndicator 
+                  size="small" 
+                  color={themeColors.accentPrimary} 
+                  style={styles.searchSpinner}
+                />
+              )}
+            </View>
+          </View>
+
+          {/* Onglets de résultats */}
+          {searchQuery.length >= 2 && hasSearchResults() && (
+            <View style={styles.searchTabs}>
+              {searchResults.channels.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.searchTab,
+                    activeSearchTab === 'channels' && styles.searchTabActive
+                  ]}
+                  onPress={() => setActiveSearchTab('channels')}
+                >
+                  <Ionicons name="chatbubbles-outline" size={16} color={
+                    activeSearchTab === 'channels' ? themeColors.accentPrimary : themeColors.textSecondary
+                  } />
+                  <Text style={[
+                    styles.searchTabText,
+                    activeSearchTab === 'channels' && styles.searchTabTextActive
+                  ]}>
+                    Canaux ({searchResults.channels.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              {searchResults.users.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.searchTab,
+                    activeSearchTab === 'users' && styles.searchTabActive
+                  ]}
+                  onPress={() => setActiveSearchTab('users')}
+                >
+                  <Ionicons name="person-outline" size={16} color={
+                    activeSearchTab === 'users' ? themeColors.accentPrimary : themeColors.textSecondary
+                  } />
+                  <Text style={[
+                    styles.searchTabText,
+                    activeSearchTab === 'users' && styles.searchTabTextActive
+                  ]}>
+                    Utilisateurs ({searchResults.users.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              {searchResults.messages.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.searchTab,
+                    activeSearchTab === 'messages' && styles.searchTabActive
+                  ]}
+                  onPress={() => setActiveSearchTab('messages')}
+                >
+                  <Ionicons name="chatbox-outline" size={16} color={
+                    activeSearchTab === 'messages' ? themeColors.accentPrimary : themeColors.textSecondary
+                  } />
+                  <Text style={[
+                    styles.searchTabText,
+                    activeSearchTab === 'messages' && styles.searchTabTextActive
+                  ]}>
+                    Messages ({searchResults.messages.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Résultats de recherche */}
+          <ScrollView style={styles.searchResults}>
+            {searchQuery.length < 2 ? (
+              <View style={styles.searchEmptyState}>
+                <Ionicons name="search" size={60} color={themeColors.textMuted} />
+                <Text style={styles.searchEmptyText}>
+                  Tapez au moins 2 caractères pour rechercher
+                </Text>
+              </View>
+            ) : !hasSearchResults() && !isSearching ? (
+              <View style={styles.searchEmptyState}>
+                <Ionicons name="sad-outline" size={60} color={themeColors.textMuted} />
+                <Text style={styles.searchEmptyText}>
+                  Aucun résultat trouvé pour "{searchQuery}"
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Résultats des canaux */}
+                {activeSearchTab === 'channels' && searchResults.channels.map((channel) => (
+                  <TouchableOpacity
+                    key={`channel-${channel.id}`}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchResultSelect('channel', channel)}
+                  >
+                    <View style={styles.searchResultIcon}>
+                      {channel.isPrivate ? (
+                        <Ionicons name="lock-closed" size={20} color={themeColors.textSecondary} />
+                      ) : (
+                        <Text style={styles.searchResultHashtag}>#</Text>
+                      )}
+                    </View>
+                    <View style={styles.searchResultContent}>
+                      <Text style={styles.searchResultTitle}>{channel.name}</Text>
+                      {channel.description && (
+                        <Text style={styles.searchResultSubtitle}>
+                          {truncateText(channel.description, 60)}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Résultats des utilisateurs */}
+                {activeSearchTab === 'users' && searchResults.users.map((user) => (
+                  <TouchableOpacity
+                    key={`user-${user.id}`}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchResultSelect('user', user)}
+                  >
+                    <View style={styles.searchResultIcon}>
+                      {user.avatar ? (
+                        <Image
+                          source={{ uri: user.avatar.startsWith('http') ? user.avatar : env.S3_BASE_URL + user.avatar }}
+                          style={styles.searchResultAvatar}
+                        />
+                      ) : (
+                        <View style={styles.searchResultAvatarPlaceholder}>
+                          <Text style={styles.searchResultAvatarText}>
+                            {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.searchResultContent}>
+                      <Text style={styles.searchResultTitle}>{user.name}</Text>
+                      {user.email && (
+                        <Text style={styles.searchResultSubtitle}>{user.email}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Résultats des messages */}
+                {activeSearchTab === 'messages' && searchResults.messages.map((message) => (
+                  <TouchableOpacity
+                    key={`message-${message.id}`}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchResultSelect('message', message)}
+                  >
+                    <View style={styles.searchResultIcon}>
+                      <Ionicons name="chatbox-outline" size={20} color={themeColors.textSecondary} />
+                    </View>
+                    <View style={styles.searchResultContent}>
+                      <View style={styles.searchMessageHeader}>
+                        <Text style={styles.searchResultTitle}>{message.userName}</Text>
+                        <Text style={styles.searchMessageChannel}>#{message.channelName}</Text>
+                      </View>
+                      <Text style={styles.searchResultSubtitle}>
+                        {truncateText(message.content, 80)}
+                      </Text>
+                      <Text style={styles.searchMessageDate}>
+                        {formatSearchDate(message.date)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 };
