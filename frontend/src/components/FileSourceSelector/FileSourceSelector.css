@@ -1,0 +1,234 @@
+/* Styles pour le sélecteur de source de fichiers */
+
+.file-source-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+}
+
+.file-source-popup {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  margin: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(147, 72, 183, 0.1);
+  border: 1px solid #374151;
+  animation: popup-enter 0.3s ease-out;
+}
+
+@keyframes popup-enter {
+  from {
+    transform: scale(0.9) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.file-source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #374151;
+}
+
+.file-source-header h3 {
+  margin: 0;
+  color: #f3f4f6;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.file-source-close {
+  background: rgba(45, 45, 45, 0.9);
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  color: #9ca3af;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-source-close:hover {
+  background: linear-gradient(135deg, #9348b7 0%, #7c3aed 100%);
+  color: white;
+  border-color: #9348b7;
+  transform: scale(1.05);
+}
+
+.file-source-content {
+  padding: 24px;
+}
+
+.file-source-content p {
+  margin: 0 0 24px 0;
+  color: #d1d5db;
+  font-size: 16px;
+  text-align: center;
+}
+
+.file-source-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.file-source-option {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: rgba(45, 45, 45, 0.6);
+  border: 2px solid #374151;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.file-source-option:hover {
+  border-color: #9348b7;
+  background: rgba(147, 72, 183, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(147, 72, 183, 0.2);
+}
+
+.file-source-option:active {
+  transform: translateY(0);
+}
+
+.option-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  margin-right: 16px;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+.local-option .option-icon {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  color: #9ca3af;
+}
+
+.local-option:hover .option-icon {
+  background: linear-gradient(135deg, #9348b7 0%, #7c3aed 100%);
+  color: white;
+}
+
+.drive-option .option-icon {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: #4285f4;
+}
+
+.drive-option:hover .option-icon {
+  background: linear-gradient(135deg, #9348b7 0%, #7c3aed 100%);
+  color: white;
+}
+
+.option-text {
+  flex: 1;
+}
+
+.option-text h4 {
+  margin: 0 0 4px 0;
+  color: #f3f4f6;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.option-text p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: left;
+}
+
+.file-source-footer {
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #374151;
+}
+
+.cancel-button {
+  background: rgba(45, 45, 45, 0.8);
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  color: #d1d5db;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  background: rgba(45, 45, 45, 1);
+  border-color: #6b7280;
+  color: #f3f4f6;
+}
+
+.cancel-button:active {
+  transform: scale(0.98);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .file-source-popup {
+    margin: 10px;
+    max-width: none;
+  }
+
+  .file-source-header {
+    padding: 20px 20px 12px 20px;
+  }
+
+  .file-source-header h3 {
+    font-size: 18px;
+  }
+
+  .file-source-content {
+    padding: 20px;
+  }
+
+  .file-source-option {
+    padding: 16px;
+  }
+
+  .option-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-right: 12px;
+  }
+
+  .option-text h4 {
+    font-size: 16px;
+  }
+
+  .option-text p {
+    font-size: 13px;
+  }
+}

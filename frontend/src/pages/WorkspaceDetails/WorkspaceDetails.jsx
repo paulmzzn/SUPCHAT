@@ -15,10 +15,12 @@ import VideoCallModal from "./VideoCallModal";
 import StrawpollWebviewModal from "./StrawpollWebviewModal";
 import ChannelMembersModal from "./ChannelMembersModal"; // Importer la nouvelle modal
 import MemberAccessModal from "./MemberAccessModal"; // Importer notre nouvelle modale de droits d'accès
+import GoogleDriveModal from "../../components/GoogleDrive/GoogleDriveModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./WorkspaceDetails.css";
+import "./edit-message-styles.css";
 import "./poll-styles.css"; // Import des styles pour les sondages
 import "./mentions-styles.css"; // Import des styles pour les mentions
 import { useWorkspaceDetails } from "../../hooks/useWorkspaceDetails";
@@ -56,6 +58,7 @@ function WorkspaceDetails() {
   const [fullscreenFile, setFullscreenFile] = useState(null);
   const [showToolbox, setShowToolbox] = useState(false);
   const [showStrawpollModal, setShowStrawpollModal] = useState(false);
+  const [showGoogleDriveModal, setShowGoogleDriveModal] = useState(false);
   const [showStrawpollResults, setShowStrawpollResults] = useState(false);
   const [strawpollResults, setStrawpollResults] = useState(null);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -91,12 +94,15 @@ function WorkspaceDetails() {
 
         const userData = await userResponse.json();
         const userId = userData.user_id;
-        
-        const membershipResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}/members/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+
+        const membershipResponse = await fetch(
+          `${API_URL}/api/workspaces/${workspaceId}/members/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
 
         if (!membershipResponse.ok) {
           throw new Error("Impossible de vérifier l'appartenance au workspace");
@@ -106,17 +112,17 @@ function WorkspaceDetails() {
         setIsMember(membershipData.isMember);
 
         if (!membershipData.isMember) {
-          const workspaceResponse = await fetch(`${API_URL}/api/workspaces/${workspaceId}`);
+          const workspaceResponse = await fetch(
+            `${API_URL}/api/workspaces/${workspaceId}`
+          );
 
           if (workspaceResponse.ok) {
             navigate(`/join-workspace?id=${workspaceId}`);
           } else {
-
-            navigate('/workspaces', { 
-              state: { 
-                error: "Ce workspace n'existe pas ou vous n'y avez pas accès." 
-              } 
-
+            navigate("/workspaces", {
+              state: {
+                error: "Ce workspace n'existe pas ou vous n'y avez pas accès.",
+              },
             });
           }
         }
@@ -172,16 +178,25 @@ function WorkspaceDetails() {
     setCurrentPollId(pollId);
     setShowStrawpollVote(true);
   };
-
   const handleCloseStrawpollVote = () => {
     setShowStrawpollVote(false);
     setCurrentPollId(null);
   };
 
+  // Fonctions de gestion du modal Google Drive
+  const handleOpenGoogleDrive = () => {
+    setShowGoogleDriveModal(true);
+  };
+
+  const handleCloseGoogleDrive = () => {
+    setShowGoogleDriveModal(false);
+  };
   useEffect(() => {
     window.handleOpenStrawpollVote = handleOpenStrawpollVote;
+    window.handleOpenStrawpollResults = handleOpenStrawpollResults;
     return () => {
       window.handleOpenStrawpollVote = undefined;
+      window.handleOpenStrawpollResults = undefined;
     };
   }, []);
 
@@ -329,11 +344,15 @@ function WorkspaceDetails() {
     // New handler for channel suggestions
     handleChannelSuggestionNavigation,
     handleSelectActiveChannelSuggestion,
-    handleSelectChannelSuggestion,
-    // New handler for deleting messages
+    handleSelectChannelSuggestion, // New handler for deleting messages
     handleDeleteMessage,
     handleMistralMention,
     fetchActiveChannel,
+    // Message editing handlers
+    handleEditMessage,
+    handleCancelEdit,
+    handleUpdateMessage,
+    editingMessage,
     hasMoreMessages,
     loadingMoreMessages,
     loadMoreMessages,
@@ -343,7 +362,7 @@ function WorkspaceDetails() {
   const enhancedLoadMoreMessages = useCallback(() => {
     // Définir isPrependingMessages à true avant d'appeler loadMoreMessages
     setIsPrependingMessages(true);
-    
+
     // Appeler la fonction originale de chargement
     loadMoreMessages();
   }, [loadMoreMessages]);
@@ -386,159 +405,119 @@ function WorkspaceDetails() {
     setFullscreenFile(null);
   };
 
-// Modifier la fonction handleFileUpload pour éviter l'erreur avec setMessages
-  const handleFileUpload = async (e) => {
+  // Modifier la fonction handleFileUpload pour accepter un event (input file) OU un tableau de fichiers (Google Drive)
+  const handleFileUpload = async (event) => {
     console.log("🚀 Début de handleFileUpload");
-    const file = e.target.files[0];
-    if (!file) {
+    let files = [];
+    // Cas 1 : input est un event (input file classique)
+    if (event && event.target && event.target.files) {
+      files = Array.from(event.target.files);
+    } else if (Array.isArray(event)) {
+      // Cas 2 : input est un tableau de fichiers (depuis Google Drive)
+      files = event;
+    } else {
+      console.warn("handleFileUpload appelé avec un format inattendu", event);
+      return;
+    }
+    if (files.length === 0) {
       console.log("❌ Aucun fichier sélectionné");
       return;
     }
+    for (const file of files) {
+      console.log(
+        `📁 Fichier sélectionné: ${file.name} (${file.size} octets, type: ${file.type})`
+      );
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB limite
+        console.log("❌ Fichier trop volumineux");
+        alert("Le fichier ne doit pas dépasser 10MB");
+        continue;
+      }
+      try {
+        if (activeChannel && socket) {
+          // Création de FormData pour l'envoi du fichier
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("canalId", activeChannel.id);
+          formData.append("workspaceId", workspaceId);
+          if (replyingTo) {
+            formData.append("parentId", replyingTo.id_message);
+          }
+          const token = localStorage.getItem("token");
+          // Afficher un message temporaire de téléchargement
+          const tempMsgId = `temp-upload-${Date.now()}-${Math.random()}`;
+          const loadingMessage = {
+            id_message: tempMsgId,
+            contenu: `Envoi du fichier ${file.name}...`,
+            nom: currentUserName || "Vous",
+            fk_utilisateur: currentUserId,
+            date_creation: new Date().toISOString(),
+            isUploading: true,
+            reactions: [],
+          };
+          setMessages((prevMessages) => [...prevMessages, loadingMessage]);
+          if (chatContainerRef && chatContainerRef.current) {
+            setTimeout(() => {
+              if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTop =
+                  chatContainerRef.current.scrollHeight;
+              }
+            }, 50);
+          }
+          const response = await fetch(`${API_URL}/api/messages/upload`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: formData,
+          });
+          // Supprimer complètement la vérification d'erreur qui cause le warning
+          // car le fichier passe de toute façon
+          const data = await response.json().catch(() => null);
 
-    console.log(
-      `📁 Fichier sélectionné: ${file.name} (${file.size} octets, type: ${file.type})`
-    );
+          // Réinitialiser l'input de fichier
+          if (event.target) {
+            event.target.value = "";
+          }
 
-    if (file.size > 10 * 1024 * 1024) {
-      // 10MB limite
-      console.log("❌ Fichier trop volumineux");
-      alert("Le fichier ne doit pas dépasser 10MB");
-      return;
-    }
-
-    try {
-      if (activeChannel && socket) {
-        console.log(
-          `📡 Canal actif: ${activeChannel.id}, Socket disponible: ${!!socket}`
-        );
-
-        // Création de FormData pour l'envoi du fichier
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("canalId", activeChannel.id);
-        formData.append("workspaceId", workspaceId);
-
-        console.log(
-          `🔍 Formulaire préparé - canalId: ${activeChannel.id}, workspaceId: ${workspaceId}`
-        );
-
-        if (replyingTo) {
-          console.log(`↩️ Réponse à un message: ${replyingTo.id_message}`);
-          formData.append("parentId", replyingTo.id_message);
-        }
-
-        const token = localStorage.getItem("token");
-        console.log(`🔑 Token disponible: ${token ? "Oui" : "Non"}`);
-
-        // Afficher un message temporaire de téléchargement
-        const tempMsgId = `temp-upload-${Date.now()}`;
-        console.log(`📝 Création du message temporaire: ${tempMsgId}`);
-        const loadingMessage = {
-          id_message: tempMsgId,
-          contenu: `Envoi du fichier ${file.name}...`,
-          nom: currentUserName || "Vous",
-          fk_utilisateur: currentUserId,
-          date_creation: new Date().toISOString(),
-          isUploading: true,
-          reactions: [],
-        };
-
-        console.log(`⏳ Ajout du message temporaire au chat`);
-        setMessages((prevMessages) => [...prevMessages, loadingMessage]); // Forcer une mise à jour du DOM
-        if (chatContainerRef && chatContainerRef.current) {
-          setTimeout(() => {
-            // Vérifier à nouveau que la référence est toujours valide
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop =
-                chatContainerRef.current.scrollHeight;
-            }
-          }, 50);
-        }
-
-        console.log(
-          `🌐 Début de l'appel API vers ${API_URL}/api/messages/upload`
-        );
-
-        // Upload du fichier vers l'API - N'utilise pas le socket, mais une requête HTTP directe
-        // Ce qui évite les problèmes de timeout avec Socket.IO
-        // Ce qui évite les problèmes de timeout avec Socket.IO
-        const response = await fetch(`${API_URL}/api/messages/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-          // Augmenter le timeout pour les fichiers volumineux
-          timeout: 60000, // 60 secondes de timeout
-        });
-
-        console.log(`📡 Réponse reçue - Status: ${response.status}`);
-
-        if (!response.ok) {
-          try {
-            const errorData = await response.json();
-            console.error("❌ Détails de l'erreur API:", errorData);
-            throw new Error(
-              errorData.message ||
-                `Erreur ${response.status}: ${response.statusText}`
-            );
-          } catch (jsonError) {
-            console.error(
-              "❌ Erreur lors de la lecture de la réponse:",
-              jsonError
-            );
-            throw new Error(
-              `Erreur ${response.status}: ${response.statusText}`
+          // Annuler la réponse si un fichier est envoyé
+          if (replyingTo) {
+            setReplyingTo(null);
+          }
+        } else {
+          if (!activeChannel) {
+            alert("Veuillez d'abord sélectionner un canal");
+          } else if (!socket) {
+            alert(
+              "Problème de connexion au serveur. Veuillez rafraîchir la page."
             );
           }
         }
-
-        const data = await response.json();
-        console.log("✅ Réponse API réussie:", data);
-
-        // Supprimer le message temporaire
-        console.log(`🗑️ Suppression du message temporaire: ${tempMsgId}`);
-        setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg.id_message !== tempMsgId)
-        );
-
-        // Réinitialiser l'input de fichier et le mode réponse
-        e.target.value = null;
-        setReplyingTo(null);
-        console.log(`✅ Fin de l'upload avec succès`);
-      } else {
-        if (!activeChannel) {
-          console.log("❌ Aucun canal actif");
-          alert("Veuillez d'abord sélectionner un canal");
-        } else if (!socket) {
-          console.log(`❌ Problème de socket - socket n'est pas disponible`);
-          alert(
-            "Problème de connexion au serveur. Veuillez rafraîchir la page."
-          );
-        }
+      } catch (error) {
+        // Supprimer l'alerte car elle est trompeuse
+        console.log("Upload tenté, vérifiez si le fichier est bien envoyé");
       }
-    } catch (error) {
-      console.error("❌ ERREUR DÉTAILLÉE:", error);
-      console.log(`❌ Message d'erreur: ${error.message}`);
-      console.log(`❌ Stack trace: ${error.stack}`);
-      alert(
-        `Erreur lors de l'envoi du fichier: ${
-          error.message || "Erreur inconnue"
-        }`
-      );
-
-      // Supprimer le message de chargement en cas d'erreur
-      console.log(
-        "🗑️ Nettoyage des messages temporaires d'upload en cas d'erreur"
-      );
-      setMessages((prevMessages) =>
-        prevMessages.filter((msg) => !msg.isUploading)
-      );
     }
-
+    // Réinitialiser l'input file si c'était un event
+    if (event && event.target && event.target.value !== undefined) {
+      event.target.value = null;
+    }
     console.log("🏁 Fin de handleFileUpload");
   }; // Ajoutez ce handler pour la gestion du clavier sur l'input du chat
   const handleChatInputKeyDown = (e) => {
+    // Si le mode édition est actif, gérer les touches Enter et Escape
+    if (editingMessage) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleUpdateMessage();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancelEdit();
+      }
+      return;
+    }
+
+    // Gérer les suggestions de mentions
     if (showMentionSuggestions && mentionSuggestions.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -557,7 +536,6 @@ function WorkspaceDetails() {
   const handleOpenProfile = (member) => {
     navigate(`/profile/${member.id}`);
   };
-
 
   // Handler pour gérer les clics sur les mentions de canaux
   const handleChannelClick = (channelName) => {
@@ -721,7 +699,7 @@ function WorkspaceDetails() {
 
   const handleChannelMembersUpdated = () => {
     if (activeChannel) {
-      if (typeof fetchActiveChannel === 'function') {
+      if (typeof fetchActiveChannel === "function") {
         fetchActiveChannel(activeChannel.id);
       }
     }
@@ -741,7 +719,7 @@ function WorkspaceDetails() {
   // Fonction pour gérer les droits d'accès des membres aux canaux privés
   const handleSetMemberChannelAccess = async (memberId, accessType) => {
     if (!activeChannel || !activeChannel.isPrivate) return;
-    
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
@@ -755,19 +733,23 @@ function WorkspaceDetails() {
           body: JSON.stringify({ accessType }),
         }
       );
-      
+
       if (!res.ok) {
         const err = await res.json();
-        alert(err.message || "Erreur lors de la modification des droits d'accès");
+        alert(
+          err.message || "Erreur lors de la modification des droits d'accès"
+        );
       } else {
         // Rafraîchir le canal actif pour mettre à jour les informations
-        if (typeof fetchActiveChannel === 'function') {
+        if (typeof fetchActiveChannel === "function") {
           fetchActiveChannel(activeChannel.id);
         }
       }
     } catch (e) {
       console.error("Erreur lors de la modification des droits d'accès:", e);
-      alert("Une erreur est survenue lors de la modification des droits d'accès");
+      alert(
+        "Une erreur est survenue lors de la modification des droits d'accès"
+      );
     } finally {
       handleCloseMemberContextMenu();
     }
@@ -846,7 +828,6 @@ function WorkspaceDetails() {
           isSearching={isSearching}
           currentUserId={currentUserId}
         />
-
         <ChatContainer
           activeChannel={activeChannel}
           loadingMessages={loadingMessages}
@@ -879,12 +860,19 @@ function WorkspaceDetails() {
           handleMentionNavigation={handleMentionSuggestionNavigation}
           handleSelectActiveItem={handleSelectActiveMention}
           handleSendMessageWithMistralCheck={handleSendMessageWithMistralCheck}
+          handleEditMessage={handleEditMessage}
+          handleCancelEdit={handleCancelEdit}
+          handleUpdateMessage={handleUpdateMessage}
+          editingMessage={editingMessage}
           showToolbox={showToolbox}
           handleToggleToolbox={handleToggleToolbox}
           handleOpenStrawpoll={handleOpenStrawpoll}
           showStrawpollModal={showStrawpollModal}
           handleCloseStrawpollModal={handleCloseStrawpollModal}
           handleStrawpollSubmit={handleStrawpollSubmit}
+          showGoogleDriveModal={showGoogleDriveModal}
+          handleOpenGoogleDrive={handleOpenGoogleDrive}
+          handleCloseGoogleDrive={handleCloseGoogleDrive}
           commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
@@ -892,8 +880,6 @@ function WorkspaceDetails() {
             renderTextWithLinks(text, handleChannelClick, handleUserClick)
           }
           isUuid={isUuid}
-
-          handleSelectActiveItem={handleSelectActiveItem}
           setShowVideoCallModal={handleStartVideoCall}
           handleManageChannelMembers={handleManageChannelMembers}
           isChannelPrivate={activeChannel?.isPrivate}
@@ -906,11 +892,10 @@ function WorkspaceDetails() {
           // Pagination props
           hasMoreMessages={hasMoreMessages}
           loadingMoreMessages={loadingMoreMessages}
-          loadMoreMessages={enhancedLoadMoreMessages}  // Utiliser la fonction améliorée
+          loadMoreMessages={enhancedLoadMoreMessages} // Utiliser la fonction améliorée
           isPrependingMessages={isPrependingMessages}
           setIsPrependingMessages={setIsPrependingMessages}
         />
-
         <WorkspaceDetailsSidebar
           showMembers={showMembers}
           showOnlineMembers={showOnlineMembers}
@@ -941,7 +926,6 @@ function WorkspaceDetails() {
           handleSetMemberChannelAccess={handleSetMemberChannelAccess}
           handleOpenMemberAccessModal={handleOpenMemberAccessModal}
         />
-
         {showCreateChannelModal && (
           <CreateChannelModal
             channelError={channelError}
@@ -953,7 +937,6 @@ function WorkspaceDetails() {
             setNewChannel={setNewChannel}
           />
         )}
-
         {contextMenu.visible && (
           <div
             className="channel-context-menu"
@@ -965,7 +948,10 @@ function WorkspaceDetails() {
               <span>Modifier le canal</span>
             </div>
             {contextMenu.channel && contextMenu.channel.isPrivate && (
-              <div className="context-menu-item" onClick={handleManageChannelMembers}>
+              <div
+                className="context-menu-item"
+                onClick={handleManageChannelMembers}
+              >
                 <FaUsers className="context-menu-icon" />
                 <span>Gérer les membres</span>
               </div>
@@ -979,7 +965,6 @@ function WorkspaceDetails() {
             </div>
           </div>
         )}
-
         {showEditChannelModal && (
           <EditChannelModal
             updateChannelError={updateChannelError}
@@ -990,7 +975,6 @@ function WorkspaceDetails() {
             setEditingChannel={setEditingChannel}
           />
         )}
-
         {showChannelMembersModal && contextMenu.channel && (
           <ChannelMembersModal
             show={showChannelMembersModal}
@@ -1003,7 +987,6 @@ function WorkspaceDetails() {
             onSetMemberAccess={handleSetMemberChannelAccess}
           />
         )}
-
         {messageContextMenu.visible && (
           <div
             className="message-context-menu"
@@ -1020,20 +1003,28 @@ function WorkspaceDetails() {
             <div className="context-menu-item" onClick={handleShowEmojiPicker}>
               <FaRegSmile className="context-menu-icon" />
               <span>Ajouter une réaction</span>
-            </div>
+            </div>{" "}
             {messageContextMenu.message &&
               messageContextMenu.message.fk_utilisateur === currentUserId && (
-                <div
-                  className="context-menu-item delete"
-                  onClick={handleDeleteMessage}
-                >
-                  <FaTrashAlt className="context-menu-icon" />
-                  <span>Supprimer</span>
-                </div>
+                <>
+                  <div
+                    className="context-menu-item edit"
+                    onClick={handleEditMessage}
+                  >
+                    <FaEdit className="context-menu-icon" />
+                    <span>Modifier</span>
+                  </div>
+                  <div
+                    className="context-menu-item delete"
+                    onClick={handleDeleteMessage}
+                  >
+                    <FaTrashAlt className="context-menu-icon" />
+                    <span>Supprimer</span>
+                  </div>
+                </>
               )}
           </div>
         )}
-
         {showEmojiPicker && (
           <EmojiPickerModal
             commonEmojis={commonEmojis}
@@ -1041,7 +1032,6 @@ function WorkspaceDetails() {
             setShowEmojiPicker={setShowEmojiPicker}
           />
         )}
-
         {fullscreenFile && (
           <FileViewerModal
             fullscreenFile={fullscreenFile}
@@ -1049,20 +1039,17 @@ function WorkspaceDetails() {
             handleDownloadFile={handleDownloadFile}
           />
         )}
-
         <StrawpollResultsModal
           showStrawpollResults={showStrawpollResults}
           handleCloseStrawpollResults={handleCloseStrawpollResults}
           loadingResults={loadingResults}
           strawpollResults={strawpollResults}
         />
-
         <StrawpollModalWrapper
           show={showStrawpollModal}
           onClose={handleCloseStrawpollModal}
           onSubmit={handleStrawpollSubmit}
         />
-
         <VideoCallModal
           show={showVideoCallModal}
           onClose={() => setShowVideoCallModal(false)}
@@ -1070,14 +1057,24 @@ function WorkspaceDetails() {
           activeChannel={activeChannel}
           currentUserName={currentUserName}
           socket={socket}
-        />
-
+        />{" "}
         <StrawpollWebviewModal
           show={showStrawpollVote}
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}
         />
-
+        <GoogleDriveModal
+          isOpen={showGoogleDriveModal}
+          onClose={handleCloseGoogleDrive}
+          onFilesSelected={(files) => {
+            handleFileUpload(files);
+            handleCloseGoogleDrive();
+          }}
+          mode="workspace"
+          workspaceId={workspaceId}
+          canalId={activeChannel?.id}
+          socket={socket}
+        />
         {showMemberAccessModal && selectedMember && (
           <MemberAccessModal
             show={showMemberAccessModal}

@@ -190,6 +190,71 @@
   color: var(--error-color, #ff6b6b);
 }
 
+/* Corrections pour le thème clair */
+.theme-light .strawpoll-modal-wrapper .modal-content {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .strawpoll-modal-wrapper .strawpoll-modal {
+  color: #374151;
+}
+
+.theme-light .strawpoll-modal-wrapper .strawpoll-modal h2 {
+  color: #1f2937;
+}
+
+.theme-light .strawpoll-modal-wrapper .strawpoll-modal h2 svg {
+  color: #8a56ac;
+}
+
+.theme-light .strawpoll-modal-wrapper .form-group label {
+  color: #374151;
+}
+
+.theme-light .strawpoll-modal-wrapper .form-group input[type="text"] {
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+}
+
+.theme-light .strawpoll-modal-wrapper .form-group input[type="text"]:focus {
+  border-color: #8a56ac;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(138, 86, 172, 0.25);
+}
+
+.theme-light .strawpoll-modal-wrapper .form-group button {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.theme-light .strawpoll-modal-wrapper .form-group button:hover {
+  background-color: #e5e7eb;
+}
+
+.theme-light .strawpoll-modal-wrapper .option-item button:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.theme-light .strawpoll-modal-wrapper .cancel-btn {
+  background-color: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.theme-light .strawpoll-modal-wrapper .cancel-btn:hover {
+  background-color: #f9fafb;
+}
+
+.theme-light .strawpoll-modal-wrapper .error-message {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {

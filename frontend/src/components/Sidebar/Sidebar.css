@@ -69,7 +69,7 @@
 }
 
 .nav-item::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -111,7 +111,7 @@
 /* SVG specific styling for active items */
 .nav-item.active svg {
   stroke-width: 2.5px;
-  fill: #EDF2F7;
+  fill: #edf2f7;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
   outline: none;
   border: none;
@@ -119,33 +119,39 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.notification-badge {
+.nav-badge {
   position: absolute;
   top: 4px;
-  right: 18px;
-  background: #e74c3c;
+  right: 10px;
+  background: var(--notification-badge-bg, #e74c3c);
   color: white;
-  font-size: 10px;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 9px;
+  font-size: 11px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(147, 72, 183, 0.4);
-  animation: pulse 2s infinite;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.6);
+  animation: badge-pulse 2s infinite;
+  z-index: 2;
+  padding: 0 4px;
+  transition: all 0.3s ease;
 }
 
-@keyframes pulse {
+@keyframes badge-pulse {
   0% {
     transform: scale(1);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.6);
   }
   50% {
     transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.8);
   }
   100% {
     transform: scale(1);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.6);
   }
 }
 
@@ -169,9 +175,15 @@
 
 /* Make the badge bounce when it appears */
 @keyframes badge-bounce {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .nav-item .notification-badge {
@@ -287,14 +299,14 @@ svg rect[width="24"][height="24"] {
   }
 
   .nav-item::before {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -8px;
     left: 50%;
     transform: translateX(-50%) scaleX(0);
     width: 20px;
     height: 3px;
-    background: linear-gradient(to right, #9348B7, #B05FDF);
+    background: linear-gradient(to right, #9348b7, #b05fdf);
     border-radius: 3px;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     opacity: 0;
@@ -333,18 +345,23 @@ svg rect[width="24"][height="24"] {
 
   .nav-item.active .nav-icon {
     transform: scale(1.2);
-    filter: brightness(1.8) contrast(1.1) drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
+    filter: brightness(1.8) contrast(1.1)
+      drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
     opacity: 1;
   }
 
   .nav-item::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 50%;
     width: 45px;
     height: 45px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.25),
+      transparent 70%
+    );
     border-radius: 50%;
     transform: translate(-50%, -50%) scale(0);
     transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -358,7 +375,12 @@ svg rect[width="24"][height="24"] {
 
   .nav-item.active::after {
     transform: translate(-50%, -50%) scale(1.1);
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15) 60%, transparent 80%);
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.3),
+      rgba(255, 255, 255, 0.15) 60%,
+      transparent 80%
+    );
   }
 
   .nav-item svg {
@@ -383,16 +405,17 @@ svg rect[width="24"][height="24"] {
     width: 26px;
     height: 26px;
   }
-  
+
   .nav-item:hover img.nav-icon {
     filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.2));
     transform: scale(1.15);
   }
-  
+
   .nav-item.active img.nav-icon {
     filter: drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
     transform: scale(1.2);
-  }  .notification-badge {
+  }
+  .notification-badge {
     position: absolute;
     top: 0px;
     right: calc(50% - 15px);
@@ -407,7 +430,7 @@ svg rect[width="24"][height="24"] {
     z-index: 2;
     box-shadow: 0 2px 4px rgba(147, 72, 183, 0.4);
   }
-  
+
   @keyframes pulseAndFloat {
     0% {
       transform: scale(1) translateY(0);
@@ -440,7 +463,8 @@ svg rect[width="24"][height="24"] {
 
   .nav-item.active .sidebar-icon {
     transform: scale(1.2);
-    filter: brightness(1.8) contrast(1.1) drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
+    filter: brightness(1.8) contrast(1.1)
+      drop-shadow(0 3px 5px rgba(147, 72, 183, 0.4));
     opacity: 1;
     color: white;
     outline: none;
@@ -472,6 +496,10 @@ svg rect[width="24"][height="24"] {
 }
 
 @keyframes badge-appear {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
 }

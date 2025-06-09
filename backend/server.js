@@ -21,6 +21,7 @@ import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachmen
 import fichierRoutes from "./routes/fichierRoutes.js"; // Import fichier routes
 import fileRoutes from "./routes/fileRoutes.js"; // Import des routes
 import searchRoutes from "./routes/searchRoutes.js"; // Import des routes de recherche
+import reminderRoutes from "./routes/reminderRoutes.js"; // Import des routes de rappels
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path"; // Import path
@@ -145,6 +146,7 @@ app.use("/api/files", fileRoutes); // Routes pour les fichiers (incluant notre r
 app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
+app.use("/api", reminderRoutes); // Ajout des routes pour les rappels
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Ces routes sont maintenant placées APRÈS la définition de fileRoutes pour éviter qu'elles n'interceptent notre route personnalisée
@@ -197,8 +199,8 @@ try {
 }
 
 httpServer.listen(PORT, "0.0.0.0", () => {
-  logger.info(`Serveur démarré sur http://192.168.1.63:${PORT}`);
-  logger.info(`WebSocket URL: ws://192.168.1.63:${PORT}`);
+  logger.info(`Serveur démarré sur http://192.168.1.31:${PORT}`);
+  logger.info(`WebSocket URL: ws://192.168.1.31:${PORT}`);
 
   // Déplacer le test de connexion PostgreSQL dans le callback de l'écoute du serveur
   pool

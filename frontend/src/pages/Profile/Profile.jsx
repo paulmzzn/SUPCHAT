@@ -52,8 +52,7 @@ function Profile() {
     setError(null);
 
     const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
-
+      (process.env.REACT_APP_API_URL || "http://192.168.1.31:3001") +
       `/api/users/${userId}`;
 
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
@@ -112,8 +111,7 @@ function Profile() {
   const fetchUserWorkspaces = async () => {
     try {
       const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
-
+        (process.env.REACT_APP_API_URL || "http://192.168.1.31:3001") +
         `/api/users/${userId}/workspaces`;
 
       console.log(`Fetching workspaces from: ${apiUrl}`);
@@ -147,7 +145,7 @@ function Profile() {
     const fetchStats = async () => {
       try {
         const apiUrl =
-          (process.env.REACT_APP_API_URL || "http://192.168.1.63:3001") +
+          (process.env.REACT_APP_API_URL || "http://192.168.1.31:3001") +
           `/api/users/${userId}/activity-stats`;
         const res = await fetch(apiUrl, {
           headers: {
@@ -213,19 +211,22 @@ function Profile() {
   const getUserStats = () => {
     return {
       messages:
-        (activityStats && (activityStats.messageCount ?? activityStats.messages)) ??
+        (activityStats &&
+          (activityStats.messageCount ?? activityStats.messages)) ??
         user?.message_count ??
         user?.messages ??
         user?.stats?.messages ??
         0,
       replies:
-        (activityStats && (activityStats.replyCount ?? activityStats.replies)) ??
+        (activityStats &&
+          (activityStats.replyCount ?? activityStats.replies)) ??
         user?.reply_count ??
         user?.replies ??
         user?.stats?.replies ??
         0,
       mentions:
-        (activityStats && (activityStats.mentionCount ?? activityStats.mentions)) ??
+        (activityStats &&
+          (activityStats.mentionCount ?? activityStats.mentions)) ??
         user?.mention_count ??
         user?.mentions ??
         user?.stats?.mentions ??

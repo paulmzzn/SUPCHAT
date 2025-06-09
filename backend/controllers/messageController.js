@@ -3,6 +3,7 @@ import Canal from "../models/Canal.js";
 import Fichier from "../models/Fichier.js";
 import { uploadToS3 } from "../config/s3Config.js";
 import pool from "../config/dbConnection.js"; // Ajout de l'import manquant
+import path from "path";
 
 // Créer un nouveau message
 export const createMessage = async (req, res) => {
@@ -88,18 +89,20 @@ export const getMessagesByChannel = async (req, res) => {
     if (isNaN(offset) || offset < 0) offset = 0;
 
     if (!channelId) {
-      console.error("getMessagesByChannel: ID de canal manquant", { 
-        params: req.params, 
-        url: req.originalUrl 
+      console.error("getMessagesByChannel: ID de canal manquant", {
+        params: req.params,
+        url: req.originalUrl,
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "ID de canal non fourni.",
         error: "CHANNEL_ID_MISSING",
-        params: req.params
+        params: req.params,
       });
     }
 
-    console.log(`Récupération des messages pour canal ${channelId} par utilisateur ${userId} (limit=${limit}, offset=${offset})`);
+    console.log(
+      `Récupération des messages pour canal ${channelId} par utilisateur ${userId} (limit=${limit}, offset=${offset})`
+    );
 
     // Vérifier que le canal existe
     const canal = await Canal.findById(channelId);
@@ -112,15 +115,17 @@ export const getMessagesByChannel = async (req, res) => {
     const accessCheck = await Canal.checkUserAccess(channelId, userId);
     if (!accessCheck.hasAccess) {
       console.log(`Utilisateur ${userId} n'a pas accès au canal ${channelId}`);
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: "Vous n'avez pas accès à ce canal",
-        error: "ACCESS_DENIED" 
+        error: "ACCESS_DENIED",
       });
     }
 
     // Une fois que nous avons vérifié que l'utilisateur a accès, récupérer les messages paginés
     const messages = await MessageModel.findByChannel(channelId, limit, offset);
-    console.log(`${messages.length} messages trouvés (limit=${limit}, offset=${offset})`);
+    console.log(
+      `${messages.length} messages trouvés (limit=${limit}, offset=${offset})`
+    );
 
     // Normaliser les dates pour assurer la compatibilité avec le front-end
     const transformedMessages = messages.map((msg) => {
@@ -264,27 +269,22 @@ export const uploadFile = async (req, res) => {
     console.log("🧪 Vérification de la requête multer:", {
       fileBuffer: req.file.buffer ? "Présent" : "Absent",
       fileBufferSize: req.file.buffer ? req.file.buffer.length : 0,
-    });
-
-    // Upload du fichier vers S3
+    }); // Upload du fichier vers S3
     try {
       console.log("☁️ Tentative d'upload vers S3...");
-      const fileKey = await uploadToS3(req.file, "messages/files");
-      console.log("✅ Fichier uploadé avec succès vers S3:", fileKey);
+      const s3Result = await uploadToS3(req.file, "messages/files");
+      console.log("✅ Fichier uploadé avec succès vers S3:", s3Result);
 
       // Construction de l'URL complète du fichier
       const s3Endpoint =
         process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
       const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
-      const fullFileUrl = `${s3Endpoint}${bucketName}/${fileKey}`.replace(
-        /([^:])\/\/+/g,
-        "$1/"
-      );
+      const fullFileUrl = s3Result.url; // Utiliser l'URL complète retournée par uploadToS3
 
       console.log("🔗 URL complète du fichier:", fullFileUrl);
 
       // Créer le message avec le lien vers le fichier
-      const fileUrl = fileKey;
+      const fileUrl = s3Result.fileKey; // Clé pour les opérations S3
       const fileName = req.file.originalname;
       const fileSize = req.file.size;
       const fileType = req.file.mimetype;
@@ -380,20 +380,212 @@ export const uploadFile = async (req, res) => {
   console.log("🏁 Fin de uploadFile - serveur");
 };
 
+// Fonction pour gérer l'upload de fichiers Google Drive pour les messages de workspace
+export const uploadGoogleDriveFile = async (req, res) => {
+  try {
+    console.log("[MessageController] Début de l'upload Google Drive");
+
+    const {
+      googleDriveFileId,
+      fileName,
+      mimeType,
+      size,
+      canalId,
+      workspaceId,
+    } = req.body;
+    const userId = req.user.id;
+
+    console.log("[MessageController] Données Google Drive reçues:", {
+      googleDriveFileId,
+      fileName,
+      mimeType,
+      size,
+      canalId,
+      workspaceId,
+      userId,
+    });
+
+    if (!googleDriveFileId || !fileName || !canalId || !workspaceId) {
+      return res.status(400).json({
+        message:
+          "Données manquantes: googleDriveFileId, fileName, canalId et workspaceId requis",
+      });
+    }
+
+    // Vérifier que l'utilisateur a accès au canal
+    const canalAccess = await pool.query(
+      `SELECT c.* FROM canal c 
+       JOIN workspace w ON c.fk_workspace = w.id_workspace 
+       JOIN workspace_membre wm ON w.id_workspace = wm.fk_workspace 
+       WHERE c.id_canal = $1 AND w.id_workspace = $2 AND wm.fk_utilisateur = $3`,
+      [canalId, workspaceId, userId]
+    );
+
+    if (canalAccess.rows.length === 0) {
+      return res.status(403).json({
+        message: "Accès refusé au canal ou workspace",
+      });
+    }
+
+    // Récupérer le token Google Drive de l'utilisateur
+    const userResult = await pool.query(
+      `SELECT google_drive_access_token FROM utilisateur WHERE id_utilisateur = $1`,
+      [userId]
+    );
+
+    if (
+      userResult.rows.length === 0 ||
+      !userResult.rows[0].google_drive_access_token
+    ) {
+      return res.status(400).json({
+        message: "Token Google Drive non trouvé pour cet utilisateur",
+      });
+    }
+
+    const accessToken = userResult.rows[0].google_drive_access_token;
+
+    // Télécharger le fichier depuis Google Drive
+    console.log("[MessageController] Téléchargement depuis Google Drive...");
+
+    let downloadUrl;
+    if (mimeType.startsWith("application/vnd.google-apps.")) {
+      // Pour les fichiers Google Workspace, utiliser l'export
+      const exportMimeTypes = {
+        "application/vnd.google-apps.document":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.google-apps.spreadsheet":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.google-apps.presentation":
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      };
+      const exportMimeType = exportMimeTypes[mimeType] || "application/pdf";
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}/export?mimeType=${encodeURIComponent(
+        exportMimeType
+      )}`;
+    } else {
+      // Pour les fichiers normaux
+      downloadUrl = `https://www.googleapis.com/drive/v3/files/${googleDriveFileId}?alt=media`;
+    }
+
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!downloadResponse.ok) {
+      throw new Error(
+        `Erreur lors du téléchargement depuis Google Drive: ${downloadResponse.status}`
+      );
+    }
+
+    const fileBuffer = await downloadResponse.arrayBuffer();
+    const fileBlob = new Uint8Array(fileBuffer);
+
+    // Préparer le fichier pour S3
+    const fileExt = path.extname(fileName).substring(1) || "bin";
+
+    const fileForS3 = {
+      buffer: Buffer.from(fileBlob),
+      originalname: fileName,
+      mimetype: mimeType || "application/octet-stream",
+      size: fileBlob.length,
+    };
+
+    // Upload vers S3
+    console.log("[MessageController] Upload vers S3...");
+    const s3Result = await uploadToS3(fileForS3, "messages/google-drive");
+    console.log(
+      "[MessageController] Fichier Google Drive uploadé vers S3:",
+      s3Result
+    );
+
+    // Créer l'entrée fichier dans la base de données
+    const fichierData = {
+      nom_fichier: fileName,
+      url: s3Result.url,
+      type: mimeType || "application/octet-stream",
+      taille_fichier: fileBlob.length,
+      extension: fileExt,
+      mime_type: mimeType || "application/octet-stream",
+      fk_utilisateur: userId,
+    };
+
+    console.log("[MessageController] Création du fichier en BDD:", fichierData);
+    const newFichier = await Fichier.create(fichierData);
+    console.log("[MessageController] Fichier créé:", newFichier);
+
+    // Créer le message dans le canal
+    const messageData = {
+      contenu: "",
+      fk_canal: canalId,
+      fk_utilisateur: userId,
+    };
+
+    console.log("[MessageController] Création du message:", messageData);
+    const newMessage = await MessageModel.create(messageData);
+    console.log("[MessageController] Message créé:", newMessage);
+
+    // Associer le fichier au message
+    await Fichier.addToMessage(newMessage.id_message, newFichier.id_fichier);
+    console.log("[MessageController] Association fichier-message réussie");
+
+    // Récupérer le message complet avec pièces jointes
+    const completeMessage = await MessageModel.getById(newMessage.id_message);
+
+    // Envoyer une notification en temps réel via WebSocket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`${canalId}`).emit("message", {
+        ...completeMessage,
+        sender: {
+          id: req.user.id,
+          nom: req.user.nom,
+          photo_de_profil: req.user.photo_de_profil,
+        },
+      });
+      console.log("[MessageController] Notification WebSocket envoyée");
+    }
+
+    res.status(201).json({
+      message: "Fichier Google Drive uploadé et message créé",
+      fichier: {
+        ...newFichier,
+        presignedUrl: s3Result.url,
+      },
+      message: newMessage,
+    });
+  } catch (error) {
+    console.error("[MessageController] Erreur upload Google Drive:", error);
+    console.error("[MessageController] Stack trace:", error.stack);
+
+    res.status(500).json({
+      message: "Erreur lors de l'upload Google Drive",
+      error: error.message,
+    });
+  }
+};
+
 // Récupérer le nombre de messages non lus par canal pour un utilisateur
 export const getUnreadCounts = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(`Récupération des messages non lus pour l'utilisateur ${userId}`);
-    
+    console.log(
+      `Récupération des messages non lus pour l'utilisateur ${userId}`
+    );
+
     const unreadData = await MessageModel.getUnreadCountByChannel(userId);
-    
+
     // Pas besoin de recalculer le total, il est déjà fourni par le modèle
     res.status(200).json(unreadData);
   } catch (error) {
-    console.error("Erreur lors de la récupération des messages non lus:", error);
-    res.status(500).json({ 
-      message: error.message || "Erreur lors de la récupération des messages non lus" 
+    console.error(
+      "Erreur lors de la récupération des messages non lus:",
+      error
+    );
+    res.status(500).json({
+      message:
+        error.message || "Erreur lors de la récupération des messages non lus",
     });
   }
 };
@@ -402,13 +594,13 @@ export const getUnreadCounts = async (req, res) => {
 export const getUnreadMessages = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     if (!userId) {
       return res.status(400).json({ message: "ID utilisateur requis" });
     }
 
     const unreadData = await MessageModel.getUnreadCountByChannel(userId);
-    
+
     // Pas besoin de recalculer le total, il est déjà fourni par le modèle
     res.status(200).json(unreadData);
   } catch (error) {
@@ -422,23 +614,25 @@ export const markChannelAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
     const { channelId } = req.params;
-    
+
     if (!userId || !channelId) {
-      return res.status(400).json({ message: "ID utilisateur et ID canal requis" });
+      return res
+        .status(400)
+        .json({ message: "ID utilisateur et ID canal requis" });
     }
 
     const result = await MessageModel.markChannelAsRead(userId, channelId);
-    
+
     // Diffuser l'événement à l'utilisateur pour mettre à jour son UI
     const io = req.app.get("io");
     if (io) {
       io.to(`user:${userId}`).emit("channelRead", { channelId });
     }
-    
-    res.status(200).json({ 
-      message: "Canal marqué comme lu", 
+
+    res.status(200).json({
+      message: "Canal marqué comme lu",
       channel: channelId,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   } catch (error) {
     console.error("Erreur dans markChannelAsRead:", error);

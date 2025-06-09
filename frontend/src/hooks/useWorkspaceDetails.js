@@ -203,9 +203,11 @@ return {
 
   // Emoji Picker state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
   // Replying state
   const [replyingTo, setReplyingTo] = useState(null);
+  
+  // Editing state
+  const [editingMessage, setEditingMessage] = useState(null);
 
   // Common Emojis for reactions
   const commonEmojis = [
@@ -740,6 +742,18 @@ return {
       );
     });
 
+    // Écouteur pour les messages mis à jour
+    socket.on("updateMessage", (updatedMessage) => {
+      console.log(`Message mis à jour reçu:`, updatedMessage);
+      setMessages((prevMessages) =>
+        prevMessages.map((message) =>
+          message.id_message === updatedMessage.id_message
+            ? updatedMessage
+            : message
+        )
+      );
+    });
+
     // *** Listen for typing events ***
     socket.on("typing", (data) => {
       console.log("Événement typing reçu:", data);
@@ -765,11 +779,11 @@ return {
     // *** End typing event listeners ***
 
     // Nettoyage lors du démontage du composant
-    return () => {
-      socket.off("message", handleNewMessage);
+    return () => {      socket.off("message", handleNewMessage);
       socket.off("messageReaction");
       socket.off("messageDeleted"); // Remove the listener
       socket.off("deleteMessage"); // Make sure to remove both listeners
+      socket.off("updateMessage"); // Remove the update message listener
       socket.off("typing"); // Clean up listeners
       socket.off("stopTyping"); // Clean up listeners
       socket.off("botTyping"); // N'oubliez pas de supprimer aussi cet écouteur
@@ -1396,6 +1410,61 @@ return {
     if (messageInput) messageInput.focus();
   };
 
+  const handleEditMessage = () => {
+    setEditingMessage(messageContextMenu.message);
+    setNewMessage(messageContextMenu.message.contenu);
+    setDisplayMessage(messageContextMenu.message.contenu);
+    handleCloseMessageContextMenu();
+    const messageInput = document.querySelector(".chat-input-wrapper input");
+    if (messageInput) {
+      messageInput.focus();
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setNewMessage("");
+    setDisplayMessage("");
+  };
+  const handleUpdateMessage = async () => {
+    try {
+      if (!editingMessage || !newMessage.trim()) return;
+
+      // Vérifier si le socket est disponible
+      if (socket && socket.connected) {
+        // Utiliser le socket pour mettre à jour le message
+        socket.emit("editChannelMessage", {
+          messageId: editingMessage.id_message,
+          contenu: newMessage.trim(),
+          canalId: activeChannel.id
+        });
+      } else {
+        // Fallback: utiliser l'API REST si le socket n'est pas disponible
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/messages/${editingMessage.id_message}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ contenu: newMessage.trim() }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la mise à jour du message");
+        }
+      }
+
+      // Réinitialiser l'état d'édition
+      setEditingMessage(null);
+      setNewMessage("");
+      setDisplayMessage("");
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du message:", error);
+      // Optionnel: afficher une notification d'erreur
+    }
+  };
+
   const handleShowEmojiPicker = () => {
     setShowEmojiPicker(true);
     handleCloseMessageContextMenu();
@@ -1823,6 +1892,11 @@ return {
     userStatuses, // Expose userStatuses
     fetchActiveChannel, // Exposer la fonction fetchActiveChannel
     handleSelectActiveItem, // <-- Export the new handler
+    // Édition de message
+    handleEditMessage,
+    handleCancelEdit,
+    handleUpdateMessage,
+    editingMessage,
     // Pagination messages
     messageOffset,
     hasMoreMessages,

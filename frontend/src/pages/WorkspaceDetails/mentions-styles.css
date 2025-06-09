@@ -111,3 +111,12 @@
 .username-clickable:hover::after {
   width: 100%;
 }
+
+/* Light theme corrections for username-clickable text */
+.theme-light .username-clickable {
+  color: #23272f;
+}
+
+.theme-light .username-clickable:hover {
+  color: #4a7aff;
+}

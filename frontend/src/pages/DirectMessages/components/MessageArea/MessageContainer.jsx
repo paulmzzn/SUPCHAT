@@ -21,7 +21,47 @@ const MessageContainer = ({
   getCompleteFileUrl,
   formatFileSize,
   onDownloadFile,
+  onImageClick,
+  onReplyMessage, // Ajout explicite de la prop pour le bouton "Répondre"
 }) => {
+  // Debug : log le nombre de messages reçus
+  React.useEffect(() => {
+    console.log("[MessageContainer] messages:", messages);
+  }, [messages]);
+
+  const lastMessageIdRef = React.useRef();
+  const prevMessagesLengthRef = React.useRef(0);
+
+  // Scroll automatique uniquement si un nouveau message est ajouté
+  React.useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    const lastMsgId = lastMsg ? lastMsg.id_message_prive : undefined;
+    const prevLastMsgId = lastMessageIdRef.current;
+    const prevLength = prevMessagesLengthRef.current;
+
+    // Nouveau message si la longueur augmente OU l'ID du dernier message change
+    const isNewMessage =
+      messages.length > prevLength ||
+      (lastMsgId && lastMsgId !== prevLastMsgId);
+
+    if (isNewMessage && messagesContainerRef && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+
+    // Mettre à jour les refs pour la prochaine exécution
+    lastMessageIdRef.current = lastMsgId;
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, currentUserId]);
+
+  // Scroll automatique vers le bas quand on change de conversation (selectedUser)
+  React.useEffect(() => {
+    if (messagesContainerRef && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, [selectedUserInfo]);
+
   return (
     <div className="dm-messages" ref={messagesContainerRef}>
       {loadingMessages ? (
@@ -65,6 +105,8 @@ const MessageContainer = ({
               formatFileSize={formatFileSize}
               onMessageContextMenu={onMessageContextMenu}
               onDownloadFile={onDownloadFile}
+              onImageClick={onImageClick}
+              onReply={onReplyMessage} // Passe le handler pour le bouton "Répondre" (clic droit ou bouton)
             />
           );
         })

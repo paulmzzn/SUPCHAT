@@ -108,10 +108,21 @@ export const uploadToS3 = async (file, directory = "") => {
       });
       throw s3SendError;
     }
-
     console.log("🏁 Fin de uploadToS3 avec succès");
-    // Retourner la clé du fichier (qui sera utilisée pour créer l'URL)
-    return fileKey;
+
+    // Construire l'URL complète S3
+    const s3BaseUrl =
+      process.env.SCW_ENDPOINT?.replace(/\/$/, "") ||
+      "https://s3.fr-par.scw.cloud";
+    const fullUrl = `${s3BaseUrl}/${BUCKET_NAME}/${fileKey}`;
+
+    console.log(`🔗 URL S3 complète générée: ${fullUrl}`);
+
+    // Retourner l'URL complète au lieu de seulement la clé
+    return {
+      fileKey: fileKey,
+      url: fullUrl,
+    };
   } catch (error) {
     console.error("❌ Erreur dans uploadToS3:", error);
     console.error("❌ Stack trace:", error.stack);

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   FaUser,
-  FaBell,
   FaLock,
   FaPalette,
   FaShieldAlt,
@@ -12,7 +11,6 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import "./Settings.css";
 import { API_URL } from "../../config/config";
 import { useTheme } from "../../context/ThemeContext";
-import { useNotificationSettings } from "../../context/NotificationSettingsContext";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -26,13 +24,8 @@ const Settings = () => {
     status: "", // Déjà défini comme 'online' par défaut
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [avatarFile, setAvatarFile] = useState(null);
-  // Nouvel état pour suivre si des modifications ont été effectuées
+  const [avatarFile, setAvatarFile] = useState(null);  // Nouvel état pour suivre si des modifications ont été effectuées
   const [hasChanges, setHasChanges] = useState(false);
-  // Notification settings
-  const { notificationSettings, updateNotificationSettings } =
-    useNotificationSettings();
-  const [notifications, setNotifications] = useState(notificationSettings);
 
   // Appearance settings
   const { theme, setTheme } = useTheme(); // Utilise le contexte pour le thème
@@ -129,17 +122,7 @@ const Settings = () => {
     reader.onload = () => {
       setAvatarPreview(reader.result);
     };
-    reader.readAsDataURL(file);
-    setHasChanges(true);
-  };
-  const handleNotificationChange = (setting) => {
-    const updatedSettings = {
-      ...notifications,
-      [setting]: !notifications[setting],
-    };
-    setNotifications(updatedSettings);
-    updateNotificationSettings(updatedSettings);
-    setHasChanges(true);
+    reader.readAsDataURL(file);    setHasChanges(true);
   };
 
   const handlePrivacyChange = (setting, value) => {
@@ -399,8 +382,7 @@ const Settings = () => {
         </div>
 
         <div className="settings-layout">
-          <div className="settings-sidebar">
-            <button
+          <div className="settings-sidebar">            <button
               className={`settings-tab ${
                 activeTab === "profile" ? "active" : ""
               }`}
@@ -408,15 +390,6 @@ const Settings = () => {
             >
               <FaUser className="tab-icon" />
               <span>Profil</span>
-            </button>
-            <button
-              className={`settings-tab ${
-                activeTab === "notifications" ? "active" : ""
-              }`}
-              onClick={() => handleTabChange("notifications")}
-            >
-              <FaBell className="tab-icon" />
-              <span>Notifications</span>
             </button>
             <button
               className={`settings-tab ${
@@ -623,106 +596,6 @@ const Settings = () => {
 
                   {/* Suppression de la section Préférences qui contenait le statut */}
                 </form>
-              </div>
-            )}
-
-            {/* Notifications Settings */}
-            {activeTab === "notifications" && (
-              <div className="settings-section">
-                <h2>Paramètres de notification</h2>
-
-                <div className="settings-group">
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Notifications de messages</h3>
-                      <p>
-                        Recevez des notifications lorsque vous recevez des
-                        messages
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={notifications.messages}
-                          onChange={() => handleNotificationChange("messages")}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Notifications de mentions</h3>
-                      <p>
-                        Recevez des notifications lorsque vous êtes mentionné
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={notifications.mentions}
-                          onChange={() => handleNotificationChange("mentions")}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>{" "}
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Sons de notification</h3>
-                      <p>Jouer un son lorsque vous recevez une notification</p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={notifications.sounds}
-                          onChange={() => handleNotificationChange("sounds")}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Notifications par e-mail</h3>
-                      <p>
-                        Recevez des notifications par e-mail lorsque vous êtes
-                        hors ligne
-                      </p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={notifications.email}
-                          onChange={() => handleNotificationChange("email")}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Notifications sur ordinateur</h3>
-                      <p>Afficher les notifications sur votre bureau</p>
-                    </div>
-                    <div className="setting-control">
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={notifications.desktop}
-                          onChange={() => handleNotificationChange("desktop")}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Suppression du bouton d'enregistrement statique */}
               </div>
             )}
 
