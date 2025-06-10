@@ -22,7 +22,7 @@ function AuthCallback() {
         console.log('Auth callback: token et validation enregistrés');
         
         // Redirige proprement avec React Router
-        navigate('/dashboard', { replace: true });
+        navigate('/workspaces', { replace: true });
       } catch (error) {
         console.error('Error during redirection:', error);
         navigate('/login');
@@ -33,7 +33,7 @@ function AuthCallback() {
     }
   }, [navigate, searchParams]);
 
-  return <div>Redirection vers le dashboard...</div>;
+  return <div>Redirection vers l'espace de travail...</div>;
 }
 
 export default AuthCallback;
