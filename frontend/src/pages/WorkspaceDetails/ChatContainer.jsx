@@ -74,10 +74,12 @@ function ChatContainer({
   handleOpenStrawpoll,
   showStrawpollModal,
   handleCloseStrawpollModal,
-  handleStrawpollSubmit,
-  showGoogleDriveModal,
+  handleStrawpollSubmit,  showGoogleDriveModal,
   handleOpenGoogleDrive,
   handleCloseGoogleDrive,
+  onFilesSelected,
+  workspaceId,
+  socket,
   commonEmojis,
   showEmojiPicker,
   handleAddReaction,
@@ -1099,19 +1101,21 @@ function ChatContainer({
                 Vous êtes en lecture seule dans ce canal
               </p>
             </div>
-          )}
-        </div>
+          )}        </div>
       )}
-
+      
       {/* Google Drive Modal */}
-      <GoogleDriveModal
-        show={showGoogleDriveModal}
-        onClose={handleCloseGoogleDrive}
-        onFileSelect={(files) => {
-          handleFileUpload(files);
-          handleCloseGoogleDrive();
-        }}
-      />
+      {showGoogleDriveModal && (
+        <GoogleDriveModal
+          isOpen={showGoogleDriveModal}
+          onClose={handleCloseGoogleDrive}
+          onFilesSelected={onFilesSelected}
+          mode="workspace"
+          workspaceId={workspaceId}
+          canalId={activeChannel?.id}
+          socket={socket}
+        />
+      )}
     </div>
   );
 }

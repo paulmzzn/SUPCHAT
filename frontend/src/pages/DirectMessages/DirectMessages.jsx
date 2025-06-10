@@ -347,12 +347,14 @@ function DirectMessages() {
           onClose={() => setShowFileSourceSelector(false)}
           onSelectLocal={handleSelectLocalFiles}
           onSelectGoogleDrive={handleSelectGoogleDrive}
-        />
-        {/* Modal Google Drive */}
+        />        {/* Modal Google Drive */}
         <GoogleDriveModal
           isOpen={showGoogleDriveModal}
           onClose={handleCloseGoogleDriveModal}
-          onFilesSelected={handleGoogleDriveFiles}
+          onFilesSelected={(files) => {
+            handleGoogleDriveFiles(files);
+            handleCloseGoogleDriveModal();
+          }}
           socket={socket}
           mode="dm"
           recipientId={selectedUser}

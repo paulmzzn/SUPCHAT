@@ -617,13 +617,14 @@ return {
 
   // Socket message listener effect
   useEffect(() => {
-    if (!socket) return;
-
-    // Abonnement à l'événement "message"
+    if (!socket) return;    // Abonnement à l'événement "message"
     socket.on("message", (message) => {
-      console.log("[DEBUG] Message reçu:", message);
-      console.log("[DEBUG] Type de message:", typeof message);
-      console.log("[DEBUG] Propriétés:", Object.keys(message));
+      console.log("[DEBUG] 📨 Message reçu via WebSocket:", message);
+      console.log("[DEBUG] 📝 Type de message:", typeof message);
+      console.log("[DEBUG] 🔑 Propriétés:", Object.keys(message));
+      console.log("[DEBUG] 🏢 Canal du message:", message.fk_canal);
+      console.log("[DEBUG] 🏢 Canal actif:", activeChannel?.id);
+      console.log("[DEBUG] 📎 A des pièces jointes:", message.attachments?.length > 0);
 
       // Vérifie si c'est un message système pour l'appel vidéo
       const isVideoCallMessage =
@@ -632,8 +633,14 @@ return {
           message.contenu.includes("video call"));
 
       if (isVideoCallMessage) {
-        console.log("[DEBUG] Message d'appel vidéo détecté");
+        console.log("[DEBUG] 📞 Message d'appel vidéo détecté");
         message.is_system_message = true;
+      }
+
+      // Vérification spéciale pour les fichiers Google Drive
+      if (message.attachments && message.attachments.length > 0) {
+        console.log("[DEBUG] 🗂️ Message avec pièces jointes Google Drive détecté");
+        console.log("[DEBUG] 📎 Pièces jointes:", message.attachments);
       }
 
       handleNewMessage(message);
