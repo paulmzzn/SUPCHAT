@@ -355,6 +355,83 @@ export const useAttachments = (options = {}) => {
   const resetAttachments = useCallback(() => {
     setAttachments([]);
   }, []);
+  /**
+   * Gère les fichiers sélectionnés depuis Google Drive
+   * @param {Array} googleDriveFiles - Liste des fichiers Google Drive uploadés
+   */
+  const handleGoogleDriveFiles = useCallback(
+    async (googleDriveFiles) => {
+      console.log("[useAttachments] Fichiers Google Drive reçus:", googleDriveFiles);
+      
+      if (!googleDriveFiles || googleDriveFiles.length === 0) {
+        console.log("[useAttachments] Aucun fichier Google Drive sélectionné");
+        return;
+      }
+
+      try {
+        setUploadingFile(true);
+
+        // Traiter chaque fichier Google Drive
+        const uploads = [];
+        for (const file of googleDriveFiles) {
+          console.log("[useAttachments] Traitement fichier Google Drive:", file);
+          
+          // Vérifier que le fichier a les propriétés nécessaires
+          if (file.id_fichier || file.id) {
+            uploads.push({
+              id_fichier: file.id_fichier || file.id,
+              nom_fichier: file.nom_fichier || file.originalDriveFile?.name || "Fichier Google Drive",
+              type: file.type || file.originalDriveFile?.mimeType || "application/octet-stream",
+              taille_fichier: file.taille_fichier || file.originalDriveFile?.size || 0,
+              url: file.url,
+              presignedUrl: file.presignedUrl,
+            });
+          }
+        }
+
+        console.log("[useAttachments] Uploads Google Drive traités:", uploads);
+
+        // Envoyer directement via WebSocket si possible
+        if (socket && uploads.length > 0 && recipientId) {
+          console.log("[useAttachments] Envoi Google Drive via WebSocket:", {
+            socket: !!socket,
+            uploads,
+            recipientId,
+          });
+
+          // Envoyer un message vide avec les pièces jointes
+          socket.emit("privateMessage", {
+            destinataireId: recipientId,
+            contenu: "", // Message vide
+            attachments: uploads.map((a) => a.id_fichier),
+          });
+
+          console.log("[useAttachments] Fichiers Google Drive envoyés via WebSocket");
+        } else {
+          console.warn(
+            "[useAttachments] Impossible d'envoyer Google Drive via socket:",
+            {
+              socketPresent: !!socket,
+              uploadsCount: uploads.length,
+              recipientId,
+            }
+          );
+          // Si pas de socket, ajouter aux attachments locaux
+          setAttachments((prev) => [...prev, ...uploads]);
+        }
+
+      } catch (error) {
+        console.error("[useAttachments] Erreur lors du traitement Google Drive:", error);
+        alert(
+          "Une erreur est survenue lors du traitement des fichiers Google Drive : " +
+            error.message
+        );
+      } finally {
+        setUploadingFile(false);
+      }
+    },
+    [socket, recipientId]
+  );
   return {
     attachments,
     setAttachments,
@@ -363,6 +440,7 @@ export const useAttachments = (options = {}) => {
     handleFileSelect,
     handleAttachmentClick,
     handleLocalFileSelect,
+    handleGoogleDriveFiles,
     handleDownloadFile,
     removeAttachment,
     fetchMessageAttachments,
