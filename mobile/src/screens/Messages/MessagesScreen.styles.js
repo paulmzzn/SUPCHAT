@@ -298,6 +298,14 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  attachmentButton: {
+    width: 40, 
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   messageInput: {
     flex: 1,
     backgroundColor: theme.inputBackground,
@@ -931,6 +939,41 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     color: theme.textSecondary,
+  },
+
+  // STYLES POUR LES MESSAGES SYSTÈME
+  systemMessageContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+    paddingHorizontal: 20,
+  },
+
+  systemMessageBubble: {
+    backgroundColor: 'rgba(255, 193, 7, 0.1)', // Fond jaune/ambre très léger
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.3)', // Bordure ambre
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    maxWidth: '90%',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  systemMessageText: {
+    fontSize: 14,
+    color: '#B7950B', // Couleur ambre/dorée pour le texte
+    textAlign: 'center',
+    fontWeight: '500',
+    fontStyle: 'italic',
+    lineHeight: 18,
   },
 });
 

@@ -51,6 +51,11 @@ router.post("/", async (req, res) => {
       type: "multiple_choice",
     };
 
+    console.log(
+      "Envoi de la requête Strawpoll:",
+      JSON.stringify(poll, null, 2)
+    );
+
     const strawRes = await axios.post(ENDPOINT, poll, {
       headers: {
         "Content-Type": "application/json",
@@ -58,12 +63,49 @@ router.post("/", async (req, res) => {
       },
     });
 
-    return res.json({ url: strawRes.data.url || strawRes.data.content_url });
+    console.log(
+      "Réponse complète de Strawpoll:",
+      JSON.stringify(strawRes.data, null, 2)
+    );
+
+    // Extraire l'URL ou l'ID de différentes façons possibles
+    let pollUrl = strawRes.data.url || strawRes.data.content_url;
+    let pollId = strawRes.data.id;
+
+    // Si pas d'URL directe, construire l'URL avec l'ID
+    if (!pollUrl && pollId) {
+      pollUrl = `https://strawpoll.com/polls/${pollId}`;
+    }
+
+    if (!pollUrl && !pollId) {
+      console.error("Aucune URL ou ID trouvé dans la réponse Strawpoll");
+      return res.status(500).json({
+        message: "Erreur: Impossible de récupérer l'URL du sondage",
+        debug: strawRes.data,
+      });
+    }
+
+    const response = {
+      url: pollUrl,
+      id: pollId,
+      title: title,
+      options: options,
+    };
+
+    console.log("Réponse envoyée au frontend:", response);
+    return res.json(response);
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error(
+      "Erreur Strawpoll complète:",
+      err.response?.data || err.message
+    );
+    console.error("Status:", err.response?.status);
+    console.error("Headers:", err.response?.headers);
+
     return res.status(500).json({
       message: "Erreur Strawpoll",
       details: err.response?.data || err.message,
+      status: err.response?.status,
     });
   }
 });

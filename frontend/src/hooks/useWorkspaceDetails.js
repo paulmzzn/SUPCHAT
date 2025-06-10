@@ -1010,30 +1010,28 @@ return {
   }, [searchQuery, searchWorkspace]);
 
   // Fonction pour sélectionner un résultat de recherche
+  // Correction navigation message segmenté
   const handleSelectSearchResult = (type, result) => {
     if (type === "channel") {
       handleSelectChannel(result);
     } else if (type === "message") {
-      // D'abord sélectionner le canal
       const channel = channels.find((c) => c.id === result.channelId);
       if (channel) {
         handleSelectChannel(channel).then(() => {
-          // Puis mettre en évidence le message
           setTimeout(() => {
-            const messageElement = document.getElementById(
-              `message-${result.id}`
-            );
+            // Vérifier si le message est déjà dans le DOM
+            const messageElement = document.getElementById(`msg-${result.id}`);
             if (messageElement) {
-              messageElement.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-              });
+              messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
               messageElement.classList.add("highlighted-message");
               setTimeout(() => {
                 messageElement.classList.remove("highlighted-message");
               }, 5000);
+            } else if (typeof window.setPendingScrollToMessageId === "function") {
+              // Demander au composant parent de gérer le scroll après chargement
+              window.setPendingScrollToMessageId(result.id);
             }
-          }, 500);
+          }, 300);
         });
       }
     }

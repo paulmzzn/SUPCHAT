@@ -132,8 +132,8 @@
 }
 
 .strawpoll-external-link:hover {
-  background-color: rgba(166, 112, 194, 0.1);
-  color: var(--link-hover-color, #bc86d9);
+  background-color: rgba(138, 86, 172, 0.1);
+  color: #6a3f85;
 }
 
 .strawpoll-results-content {
@@ -141,6 +141,7 @@
   overflow-y: auto;
   flex: 1;
   max-height: calc(90vh - 130px);
+  background-color: #ffffff;
 }
 
 /* Loading state */
@@ -164,7 +165,7 @@
 .strawpoll-error {
   padding: 24px;
   text-align: center;
-  color: var(--error-color, #ff6b6b);
+  color: #dc2626;
 }
 
 .error-details {
@@ -182,7 +183,7 @@
 /* Debug view */
 .strawpoll-debug {
   padding: 16px;
-  color: var(--text-color, rgba(255, 255, 255, 0.8));
+  color: #374151;
 }
 
 .debug-section {
@@ -191,11 +192,13 @@
 
 .debug-section h4 {
   margin-bottom: 12px;
-  color: var(--error-color, #ff6b6b);
+  color: #1f2937;
 }
 
 .debug-data {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
   border-radius: 6px;
   padding: 16px;
   max-height: 400px;
@@ -220,11 +223,11 @@
 
 .poll-option-text {
   font-weight: 500;
-  color: var(--text-color, #fff);
+  color: #1f2937;
 }
 
 .poll-result-bar-container {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #f3f4f6;
   height: 30px;
   border-radius: 6px;
   overflow: hidden;
@@ -251,13 +254,13 @@
 
 .poll-votes-count {
   font-size: 0.9rem;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  color: #6b7280;
 }
 
 .poll-total-votes {
   margin-top: 24px;
   text-align: right;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  color: #374151;
   font-size: 0.95rem;
 }
 
@@ -275,18 +278,17 @@
 }
 
 .stats-card {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: #f9fafb;
   border-radius: 10px;
   padding: 16px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid #e5e7eb;
   transition: all 0.3s;
 }
 
 .stats-card:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background-color: #f3f4f6;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .stats-value {
@@ -298,18 +300,18 @@
 
 .stats-label {
   font-size: 0.9rem;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: #6b7280;
 }
 
 .winning-option {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
+    #f9fafb,
+    #f3f4f6
   );
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid #e5e7eb;
 }
 
 .winning-option h4 {
@@ -338,7 +340,7 @@
 }
 
 .winner-votes {
-  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  color: #374151;
 }
 
 .winner-percent {
@@ -355,11 +357,11 @@
 
 .tie-text {
   font-weight: 600;
-  color: var(--warning-color, #ffbe0b);
+  color: #d97706;
 }
 
 .tie-votes {
-  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  color: #374151;
 }
 
 .tie-options {
@@ -370,22 +372,22 @@
 }
 
 .tie-option {
-  background-color: rgba(255, 190, 11, 0.1);
+  background-color: rgba(217, 119, 6, 0.1);
   padding: 8px 12px;
   border-radius: 6px;
-  color: var(--text-color, #fff);
+  color: #92400e;
   font-weight: 500;
 }
 
 .no-votes {
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  color: #9ca3af;
   font-style: italic;
 }
 
 /* Info view */
 .strawpoll-info {
   padding: 10px 0;
-  color: var(--text-color, rgba(255, 255, 255, 0.9));
+  color: #374151;
 }
 
 .strawpoll-info h3 {
@@ -402,22 +404,18 @@
   gap: 12px;
 }
 
-.info-row {
-  display: flex;
-  padding: 10px;
-  border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.05);
-}
+
 
 .info-label {
   width: 120px;
   font-weight: 500;
-  color: var(--text-muted, rgba(255, 255, 255, 0.7));
+  color: #6b7280;
 }
 
 .info-value {
   flex: 1;
   word-break: break-word;
+  color: #1f2937;
 }
 
 /* Animations */
@@ -448,6 +446,154 @@
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Corrections pour le thème clair */
+.theme-light .strawpoll-results-modal {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .strawpoll-results-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-light .strawpoll-results-header h2 {
+  color: #1f2937;
+}
+
+.theme-light .modal-close-btn {
+  color: #6b7280;
+}
+
+.theme-light .modal-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+.theme-light .strawpoll-tabs {
+  background-color: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-light .strawpoll-tab {
+  color: #6b7280;
+}
+
+.theme-light .strawpoll-tab.active {
+  color: #8a56ac;
+}
+
+.theme-light .strawpoll-tab:hover {
+  color: #374151;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .strawpoll-external-link {
+  color: #8a56ac;
+}
+
+.theme-light .strawpoll-external-link:hover {
+  background-color: rgba(138, 86, 172, 0.1);
+  color: #6a3f85;
+}
+
+.theme-light .strawpoll-results-content {
+  background-color: #ffffff;
+}
+
+.theme-light .strawpoll-loading {
+  color: #374151;
+}
+
+.theme-light .strawpoll-error {
+  color: #dc2626;
+}
+
+.theme-light .poll-option-text {
+  color: #1f2937;
+}
+
+.theme-light .poll-result-bar-container {
+  background-color: #f3f4f6;
+}
+
+.theme-light .poll-votes-count {
+  color: #6b7280;
+}
+
+.theme-light .poll-total-votes {
+  color: #374151;
+}
+
+.theme-light .stats-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.theme-light .stats-card:hover {
+  background-color: #f3f4f6;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .stats-label {
+  color: #6b7280;
+}
+
+.theme-light .winning-option {
+  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border: 1px solid #e5e7eb;
+}
+
+.theme-light .winning-option h4 {
+  color: #1f2937;
+}
+
+.theme-light .winner-text {
+  color: #8a56ac;
+}
+
+.theme-light .winner-votes {
+  color: #374151;
+}
+
+.theme-light .tie-text {
+  color: #d97706;
+}
+
+.theme-light .tie-votes {
+  color: #374151;
+}
+
+.theme-light .tie-option {
+  background-color: rgba(217, 119, 6, 0.1);
+  color: #92400e;
+}
+
+.theme-light .no-votes {
+  color: #9ca3af;
+}
+
+.theme-light .strawpoll-info {
+  color: #374151;
+}
+
+.theme-light .strawpoll-info h3 {
+  color: #8a56ac;
+}
+
+.theme-light .info-row {
+  background-color: #f9fafb;
+}
+
+.theme-light .info-label {
+  color: #6b7280;
+}
+
+.theme-light .info-value {
+  color: #1f2937;
 }
 
 /* Responsive styles */

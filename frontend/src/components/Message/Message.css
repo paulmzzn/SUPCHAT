@@ -46,6 +46,11 @@
   color: white;
 }
 
+/* Light theme corrections for message author text */
+.theme-light .message-author {
+  color: #23272f;
+}
+
 .message-time {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);

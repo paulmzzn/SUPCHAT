@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   FaChevronDown,
   FaChevronRight,
+  FaChevronUp,
   FaUserCircle,
   FaArrowUp,
   FaArrowDown,
@@ -21,7 +22,7 @@ import {
   FaEdit,
   FaEye,
   FaUserCog,
-  FaPlus,
+  FaPlus,  FaEllipsisH,
 } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
@@ -82,8 +83,7 @@ function WorkspaceDetailsSidebar({
   const [showJoinRequests, setShowJoinRequests] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [requestError, setRequestError] = useState(null);
-  const [processingRequestId, setProcessingRequestId] = useState(null);
-  // States for reminders management
+  const [processingRequestId, setProcessingRequestId] = useState(null);  // States for reminders management
   const [reminders, setReminders] = useState([]);
   const [showReminders, setShowReminders] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -91,6 +91,8 @@ function WorkspaceDetailsSidebar({
   const [reminderError, setReminderError] = useState(null);
   const [creatingReminder, setCreatingReminder] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null); // New state for editing
+  // States for files expanded view
+  const [showAllFiles, setShowAllFiles] = useState(false);
 
   // Référence pour le panneau des demandes d'adhésion
   const joinRequestsPanelRef = useRef(null);
@@ -615,19 +617,27 @@ function WorkspaceDetailsSidebar({
       return;
     }
 
-    e.preventDefault();
-
-    const statusMenu = document.createElement("div");
+    e.preventDefault();    const statusMenu = document.createElement("div");
     statusMenu.className = "status-context-menu";
     statusMenu.style.position = "absolute";
     statusMenu.style.top = `${e.pageY}px`;
     statusMenu.style.left = `${e.pageX}px`;
     statusMenu.style.zIndex = "2000";
-    statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
+    
+    // Appliquer les styles selon le thème
+    const isLightTheme = document.body.classList.contains('theme-light');
+    if (isLightTheme) {
+      statusMenu.style.background = "white";
+      statusMenu.style.border = "1px solid rgba(0, 0, 0, 0.1)";
+      statusMenu.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.15)";
+    } else {
+      statusMenu.style.background = "rgba(40, 40, 45, 0.98)";
+      statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+      statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+    }
+    
     statusMenu.style.borderRadius = "8px";
     statusMenu.style.padding = "8px 0";
-    statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-    statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
 
     const statuses = [
       { id: "online", label: "En ligne", icon: FaCircle, color: "#44b700" },
@@ -644,16 +654,23 @@ function WorkspaceDetailsSidebar({
         icon: FaRegMoon,
         color: "#9e9e9e",
       },
-    ];
-
-    statuses.forEach((status) => {
+    ];    statuses.forEach((status) => {
       const option = document.createElement("div");
       option.style.padding = "8px 16px";
       option.style.display = "flex";
       option.style.alignItems = "center";
       option.style.gap = "10px";
       option.style.cursor = "pointer";
-      option.style.color = "white";
+      
+      // Appliquer la couleur selon le thème avec !important pour forcer
+      const isLightTheme = document.body.classList.contains('theme-light');
+      if (isLightTheme) {
+        option.style.color = "#333333";
+        option.style.transition = "background-color 0.2s ease";
+      } else {
+        option.style.color = "white";
+        option.style.transition = "background-color 0.2s ease";
+      }
 
       const icon = document.createElement("span");
       icon.style.color = status.color;
@@ -673,14 +690,25 @@ function WorkspaceDetailsSidebar({
           `[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`
         );
         document.body.removeChild(statusMenu);
-      });
-
-      option.addEventListener("mouseover", () => {
-        option.style.backgroundColor = "rgba(147, 72, 183, 0.15)";
+      });      option.addEventListener("mouseover", () => {
+        const isLightTheme = document.body.classList.contains('theme-light');
+        if (isLightTheme) {
+          option.style.backgroundColor = "rgba(147, 72, 183, 0.08)";
+          option.style.color = "#333333";
+        } else {
+          option.style.backgroundColor = "rgba(147, 72, 183, 0.15)";
+          option.style.color = "white";
+        }
       });
 
       option.addEventListener("mouseout", () => {
+        const isLightTheme = document.body.classList.contains('theme-light');
         option.style.backgroundColor = "transparent";
+        if (isLightTheme) {
+          option.style.color = "#333333";
+        } else {
+          option.style.color = "white";
+        }
       });
 
       statusMenu.appendChild(option);
@@ -1019,8 +1047,7 @@ function WorkspaceDetailsSidebar({
             </div>
           )}
         </div>
-      )}
-      {files.length > 0 && (
+      )}      {files.length > 0 && (
         <div className="details-section">
           <div className="section-header" onClick={toggleFiles}>
             {showFiles ? (
@@ -1031,48 +1058,67 @@ function WorkspaceDetailsSidebar({
             <h3>Fichiers ({files.length})</h3>
           </div>
           {showFiles && (
-            <ul
-              className="files-list"
-              style={{
-                maxHeight: "220px",
-                overflowY: files.length > 5 ? "auto" : "visible",
-              }}
-            >
-              {files.slice(0, 5).map((file) => (
-                <li key={file.id} className="file-item">
-                  <div className="file-icon">
-                    {(() => {
-                      switch (file.type) {
-                        case "pdf":
-                          return <FaFilePdf />;
-                        case "word":
-                          return <FaFileWord />;
-                        case "excel":
-                          return <FaFileExcel />;
-                        default:
-                          return <FaFileAlt />;
-                      }
-                    })()}
-                  </div>
-                  <div className="file-info">
-                    <span className="file-name">{file.name}</span>
-                    <span className="file-meta">
-                      {file.size} •{" "}
-                      {file.uploadedAt && formatMessageDate(file.uploadedAt)}
-                    </span>
-                  </div>
-                  <div className="file-actions">
-                    <button
-                      className="file-download-button"
-                      title="Télécharger"
-                      onClick={() => handleDownloadFile(file.url, file.name)}
-                    >
-                      <FaDownload />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="files-container">
+              <ul className="files-list">
+                {(showAllFiles ? files : files.slice(0, 3)).map((file) => (
+                  <li key={file.id} className="file-item">
+                    {/* Nom du fichier au-dessus du bouton, crop si > 8 caractères */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span className="file-name" title={file.name} style={{ marginBottom: 4 }}>
+                        {file.name.length > 8 ? file.name.slice(0, 8) + '…' : file.name}
+                      </span>
+                      <div className="file-icon-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="file-icon">
+                          {(() => {
+                            switch (file.type) {
+                              case "pdf":
+                                return <FaFilePdf />;
+                              case "word":
+                                return <FaFileWord />;
+                              case "excel":
+                                return <FaFileExcel />;
+                              default:
+                                return <FaFileAlt />;
+                            }
+                          })()}
+                        </div>
+                        <span className="file-meta">
+                          {file.size} •{' '}
+                          {file.uploadedAt && formatMessageDate(file.uploadedAt)}
+                        </span>
+                        <div className="file-actions">
+                          <button
+                            className="file-download-button"
+                            title="Télécharger"
+                            onClick={() => handleDownloadFile(file.url, file.name)}
+                          >
+                            <FaDownload />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {files.length > 3 && (
+                <div className="show-more-files">
+                  <button
+                    className="show-more-btn"
+                    onClick={() => setShowAllFiles(!showAllFiles)}
+                  >
+                    {showAllFiles ? (
+                      <>
+                        <FaChevronUp /> Voir moins
+                      </>
+                    ) : (
+                      <>
+                        <FaEllipsisH /> Voir {files.length - 3} fichier{files.length - 3 > 1 ? 's' : ''} de plus
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

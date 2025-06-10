@@ -105,7 +105,25 @@ function ChatContainer({
   handleCancelEdit,
   handleUpdateMessage,
   editingMessage,
+  pendingScrollToMessageId,
+  setPendingScrollToMessageId,
 }) {
+  // Effet pour gérer le scroll vers un message précis après chargement segmenté
+  useEffect(() => {
+    if (!pendingScrollToMessageId || !chatContainerRef?.current) return;
+    const el = document.getElementById(`msg-${pendingScrollToMessageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("highlighted-message");
+      setTimeout(() => {
+        el.classList.remove("highlighted-message");
+      }, 5000);
+      setPendingScrollToMessageId(null);
+    } else if (hasMoreMessages && typeof loadMoreMessages === "function") {
+      // Charger plus de messages si le message n'est pas encore là
+      loadMoreMessages();
+    }
+  }, [pendingScrollToMessageId, messages, chatContainerRef, hasMoreMessages, loadMoreMessages, setPendingScrollToMessageId]);
   const navigate = useNavigate();
   const canWriteInChannel = activeChannel?.isPrivate
     ? currentUserAccessRight === "lecture_ecriture"

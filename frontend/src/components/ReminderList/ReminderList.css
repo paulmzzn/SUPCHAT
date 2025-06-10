@@ -314,3 +314,89 @@
     padding-left: 0;
   }
 }
+
+/* Light theme corrections */
+.theme-light .reminder-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .reminder-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.theme-light .reminder-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.theme-light .reminder-list-loading {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.theme-light .reminder-list-empty {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .empty-icon {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.theme-light .reminder-list-empty small {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .reminder-item {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .reminder-item.upcoming {
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.theme-light .reminder-item.past {
+  border-left-color: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.theme-light .reminder-item.sent {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.theme-light .reminder-item:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .reminder-status-icon.past {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .reminder-title {
+  color: #1f2937;
+}
+
+.theme-light .sent-badge {
+  color: #ffffff;
+}
+
+.theme-light .reminder-description {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.theme-light .reminder-datetime,
+.theme-light .reminder-creator {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.theme-light .cancel-delete {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.theme-light .cancel-delete:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #1f2937;
+}
+
+.theme-light .spinner {
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-top: 2px solid #9933cc;
+}
