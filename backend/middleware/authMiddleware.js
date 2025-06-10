@@ -31,11 +31,9 @@ export const verifyToken = (req, res, next) => {
     // Vérifier que le format est correct (Bearer + token)
     if (bearer.length !== 2 || bearer[0] !== "Bearer") {
       console.log("Format de token invalide:", bearerHeader);
-      return res
-        .status(401)
-        .json({
-          message: "Format de token invalide. Format attendu: 'Bearer TOKEN'",
-        });
+      return res.status(401).json({
+        message: "Format de token invalide. Format attendu: 'Bearer TOKEN'",
+      });
     }
 
     const token = bearer[1];
@@ -51,11 +49,9 @@ export const verifyToken = (req, res, next) => {
         "Format JWT invalide (ne contient pas 3 segments):",
         token.substring(0, 20)
       );
-      return res
-        .status(401)
-        .json({
-          message: "Format JWT invalide. Le token doit contenir 3 segments.",
-        });
+      return res.status(401).json({
+        message: "Format JWT invalide. Le token doit contenir 3 segments.",
+      });
     }
 
     // Vérification du token avec la clé constante
@@ -278,9 +274,6 @@ export const checkCanalWriteAccess = async (req, res, next) => {
 
     // Récupérer l'ID du canal depuis les paramètres de route
     const canalId = req.params.canalId;
-
-    // Récupérer l'ID du canal depuis les paramètres de route OU depuis le body pour les créations de message
-    let canalId = req.params.canalId;
 
     // Si pas trouvé dans les paramètres, chercher dans le body (pour POST /api/messages)
     if (!canalId && req.body && req.body.fk_canal) {

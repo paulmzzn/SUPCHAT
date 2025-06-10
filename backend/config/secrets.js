@@ -171,7 +171,7 @@ export const getDbConfig = () => {
  * @returns {Object} - Configuration S3 avec secrets
  */
 export const getS3Config = () => {
-  let endpoint, region;
+  let endpoint, region, bucketName;
   try {
     endpoint = getSecret("scw_endpoint", "SCW_ENDPOINT");
     if (!endpoint) throw new Error();
@@ -190,12 +190,43 @@ export const getS3Config = () => {
       "⚠️ Secret 'scw_region' absent, utilisation de la région par défaut : fr-par"
     );
   }
+  try {
+    bucketName = getSecret("s3_bucket_name", "S3_BUCKET_NAME");
+    if (!bucketName) throw new Error();
+  } catch (e) {
+    bucketName = "s3-supchat";
+    console.warn(
+      "⚠️ Secret 's3_bucket_name' absent, utilisation du bucket par défaut : s3-supchat"
+    );
+  }
+  let accessKeyId, secretAccessKey;
+
+  try {
+    accessKeyId = getSecret("scw_access_key", "SCW_ACCESS_KEY_ID");
+    if (!accessKeyId) throw new Error();
+  } catch (e) {
+    accessKeyId = "";
+    console.warn(
+      "⚠️ Secret 'scw_access_key' absent, l'upload de fichiers ne fonctionnera pas correctement"
+    );
+  }
+
+  try {
+    secretAccessKey = getSecret("scw_secret_key", "SCW_SECRET_ACCESS_KEY");
+    if (!secretAccessKey) throw new Error();
+  } catch (e) {
+    secretAccessKey = "";
+    console.warn(
+      "⚠️ Secret 'scw_secret_key' absent, l'upload de fichiers ne fonctionnera pas correctement"
+    );
+  }
+
   return {
-    accessKeyId: getSecret("scw_access_key", "SCW_ACCESS_KEY_ID"),
-    secretAccessKey: getSecret("scw_secret_key", "SCW_SECRET_ACCESS_KEY"),
+    accessKeyId,
+    secretAccessKey,
     endpoint,
     region,
-    bucketName: getSecret("s3_bucket_name", "S3_BUCKET_NAME") || "s3-supchat",
+    bucketName,
   };
 };
 
