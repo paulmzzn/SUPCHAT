@@ -58,11 +58,11 @@ export const uploadWorkspaceImages = async (req, res) => {
       }
 
       // Upload new banner to S3
-      const bannerUrl = await uploadToS3(
+      const bannerResult = await uploadToS3(
         req.files.banner[0],
         "workspaces/banners"
       );
-      updateFields.banner_url = bannerUrl;
+      updateFields.banner_url = bannerResult.url;
     }
 
     // Upload icon to S3 if provided
