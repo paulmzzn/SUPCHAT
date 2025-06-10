@@ -244,13 +244,17 @@ export const checkCanalWriteAccess = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Authentification requise." });
     }
-    
-    // Récupérer l'ID du canal depuis les paramètres de route OU depuis le body pour les créations de message
+      // Récupérer l'ID du canal depuis les paramètres de route OU depuis le body pour les créations de message
     let canalId = req.params.canalId;
     
     // Si pas trouvé dans les paramètres, chercher dans le body (pour POST /api/messages)
     if (!canalId && req.body && req.body.fk_canal) {
       canalId = req.body.fk_canal;
+    }
+    
+    // Chercher aussi dans req.body.canalId pour les routes Google Drive
+    if (!canalId && req.body && req.body.canalId) {
+      canalId = req.body.canalId;
     }
     
     if (!canalId) {
