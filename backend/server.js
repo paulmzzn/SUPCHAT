@@ -1,3 +1,4 @@
+import invitationRoutes from "./routes/invitationRoutes.js";
 import express from "express";
 import pool from "./config/dbConnection.js"; // Importation du pool configuré
 import userRoutes from "./routes/userRoutes.js";
@@ -143,6 +144,9 @@ app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
 app.use("/api", reminderRoutes); // Ajout des routes pour les rappels
+
+// Ajout de la route pour les invitations (pending)
+app.use("/api/invitations", invitationRoutes);
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Ces routes sont maintenant placées APRÈS la définition de fileRoutes pour éviter qu'elles n'interceptent notre route personnalisée

@@ -1,3 +1,28 @@
+// Vérifier s'il existe une invitation en attente pour un email donné
+export const checkPendingInvitation = async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ message: "Email requis" });
+  }
+
+  try {
+    // Vérifier s'il existe une invitation non expirée pour cet email
+    const invitationResult = await pool.query(
+      `SELECT * FROM workspace_invitations WHERE LOWER(email_invite) = LOWER($1) AND date_expiration > NOW()`,
+      [email]
+    );
+
+    if (invitationResult.rows.length > 0) {
+      // On retourne la première invitation trouvée (ou toutes si besoin)
+      return res.status(200).json({ hasPendingInvitation: true, invitation: invitationResult.rows[0] });
+    } else {
+      return res.status(200).json({ hasPendingInvitation: false });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la vérification de l'invitation en attente:", error);
+    return res.status(500).json({ message: "Erreur serveur lors de la vérification de l'invitation" });
+  }
+};
 import UserModel from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
