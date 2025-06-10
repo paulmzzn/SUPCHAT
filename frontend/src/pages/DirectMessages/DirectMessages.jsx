@@ -114,18 +114,6 @@ function DirectMessages() {
     setShowGoogleDriveModal(false);
   }, []);
 
-  // Effet pour charger les conversations si la liste est vide
-  React.useEffect(() => {
-    if (
-      conv &&
-      typeof conv.fetchConversations === "function" &&
-      Array.isArray(conv.conversations) &&
-      conv.conversations.length === 0
-    ) {
-      conv.fetchConversations();
-    }
-  }, [conv]);
-
   // Valeurs par défaut si les hooks retournent null/undefined
   const convWithDefaults = conv || {};
 
