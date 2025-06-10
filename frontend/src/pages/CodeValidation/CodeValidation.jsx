@@ -66,8 +66,7 @@ const CodeValidation = ({ email }) => {
           
           // Attendre que localStorage soit mis à jour
           setTimeout(() => {
-            console.log("Navigation vers le dashboard");
-            navigate('/dashboard', { replace: true });
+            navigate('/workspaces', { replace: true });
           }, 100);
         } catch (storageError) {
           console.error("Erreur lors de la sauvegarde du token:", storageError);

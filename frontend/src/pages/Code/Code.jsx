@@ -45,8 +45,7 @@ const Code = () => {
     
     // Vérifier si déjà validé pour éviter une double validation
     if (localStorage.getItem('isValidated') === 'true') {
-      console.log("Déjà validé, redirection vers dashboard");
-      navigate('/dashboard');
+      navigate('/workspaces');
     }
   }, [navigate, location.state]);
 
@@ -111,10 +110,9 @@ const Code = () => {
               navigate(`/join-workspace?id=${pendingInvitation.workspaceId}&email=${pendingInvitation.email || emailToUse}`);
             }, 300);
           } else {
-            // Regular flow - redirect to dashboard
+            // Regular flow - redirect to workspaces
             setTimeout(() => {
-              console.log("Redirection vers dashboard avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
-              navigate("/dashboard");
+              navigate("/workspaces");
             }, 300);
           }
         } else {
