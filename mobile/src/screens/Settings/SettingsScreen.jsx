@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, Image, Linking, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../context/AuthContext'; // Updated import path
 import { useUserPreferences } from '../../context/UserPreferencesContext'; // Import du contexte de préférences utilisateur
 import env from '../../config/env'; 
@@ -162,6 +164,157 @@ const SettingsScreen = () => {
     navigation.navigate('ProfileEdit');
   };
 
+  // Fonction pour exporter les données RGPD
+  const handleRgpdExport = async () => {
+    Alert.alert(
+      "Export RGPD",
+      "Télécharger toutes vos données personnelles au format JSON ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        { 
+          text: "Télécharger", 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) {
+                Alert.alert("Erreur", "Vous devez être connecté pour exporter vos données.");
+                return;
+              }
+
+              const response = await fetch(`${env.API_URL}/api/users/rgpd-export`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                throw new Error("Erreur lors de l'export RGPD");
+              }
+
+              const responseText = await response.text();
+              const fileName = 'mes_donnees_rgpd.json';
+              const fileUri = FileSystem.documentDirectory + fileName;
+
+              await FileSystem.writeAsStringAsync(fileUri, responseText);
+
+              if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri, {
+                  mimeType: 'application/json',
+                  dialogTitle: 'Partager vos données RGPD',
+                });
+              } else {
+                Alert.alert(
+                  "Export terminé", 
+                  `Vos données ont été sauvegardées dans : ${fileUri}`
+                );
+              }
+            } catch (error) {
+              console.error("Erreur lors de l'export RGPD:", error);
+              Alert.alert("Erreur", "Erreur lors de l'export RGPD : " + error.message);
+            }
+          },
+        }
+      ]
+    );
+  };
+
+  // Fonction pour ouvrir les CGU
+  const handleOpenCGU = () => {
+    navigation.navigate('CGU');
+  };
+
+  // États pour le modal de changement de mot de passe
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Fonction pour ouvrir le modal de changement de mot de passe
+  const handleChangePassword = () => {
+    setShowPasswordModal(true);
+    setPasswordError('');
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  // Fonction pour soumettre le changement de mot de passe
+  const handleSubmitPasswordChange = async () => {
+    setPasswordError('');
+
+    // Validation côté client
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Tous les champs sont requis.');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        setPasswordError('Impossible de changer le mot de passe. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const response = await fetch(`${env.API_URL}/api/users/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          'Succès',
+          'Mot de passe changé avec succès.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setShowPasswordModal(false);
+                setOldPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+              }
+            }
+          ]
+        );
+      } else {
+        setPasswordError(data.message || 'Erreur lors du changement de mot de passe.');
+      }
+    } catch (error) {
+      console.error('Erreur lors du changement de mot de passe:', error);
+      setPasswordError('Erreur de connexion au serveur.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (loadingProfile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -182,7 +335,11 @@ const SettingsScreen = () => {
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
         {/* Section Profile */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={handleEditProfile}
+            activeOpacity={0.8}
+          >
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
@@ -190,7 +347,10 @@ const SettingsScreen = () => {
                 {userName?.charAt(0).toUpperCase() || 'U'}
               </Text>
             )}
-          </View>
+            <View style={styles.avatarEditIcon}>
+              <Ionicons name="camera" size={16} color={themeColors.textOnAccent} />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.profileName}>{userName}</Text>
           <Text style={styles.profileEmail}>{userEmail}</Text>
           {userBio ? (
@@ -256,7 +416,7 @@ const SettingsScreen = () => {
         {/* Section Security */}
         <Text style={styles.sectionTitle}>Sécurité</Text>
         <View style={styles.settingsCard}>
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} onPress={handleChangePassword}>
             <View style={styles.settingButtonContent}>
               <Ionicons name="lock-closed-outline" size={22} color={themeColors.textPrimary} />
               <Text style={styles.settingButtonText}>Changer le mot de passe</Text>
@@ -266,20 +426,22 @@ const SettingsScreen = () => {
           
           <View style={styles.divider} />
           
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} onPress={handleRgpdExport}>
             <View style={styles.settingButtonContent}>
-              <Ionicons name="shield-outline" size={22} color={themeColors.textPrimary} />
-              <Text style={styles.settingButtonText}>Confidentialité</Text>
+              <Ionicons name="download-outline" size={22} color={themeColors.textPrimary} />
+              <Text style={styles.settingButtonText}>Exporter mes données RGPD</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity style={styles.settingButton}>
+        </View>
+
+        {/* Section Légal */}
+        <Text style={styles.sectionTitle}>Légal</Text>
+        <View style={styles.settingsCard}>
+          <TouchableOpacity style={styles.settingButton} onPress={handleOpenCGU}>
             <View style={styles.settingButtonContent}>
-              <Ionicons name="finger-print-outline" size={22} color={themeColors.textPrimary} />
-              <Text style={styles.settingButtonText}>Authentification biométrique</Text>
+              <Ionicons name="document-text-outline" size={22} color={themeColors.textPrimary} />
+              <Text style={styles.settingButtonText}>Conditions Générales d'Utilisation</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
@@ -299,6 +461,132 @@ const SettingsScreen = () => {
         
         <Text style={styles.versionText}>SUPCHAT v1.0.0</Text>
       </ScrollView>
+
+      {/* Modal de changement de mot de passe */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Changer le mot de passe</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowPasswordModal(false)}
+              >
+                <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              {/* Ancien mot de passe */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Ancien mot de passe</Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={oldPassword}
+                    onChangeText={setOldPassword}
+                    secureTextEntry={!showOldPassword}
+                    placeholder="Entrez votre ancien mot de passe"
+                    placeholderTextColor={themeColors.textMuted}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowOldPassword(!showOldPassword)}
+                  >
+                    <Ionicons
+                      name={showOldPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={themeColors.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Nouveau mot de passe */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nouveau mot de passe</Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={!showNewPassword}
+                    placeholder="Au moins 8 caractères"
+                    placeholderTextColor={themeColors.textMuted}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={themeColors.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Confirmer nouveau mot de passe */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirmer le nouveau mot de passe</Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Confirmez votre nouveau mot de passe"
+                    placeholderTextColor={themeColors.textMuted}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={themeColors.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Message d'erreur */}
+              {passwordError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{passwordError}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowPasswordModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, isChangingPassword && styles.confirmButtonDisabled]}
+                onPress={handleSubmitPasswordChange}
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <ActivityIndicator color={themeColors.textOnAccent} size="small" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Changer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

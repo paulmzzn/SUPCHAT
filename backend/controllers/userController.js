@@ -559,8 +559,12 @@ const updateUserProfile = async (req, res) => {
     } // Traiter l'upload d'avatar si présent
     if (req.file) {
       try {
+        // Upload vers S3 au lieu du stockage local
         const uploadResult = await uploadToS3(req.file, "avatars");
+
+        // Utiliser directement l'URL retournée par uploadToS3
         photo_de_profil = uploadResult.url;
+
         console.log("Nouvel avatar uploadé sur S3:", uploadResult.fileKey);
         console.log("URL complète de l'avatar:", uploadResult.url);
       } catch (uploadError) {

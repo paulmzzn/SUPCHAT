@@ -17,7 +17,8 @@ const MessageGroup = memo(({
   onEmojiSelect,
   onOpenAttachment,
   onStrawpollVote,
-  onStrawpollViewResults 
+  onStrawpollViewResults,
+  onUserPress // Nouvelle prop pour les mentions
 }) => {
   const chronologicalMessages = [...group.messages].reverse();
   
@@ -94,6 +95,7 @@ const MessageGroup = memo(({
               onOpenAttachment={onOpenAttachment}
               onStrawpollVote={onStrawpollVote}
               onStrawpollViewResults={onStrawpollViewResults}
+              onUserPress={onUserPress}
             />
             
             {group.isOwn && isLastMessage && (

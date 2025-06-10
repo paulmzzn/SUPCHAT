@@ -200,6 +200,91 @@ function WorkspaceDetails() {
   const handleCloseGoogleDrive = () => {
     setShowGoogleDriveModal(false);
   };
+  // Nouveau: Fonction pour gérer les fichiers Google Drive
+  const handleGoogleDriveFiles = async (googleDriveFiles) => {
+    console.log("🚀 [WorkspaceDetails] Fichiers Google Drive reçus:", googleDriveFiles);
+    
+    if (!googleDriveFiles || googleDriveFiles.length === 0) {
+      console.log("❌ [WorkspaceDetails] Aucun fichier Google Drive sélectionné");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("❌ [WorkspaceDetails] Token d'authentification manquant");
+      return;
+    }
+
+    try {
+      // Traiter chaque fichier Google Drive via l'API appropriée
+      for (const file of googleDriveFiles) {
+        console.log("[WorkspaceDetails] Traitement fichier Google Drive:", file);
+        
+        if (file.originalDriveFile) {
+          // Ce fichier a déjà été uploadé, utiliser l'endpoint Google Drive
+          const googleDriveData = {
+            googleDriveFileId: file.originalDriveFile.id,
+            fileName: file.originalDriveFile.name,
+            mimeType: file.originalDriveFile.mimeType,
+            size: file.originalDriveFile.size || 0,
+            canalId: activeChannel?.id,
+            workspaceId: workspaceId,
+          };
+
+          console.log("[WorkspaceDetails] Envoi via API Google Drive:", googleDriveData);
+
+          const response = await fetch(`${API_URL}/api/messages/upload-google-drive`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify(googleDriveData),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ [WorkspaceDetails] Erreur API Google Drive:`, response.status, errorText);
+            throw new Error(`Erreur lors de l'envoi du fichier Google Drive: ${response.status}`);
+          }
+
+          const result = await response.json();
+          console.log("✅ [WorkspaceDetails] Fichier Google Drive envoyé avec succès:", result);
+        } else if (file.id_fichier || file.id) {
+          console.log("[WorkspaceDetails] Fichier déjà uploadé, création message standard");
+          // Ce fichier a été uploadé via l'upload standard, créer un message vide avec attachment
+          const messageData = {
+            canalId: activeChannel?.id,
+            workspaceId: workspaceId,
+            contenu: "", // Message vide, juste la pièce jointe
+            attachments: [file.id_fichier || file.id], // ID du fichier uploadé
+          };
+
+          // Utiliser l'API standard pour créer le message
+          const response = await fetch(`${API_URL}/api/messages`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify(messageData),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ [WorkspaceDetails] Erreur API message:`, response.status, errorText);
+            throw new Error(`Erreur lors de l'envoi du message: ${response.status}`);
+          }
+
+          const result = await response.json();
+          console.log("✅ [WorkspaceDetails] Message avec pièce jointe envoyé:", result);
+        }
+      }
+    } catch (error) {
+      console.error("❌ [WorkspaceDetails] Erreur lors du traitement Google Drive:", error);
+    }
+  };
+
   useEffect(() => {
     window.handleOpenStrawpollVote = handleOpenStrawpollVote;
     window.handleOpenStrawpollResults = handleOpenStrawpollResults;
@@ -878,10 +963,12 @@ function WorkspaceDetails() {
           handleOpenStrawpoll={handleOpenStrawpoll}
           showStrawpollModal={showStrawpollModal}
           handleCloseStrawpollModal={handleCloseStrawpollModal}
-          handleStrawpollSubmit={handleStrawpollSubmit}
-          showGoogleDriveModal={showGoogleDriveModal}
+          handleStrawpollSubmit={handleStrawpollSubmit}          showGoogleDriveModal={showGoogleDriveModal}
           handleOpenGoogleDrive={handleOpenGoogleDrive}
           handleCloseGoogleDrive={handleCloseGoogleDrive}
+          onFilesSelected={handleGoogleDriveFiles}
+          workspaceId={workspaceId}
+          socket={socket}
           commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
@@ -898,6 +985,13 @@ function WorkspaceDetails() {
             (activeChannel?.isPrivate && activeChannel?.isCreator)
           }
           currentUserAccessRight={activeChannel?.memberAccess}
+          // Channel suggestions props
+          showChannelSuggestions={showChannelSuggestions}
+          channelSuggestions={channelSuggestions}
+          activeChannelSuggestionIndex={activeChannelSuggestionIndex}
+          handleSelectChannelSuggestion={handleSelectChannelSuggestion}
+          handleChannelSuggestionNavigation={handleChannelSuggestionNavigation}
+          handleSelectActiveChannelSuggestion={handleSelectActiveChannelSuggestion}
           // Pagination props
           hasMoreMessages={hasMoreMessages}
           loadingMoreMessages={loadingMoreMessages}
@@ -1073,12 +1167,11 @@ function WorkspaceDetails() {
           show={showStrawpollVote}
           pollId={currentPollId}
           onClose={handleCloseStrawpollVote}
-        />
-        <GoogleDriveModal
+        />        <GoogleDriveModal
           isOpen={showGoogleDriveModal}
           onClose={handleCloseGoogleDrive}
           onFilesSelected={(files) => {
-            handleFileUpload(files);
+            handleGoogleDriveFiles(files);
             handleCloseGoogleDrive();
           }}
           mode="workspace"

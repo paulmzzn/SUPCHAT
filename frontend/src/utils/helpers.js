@@ -113,12 +113,13 @@ export const debugMistralInteraction = (message) => {
 
 // Helper pour rendre les liens cliquables dans un texte
 export const renderTextWithLinks = (text, onChannelClick, onUserClick) => {
-  // Suppression des logs de débogage pour la version de production
-  // console.log("renderTextWithLinks appelé avec:", {
-  //   text,
-  //   hasCallback: !!onChannelClick,
-  //   matchesFound: text && text.includes("#"),
-  // });
+  // Logs de débogage activés temporairement
+  console.log("renderTextWithLinks appelé avec:", {
+    text,
+    hasChannelCallback: !!onChannelClick,
+    hasUserCallback: !!onUserClick,
+    containsHash: text && text.includes("#"),
+  });
 
   if (!text) return "";
 
@@ -228,10 +229,11 @@ export const renderTextWithLinks = (text, onChannelClick, onUserClick) => {
         </a>
       );
     } else if (match.type === "channel") {
-      // console.log("Rendu d'une mention de canal:", {
-      //   channelName: match.channelName,
-      //   hasCallback: !!onChannelClick,
-      // });
+      console.log("Rendu d'une mention de canal:", {
+        channelName: match.channelName,
+        hasCallback: !!onChannelClick,
+        content: match.content
+      });
 
       parts.push(
         <span

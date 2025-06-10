@@ -155,6 +155,14 @@ export const useConversations = (options = {}) => {
    * Récupère la liste des conversations
    */
   const fetchConversations = useCallback(async () => {
+    // Éviter les appels multiples en parallèle
+    if (loading) {
+      console.log(
+        "[useConversations] Appel ignoré - récupération déjà en cours"
+      );
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -215,8 +223,10 @@ export const useConversations = (options = {}) => {
         return convList;
       });
 
-      // Charger les infos utilisateurs pour chaque conversation
-      await Promise.all(convList.map((userId) => fetchUserInfo(userId)));
+      // Charger les infos utilisateurs pour chaque conversation uniquement si il y a des conversations
+      if (convList.length > 0) {
+        await Promise.all(convList.map((userId) => fetchUserInfo(userId)));
+      }
     } catch (error) {
       console.error("[useConversations] Erreur:", error);
       setError("Impossible de charger les conversations");
@@ -225,7 +235,7 @@ export const useConversations = (options = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [fetchUserInfo, API_URL]);
+  }, [fetchUserInfo, loading]);
 
   /**
    * Récupère la liste des utilisateurs disponibles
@@ -288,17 +298,12 @@ export const useConversations = (options = {}) => {
       }
     });
 
-    // Si l'utilisateur sélectionné a déjà un compteur, le réinitialiser
-    if (selectedUser && cleanCounts[selectedUser]) {
-      cleanCounts[selectedUser] = 0;
-    }
-
     setUnreadMessageCounts(cleanCounts);
     const total = calculateTotalUnreadCount(cleanCounts);
     setTotalUnreadCount(total);
 
     return { counts: cleanCounts, total };
-  }, [calculateTotalUnreadCount, selectedUser]);
+  }, [calculateTotalUnreadCount]);
 
   /**
    * Filtre les conversations en fonction de la recherche
@@ -462,8 +467,10 @@ export const useConversations = (options = {}) => {
     [deleteConversation, selectedUser, handleCloseConversationContextMenu]
   );
 
-  // Effet pour initialiser l'application et charger les conversations
+  // Effet pour initialiser l'application et charger les conversations une seule fois
   useEffect(() => {
+    let isInitialized = false;
+
     // Récupérer d'abord l'ID utilisateur
     try {
       const token = localStorage.getItem("token");
@@ -485,9 +492,10 @@ export const useConversations = (options = {}) => {
           .join("")
       );
       const payload = JSON.parse(jsonPayload);
-      if (payload && payload.id) {
+      if (payload && payload.id && !isInitialized) {
         console.log("[useConversations] ID utilisateur récupéré:", payload.id);
         setCurrentUserId(payload.id);
+        isInitialized = true;
 
         // Une fois l'ID utilisateur défini, charger les conversations une seule fois
         fetchConversations();
@@ -501,38 +509,8 @@ export const useConversations = (options = {}) => {
         error
       );
     }
-    // Note: fetchConversations est omis intentionnellement pour éviter les appels en boucle
-  }, []);
-
-  // Effet pour charger l'utilisateur courant au démarrage
-  useEffect(() => {
-    // Récupérer l'ID de l'utilisateur courant depuis le localStorage
-    try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map(function (c) {
-              return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-            })
-            .join("")
-        );
-
-        const payload = JSON.parse(jsonPayload);
-        if (payload && payload.id) {
-          setCurrentUserId(payload.id);
-        }
-      }
-    } catch (error) {
-      console.error(
-        "Erreur lors de la récupération de l'ID utilisateur:",
-        error
-      );
-    }
-  }, []);
+    // Note: fetchConversations est omis intentionnellement des dépendances pour éviter les appels en boucle
+  }, []); // Tableau de dépendances vide pour n'exécuter qu'une seule fois
 
   // Effet pour filtrer les utilisateurs selon la recherche
   useEffect(() => {
@@ -590,18 +568,13 @@ export const useConversations = (options = {}) => {
       }
     });
 
-    // Si l'utilisateur sélectionné a déjà un compteur, le réinitialiser
-    if (selectedUser && cleanCounts[selectedUser]) {
-      cleanCounts[selectedUser] = 0;
-    }
-
     setUnreadMessageCounts(cleanCounts);
     const total = calculateTotalUnreadCount(cleanCounts);
     setTotalUnreadCount(total);
     // Mettre à jour localStorage avec les valeurs nettoyées
     localStorage.setItem("unreadDMCounts", JSON.stringify(cleanCounts));
     localStorage.setItem("unreadPrivateMessages", total.toString());
-  }, [calculateTotalUnreadCount, selectedUser]); // --- Gestion des messages non lus en temps réel ---
+  }, [calculateTotalUnreadCount]); // Enlever selectedUser des dépendances // --- Gestion des messages non lus en temps réel ---
   useEffect(() => {
     if (!socket) return;
     const handlePrivateMessage = (msg) => {
