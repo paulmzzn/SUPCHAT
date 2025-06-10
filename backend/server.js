@@ -27,6 +27,7 @@ import { dirname } from "path";
 import path from "path"; // Import path
 import fs from "fs"; // Import fs
 import strawpollRoutes from "./routes/strawpollRoutes.js"; // Import ES module
+import mistralRoutes from "./routes/mistralRoutes.js"; // Ajout des routes Mistral
 
 // Système de logging simple
 // Niveaux: error, warn, info, debug
@@ -147,6 +148,7 @@ app.use("/api/strawpoll", strawpollRoutes); // Ajout des routes pour strawpoll
 app.use("/api/private-messages/reactions", privateMessageReactionRoutes); // Ajout des routes pour les réactions aux messages privés
 app.use("/api/search", searchRoutes); // Ajout des routes pour la recherche
 app.use("/api", reminderRoutes); // Ajout des routes pour les rappels
+app.use("/api/mistral", mistralRoutes); // Ajout des routes pour Mistral AI
 
 // Servir les fichiers statiques pour les messages privés et autres
 // Ces routes sont maintenant placées APRÈS la définition de fileRoutes pour éviter qu'elles n'interceptent notre route personnalisée
