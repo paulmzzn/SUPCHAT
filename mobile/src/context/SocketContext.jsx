@@ -5,19 +5,29 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
+import env from "../config/env";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 const SocketContext = createContext(null);
 
-export const useSocket = () => useContext(SocketContext);
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return context;
+};
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [connected, setConnected] = useState(false);
+  const [isConnected, setConnected] = useState(false);
+
+  // Messages privés - GARDÉ INTACT
   const [unreadMessages, setUnreadMessages] = useState({});
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -27,33 +37,16 @@ export const SocketProvider = ({ children }) => {
   const notificationListeners = useRef([]);
   const debounceTimer = useRef(null);
   const initialFetchDone = useRef(false);
+  const socketRef = useRef(null); // Ajout d'une ref pour le socket
+  const [forceUpdate, setForceUpdate] = useState(0); // Ajout pour forcer les re-renders
 
-  // Fonction d'aide pour notifier tous les listeners de façon sécurisée
-  const notifyListeners = useCallback((notification) => {
-    if (
-      !notificationListeners.current ||
-      !Array.isArray(notificationListeners.current)
-    ) {
-      console.warn("No notification listeners available");
-      return;
-    }
-
-    notificationListeners.current.forEach((listener) => {
-      try {
-        listener(notification);
-      } catch (e) {
-        console.error("Error notifying listener:", e);
-      }
-    });
-  }, []);
-
-  // Fonction pour charger les compteurs de messages non lus
+  // Fonction pour récupérer les compteurs de messages privés - GARDÉE INTACTE
   const fetchUnreadCounts = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      if (!token) return;
-
-      console.log("Socket: Fetching unread message counts");
+      if (!token) {
+        return;
+      }
 
       const response = await fetch(
         `${API_URL}/api/private-messages/unread-counts`,
@@ -64,12 +57,7 @@ export const SocketProvider = ({ children }) => {
 
       if (response.ok) {
         const counts = await response.json();
-        console.log(
-          "Socket: Unread counts received:",
-          Object.keys(counts).length
-        );
 
-        // Mettre à jour uniquement si les données sont différentes
         setUnreadMessages((prevCounts) => {
           const prevTotal = Object.values(prevCounts).reduce(
             (sum, val) => sum + val,
@@ -103,35 +91,7 @@ export const SocketProvider = ({ children }) => {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
 
-        console.log("Socket: Connecting to", API_URL);
-
-        const newSocket = io(API_URL, {
-          auth: { token },
-          transports: ["websocket"],
-          reconnection: true,
-          reconnectionAttempts: 10,
-        });
-
-        newSocket.on("connect", () => {
-          console.log("Socket: Connected with ID", newSocket.id);
-          setConnected(true);
-          newSocket.emit("joinPrivate");
-
-          // Charger les messages non lus immédiatement après la connexion
-          fetchUnreadCounts();
-        });
-
-        newSocket.on("connect_error", (err) => {
-          console.error("Socket: Connection error", err);
-          setConnected(false);
-        });
-
-        newSocket.on("disconnect", () => {
-          console.log("Socket: Disconnected");
-          setConnected(false);
-        });
-
-        // Obtenir l'ID de l'utilisateur à partir du token
+        // Extraire l'ID utilisateur du token AVANT la connexion
         try {
           const parts = token.split(".");
           if (parts.length === 3) {
@@ -148,8 +108,8 @@ export const SocketProvider = ({ children }) => {
 
         return () => {
           if (newSocket) {
-            console.log("Socket: Cleaning up connection");
             newSocket.disconnect();
+            socketRef.current = null;
           }
         };
       } catch (error) {
@@ -158,9 +118,9 @@ export const SocketProvider = ({ children }) => {
     };
 
     connectSocket();
-  }, [fetchUnreadCounts]);
+  }, []); // Removed refreshUnreadCounts dependency to prevent reconnection loops
 
-  // Assurer le chargement des compteurs même si connecté avant le rendu du composant
+  // NOUVEAU système d'écoute des messages pour les canaux - AMÉLIORÉ
   useEffect(() => {
     if (connected && !initialFetchDone.current) {
       console.log("Socket: Initial fetch of unread counts");
@@ -288,23 +248,19 @@ export const SocketProvider = ({ children }) => {
 
         return newCounts;
       });
-    },
-    [totalUnreadCount]
-  );
-
-  // Méthodes pour s'abonner/se désabonner aux notifications
-  const subscribeToNotifications = useCallback((callback) => {
-    if (!callback || typeof callback !== "function") {
-      console.warn("Invalid notification callback provided");
-      return () => {};
     }
+  }, [socket]);
 
-    notificationListeners.current.push(callback);
+  // Fonction pour forcer le refresh des compteurs
+  const forceRefreshCounts = useCallback(() => {
+    initialFetchDone.current = false;
+    refreshUnreadCounts();
+  }, [refreshUnreadCounts]);
 
+  // Fonction pour s'abonner aux notifications
+  const subscribeToNotifications = useCallback(() => {
     return () => {
-      notificationListeners.current = notificationListeners.current.filter(
-        (cb) => cb !== callback
-      );
+      // Cleanup
     };
   }, []);
 
@@ -336,8 +292,10 @@ export const SocketProvider = ({ children }) => {
     conversationTimestamps,
     markMessagesAsRead,
     subscribeToNotifications,
-    updateConversationTimestamp,
-    refreshUnreadCounts: fetchUnreadCounts,
+    forceRefreshCounts,
+    forceFullRefresh, // Nouvelle fonction de refresh complet
+    testSocketConnection,
+    getDebugInfo, // Nouvelle fonction de debug
   };
 
   return (

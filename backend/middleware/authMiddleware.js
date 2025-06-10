@@ -279,8 +279,29 @@ export const checkCanalWriteAccess = async (req, res, next) => {
     // Récupérer l'ID du canal depuis les paramètres de route
     const canalId = req.params.canalId;
 
+    // Récupérer l'ID du canal depuis les paramètres de route OU depuis le body pour les créations de message
+    let canalId = req.params.canalId;
+
+    // Si pas trouvé dans les paramètres, chercher dans le body (pour POST /api/messages)
+    if (!canalId && req.body && req.body.fk_canal) {
+      canalId = req.body.fk_canal;
+    }
+
     if (!canalId) {
-      return res.status(400).json({ message: "ID de canal non fourni." });
+      console.error("checkCanalWriteAccess: ID de canal manquant", {
+        params: req.params,
+        body: req.body,
+        url: req.originalUrl,
+        method: req.method,
+      });
+      return res.status(400).json({
+        message: "ID de canal non fourni.",
+        error: "canal_id_missing",
+        debug: {
+          params: req.params,
+          hasBodyFkCanal: !!(req.body && req.body.fk_canal),
+        },
+      });
     }
 
     // Utiliser la méthode du modèle Canal pour vérifier l'accès

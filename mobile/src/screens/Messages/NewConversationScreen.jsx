@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStyles } from "./NewConversationScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
+import env from "../../config/env";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = env.API_URL;
 
 const NewConversationScreen = ({ navigation }) => {
   const { colors: themeColors } = useTheme();

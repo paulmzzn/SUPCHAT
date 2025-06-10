@@ -604,24 +604,7 @@ const Settings = () => {
               <div className="settings-section">
                 <h2>Paramètres de confidentialité</h2>
                 <div className="settings-group">
-                  <div className="settings-item">
-                    <div className="setting-info">
-                      <h3>Qui peut voir mon statut en ligne</h3>
-                    </div>
-                    <div className="setting-control">
-                      <select
-                        className="form-select"
-                        value={privacy.onlineStatus}
-                        onChange={(e) =>
-                          handlePrivacyChange("onlineStatus", e.target.value)
-                        }
-                      >
-                        <option value="all">Tout le monde</option>
-                        <option value="friends">Seulement mes amis</option>
-                        <option value="none">Personne</option>
-                      </select>
-                    </div>
-                  </div>                  {/* Bouton d'accès aux CGU */}                  <div className="settings-item">
+                  {/* Bouton d'accès aux CGU */}                  <div className="settings-item">
                     <div className="setting-info">
                       <h3>Conditions Générales d'Utilisation</h3>
                       <p>Consultez les CGU de SUPCHAT pour connaître vos droits et obligations.</p>

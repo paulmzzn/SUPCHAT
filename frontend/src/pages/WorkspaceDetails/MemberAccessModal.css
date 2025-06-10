@@ -271,6 +271,113 @@
   cursor: not-allowed;
 }
 
+/* Corrections pour le thème clair */
+.theme-light .member-access-modal {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .modal-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-light .modal-title {
+  color: #1f2937;
+}
+
+.theme-light .close-button {
+  color: #6b7280;
+}
+
+.theme-light .close-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+.theme-light .modal-content {
+  background-color: #ffffff;
+}
+
+.theme-light .member-info {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.theme-light .member-avatar-large {
+  color: white; /* Garder blanc sur fond coloré */
+}
+
+.theme-light .member-details h3 {
+  color: #1f2937;
+}
+
+.theme-light .member-role {
+  color: #6b7280;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .section-description p {
+  color: #6b7280;
+}
+
+.theme-light .section-title {
+  color: #1f2937;
+}
+
+.theme-light .channels-list-header {
+  background-color: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-light .channels-list-header span {
+  color: #374151;
+}
+
+.theme-light .channel-item {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.theme-light .channel-info h4 {
+  color: #1f2937;
+}
+
+.theme-light .channel-info p {
+  color: #6b7280;
+}
+
+.theme-light .access-button {
+  background-color: #f9fafb;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.theme-light .access-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.theme-light .access-button.active {
+  background-color: #8a56ac;
+  color: white;
+  border-color: #8a56ac;
+}
+
+.theme-light .access-button.danger {
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.theme-light .access-button.danger:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.theme-light .access-button.danger.active {
+  background-color: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.6);
+  color: #dc2626;
+}
+
 @media screen and (max-width: 600px) {
   .channel-item {
     flex-direction: column;

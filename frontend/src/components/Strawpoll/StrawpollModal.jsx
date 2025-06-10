@@ -1,18 +1,23 @@
 import React, { useState } from "react";
 import { FaPoll, FaPlus, FaTimes, FaCheck } from "react-icons/fa";
+import "./StrawpollModal.css";
 
 const StrawpollModal = ({ onClose, onSubmit }) => {
   const [title, setTitle] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [newOptionIndex, setNewOptionIndex] = useState(null);
 
   const handleOptionChange = (idx, value) => {
     setOptions((prev) => prev.map((opt, i) => (i === idx ? value : opt)));
   };
-
   const handleAddOption = () => {
+    const newIndex = options.length;
     setOptions((prev) => [...prev, ""]);
+    setNewOptionIndex(newIndex);
+    // Retirer l'animation après un délai
+    setTimeout(() => setNewOptionIndex(null), 300);
   };
 
   const handleRemoveOption = (idx) => {
@@ -61,32 +66,35 @@ const StrawpollModal = ({ onClose, onSubmit }) => {
             placeholder="Ex: Quel est votre framework préféré ?"
             autoFocus
           />
-        </div>
-
-        <div className="form-group">
+        </div>        <div className="form-group">
           <label>Options</label>
-          {options.map((opt, idx) => (
-            <div className="option-item" key={idx}>
-              <input
-                type="text"
-                value={opt}
-                onChange={(e) => handleOptionChange(idx, e.target.value)}
-                placeholder={`Option ${idx + 1}`}
-              />
-              {options.length > 2 && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveOption(idx)}
-                  aria-label="Supprimer l'option"
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
-          ))}
-          <button type="button" onClick={handleAddOption}>
-            <FaPlus /> Ajouter une option
-          </button>
+          <div className="strawpoll-options">            {options.map((opt, idx) => (
+              <div 
+                className={`option-item ${newOptionIndex === idx ? 'new-option' : ''}`} 
+                key={idx}
+              >
+                <input
+                  type="text"
+                  value={opt}
+                  onChange={(e) => handleOptionChange(idx, e.target.value)}
+                  placeholder={`Option ${idx + 1}`}
+                />
+                {options.length > 2 && (
+                  <button
+                    type="button"
+                    className="remove-option-btn"
+                    onClick={() => handleRemoveOption(idx)}
+                    aria-label="Supprimer l'option"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="add-option-btn" onClick={handleAddOption}>
+              <FaPlus /> Ajouter une option
+            </button>
+          </div>
         </div>
 
         <div className="modal-actions">
