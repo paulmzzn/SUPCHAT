@@ -20,6 +20,10 @@ import WorkspaceChannelsScreen from '../screens/WorkspaceChannels/WorkspaceChann
 import ChannelFilesScreen from '../screens/ChannelFiles/ChannelFilesScreen';
 import WorkspaceSettingsScreen from '../screens/WorkspaceSettings/WorkspaceSettingsScreen';
 
+// Import Settings related screens
+import ProfileEditScreen from '../screens/Settings/ProfileEdit/ProfileEditScreen';
+import CGUScreen from '../screens/Settings/CGUScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +43,15 @@ const WorkspacesStack = () => (
     <Stack.Screen name="WorkspaceDetail" component={WorkspaceDetailScreen} />
     <Stack.Screen name="ChannelFiles" component={ChannelFilesScreen} />
     <Stack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
+  </Stack.Navigator>
+);
+
+// Stack pour les paramètres
+const SettingsStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="SettingsMain" component={SettingsScreen} />
+    <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+    <Stack.Screen name="CGU" component={CGUScreen} />
   </Stack.Navigator>
 );
 
@@ -70,7 +83,7 @@ const MainNavigator = () => {
       />
       <Tab.Screen 
         name="Settings" 
-        component={SettingsScreen} 
+        component={SettingsStack} 
       />
     </Tab.Navigator>
   );

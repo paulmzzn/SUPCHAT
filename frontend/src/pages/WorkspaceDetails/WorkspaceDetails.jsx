@@ -985,6 +985,13 @@ function WorkspaceDetails() {
             (activeChannel?.isPrivate && activeChannel?.isCreator)
           }
           currentUserAccessRight={activeChannel?.memberAccess}
+          // Channel suggestions props
+          showChannelSuggestions={showChannelSuggestions}
+          channelSuggestions={channelSuggestions}
+          activeChannelSuggestionIndex={activeChannelSuggestionIndex}
+          handleSelectChannelSuggestion={handleSelectChannelSuggestion}
+          handleChannelSuggestionNavigation={handleChannelSuggestionNavigation}
+          handleSelectActiveChannelSuggestion={handleSelectActiveChannelSuggestion}
           // Pagination props
           hasMoreMessages={hasMoreMessages}
           loadingMoreMessages={loadingMoreMessages}
