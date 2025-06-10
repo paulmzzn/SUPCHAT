@@ -383,7 +383,13 @@ export const uploadFile = async (req, res) => {
 // Fonction pour gérer l'upload de fichiers Google Drive pour les messages de workspace
 export const uploadGoogleDriveFile = async (req, res) => {
   try {
-    console.log("[MessageController] Début de l'upload Google Drive");
+    console.log("🚀 [MessageController] === DÉBUT UPLOAD GOOGLE DRIVE ===");
+    console.log("[MessageController] Requête reçue:", {
+      method: req.method,
+      url: req.originalUrl,
+      body: req.body,
+      user: req.user?.id
+    });
 
     const {
       googleDriveFileId,
@@ -528,23 +534,50 @@ export const uploadGoogleDriveFile = async (req, res) => {
 
     // Associer le fichier au message
     await Fichier.addToMessage(newMessage.id_message, newFichier.id_fichier);
-    console.log("[MessageController] Association fichier-message réussie");
-
-    // Récupérer le message complet avec pièces jointes
+    console.log("[MessageController] Association fichier-message réussie");    // Récupérer le message complet avec pièces jointes
     const completeMessage = await MessageModel.getById(newMessage.id_message);
 
-    // Envoyer une notification en temps réel via WebSocket
+    // Récupérer les informations de l'utilisateur pour l'enrichissement du message
+    console.log("[MessageController] Récupération des infos utilisateur...");
+    const userInfoResult = await pool.query(
+      "SELECT nom, photo_de_profil FROM utilisateur WHERE id_utilisateur = $1",
+      [userId]
+    );
+
+    const user = userInfoResult.rows[0];
+    console.log("[MessageController] Infos utilisateur récupérées:", user);
+
+    // Enrichir le message avec les informations de l'utilisateur (même format que upload normal)
+    const enrichedMessage = {
+      ...completeMessage,
+      nom: user.nom,
+      photo_de_profil: user.photo_de_profil,
+    };    // Envoyer une notification en temps réel via WebSocket
     const io = req.app.get("io");
     if (io) {
-      io.to(`${canalId}`).emit("message", {
-        ...completeMessage,
-        sender: {
-          id: req.user.id,
-          nom: req.user.nom,
-          photo_de_profil: req.user.photo_de_profil,
-        },
+      console.log("[MessageController] 📡 Émission du message Google Drive via Socket.IO");
+      console.log("[MessageController] 📤 Canal cible:", canalId);
+      console.log("[MessageController] 🏢 Workspace:", workspaceId);
+      console.log("[MessageController] 📝 Message enrichi:", {
+        id: enrichedMessage.id_message,
+        contenu: enrichedMessage.contenu,
+        nom: enrichedMessage.nom,
+        hasAttachments: enrichedMessage.attachments?.length > 0
       });
-      console.log("[MessageController] Notification WebSocket envoyée");
+      
+      // Vérifier combien de clients sont connectés à ce canal
+      const room = io.sockets.adapter.rooms.get(`${canalId}`);
+      const clientCount = room ? room.size : 0;
+      console.log("[MessageController] 👥 Clients connectés au canal:", {
+        canalId: canalId,
+        clientCount: clientCount,
+        clients: room ? Array.from(room) : []
+      });
+      
+      io.to(`${canalId}`).emit("message", enrichedMessage);
+      console.log("[MessageController] ✅ Notification WebSocket envoyée");
+    } else {
+      console.log("[MessageController] ⚠️ Instance Socket.IO non disponible");
     }
 
     res.status(201).json({
