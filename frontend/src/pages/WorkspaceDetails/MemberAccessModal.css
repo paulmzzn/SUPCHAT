@@ -300,11 +300,6 @@
   background-color: #ffffff;
 }
 
-.theme-light .member-info {
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-}
-
 .theme-light .member-avatar-large {
   color: white; /* Garder blanc sur fond coloré */
 }

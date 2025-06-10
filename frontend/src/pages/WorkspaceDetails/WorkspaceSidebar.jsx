@@ -521,7 +521,7 @@ function WorkspaceSidebar({
                       </div>
 
                       {/* Contenu du message */}
-                      <div className="message-content">
+                      <div className="message-sidebar">
                         <p
                           className="message-text"
                           dangerouslySetInnerHTML={{
