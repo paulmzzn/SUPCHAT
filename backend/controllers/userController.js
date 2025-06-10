@@ -554,24 +554,17 @@ const updateUserProfile = async (req, res) => {
         req.body.fk_statut
       );
       console.log(`Statut converti (${typeof fk_statut}):`, fk_statut);
-    } // Traiter l'upload d'avatar si présent
+    }    // Traiter l'upload d'avatar si présent
     if (req.file) {
       try {
         // Upload vers S3 au lieu du stockage local
-        const fileKey = await uploadToS3(req.file, "avatars");
-        // Construire le chemin complet de l'image dans S3
-        const s3Endpoint =
-          process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-        const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
-        // S'assurer que l'URL est correctement formatée
-        const fullUrl = `${s3Endpoint}${bucketName}/${fileKey}`.replace(
-          /([^:])\/\/+/g,
-          "$1/"
-        );
-        // Stocker l'URL complète au lieu de juste la clé
-        photo_de_profil = fullUrl;
-        console.log("Nouvel avatar uploadé sur S3:", fileKey);
-        console.log("URL complète de l'avatar:", fullUrl);
+        const uploadResult = await uploadToS3(req.file, "avatars");
+        
+        // Utiliser directement l'URL retournée par uploadToS3
+        photo_de_profil = uploadResult.url;
+        
+        console.log("Nouvel avatar uploadé sur S3:", uploadResult.fileKey);
+        console.log("URL complète de l'avatar:", uploadResult.url);
       } catch (uploadError) {
         console.error(
           "Erreur lors de l'upload de l'avatar vers S3:",

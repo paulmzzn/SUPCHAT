@@ -550,6 +550,13 @@ function ChatContainer({
                       )}
                       {(() => {
                         const fileData = parseFileContent(message.contenu);
+                        console.log("Message render branch check:", {
+                          messageId: message.id_message,
+                          contenu: message.contenu,
+                          hasFileData: !!fileData,
+                          isSystemMsg: systemMsg,
+                          willUseReactMarkdown: !fileData || systemMsg
+                        });
                         if (fileData && !systemMsg) {
                           const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
                           if (fileData.isImage) {
@@ -614,12 +621,25 @@ function ChatContainer({
                             <div className="message-text">
                               <ReactMarkdown
                                 components={{
-                                  p: ({ node, ...props }) => (
-                                    <p
-                                      {...props}
-                                      className="message-paragraph"
-                                    />
-                                  ),
+                                  p: ({ node, ...props }) => {
+                                    console.log("ReactMarkdown p component called:", { children: props.children });
+                                    // Traiter le texte avec renderTextWithLinks si c'est une chaîne
+                                    const processedChildren = React.Children.map(props.children, (child) => {
+                                      if (typeof child === 'string') {
+                                        console.log("Processing text child:", child);
+                                        return renderTextWithLinks(child);
+                                      }
+                                      return child;
+                                    });
+                                    return (
+                                      <p
+                                        {...props}
+                                        className="message-paragraph"
+                                      >
+                                        {processedChildren}
+                                      </p>
+                                    );
+                                  },
                                   a: ({ node, href, children, ...props }) => {
                                     const mentionMatch =
                                       Array.isArray(children) &&
@@ -692,14 +712,22 @@ function ChatContainer({
                                       </a>
                                     );
                                   },
-                                  text: ({ node, ...props }) => (
-                                    <>{renderTextWithLinks(node.value)}</>
-                                  ),
+                                  text: ({ node, ...props }) => {
+                                    console.log("ReactMarkdown text component called:", {
+                                      nodeValue: node.value,
+                                      hasRenderTextWithLinks: !!renderTextWithLinks,
+                                      renderTextWithLinksType: typeof renderTextWithLinks
+                                    });
+                                    return <>{renderTextWithLinks(node.value)}</>;
+                                  },
                                 }}
                                 remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeRaw]}
                               >
-                                {message.contenu || ""}
+                                {(() => {
+                                  console.log("ReactMarkdown content:", message.contenu);
+                                  return message.contenu || "";
+                                })()}
                               </ReactMarkdown>
 
                               {message.file_url && (
@@ -894,6 +922,48 @@ function ChatContainer({
                     ) : (
                       <div className="supchat-mention-no-results">
                         Aucun utilisateur ne correspond à votre recherche
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {showChannelSuggestions && (
+                <div id="supchat-channels-dropdown">
+                  <div id="supchat-channels-header">
+                    <span>#</span>
+                    <span>Mentionner un canal</span>
+                  </div>
+                  <div id="supchat-channels-list">
+                    {channelSuggestions.length > 0 ? (
+                      channelSuggestions.map((channel, index) => (
+                        <button
+                          key={channel.id}
+                          className={`supchat-channel-item ${
+                            index === activeChannelSuggestionIndex ? "active" : ""
+                          }`}
+                          onClick={() => handleSelectChannelSuggestion(channel)}
+                        >
+                          <div className="supchat-channel-icon-wrapper">
+                            {channel.isPrivate ? (
+                              <FaLock className="supchat-channel-icon" />
+                            ) : (
+                              <FaHashtag className="supchat-channel-icon" />
+                            )}
+                          </div>
+                          <div className="supchat-channel-details">
+                            <div className="supchat-channel-name">
+                              #{channel.name}
+                            </div>
+                            <div className="supchat-channel-info">
+                              {channel.isPrivate ? "Canal privé" : "Canal public"}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="supchat-channel-no-results">
+                        Aucun canal ne correspond à votre recherche
                       </div>
                     )}
                   </div>

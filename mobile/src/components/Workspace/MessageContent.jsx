@@ -2,6 +2,7 @@ import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import StrawpollMessageCard from '../Strawpoll/StrawpollMessageCard';
+import { renderTextWithMentions } from '../../utils/mentionUtils';
 
 const MessageContent = memo(({ 
   message, 
@@ -10,7 +11,8 @@ const MessageContent = memo(({
   themeColors, 
   onOpenAttachment,
   onStrawpollVote,
-  onStrawpollViewResults 
+  onStrawpollViewResults,
+  onUserPress // Nouvelle prop pour gérer les clics sur les mentions
 }) => {
   const parseFileContent = useCallback((content) => {
     if (!content) return null;
@@ -168,13 +170,15 @@ const MessageContent = memo(({
     }
   }
 
-  return (
-    <Text style={[
+  return renderTextWithMentions(
+    message.contenu, 
+    themeColors, 
+    onUserPress,
+    [
       styles.messageText,
       group.isOwn ? styles.ownMessageText : styles.otherMessageText
-    ]}>
-      {message.contenu}
-    </Text>
+    ],
+    group.isOwn // Passer l'information si c'est notre message
   );
 });
 

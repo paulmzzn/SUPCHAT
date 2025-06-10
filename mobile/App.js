@@ -29,7 +29,9 @@ import NewConversationScreen from './src/screens/Messages/NewConversationScreen'
 import DiscoverScreen from './src/screens/Discover/DiscoverScreen';
 import SettingsScreen from './src/screens/Settings/SettingsScreen';
 import ProfileEditScreen from './src/screens/Settings/ProfileEdit/ProfileEditScreen';
+import CGUScreen from './src/screens/Settings/CGUScreen';
 import WorkspaceSettingsScreen from './src/screens/WorkspaceSettings/WorkspaceSettingsScreen'; // Import du nouvel écran
+import RemindersScreen from './src/screens/Reminders/RemindersScreen';
 
 // Custom TabBar
 import TabBar from './src/components/TabBar/TabBar'; 
@@ -61,6 +63,7 @@ function WorkspacesNavigator() {
       <WorkspacesStack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} />
       <WorkspacesStack.Screen name="Workspace" component={WorkspaceScreen} />
       <WorkspacesStack.Screen name="ChannelFiles" component={ChannelFilesScreen} />
+      <WorkspacesStack.Screen name="Reminders" component={RemindersScreen} />
       <WorkspacesStack.Screen name="WorkspaceSettings" component={WorkspaceSettingsScreen} />
       <WorkspacesStack.Screen name="CreateWorkspace" component={CreateWorkspaceScreen} />
     </WorkspacesStack.Navigator>
@@ -117,6 +120,7 @@ function MainAppNavigator() {
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="HomeTabs" component={AppTabs} />
       <AppStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+      <AppStack.Screen name="CGU" component={CGUScreen} />
     </AppStack.Navigator>
   );
 }

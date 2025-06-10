@@ -116,21 +116,31 @@ const ProfileEditScreen = ({ navigation }) => {
         return;
       }
 
-      // Pour le moment, nous n'utilisons pas FormData pour éviter les problèmes avec l'image
-      // En attendant, nous envoyons directement un JSON
+      // Utilisation de FormData pour gérer l'upload d'image
+      const formData = new FormData();
+      formData.append('nom', name);
+      formData.append('bio', bio);
+
+      // Ajouter l'image si elle a été sélectionnée
+      if (imageFile) {
+        formData.append('avatar', {
+          uri: imageFile.uri,
+          type: imageFile.type,
+          name: imageFile.name,
+        });
+      }
+
       const response = await fetch(`${env.API_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
-        body: JSON.stringify({
-          nom: name, // Correction du nom du champ (nom au lieu de name)
-          bio: bio
-        }),
+        body: formData,
       });
 
       if (response.ok) {
+        const responseData = await response.json();
         Alert.alert(
           "Succès", 
           "Profil mis à jour avec succès !",
