@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import env from '../../config/env';
 
 // Components
-import MessageInput from '../../components/MessageInput';
+import MessageInputWithMentions from '../../components/MessageInput/MessageInputWithMentions';
 import AttachmentViewer from '../../components/AttachmentViewer/AttachmentViewer';
 import StrawpollCreationModal from '../../components/Strawpoll/StrawpollCreationModal';
 import StrawpollResultsModal from '../../components/Strawpoll/StrawpollResultsModal';
@@ -213,6 +213,26 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     setStrawpollResultsModalVisible(true);
   }, []);
 
+  // Handler pour les clics sur les mentions d'utilisateurs
+  const handleUserPress = useCallback((userId, userName) => {
+    console.log('Mention cliquée:', userName, 'ID:', userId);
+    
+    // Vérifier si c'est Mistral AI
+    if (userId === '00000000-0000-0000-0000-000000000001') {
+      // Optionnel : action spéciale pour Mistral AI
+      return;
+    }
+
+    // Naviguer vers la conversation privée avec l'utilisateur
+    navigation.navigate('Messages', {
+      screen: 'Conversation',
+      params: {
+        recipientId: userId,
+        recipientName: userName
+      }
+    });
+  }, [navigation]);
+
   const renderConnectionError = useCallback(() => {
     if (!connectionError) return null;
 
@@ -293,11 +313,12 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         onOpenAttachment={handleOpenAttachment}
         onStrawpollVote={handleStrawpollVote}
         onStrawpollViewResults={handleStrawpollViewResults}
+        onUserPress={handleUserPress}
       />
 
       <TypingIndicator typingUsers={typingUsers} styles={styles} />
 
-      <MessageInput
+      <MessageInputWithMentions
         value={newMessage}
         onChangeText={handleInputChange}
         onSend={sendMessage}
@@ -305,9 +326,9 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         inputRef={messageInputRef}
         replyingTo={replyingTo}
         onCancelReply={handleCancelReply}
-        uploadType="workspace-message"
         workspaceId={workspaceId}
         channelId={channelId}
+        uploadType="workspace-message"
         onUploadError={(error) => {
           Toast.show({ type: 'error', text1: 'Erreur', text2: 'Impossible d\'envoyer le fichier' });
         }}

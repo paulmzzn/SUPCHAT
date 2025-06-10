@@ -18,7 +18,8 @@ const MessageList = memo(({
   onEmojiSelect,
   onOpenAttachment,
   onStrawpollVote,
-  onStrawpollViewResults
+  onStrawpollViewResults,
+  onUserPress // Nouvelle prop pour les mentions
 }) => {
   const flatListRef = useRef(null);
 
@@ -85,9 +86,10 @@ const MessageList = memo(({
         onOpenAttachment={onOpenAttachment}
         onStrawpollVote={onStrawpollVote}
         onStrawpollViewResults={onStrawpollViewResults}
+        onUserPress={onUserPress}
       />
     );
-  }, [styles, themeColors, currentUserId, messages, onLongPress, onRemoveReaction, onEmojiSelect, onOpenAttachment, onStrawpollVote, onStrawpollViewResults]);
+  }, [styles, themeColors, currentUserId, messages, onLongPress, onRemoveReaction, onEmojiSelect, onOpenAttachment, onStrawpollVote, onStrawpollViewResults, onUserPress]);
 
   const renderListFooter = useCallback(() => {
     if (!hasMoreMessages && messages.length > 0) {
