@@ -28,14 +28,28 @@ export const useMessageActions = (
 
   const typingTimeoutRef = useRef(null);
 
+  // Convertir les mentions au format visible vers le format interne
+  const convertMentionsForSending = useCallback((text) => {
+    // Rechercher toutes les mentions au format @[nom](id)
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    
+    // Remplacer par le format interne @[id:nom]
+    return text.replace(mentionRegex, (match, nom, id) => {
+      return `@[${id}:${nom}]`;
+    });
+  }, []);
+
   const sendMessage = useCallback(() => {
     if (!newMessage.trim() || !socket) return;
 
-    console.log("📤 Envoi du message:", newMessage.trim());
+    // Convertir les mentions au format attendu par le backend
+    const processedMessage = convertMentionsForSending(newMessage.trim());
+    
+    console.log("📤 Envoi du message:", processedMessage);
 
     const messageData = {
       canal_id: channelId,
-      content: newMessage.trim(),
+      content: processedMessage,
       workspace_id: workspaceId,
       parent_id: replyingTo ? replyingTo.id_message : null,
     };
@@ -45,7 +59,7 @@ export const useMessageActions = (
     setNewMessage('');
     setIsTyping(false);
     setReplyingTo(null);
-  }, [newMessage, socket, currentUserId, channelId, workspaceId, replyingTo]);
+  }, [newMessage, socket, currentUserId, channelId, workspaceId, replyingTo, convertMentionsForSending]);
 
   const handleInputChange = useCallback((text) => {
     setNewMessage(text);
