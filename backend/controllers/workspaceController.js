@@ -45,9 +45,7 @@ export const uploadWorkspaceImages = async (req, res) => {
     const existingWorkspace = await Workspace.findById(workspaceId);
     if (!existingWorkspace) {
       return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    // Upload banner to S3 if provided
+    } // Upload banner to S3 if provided
     if (req.files && req.files.banner && req.files.banner[0]) {
       // Delete old banner if it exists
       if (existingWorkspace.banner_url) {
@@ -58,12 +56,18 @@ export const uploadWorkspaceImages = async (req, res) => {
         }
       }
 
-      // Upload new banner to S3
-      const bannerUrl = await uploadToS3(
-        req.files.banner[0],
-        "workspaces/banners"
-      );
-      updateFields.banner_url = bannerUrl;
+      try {
+        // Upload new banner to S3
+        const bannerResult = await uploadToS3(
+          req.files.banner[0],
+          "workspaces/banners"
+        );
+        updateFields.banner_url = bannerResult.url;
+        console.log("✅ Bannière uploadée avec succès:", bannerResult.url);
+      } catch (err) {
+        console.error("❌ Erreur lors de l'upload de la bannière:", err);
+        // Ne pas interrompre le processus si l'upload échoue
+      }
     }
 
     // Upload icon to S3 if provided
@@ -77,9 +81,18 @@ export const uploadWorkspaceImages = async (req, res) => {
         }
       }
 
-      // Upload new icon to S3
-      const iconUrl = await uploadToS3(req.files.icon[0], "workspaces/icons");
-      updateFields.icon_url = iconUrl;
+      try {
+        // Upload new icon to S3
+        const iconResult = await uploadToS3(
+          req.files.icon[0],
+          "workspaces/icons"
+        );
+        updateFields.icon_url = iconResult.url;
+        console.log("✅ Icône uploadée avec succès:", iconResult.url);
+      } catch (err) {
+        console.error("❌ Erreur lors de l'upload de l'icône:", err);
+        // Ne pas interrompre le processus si l'upload échoue
+      }
     }
 
     // Only update if we have files
@@ -780,11 +793,9 @@ export const respondToJoinRequest = async (req, res) => {
           });
       }
 
-      res
-        .status(200)
-        .json({
-          message: "Demande acceptée. L'utilisateur a été ajouté au workspace.",
-        });
+      res.status(200).json({
+        message: "Demande acceptée. L'utilisateur a été ajouté au workspace.",
+      });
     } else {
       // Rejeter la demande
       await WorkspaceJoinRequest.reject(requestId, adminId, rejectReason);

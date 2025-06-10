@@ -14,15 +14,22 @@ console.log(
   `🔧 Configuration S3: ${s3Config.endpoint} - Région: ${s3Config.region}`
 );
 
-const s3Client = new S3Client({
-  region: s3Config.region,
-  endpoint: s3Config.endpoint,
-  credentials: {
-    accessKeyId: s3Config.accessKeyId,
-    secretAccessKey: s3Config.secretAccessKey,
-  },
-  forcePathStyle: true,
-});
+let s3Client;
+try {
+  s3Client = new S3Client({
+    region: s3Config.region,
+    endpoint: s3Config.endpoint,
+    credentials: {
+      accessKeyId: s3Config.accessKeyId,
+      secretAccessKey: s3Config.secretAccessKey,
+    },
+    forcePathStyle: true,
+  });
+  console.log("✅ Client S3 initialisé avec succès");
+} catch (error) {
+  console.error("❌ Erreur lors de l'initialisation du client S3:", error);
+  s3Client = null;
+}
 
 const BUCKET_NAME = s3Config.bucketName;
 
@@ -30,6 +37,15 @@ const BUCKET_NAME = s3Config.bucketName;
 export const uploadToS3 = async (file, directory = "") => {
   console.log("🚀 Début de uploadToS3");
   try {
+    if (!s3Client) {
+      console.error(
+        "❌ Client S3 non initialisé - impossible de télécharger le fichier"
+      );
+      throw new Error(
+        "Client S3 non disponible - vérifiez la configuration et les secrets"
+      );
+    }
+
     if (!file) {
       console.log("❌ Aucun fichier fourni à uploadToS3");
       throw new Error("Aucun fichier fourni");
@@ -132,6 +148,15 @@ export const uploadToS3 = async (file, directory = "") => {
 // Fonction pour supprimer un fichier de S3
 export const deleteFromS3 = async (fileKey) => {
   try {
+    if (!s3Client) {
+      console.error(
+        "❌ Client S3 non initialisé - impossible de supprimer le fichier"
+      );
+      throw new Error(
+        "Client S3 non disponible - vérifiez la configuration et les secrets"
+      );
+    }
+
     const params = {
       Bucket: BUCKET_NAME,
       Key: fileKey,
