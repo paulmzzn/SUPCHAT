@@ -8,7 +8,6 @@ import {
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
 import Code from "./pages/Code/Code";
-import Dashboard from "./pages/Dashboard/Dashboard";
 import AuthCallback from "./pages/AuthCallback/AuthCallback";
 import Validate from "./pages/Validate/Validate";
 import Workspaces from "./pages/Workspaces/Workspaces";
@@ -217,18 +216,6 @@ function App() {
                         {console.log("[App.jsx] Route /auth/callback rendue")}
                       </script>
                     </>
-                  }
-                />
-                {/* Routes protégées */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /dashboard protégée rendue"
-                      )}
-                      <Dashboard />
-                    </ProtectedRoute>
                   }
                 />
                 <Route
