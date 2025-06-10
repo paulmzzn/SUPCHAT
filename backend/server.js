@@ -15,7 +15,6 @@ import messageRoutes from "./routes/messageRoutes.js";
 import socketManager from "./socket/socketManager.js";
 import reactionRoutes from "./routes/reactionRoutes.js";
 import privateMessageReactionRoutes from "./routes/privateMessageReactionRoutes.js"; // Import des routes pour les réactions aux messages privés
-import dotenv from "dotenv";
 import privateMessageRoutes from "./routes/privateMessageRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js"; // Import attachment routes
 import fichierRoutes from "./routes/fichierRoutes.js"; // Import fichier routes
@@ -75,9 +74,6 @@ global.logger = {
 console.log = (message, ...args) => {
   logger.info(message, ...args);
 };
-
-// Load environment variables at the start
-dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);

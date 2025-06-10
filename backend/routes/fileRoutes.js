@@ -3,24 +3,20 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { getObjectFromS3 } from "../config/s3Service.js"; // Suppression de l'import s3
+import { getObjectFromS3 } from "../config/s3Service.js";
 import AWS from "aws-sdk";
-import dotenv from "dotenv";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
+import { getS3Config } from "../config/secrets.js";
 
-// Charger les variables d'environnement
-dotenv.config();
-
-// Configurer S3 directement dans ce fichier
+// Configuration S3 sécurisée avec secrets Docker
+const s3ConfigSecrets = getS3Config();
 const s3Config = {
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
+  region: s3ConfigSecrets.region,
+  endpoint: s3ConfigSecrets.endpoint,
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID || "REDACTED",
-    secretAccessKey:
-      process.env.SCW_SECRET_ACCESS_KEY ||
-      "REDACTED",
+    accessKeyId: s3ConfigSecrets.accessKeyId,
+    secretAccessKey: s3ConfigSecrets.secretAccessKey,
   },
   s3ForcePathStyle: true, // Requis pour la compatibilité avec Scaleway S3
 };
@@ -150,11 +146,9 @@ router.get("/*", (req, res) => {
 router.get("/content/:path(*)", verifyToken, async (req, res) => {
   try {
     const filePath = req.params.path;
-    console.log(`[FileRoutes] Demande de contenu du fichier: ${filePath}`);
-
-    // Vérifier que le fichier existe dans S3
+    console.log(`[FileRoutes] Demande de contenu du fichier: ${filePath}`); // Vérifier que le fichier existe dans S3
     const params = {
-      Bucket: process.env.S3_BUCKET_NAME || "supchat-bucket",
+      Bucket: s3ConfigSecrets.bucketName,
       Key: filePath,
     };
 

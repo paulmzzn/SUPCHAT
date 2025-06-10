@@ -254,9 +254,10 @@ export const getOAuthConfig = () => {
 export const getEmailConfig = () => {
   return {
     user: getSecret("email_user", "EMAIL_USER"),
-    pass: getSecret("email_password", "EMAIL_PASSWORD"),
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: process.env.EMAIL_PORT || 587,
+    password: getSecret("email_password", "EMAIL_PASSWORD"), // Changé de 'pass' à 'password'
+    host: process.env.EMAIL_HOST || "mail86.lwspanel.com", // Configuration LWS
+    port: parseInt(process.env.EMAIL_PORT || "465", 10), // Port sécurisé LWS
+    secure: process.env.EMAIL_SECURE !== "false", // true par défaut pour le port 465
   };
 };
 

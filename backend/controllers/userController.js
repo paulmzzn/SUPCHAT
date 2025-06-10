@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import sendInvitationEmail from "../config/emailService.js";
 import sendValidationEmail from "../config/validationEmailService.js"; // Import the validation email service
 import sendResetPasswordEmail from "../config/resetPasswordEmailService.js";
-import dotenv from "dotenv";
 import pool from "../config/dbConnection.js";
 import Fichier from "../models/Fichier.js";
 import Message from "../models/Message.js";
@@ -12,9 +11,6 @@ import MessagePrive from "../models/MessagePrive.js";
 import WorkspaceFavoris from "../models/WorkspaceFavoris.js";
 import { uploadToS3 } from "../config/s3Config.js";
 import { getJwtSecret, getS3Config } from "../config/secrets.js";
-
-// Charger les variables d'environnement
-dotenv.config();
 
 // Utiliser le secret JWT depuis les secrets Docker
 const SECRET_KEY = getJwtSecret();

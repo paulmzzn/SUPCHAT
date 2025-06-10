@@ -4,6 +4,10 @@ import Fichier from "../models/Fichier.js";
 import { uploadToS3 } from "../config/s3Config.js";
 import pool from "../config/dbConnection.js"; // Ajout de l'import manquant
 import path from "path";
+import { getS3Config } from "../config/secrets.js";
+
+// Configuration S3 sécurisée
+const s3Config = getS3Config();
 
 // Créer un nouveau message
 export const createMessage = async (req, res) => {
@@ -276,9 +280,6 @@ export const uploadFile = async (req, res) => {
       console.log("✅ Fichier uploadé avec succès vers S3:", s3Result);
 
       // Construction de l'URL complète du fichier
-      const s3Endpoint =
-        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-      const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
       const fullFileUrl = s3Result.url; // Utiliser l'URL complète retournée par uploadToS3
 
       console.log("🔗 URL complète du fichier:", fullFileUrl);
@@ -388,7 +389,7 @@ export const uploadGoogleDriveFile = async (req, res) => {
       method: req.method,
       url: req.originalUrl,
       body: req.body,
-      user: req.user?.id
+      user: req.user?.id,
     });
 
     const {
@@ -534,7 +535,7 @@ export const uploadGoogleDriveFile = async (req, res) => {
 
     // Associer le fichier au message
     await Fichier.addToMessage(newMessage.id_message, newFichier.id_fichier);
-    console.log("[MessageController] Association fichier-message réussie");    // Récupérer le message complet avec pièces jointes
+    console.log("[MessageController] Association fichier-message réussie"); // Récupérer le message complet avec pièces jointes
     const completeMessage = await MessageModel.getById(newMessage.id_message);
 
     // Récupérer les informations de l'utilisateur pour l'enrichissement du message
@@ -552,28 +553,30 @@ export const uploadGoogleDriveFile = async (req, res) => {
       ...completeMessage,
       nom: user.nom,
       photo_de_profil: user.photo_de_profil,
-    };    // Envoyer une notification en temps réel via WebSocket
+    }; // Envoyer une notification en temps réel via WebSocket
     const io = req.app.get("io");
     if (io) {
-      console.log("[MessageController] 📡 Émission du message Google Drive via Socket.IO");
+      console.log(
+        "[MessageController] 📡 Émission du message Google Drive via Socket.IO"
+      );
       console.log("[MessageController] 📤 Canal cible:", canalId);
       console.log("[MessageController] 🏢 Workspace:", workspaceId);
       console.log("[MessageController] 📝 Message enrichi:", {
         id: enrichedMessage.id_message,
         contenu: enrichedMessage.contenu,
         nom: enrichedMessage.nom,
-        hasAttachments: enrichedMessage.attachments?.length > 0
+        hasAttachments: enrichedMessage.attachments?.length > 0,
       });
-      
+
       // Vérifier combien de clients sont connectés à ce canal
       const room = io.sockets.adapter.rooms.get(`${canalId}`);
       const clientCount = room ? room.size : 0;
       console.log("[MessageController] 👥 Clients connectés au canal:", {
         canalId: canalId,
         clientCount: clientCount,
-        clients: room ? Array.from(room) : []
+        clients: room ? Array.from(room) : [],
       });
-      
+
       io.to(`${canalId}`).emit("message", enrichedMessage);
       console.log("[MessageController] ✅ Notification WebSocket envoyée");
     } else {
@@ -677,12 +680,14 @@ export const markChannelAsRead = async (req, res) => {
 export const getUnreadMessagesByWorkspace = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     if (!userId) {
       return res.status(400).json({ message: "ID utilisateur requis" });
     }
 
-    console.log(`🏢 Récupération des messages non lus par workspace pour l'utilisateur ${userId}`);
+    console.log(
+      `🏢 Récupération des messages non lus par workspace pour l'utilisateur ${userId}`
+    );
 
     // Récupérer tous les workspaces de l'utilisateur avec leurs canaux non lus
     const query = `
@@ -731,22 +736,25 @@ export const getUnreadMessagesByWorkspace = async (req, res) => {
 
     // Organiser les résultats par workspace
     const workspaces = {};
-    rows.forEach(row => {
+    rows.forEach((row) => {
       workspaces[row.id_workspace] = {
         name: row.workspace_name,
         totalUnread: parseInt(row.total_unread),
-        channels: row.channels || {}
+        channels: row.channels || {},
       };
     });
 
     const response = {
       workspaces,
-      total: Object.values(workspaces).reduce((sum, ws) => sum + ws.totalUnread, 0)
+      total: Object.values(workspaces).reduce(
+        (sum, ws) => sum + ws.totalUnread,
+        0
+      ),
     };
 
     console.log(`🏢 Réponse workspace unread:`, {
       workspaceCount: Object.keys(workspaces).length,
-      totalUnread: response.total
+      totalUnread: response.total,
     });
 
     res.status(200).json(response);

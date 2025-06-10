@@ -1,0 +1,77 @@
+# =================================
+# FICHIERS SENSIBLES ET SECRETS
+# =================================
+.env
+.env.*
+*.env
+secrets/
+*.key
+*.pem
+*.p12
+
+# =================================
+# LOGS ET DONNÉES
+# =================================
+logs/
+*.log
+uploads/
+backend/uploads/
+backend/logs/
+*.sqlite
+*.db
+
+# =================================
+# NODE.JS
+# =================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# =================================
+# REACT BUILD
+# =================================
+frontend/build/
+frontend/dist/
+*.tgz
+*.tar.gz
+
+# =================================
+# DOCKER
+# =================================
+.docker/
+docker-compose.override.yml
+
+# =================================
+# DÉVELOPPEMENT
+# =================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =================================
+# BACKUPS ET DUMPS
+# =================================
+*.sql
+*.dump
+backup/
+backups/
+
+# =================================
+# CERTIFICATS SSL
+# =================================
+ssl/
+*.crt
+*.csr
+
+# =================================
+# CONFIGURATION LOCALE
+# =================================
+config/local.js
+config/local.json

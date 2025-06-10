@@ -10,8 +10,9 @@ services:
     secrets:
       - db_user
       - db_password
-    ports:
-      - "5432:5432"
+    # PostgreSQL ne doit PAS être exposé publiquement en production
+    # ports:
+    #   - "5432:5432"  # Commenté pour la sécurité
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db/init-docker.sql:/docker-entrypoint-initdb.d/init-docker.sql:ro
