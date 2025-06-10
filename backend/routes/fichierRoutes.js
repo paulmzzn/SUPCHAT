@@ -8,27 +8,29 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
-import { verifyToken, checkWorkspaceMembership } from "../middleware/authMiddleware.js";
+import {
+  verifyToken,
+  checkWorkspaceMembership,
+} from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 import path from "path";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { getS3Config } from "../config/secrets.js";
 
 const router = express.Router();
 
-// Configuration S3
+// Configuration S3 sécurisée avec secrets Docker
+const s3Config = getS3Config();
 const s3Client = new S3Client({
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
+  region: s3Config.region,
+  endpoint: s3Config.endpoint,
   credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID,
-    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY,
+    accessKeyId: s3Config.accessKeyId,
+    secretAccessKey: s3Config.secretAccessKey,
   },
   forcePathStyle: true, // Requis pour Scaleway
 });
 
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "supchat-files";
+const BUCKET_NAME = s3Config.bucketName;
 
 // Configuration de multer pour le stockage en mémoire (avant envoi vers S3)
 const storage = multer.memoryStorage();
@@ -118,11 +120,11 @@ router.get("/user", verifyToken, async (req, res) => {
     const fichiers = await Fichier.getByUserId(userId);
 
     // Générer des URLs S3 complètes pour chaque fichier
-    const endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
-    const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
     const fichiersWithUrls = fichiers.map((fichier) => ({
       ...fichier,
-      url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+      url: `${s3Config.endpoint.replace(/\/$/, "")}/${s3Config.bucketName}/${
+        fichier.url
+      }`,
     }));
 
     res.status(200).json(fichiersWithUrls);
@@ -139,31 +141,36 @@ router.get("/user", verifyToken, async (req, res) => {
 });
 
 // Route pour récupérer les fichiers d'un workspace
-router.get("/workspace/:workspaceId", verifyToken, checkWorkspaceMembership, async (req, res) => {
-  try {
-    const { workspaceId } = req.params;
-    const fichiers = await Fichier.getByWorkspaceId(workspaceId);
+router.get(
+  "/workspace/:workspaceId",
+  verifyToken,
+  checkWorkspaceMembership,
+  async (req, res) => {
+    try {
+      const { workspaceId } = req.params;
+      const fichiers = await Fichier.getByWorkspaceId(workspaceId);
 
-    // Générer des URLs S3 complètes pour chaque fichier
-    const endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
-    const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
-    const fichiersWithUrls = fichiers.map((fichier) => ({
-      ...fichier,
-      url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
-    }));
+      // Générer des URLs S3 complètes pour chaque fichier
+      const fichiersWithUrls = fichiers.map((fichier) => ({
+        ...fichier,
+        url: `${s3Config.endpoint.replace(/\/$/, "")}/${s3Config.bucketName}/${
+          fichier.url
+        }`,
+      }));
 
-    res.status(200).json(fichiersWithUrls);
-  } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des fichiers du workspace:",
-      error
-    );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des fichiers",
-      error: error.message,
-    });
+      res.status(200).json(fichiersWithUrls);
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des fichiers du workspace:",
+        error
+      );
+      res.status(500).json({
+        message: "Erreur lors de la récupération des fichiers",
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 // Route pour récupérer un fichier spécifique
 router.get("/:fichierIdOuNom", verifyToken, async (req, res) => {

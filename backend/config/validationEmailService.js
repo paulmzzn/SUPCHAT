@@ -1,15 +1,23 @@
 import nodemailer from "nodemailer";
+import { getEmailConfig } from "./secrets.js";
+
+// Configuration sécurisée de l'email
+const emailConfig = getEmailConfig();
+
+console.log(
+  `📧 Configuration email validation: ${emailConfig.user}@${emailConfig.host}:${emailConfig.port}`
+);
 
 const transporter = nodemailer.createTransport({
-  host: "mail86.lwspanel.com", // LWS SMTP server
-  port: 465, // SMTP port (usually 587 for TLS)
-  secure: true, // true for 465, false for other ports
+  host: emailConfig.host,
+  port: emailConfig.port,
+  secure: emailConfig.secure,
   auth: {
-    user: "noreply@supchat.fr", // Your LWS email address
-    pass: "Supchat!2025", // Your LWS email password
+    user: emailConfig.user,
+    pass: emailConfig.password,
   },
   tls: {
-    rejectUnauthorized: false, // Allow self-signed certificates
+    rejectUnauthorized: false,
   },
 });
 

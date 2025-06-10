@@ -3,8 +3,6 @@ import s3Client from "../config/s3Config.js";
 import { getS3Config } from "../config/secrets.js";
 import path from "path";
 import { Readable } from "stream";
-import dotenv from "dotenv";
-dotenv.config();
 
 const s3Config = getS3Config();
 const BUCKET_NAME = s3Config.bucketName;
@@ -81,11 +79,9 @@ export const proxyS3Image = async (req, res) => {
       return res.status(400).json({ error: "Format d'URL S3 non reconnu" });
     }
 
-    console.log(`[fileController] Clé extraite: ${fileKey}`);
-
-    // Créer la commande pour récupérer l'objet depuis S3
+    console.log(`[fileController] Clé extraite: ${fileKey}`); // Créer la commande pour récupérer l'objet depuis S3
     const command = new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME || "s3-supchat",
+      Bucket: BUCKET_NAME, // Utilise les secrets Docker
       Key: fileKey,
     });
 
