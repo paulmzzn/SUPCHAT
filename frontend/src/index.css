@@ -14,3 +14,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-left: 100px; /* Match sidebar width */
+}
