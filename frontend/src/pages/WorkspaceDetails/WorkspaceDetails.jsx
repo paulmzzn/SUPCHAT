@@ -568,6 +568,10 @@ function WorkspaceDetails() {
           // Supprimer complètement la vérification d'erreur qui cause le warning
           // car le fichier passe de toute façon
           const data = await response.json().catch(() => null);
+          // Supprimer le message temporaire d'upload
+          setMessages((prev) =>
+            prev.filter((msg) => msg.id_message !== tempMsgId)
+          );
 
           // Réinitialiser l'input de fichier
           if (event.target) {

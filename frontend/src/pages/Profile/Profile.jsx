@@ -298,21 +298,18 @@ function Profile() {
                 {user.name || user.nom || "Utilisateur"}
               </h1>
               <div className="profile-meta">
-                {/* N'affiche pas le statut si c'est mon propre profil */}
-                {currentUserId !== userId && (
-                  <div className="profile-status">
-                    <span
-                      className={`status-indicator ${
-                        user.status === "online"
-                          ? "status-online"
-                          : "status-offline"
-                      }`}
-                    ></span>
-                    <span className="status-text">
-                      {user.status === "online" ? "En ligne" : "Hors ligne"}
-                    </span>
-                  </div>
-                )}
+                <div className="profile-status">
+                  <span
+                    className={`status-indicator ${
+                      user.status === "online"
+                        ? "status-online"
+                        : "status-offline"
+                    }`}
+                  ></span>
+                  <span className="status-text">
+                    {user.status === "online" ? "En ligne" : "Hors ligne"}
+                  </span>
+                </div>
 
                 {currentUserId !== userId && (
                   <div className="profile-actions">
