@@ -1,4 +1,5 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import s3Client from "../config/s3Config.js";
 import { getS3Config } from "../config/secrets.js";
 import path from "path";
 import { Readable } from "stream";
@@ -6,15 +7,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const s3Config = getS3Config();
-const s3Client = new S3Client({
-  region: s3Config.region,
-  endpoint: s3Config.endpoint,
-  credentials: {
-    accessKeyId: s3Config.accessKeyId,
-    secretAccessKey: s3Config.secretAccessKey,
-  },
-  forcePathStyle: true,
-});
 const BUCKET_NAME = s3Config.bucketName;
 
 // Fonction pour récupérer un fichier depuis S3 et le servir au client

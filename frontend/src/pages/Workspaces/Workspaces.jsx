@@ -173,15 +173,20 @@ function Workspaces() {
 
       const data = await response.json();
 
-      const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";      const transformedWorkspaces = data.map((workspace) => ({
+      const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
+      const transformedWorkspaces = data.map((workspace) => ({
         id: workspace.id_workspace,
         name: workspace.nom,
         description: workspace.description || "No description available",
         banner: workspace.banner_url
-          ? (workspace.banner_url.startsWith('http') ? workspace.banner_url : S3_BASE_URL + workspace.banner_url)
+          ? workspace.banner_url.startsWith("http")
+            ? workspace.banner_url
+            : S3_BASE_URL + workspace.banner_url
           : "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
         icon: workspace.icon_url
-          ? (workspace.icon_url.startsWith('http') ? workspace.icon_url : S3_BASE_URL + workspace.icon_url)
+          ? workspace.icon_url.startsWith("http")
+            ? workspace.icon_url
+            : S3_BASE_URL + workspace.icon_url
           : "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
         onlineUsers: workspace.online_users || 0,
         totalMembers: workspace.total_members || 0,
@@ -516,12 +521,13 @@ function Workspaces() {
                           style={{ backgroundImage: `url(${workspace.icon})` }}
                         >
                           {unread > 0 && (
-                            <NotificationBadge count={unread} className="workspace-badge" />
+                            <NotificationBadge
+                              count={unread}
+                              className="workspace-badge"
+                            />
                           )}
                         </div>
-                        <span className="favorite-name">
-                          {workspace.name}
-                        </span>
+                        <span className="favorite-name">{workspace.name}</span>
                       </div>
                     );
                   })

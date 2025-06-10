@@ -238,15 +238,21 @@ CREATE TABLE public.workspace_invitations (
 CREATE TABLE public.message_prive (
     id_message_prive uuid DEFAULT public.random_uuid() NOT NULL,
     contenu text NOT NULL,
-    fk_utilisateur_expediteur uuid NOT NULL,
-    fk_utilisateur_destinataire uuid NOT NULL,
+    fk_expediteur uuid NOT NULL,
+    fk_destinataire uuid NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     is_read boolean DEFAULT false,
     parent_id uuid,
+    pieces_jointes text,
+    is_deleted boolean DEFAULT false,
+    date_lecture timestamp without time zone,
+    date_creation timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    date_modification timestamp without time zone,
+    date_envoi timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT message_prive_pkey PRIMARY KEY (id_message_prive),
-    CONSTRAINT message_prive_fk_utilisateur_expediteur_fkey FOREIGN KEY (fk_utilisateur_expediteur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
-    CONSTRAINT message_prive_fk_utilisateur_destinataire_fkey FOREIGN KEY (fk_utilisateur_destinataire) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
+    CONSTRAINT message_prive_fk_expediteur_fkey FOREIGN KEY (fk_expediteur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
+    CONSTRAINT message_prive_fk_destinataire_fkey FOREIGN KEY (fk_destinataire) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
     CONSTRAINT message_prive_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.message_prive(id_message_prive) ON DELETE CASCADE
 );
 
@@ -547,6 +553,57 @@ INSERT INTO public.permission (id_permission, type_permission) VALUES
 (public.random_uuid(), 'MANAGE_PERMISSIONS')
 ON CONFLICT (id_permission) DO NOTHING;
 
+-- =====================================================
+-- INSERTION DES UTILISATEURS SYSTÈME
+-- =====================================================
+
+-- Insertion des utilisateurs système par défaut
+INSERT INTO public.utilisateur (
+    id_utilisateur, 
+    nom, 
+    email, 
+    mot_de_passe, 
+    photo_de_profil, 
+    fk_statut, 
+    is_activated, 
+    bio, 
+    google_drive_enabled
+) VALUES 
+(
+    '00000000-0000-0000-0000-000000000001',
+    'Mistral AI',
+    'bot@mistral.ai',
+    'dummy_password',
+    'https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp',
+    1,
+    true,
+    NULL,
+    false
+),
+(
+    '00000000-0000-0000-0000-000000000002',
+    'MistralOCR',
+    'bot-ocr@mistral.ai',
+    'dummy_password_ocr',
+    'https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp',
+    1,
+    true,
+    'Je suis l''assistant OCR de Mistral AI.',
+    false
+),
+(
+    '00000000-0000-0000-0000-000000000003',
+    'System',
+    'system',
+    'dummy_password_ocr',
+    NULL,
+    1,
+    true,
+    'System',
+    false
+)
+ON CONFLICT (id_utilisateur) DO NOTHING;
+
 -- ===========================================
 -- CRÉATION DE L'UTILISATEUR ADMIN SI ABSENT
 -- ===========================================
@@ -576,8 +633,8 @@ CREATE INDEX IF NOT EXISTS idx_message_utilisateur ON public.message(fk_utilisat
 CREATE INDEX IF NOT EXISTS idx_message_created_at ON public.message(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_membre_workspace_workspace ON public.membre_workspace(fk_workspace);
 CREATE INDEX IF NOT EXISTS idx_membre_workspace_utilisateur ON public.membre_workspace(fk_utilisateur);
-CREATE INDEX IF NOT EXISTS idx_message_prive_expediteur ON public.message_prive(fk_utilisateur_expediteur);
-CREATE INDEX IF NOT EXISTS idx_message_prive_destinataire ON public.message_prive(fk_utilisateur_destinataire);
+CREATE INDEX IF NOT EXISTS idx_message_prive_expediteur ON public.message_prive(fk_expediteur);
+CREATE INDEX IF NOT EXISTS idx_message_prive_destinataire ON public.message_prive(fk_destinataire);
 CREATE INDEX IF NOT EXISTS idx_notification_utilisateur ON public.notification(fk_utilisateur);
 CREATE INDEX IF NOT EXISTS idx_notification_is_read ON public.notification(is_read);
 
