@@ -68,9 +68,9 @@ if ($services -match "Up") {
     Write-Host "✅ Services démarrés avec succès" -ForegroundColor Green
     Write-Host ""
     Write-Host "📋 INFORMATIONS DE DÉPLOIEMENT:" -ForegroundColor Cyan
-    Write-Host "- Frontend: http://localhost" -ForegroundColor White
-    Write-Host "- Backend API: http://localhost:3000/api" -ForegroundColor White
-    Write-Host "- Health Check: http://localhost:3000/health" -ForegroundColor White
+    Write-Host "- Frontend: http://185.98.137.166" -ForegroundColor White
+    Write-Host "- Backend API: http://185.98.137.166:3000/api" -ForegroundColor White
+    Write-Host "- Health Check: http://185.98.137.166:3000/health" -ForegroundColor White
     Write-Host ""
     Write-Host "🔒 SÉCURITÉ:" -ForegroundColor Cyan
     Write-Host "- PostgreSQL: Non exposé publiquement ✅" -ForegroundColor Green

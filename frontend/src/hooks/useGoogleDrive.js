@@ -1,7 +1,7 @@
 // Hook réutilisable pour l'intégration Google Drive
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "../config/config";
 
 // Configuration Google Drive API
 const GOOGLE_DRIVE_CONFIG = {

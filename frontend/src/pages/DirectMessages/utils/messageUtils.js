@@ -11,7 +11,7 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "../../../config/config";
 
 /**
  * Formate une date de message
@@ -126,7 +126,6 @@ export const getCompleteFileUrl = (url) => {
   }
 
   // Pour les autres URLs relatives, utiliser l'API backend
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
   const apiUrl = `${API_URL}${
     cleanUrl.startsWith("/") ? "" : "/api/files/"
   }${cleanUrl}`;

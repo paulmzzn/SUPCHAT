@@ -2,8 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-
+import { API_URL } from "../../../config/config";
 /**
  * Hook pour gérer les mentions d'utilisateurs dans les messages
  * @returns {Object} - États et fonctions liés aux mentions

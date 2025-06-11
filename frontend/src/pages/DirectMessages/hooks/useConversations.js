@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
 // import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "../../../config/config";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs

@@ -67,9 +67,9 @@ echo.
 echo ✅ RECONSTRUCTION TERMINEE !
 echo.
 echo 🌐 URLs de l'application:
-echo    Frontend: http://localhost:3000
-echo    Backend:  http://localhost:5000  
-echo    PgAdmin:  http://localhost:8080
+echo    Frontend: http://185.98.137.166:3000
+echo    Backend:  http://185.98.137.166:5000  
+echo    PgAdmin:  http://185.98.137.166:8080
 echo.
 echo 📝 Note: La base de donnees a ete completement recreee avec le nouveau schema.
 echo    Les utilisateurs systeme (Mistral AI, MistralOCR, System) ont ete ajoutes.
