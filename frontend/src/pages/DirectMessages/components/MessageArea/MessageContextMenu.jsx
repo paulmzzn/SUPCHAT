@@ -1,6 +1,6 @@
 // Composant pour le menu contextuel des messages
 import React from "react";
-import { FaReply, FaRegSmile } from "react-icons/fa";
+import { FaReply, FaRegSmile, FaEdit, FaTrashAlt } from "react-icons/fa";
 
 /**
  * Menu contextuel pour les actions sur un message
@@ -67,7 +67,7 @@ const MessageContextMenu = ({
                 onClose();
               }}
             >
-              ✏️ Modifier
+              <FaEdit className="dm-context-menu-icon" /> Modifier
             </div>
             <div
               className="dm-context-menu-item"
@@ -75,9 +75,8 @@ const MessageContextMenu = ({
                 onDelete && onDelete(message);
                 onClose();
               }}
-              style={{ color: "red" }}
             >
-              🗑️ Supprimer
+              <FaTrashAlt className="dm-context-menu-icon" /> Supprimer
             </div>
           </>
         )}
