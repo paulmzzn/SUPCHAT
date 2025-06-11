@@ -38,12 +38,15 @@ export const getFileFromS3 = async (req, res) => {
 
     // Définir les en-têtes pour le téléchargement
     res.setHeader("Content-Type", ContentType || "application/octet-stream");
-    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`); // Convertir le stream en buffer pour l'envoyer au client
+    const chunks = [];
+    for await (const chunk of Body) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
 
-    // Convertir le corps de la réponse en stream lisible et l'envoyer au client
-    const readableStream =
-      Body instanceof Readable ? Body : Readable.from(Body);
-    readableStream.pipe(res);
+    // Envoyer le fichier au client
+    res.send(buffer);
   } catch (error) {
     console.error(
       "Erreur lors de la récupération du fichier depuis S3:",
@@ -101,12 +104,15 @@ export const proxyS3Image = async (req, res) => {
 
     if (ContentLength) {
       res.setHeader("Content-Length", ContentLength);
+    } // Convertir le stream en buffer pour l'envoyer au client
+    const chunks = [];
+    for await (const chunk of Body) {
+      chunks.push(chunk);
     }
+    const buffer = Buffer.concat(chunks);
 
-    // Convertir le corps de la réponse en stream lisible et l'envoyer au client
-    const readableStream =
-      Body instanceof Readable ? Body : Readable.from(Body);
-    readableStream.pipe(res);
+    // Envoyer l'image au client
+    res.send(buffer);
 
     console.log(
       `[fileController] ✅ Image proxy servie avec succès: ${fileKey}`
