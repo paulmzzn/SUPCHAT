@@ -60,4 +60,4 @@ newSocket.on("reconnect_error", (error) => {
 });
 
 // Remplacer l'adresse IP par une valeur plus sûre :
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "./config/config";

@@ -23,7 +23,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration par défaut
-DEFAULT_DOMAIN="localhost"
+DEFAULT_DOMAIN="185.98.137.166"
 DEFAULT_EMAIL="admin@example.com"
 DEFAULT_PROJECT_DIR="/opt/supchat"
 DEFAULT_COMPOSE_FILE="docker-compose.vps.yml"
@@ -312,7 +312,7 @@ check_service() {
     local service_name=$1
     local port=$2
     
-    if curl -f -s "http://localhost:$port/health" > /dev/null 2>&1; then
+    if curl -f -s "http://185.98.137.166:$port/health" > /dev/null 2>&1; then
         echo "✅ $service_name: OK"
     else
         echo "❌ $service_name: ERREUR"
