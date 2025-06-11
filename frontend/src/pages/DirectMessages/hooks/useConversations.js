@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { safeJSONParse } from "../utils/jsonUtils";
 // import { useSocket } from "../../context/SocketContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.69:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 /**
  * Hook pour gérer les conversations et les utilisateurs
@@ -157,7 +157,9 @@ export const useConversations = (options = {}) => {
   const fetchConversations = useCallback(async () => {
     // Éviter les appels multiples en parallèle
     if (loading) {
-      console.log("[useConversations] Appel ignoré - récupération déjà en cours");
+      console.log(
+        "[useConversations] Appel ignoré - récupération déjà en cours"
+      );
       return;
     }
 
@@ -468,7 +470,7 @@ export const useConversations = (options = {}) => {
   // Effet pour initialiser l'application et charger les conversations une seule fois
   useEffect(() => {
     let isInitialized = false;
-    
+
     // Récupérer d'abord l'ID utilisateur
     try {
       const token = localStorage.getItem("token");

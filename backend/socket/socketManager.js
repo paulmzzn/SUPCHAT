@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import MessageModel from "../models/Message.js";
 import Reaction from "../models/Reaction.js";
 import MessagePrive from "../models/MessagePrive.js";
@@ -8,6 +7,7 @@ import Fichier from "../models/Fichier.js";
 import Canal from "../models/Canal.js"; // Importation directe du modèle Canal
 import { deleteFromS3 } from "../config/s3Config.js";
 import pool from "../config/dbConnection.js";
+import { getJwtSecret, getMistralApiKey } from "../config/secrets.js"; // Import des fonctions secrets
 import {
   processMistralChannelQuestion,
   processMistralPrivateQuestion,
@@ -19,11 +19,8 @@ import {
 // Assurez-vous que fetch est disponible (Node >= 18 ou import node-fetch)
 // import fetch from 'node-fetch'; // Décommentez si Node < 18 et node-fetch est installé
 
-// Charger les variables d'environnement
-dotenv.config();
-
-const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY; // Charger la clé API Mistral
+const SECRET_KEY = getJwtSecret();
+const MISTRAL_API_KEY = getMistralApiKey(); // Charger la clé API Mistral
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"; // URL de l'API Mistral
 
 // Ajouter l'UUID système pour les messages système
@@ -108,7 +105,9 @@ const socketManager = (io) => {
 
       // *** NOUVEAU : Rejoindre la room personnelle pour recevoir les mises à jour de compteurs ***
       socket.join(`user:${userId}`);
-      console.log(`🔔 Socket.IO: Utilisateur ${userId} rejoint sa room personnelle user:${userId}`);
+      console.log(
+        `🔔 Socket.IO: Utilisateur ${userId} rejoint sa room personnelle user:${userId}`
+      );
 
       // Informer tous les workspaces de l'utilisateur qu'il est en ligne
       socket.on("userJoinedWorkspaces", ({ workspaces }) => {
@@ -774,32 +773,39 @@ const socketManager = (io) => {
                 "SELECT nom FROM workspace WHERE id_workspace = $1",
                 [finalWorkspaceId]
               );
-              
+
               if (workspaceQuery.rows.length > 0) {
                 workspaceName = workspaceQuery.rows[0].nom;
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du nom du workspace pour mention:", err);
+              console.error(
+                "Erreur lors de la récupération du nom du workspace pour mention:",
+                err
+              );
             }
 
             // Récupérer les informations de l'utilisateur qui fait la mention
             let senderProfile = null;
             let photoUrl = null;
             let senderName = "Utilisateur";
-            
+
             try {
               const userQuery = await pool.query(
                 "SELECT nom, username, photo_de_profil FROM utilisateur WHERE id_utilisateur = $1",
                 [socket.user.id]
               );
-              
+
               if (userQuery.rows.length > 0) {
                 senderProfile = userQuery.rows[0];
                 photoUrl = senderProfile.photo_de_profil;
-                senderName = senderProfile.nom || senderProfile.username || "Utilisateur";
+                senderName =
+                  senderProfile.nom || senderProfile.username || "Utilisateur";
               }
             } catch (err) {
-              console.error("Erreur lors de la récupération du profil pour mention:", err);
+              console.error(
+                "Erreur lors de la récupération du profil pour mention:",
+                err
+              );
             }
 
             // Envoyer la notification sur la room privée de l'utilisateur
@@ -823,8 +829,10 @@ const socketManager = (io) => {
           // Récupérer tous les membres du workspace SAUF l'expéditeur du message
           try {
             if (finalWorkspaceId) {
-              console.log(`🔔 Socket.IO: Mise à jour des compteurs pour workspace ${finalWorkspaceId}, canal ${canal_id}`);
-              
+              console.log(
+                `🔔 Socket.IO: Mise à jour des compteurs pour workspace ${finalWorkspaceId}, canal ${canal_id}`
+              );
+
               const workspaceMembersQuery = await pool.query(
                 `SELECT mw.fk_utilisateur as user_id 
                  FROM membre_workspace mw 
@@ -833,16 +841,19 @@ const socketManager = (io) => {
               );
 
               const workspaceMembers = workspaceMembersQuery.rows;
-              console.log(`🔔 Socket.IO: ${workspaceMembers.length} membres à notifier dans le workspace ${finalWorkspaceId}`);
+              console.log(
+                `🔔 Socket.IO: ${workspaceMembers.length} membres à notifier dans le workspace ${finalWorkspaceId}`
+              );
 
               // Pour chaque membre du workspace (sauf l'expéditeur)
               for (const member of workspaceMembers) {
                 const memberId = member.user_id;
-                
+
                 try {
                   // Récupérer les compteurs mis à jour pour ce membre
-                  const updatedCounts = await MessageModel.getUnreadCountByChannel(memberId);
-                  
+                  const updatedCounts =
+                    await MessageModel.getUnreadCountByChannel(memberId);
+
                   // Calculer le total des messages non lus
                   let total = 0;
                   if (updatedCounts && updatedCounts.channels) {
@@ -853,19 +864,30 @@ const socketManager = (io) => {
 
                   // Émettre la mise à jour des compteurs vers ce membre spécifique
                   // Utiliser l'ID utilisateur comme room pour cibler précisément chaque membre
-                  io.to(`user:${memberId}`).emit("unreadChannelMessagesUpdated", {
-                    channels: updatedCounts.channels || {},
-                    total: total,
-                  });
+                  io.to(`user:${memberId}`).emit(
+                    "unreadChannelMessagesUpdated",
+                    {
+                      channels: updatedCounts.channels || {},
+                      total: total,
+                    }
+                  );
 
-                  console.log(`🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total}`);
+                  console.log(
+                    `🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total}`
+                  );
                 } catch (memberError) {
-                  console.error(`🔔 Socket.IO: Erreur mise à jour compteurs pour membre ${memberId}:`, memberError);
+                  console.error(
+                    `🔔 Socket.IO: Erreur mise à jour compteurs pour membre ${memberId}:`,
+                    memberError
+                  );
                 }
               }
             }
           } catch (workspaceError) {
-            console.error("🔔 Socket.IO: Erreur lors de la mise à jour des compteurs workspace:", workspaceError);
+            console.error(
+              "🔔 Socket.IO: Erreur lors de la mise à jour des compteurs workspace:",
+              workspaceError
+            );
           }
         } else {
           console.warn(
@@ -939,7 +961,9 @@ const socketManager = (io) => {
             .replace(/00000000-0000-0000-0000-000000000001/g, "")
             .trim();
 
-          console.log(`Socket.IO: Question pour Mistral AI avec historique: "${question}"`);
+          console.log(
+            `Socket.IO: Question pour Mistral AI avec historique: "${question}"`
+          );
 
           // *** Envoyer l'indicateur "Mistral est en train d'écrire..." ***
           io.to(`${canal_id}`).emit("typing", {
@@ -950,12 +974,12 @@ const socketManager = (io) => {
           try {
             // Utiliser le nouveau contrôleur Mistral avec historique
             const result = await processMistralChannelQuestion(
-              canal_id, 
-              question, 
+              canal_id,
+              question,
               socket.user.id,
               {
                 historyLimit: 100, // Prendre les 100 derniers messages
-                includeContext: true
+                includeContext: true,
               }
             );
 
@@ -967,7 +991,7 @@ const socketManager = (io) => {
             if (result.success) {
               // Récupérer le message complet avec toutes les informations
               const fullMessage = await MessageModel.getById(result.messageId);
-              
+
               // Récupérer le workspace_id du canal pour le joindre au message
               let finalWorkspaceId = workspace_id;
               try {
@@ -998,19 +1022,20 @@ const socketManager = (io) => {
                 fk_utilisateur: MISTRAL_USER_ID,
                 nom: MISTRAL_USERNAME,
                 photo_de_profil: MISTRAL_AVATAR,
-                date_creation: fullMessage?.created_at || new Date().toISOString(),
+                date_creation:
+                  fullMessage?.created_at || new Date().toISOString(),
                 reactions: [],
                 isBot: false,
                 workspace_id: finalWorkspaceId,
                 context_used: result.contextUsed,
-                history_length: result.historyLength
+                history_length: result.historyLength,
               };
 
               console.log(
                 `Socket.IO: Émission de la réponse Mistral avec historique (${result.historyLength} messages de contexte):`,
                 mistralMessageForEmit.contenu.substring(0, 100) + "..."
               );
-              
+
               io.to(`${canal_id}`).emit("message", mistralMessageForEmit);
             } else {
               throw new Error("Erreur lors du traitement par Mistral");
@@ -1087,7 +1112,7 @@ const socketManager = (io) => {
           messageId,
           userId: socket.user?.id,
           socketId: socket.id,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
 
         if (!messageId) {
@@ -1095,60 +1120,70 @@ const socketManager = (io) => {
           socket.emit("error", { message: "ID du message manquant" });
           return;
         }
-        
+
         const userId = socket.user.id;
-        console.log("🗑️ [SERVER DIAGNOSTIC] Processing deletion for user:", userId);
-        
+        console.log(
+          "🗑️ [SERVER DIAGNOSTIC] Processing deletion for user:",
+          userId
+        );
+
         const message = await MessageModel.getById(messageId);
         console.log("🗑️ [SERVER DIAGNOSTIC] Message found in DB:", !!message);
-        
+
         if (!message) {
           console.log("🗑️ [SERVER DIAGNOSTIC] Message not found in database");
           socket.emit("error", { message: "Message non trouvé" });
           return;
         }
-        
+
         console.log("🗑️ [SERVER DIAGNOSTIC] Message details:", {
           id: message.id_message,
           author: message.fk_utilisateur,
           channel: message.fk_canal,
-          content: message.contenu?.substring(0, 50)
+          content: message.contenu?.substring(0, 50),
         });
-        
+
         if (message.fk_utilisateur !== userId) {
-          console.log("🗑️ [SERVER DIAGNOSTIC] User not authorized to delete message");
+          console.log(
+            "🗑️ [SERVER DIAGNOSTIC] User not authorized to delete message"
+          );
           socket.emit("error", {
             message: "Vous ne pouvez supprimer que vos propres messages",
           });
           return;
         }
-        
+
         console.log("🗑️ [SERVER DIAGNOSTIC] Deleting message from database");
         await MessageModel.delete(messageId);
-        
-        console.log("🗑️ [SERVER DIAGNOSTIC] Message deleted, emitting to channel:", message.fk_canal);
-        
+
+        console.log(
+          "🗑️ [SERVER DIAGNOSTIC] Message deleted, emitting to channel:",
+          message.fk_canal
+        );
+
         // Émettre vers tous les clients connectés au canal
         const emitData = { messageId };
         io.to(`${message.fk_canal}`).emit("deleteMessage", emitData);
-        
+
         console.log("🗑️ [SERVER DIAGNOSTIC] deleteMessage event emitted:", {
           channel: message.fk_canal,
           data: emitData,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        
+
         // Vérifier combien de clients sont connectés à ce canal
         const room = io.sockets.adapter.rooms.get(`${message.fk_canal}`);
         const clientCount = room ? room.size : 0;
         console.log("🗑️ [SERVER DIAGNOSTIC] Clients connected to channel:", {
           channel: message.fk_canal,
           clientCount: clientCount,
-          clients: room ? Array.from(room) : []
+          clients: room ? Array.from(room) : [],
         });
-        
       } catch (error) {
-        console.error("🗑️ [SERVER DIAGNOSTIC] Error during message deletion:", error);
+        console.error(
+          "🗑️ [SERVER DIAGNOSTIC] Error during message deletion:",
+          error
+        );
         socket.emit("error", {
           message: "Erreur lors de la suppression du message",
         });
@@ -1228,8 +1263,8 @@ const socketManager = (io) => {
         // Récupérer le message complet avec infos utilisateur
         const fullUserMessage = await MessageModel.getById(
           userMessage.id_message
-        ); 
-        
+        );
+
         // Récupérer les informations du canal pour le message
         const canalInfo = await pool.query(
           "SELECT c.nom as nom_canal, c.fk_workspace as workspace_id FROM canal c WHERE c.id_canal = $1",
@@ -1263,12 +1298,12 @@ const socketManager = (io) => {
           try {
             // Utiliser le nouveau contrôleur Mistral avec historique
             const mistralResult = await processMistralChannelQuestion(
-              channelId, 
-              question, 
+              channelId,
+              question,
               socket.user.id,
               {
                 historyLimit: 100,
-                includeContext: true
+                includeContext: true,
               }
             );
 
@@ -1291,9 +1326,10 @@ const socketManager = (io) => {
                 isBot: false,
                 workspace_id: workspaceId,
                 nom_canal: canalData.nom_canal,
-                date_creation: fullBotMessage.created_at || new Date().toISOString(),
+                date_creation:
+                  fullBotMessage.created_at || new Date().toISOString(),
                 context_used: mistralResult.contextUsed,
-                history_length: mistralResult.historyLength
+                history_length: mistralResult.historyLength,
               });
 
               console.log(
@@ -1417,8 +1453,14 @@ const socketManager = (io) => {
 
         // Vérifier que l'utilisateur est bien l'expéditeur ou le destinataire du message
         const message = await MessagePrive.getById(id);
-        if (!message || (message.fk_expediteur !== userId && message.fk_destinataire !== userId)) {
-          socket.emit("error", { message: "Non autorisé à réagir à ce message privé" });
+        if (
+          !message ||
+          (message.fk_expediteur !== userId &&
+            message.fk_destinataire !== userId)
+        ) {
+          socket.emit("error", {
+            message: "Non autorisé à réagir à ce message privé",
+          });
           return;
         }
 
@@ -1435,15 +1477,26 @@ const socketManager = (io) => {
         // Diffuser aux deux utilisateurs concernés
         io.to(`dm:${message.fk_expediteur}`)
           .to(`dm:${message.fk_destinataire}`)
-          .emit("privateMessageReaction", { messageId: id, reactions: updatedReactions });
+          .emit("privateMessageReaction", {
+            messageId: id,
+            reactions: updatedReactions,
+          });
       } catch (error) {
         if (error.code === "23505") {
           // Contrainte unique (déjà réagi)
-          const currentReactions = await ReactionPrive.getByMessage(data.id, socket.user.id);
-          socket.emit("privateMessageReaction", { messageId: data.id, reactions: currentReactions });
+          const currentReactions = await ReactionPrive.getByMessage(
+            data.id,
+            socket.user.id
+          );
+          socket.emit("privateMessageReaction", {
+            messageId: data.id,
+            reactions: currentReactions,
+          });
         } else {
           console.error("Socket.IO: Erreur de réaction privée", error);
-          socket.emit("error", { message: "Erreur lors de la réaction privée" });
+          socket.emit("error", {
+            message: "Erreur lors de la réaction privée",
+          });
         }
       }
     });
@@ -1496,7 +1549,9 @@ const socketManager = (io) => {
           return;
         }
 
-        console.log(`Socket.IO: Récupération des fichiers pour le canal ${channelId} par l'utilisateur ${userId}`);
+        console.log(
+          `Socket.IO: Récupération des fichiers pour le canal ${channelId} par l'utilisateur ${userId}`
+        );
 
         // Vérifier que l'utilisateur a accès à ce canal
         const accessCheck = await Canal.checkUserAccess(channelId, userId);
@@ -1509,26 +1564,32 @@ const socketManager = (io) => {
 
         // Récupérer les fichiers du canal
         const files = await Fichier.getByCanalId(channelId);
-        
-        console.log(`Socket.IO: ${files.length} fichiers trouvés pour le canal ${channelId}`);
+
+        console.log(
+          `Socket.IO: ${files.length} fichiers trouvés pour le canal ${channelId}`
+        );
 
         // Répondre avec les fichiers
         if (callback) {
-          callback({ 
-            success: true, 
-            files: files || [] 
+          callback({
+            success: true,
+            files: files || [],
           });
         } else {
-          socket.emit("channelFiles", { 
-            channelId, 
-            files: files || [] 
+          socket.emit("channelFiles", {
+            channelId,
+            files: files || [],
           });
         }
-
       } catch (error) {
-        console.error("Socket.IO: Erreur lors de la récupération des fichiers du canal:", error);
-        const errorResponse = { message: "Erreur lors de la récupération des fichiers" };
-        
+        console.error(
+          "Socket.IO: Erreur lors de la récupération des fichiers du canal:",
+          error
+        );
+        const errorResponse = {
+          message: "Erreur lors de la récupération des fichiers",
+        };
+
         if (callback) {
           callback({ success: false, error: errorResponse });
         } else {

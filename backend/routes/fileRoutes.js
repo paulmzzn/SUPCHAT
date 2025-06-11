@@ -3,30 +3,9 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { getObjectFromS3 } from "../config/s3Service.js"; // Suppression de l'import s3
-import AWS from "aws-sdk";
-import dotenv from "dotenv";
+import { getObjectFromS3 } from "../config/s3Service.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
-
-// Charger les variables d'environnement
-dotenv.config();
-
-// Configurer S3 directement dans ce fichier
-const s3Config = {
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
-  credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID || "REDACTED",
-    secretAccessKey:
-      process.env.SCW_SECRET_ACCESS_KEY ||
-      "REDACTED",
-  },
-  s3ForcePathStyle: true, // Requis pour la compatibilité avec Scaleway S3
-};
-
-// Créer l'instance S3
-const s3 = new AWS.S3(s3Config);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -63,16 +42,21 @@ router.get("/download/:filePath(*)", verifyToken, async (req, res) => {
       const fileData = await getObjectFromS3(fileKey);
 
       // Extraire le nom du fichier depuis le chemin
-      const fileName = path.basename(fileKey);
-
-      // Définir l'en-tête Content-Disposition pour forcer le téléchargement
+      const fileName = path.basename(fileKey); // Définir l'en-tête Content-Disposition pour forcer le téléchargement
       res.set({
         "Content-Disposition": `attachment; filename="${fileName}"`,
         "Content-Type": fileData.ContentType || "application/octet-stream",
       });
 
+      // Convertir le stream en buffer pour l'envoyer au client
+      const chunks = [];
+      for await (const chunk of fileData.Body) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+
       // Envoyer le fichier au client
-      return res.send(fileData.Body);
+      return res.send(buffer);
     } catch (s3Error) {
       console.error(`[FileRoutes] Erreur S3:`, s3Error);
 
@@ -150,11 +134,9 @@ router.get("/*", (req, res) => {
 router.get("/content/:path(*)", verifyToken, async (req, res) => {
   try {
     const filePath = req.params.path;
-    console.log(`[FileRoutes] Demande de contenu du fichier: ${filePath}`);
-
-    // Vérifier que le fichier existe dans S3
+    console.log(`[FileRoutes] Demande de contenu du fichier: ${filePath}`); // Vérifier que le fichier existe dans S3
     const params = {
-      Bucket: process.env.S3_BUCKET_NAME || "supchat-bucket",
+      Bucket: s3ConfigSecrets.bucketName,
       Key: filePath,
     };
 

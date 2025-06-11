@@ -30,11 +30,11 @@ import { useFileUpload } from "../../components/Messages/hooks/useFileUpload";
 const MessagesScreen = ({ navigation, route }) => {
   const { colors: themeColors, mode } = useTheme();
   const styles = getStyles(themeColors);
-  
+
   // Récupération des paramètres avec support pour les deux formats
   const { userId, recipientId, recipientName } = route.params || {};
   const actualUserId = userId || recipientId;
-  
+
   // Debug: Afficher les paramètres reçus
   console.log("MessagesScreen - route.params:", route.params);
   console.log("MessagesScreen - userId:", userId);
@@ -96,7 +96,7 @@ const MessagesScreen = ({ navigation, route }) => {
   const messageActions = useMessageActions({
     socket,
     currentUserId,
-    userId: actualUserId,  // Corriger le nom du paramètre
+    userId: actualUserId, // Corriger le nom du paramètre
     setMessages,
     addAnimatingMessage,
     scrollToBottom,
@@ -159,19 +159,32 @@ const MessagesScreen = ({ navigation, route }) => {
   }, [actualUserId]);
 
   useEffect(() => {
-    if (messages.length === 0 || isInitialLoad || !actualUserId || !currentUserId) return;
+    if (
+      messages.length === 0 ||
+      isInitialLoad ||
+      !actualUserId ||
+      !currentUserId
+    )
+      return;
     console.log("User opened conversation, marking messages as read");
     markMessagesAsRead(messages);
-  }, [messages, isInitialLoad, actualUserId, currentUserId, markMessagesAsRead]);
+  }, [
+    messages,
+    isInitialLoad,
+    actualUserId,
+    currentUserId,
+    markMessagesAsRead,
+  ]);
 
   const handleScroll = (event) => {
-    if (loadingMoreMessages || !hasMoreMessages || isLoadingMore.current) return;
+    if (loadingMoreMessages || !hasMoreMessages || isLoadingMore.current)
+      return;
 
     const scrollOffset = event.nativeEvent.contentOffset.y;
     if (scrollOffset < 200) {
-      scrollPositionRef.current = { 
-        contentHeight: event.nativeEvent.contentSize.height, 
-        scrollOffset 
+      scrollPositionRef.current = {
+        contentHeight: event.nativeEvent.contentSize.height,
+        scrollOffset,
       };
       isLoadingMore.current = true;
       loadMoreMessages();
@@ -180,7 +193,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const handleSendMessageWrapper = async () => {
     if (!newMessage.trim()) return;
-    
+
     const messageText = newMessage;
     setNewMessage("");
     await handleSendMessage(messageText);
@@ -194,7 +207,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const handleGoBack = () => {
     // Toujours naviguer vers la liste des conversations
-    navigation.navigate('Messages', { screen: 'ConversationsList' });
+    navigation.navigate("Messages", { screen: "ConversationsList" });
   };
 
   const handleLongPressMessage = (message, event) => {
@@ -297,16 +310,18 @@ const MessagesScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          <MessageInput 
+          <MessageInput
             value={newMessage}
             onChangeText={setNewMessage}
             onSend={handleSendMessageWrapper}
             placeholder="Type a message..."
             replyingTo={replyingTo}
             onCancelReply={handleCancelReply}
-            replyUserName={replyingTo?.fk_expediteur === currentUserId
-              ? "vous-même"
-              : userInfo?.name || "Utilisateur"}
+            replyUserName={
+              replyingTo?.fk_expediteur === currentUserId
+                ? "vous-même"
+                : userInfo?.name || "Utilisateur"
+            }
             isDarkMode={isDarkMode}
             inputRef={textInputRef}
             keyboardVisible={keyboardVisible}

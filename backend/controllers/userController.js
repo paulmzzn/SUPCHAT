@@ -29,19 +29,16 @@ import jwt from "jsonwebtoken";
 import sendInvitationEmail from "../config/emailService.js";
 import sendValidationEmail from "../config/validationEmailService.js"; // Import the validation email service
 import sendResetPasswordEmail from "../config/resetPasswordEmailService.js";
-import dotenv from "dotenv";
 import pool from "../config/dbConnection.js";
 import Fichier from "../models/Fichier.js";
 import Message from "../models/Message.js";
 import MessagePrive from "../models/MessagePrive.js";
 import WorkspaceFavoris from "../models/WorkspaceFavoris.js";
 import { uploadToS3 } from "../config/s3Config.js";
+import { getJwtSecret, getS3Config } from "../config/secrets.js";
 
-// Charger les variables d'environnement
-dotenv.config();
-
-// Utiliser une variable d'environnement ou une valeur par défaut
-const SECRET_KEY = process.env.JWT_SECRET || "REDACTED";
+// Utiliser le secret JWT depuis les secrets Docker
+const SECRET_KEY = getJwtSecret();
 
 /**
  * Fonction utilitaire pour formater les URLs des ressources S3
@@ -58,9 +55,10 @@ const formatPhotoUrl = (photoValue) => {
   // Si c'est une URL locale (ancien système), la retourner telle quelle
   if (photoValue.startsWith("/uploads/")) return photoValue;
 
-  // Si c'est une clé S3, construire l'URL complète
-  const s3Endpoint = process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/";
-  const bucketName = process.env.S3_BUCKET_NAME || "REDACTED";
+  // Utiliser la config S3 des secrets
+  const s3Config = getS3Config();
+  const s3Endpoint = s3Config.endpoint;
+  const bucketName = s3Config.bucketName;
   // S'assurer que l'URL est correctement formatée
   return `${s3Endpoint}${bucketName}/${photoValue}`.replace(
     /([^:])\/\/+/g,
@@ -579,15 +577,15 @@ const updateUserProfile = async (req, res) => {
         req.body.fk_statut
       );
       console.log(`Statut converti (${typeof fk_statut}):`, fk_statut);
-    }    // Traiter l'upload d'avatar si présent
+    } // Traiter l'upload d'avatar si présent
     if (req.file) {
       try {
         // Upload vers S3 au lieu du stockage local
         const uploadResult = await uploadToS3(req.file, "avatars");
-        
+
         // Utiliser directement l'URL retournée par uploadToS3
         photo_de_profil = uploadResult.url;
-        
+
         console.log("Nouvel avatar uploadé sur S3:", uploadResult.fileKey);
         console.log("URL complète de l'avatar:", uploadResult.url);
       } catch (uploadError) {
@@ -804,7 +802,6 @@ export const exportRgpdData = async (req, res) => {
     );
     const invitations = invitationsResult.rows;
 
-
     // 13. Demandes d’accès workspaces (désactivé, table supprimée)
     const demandes = [];
 
@@ -890,7 +887,8 @@ export const getUserActivityStats = async (req, res) => {
       "SELECT COUNT(*) as workspace_count FROM membre_workspace WHERE fk_utilisateur = $1",
       [userId]
     );
-    const workspaceCount = parseInt(workspacesResult.rows[0].workspace_count) || 0;
+    const workspaceCount =
+      parseInt(workspacesResult.rows[0].workspace_count) || 0;
 
     res.status(200).json({
       messageCount,
