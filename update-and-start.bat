@@ -143,7 +143,7 @@ del temp_tables.txt >nul 2>&1
 REM Etape 7: Afficher l'etat des conteneurs
 echo.
 echo 📊 Etat des conteneurs:
-docker-compose ps
+docker-compose -f docker-compose.prod.yml ps
 
 REM Message de succes
 echo.
@@ -167,11 +167,11 @@ set /p choice=
 if /i "%choice%"=="O" (
     echo.
     echo 📋 Affichage des logs du backend (Ctrl+C pour arreter)...
-    docker-compose logs -f backend
+    docker-compose -f docker-compose.prod.yml logs -f backend
 ) else if /i "%choice%"=="Y" (
     echo.
     echo 📋 Affichage des logs du backend (Ctrl+C pour arreter)...
-    docker-compose logs -f backend
+    docker-compose -f docker-compose.prod.yml logs -f backend
 )
 
 echo.
