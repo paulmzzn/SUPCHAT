@@ -8,6 +8,7 @@ import Canal from "../models/Canal.js"; // Importation directe du modèle Canal
 import { deleteFromS3 } from "../config/s3Config.js";
 import { getJwtSecret, getMistralApiKey } from "../config/secrets.js";
 import pool from "../config/dbConnection.js";
+import { getJwtSecret, getMistralApiKey } from "../config/secrets.js"; // Import des fonctions secrets
 import {
   processMistralChannelQuestion,
   processMistralPrivateQuestion,
