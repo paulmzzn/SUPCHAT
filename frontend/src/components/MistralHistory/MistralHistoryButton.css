@@ -1,0 +1,124 @@
+.mistral-history-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mistral-history-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.mistral-history-button:active {
+  transform: translateY(0);
+}
+
+.mistral-icon {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.history-icon {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.button-text {
+  white-space: nowrap;
+}
+
+/* Version compacte pour les petits espaces */
+.mistral-history-button.compact {
+  padding: 6px 8px;
+  min-width: auto;
+}
+
+.mistral-history-button.compact .button-text {
+  display: none;
+}
+
+.mistral-history-button.compact .mistral-icon {
+  font-size: 16px;
+}
+
+.mistral-history-button.compact .history-icon {
+  font-size: 10px;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Version pour les messages privés */
+.mistral-history-button.private {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.mistral-history-button.private:hover {
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Version pour la toolbar */
+.mistral-history-button.toolbar {
+  background-color: transparent;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  padding: 6px 10px;
+}
+
+.mistral-history-button.toolbar:hover {
+  background-color: #f8f9fa;
+  color: #667eea;
+  border-color: #667eea;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mistral-history-button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .mistral-history-button .button-text {
+    display: none;
+  }
+  
+  .mistral-history-button .mistral-icon {
+    font-size: 16px;
+  }
+  
+  .mistral-history-button .history-icon {
+    font-size: 10px;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

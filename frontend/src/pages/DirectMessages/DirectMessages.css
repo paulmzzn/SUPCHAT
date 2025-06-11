@@ -262,10 +262,11 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--workspace-details-text-secondary, rgba(255, 255, 255, 0.5));
   text-align: center;
   font-style: italic;
   gap: 10px;
+  transition: color 0.2s ease;
 }
 
 /* Styles pour les messages */
@@ -986,21 +987,22 @@
 /* Menu contextuel pour les messages */
 .dm-context-menu {
   position: fixed;
-  background: #2a2a2a;
+  background: var(--workspace-details-sidebar-bg, #2a2a2a);
   border-radius: 8px;
   padding: 4px 0;
   min-width: 200px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
   z-index: 1100;
   animation: fadeIn 0.15s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--workspace-details-sidebar-border, 1px solid rgba(255, 255, 255, 0.1));
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .dm-context-menu-item {
   padding: 8px 16px;
   cursor: pointer;
   transition: background 0.2s;
-  color: white;
+  color: var(--workspace-details-text-color, white);
   font-size: 0.9rem;
   display: flex;
   align-items: center;
@@ -1009,7 +1011,8 @@
 .dm-context-menu-icon {
   margin-right: 8px;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--workspace-details-text-secondary, rgba(255, 255, 255, 0.7));
+  transition: color 0.2s ease;
 }
 
 .dm-context-menu-item:hover {
@@ -1444,4 +1447,36 @@
 /* Adapter la hauteur des messages avec réponses */
 .dm-message-wrapper + .dm-msg-bubble {
   margin-top: 6px;
+}
+
+/* Support du thème clair pour les messages directs */
+.theme-light .dm-context-menu {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.theme-light .dm-context-menu-item {
+  color: #2c2c2c;
+}
+
+.theme-light .dm-context-menu-icon {
+  color: #666666;
+}
+
+.theme-light .dm-context-menu-item:hover {
+  background: rgba(147, 72, 183, 0.1);
+}
+
+.theme-light .dm-context-menu-item-danger {
+  color: #dc3545;
+}
+
+.theme-light .dm-context-menu-item-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.theme-light .dm-loading,
+.theme-light .dm-empty-msg {
+  color: #666666;
 }
