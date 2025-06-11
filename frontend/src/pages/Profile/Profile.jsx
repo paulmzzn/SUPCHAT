@@ -52,9 +52,7 @@ function Profile() {
     setLoading(true);
     setError(null);
 
-    const apiUrl =
-      (process.env.REACT_APP_API_URL || "http://185.98.137.166:3001") +
-      `/api/users/${userId}`;
+    const apiUrl = `${API_URL}/api/users/${userId}`;
 
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
@@ -110,11 +108,8 @@ function Profile() {
 
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
-
     try {
-      const apiUrl =
-        (process.env.REACT_APP_API_URL || "http://185.98.137.166:3001") +
-        `/api/users/${userId}/workspaces`;
+      const apiUrl = `${API_URL}/api/users/${userId}/workspaces`;
 
       console.log(`Fetching workspaces from: ${apiUrl}`);
 
@@ -146,9 +141,7 @@ function Profile() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const apiUrl =
-          (process.env.REACT_APP_API_URL || "http://185.98.137.166:3001") +
-          `/api/users/${userId}/activity-stats`;
+        const apiUrl = `${API_URL}/api/users/${userId}/activity-stats`;
         const res = await fetch(apiUrl, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
