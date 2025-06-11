@@ -608,19 +608,89 @@ INSERT INTO public.utilisateur (
 (
     '00000000-0000-0000-0000-000000000003',
     'System',
-    'system',
-    'dummy_password_ocr',
+    'system@supchat.local',
+    'dummy_password_system',
     NULL,
     1,
     true,
-    'System',
+    'Utilisateur système',
     false
 )
 ON CONFLICT (id_utilisateur) DO NOTHING;
 
+-- =====================================================
+-- CRÉATION DE WORKSPACES ET CANAUX PAR DÉFAUT
+-- =====================================================
+
+-- Insertion d'un workspace par défaut
+INSERT INTO public.workspace (
+    id_workspace,
+    nom,
+    is_private,
+    description
+) VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'Workspace par défaut',
+    false,
+    'Workspace créé automatiquement lors de l''initialisation'
+) ON CONFLICT (id_workspace) DO NOTHING;
+
+-- Insertion d'un canal général par défaut
+INSERT INTO public.canal (
+    id_canal,
+    nom,
+    is_private,
+    fk_workspace
+) VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'général',
+    false,
+    '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT (id_canal) DO NOTHING;
+
+-- Attribution du rôle owner au système dans le workspace par défaut
+INSERT INTO public.membre_workspace (
+    fk_utilisateur,
+    fk_workspace,
+    fk_role,
+    ordre
+) VALUES (
+    '00000000-0000-0000-0000-000000000003',
+    '00000000-0000-0000-0000-000000000001',
+    1,
+    0
+) ON CONFLICT (fk_utilisateur, fk_workspace) DO NOTHING;
+
+-- Message de bienvenue dans le canal général
+INSERT INTO public.message (
+    id_message,
+    contenu,
+    type_message,
+    fk_canal,
+    fk_utilisateur
+) VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'Bienvenue sur SUPCHAT ! 🎉 Cette plateforme de communication a été initialisée avec succès.',
+    'system',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000003'
+) ON CONFLICT (id_message) DO NOTHING;
+
 -- ===========================================
--- CRÉATION DE L'UTILISATEUR ADMIN SI ABSENT
+-- CRÉATION DES UTILISATEURS DE BASE DE DONNÉES
 -- ===========================================
+
+-- Création du rôle postgres (utilisateur par défaut PostgreSQL)
+DO
+$$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgres') THEN
+      CREATE ROLE postgres LOGIN PASSWORD 'postgres' SUPERUSER CREATEDB CREATEROLE REPLICATION;
+   END IF;
+END
+$$;
+
+-- Création du rôle admin (utilisateur principal de l'application)
 DO
 $$
 BEGIN
@@ -632,10 +702,15 @@ BEGIN
 END
 $$;
 
+-- Attribution des privilèges
 GRANT ALL PRIVILEGES ON DATABASE supchat TO admin;
+GRANT ALL PRIVILEGES ON DATABASE supchat TO postgres;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO postgres;
 
 -- =====================================================
 -- INDEX ET OPTIMISATIONS
@@ -686,8 +761,23 @@ ANALYZE;
 DO
 $$
 BEGIN
+    RAISE NOTICE '====================================================';
     RAISE NOTICE 'Base de données SUPCHAT initialisée avec succès !';
-    RAISE NOTICE 'Rôles configurés: 1=owner, 2=admin, 3=member';
+    RAISE NOTICE '====================================================';
+    RAISE NOTICE 'Utilisateurs de base de données créés:';
+    RAISE NOTICE '  - postgres (superutilisateur par défaut)';
+    RAISE NOTICE '  - admin (superutilisateur principal)';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Rôles applicatifs configurés:';
+    RAISE NOTICE '  - 1=owner, 2=admin, 3=member';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Données initiales créées:';
+    RAISE NOTICE '  - 3 utilisateurs système';
+    RAISE NOTICE '  - 1 workspace par défaut';
+    RAISE NOTICE '  - 1 canal général';
+    RAISE NOTICE '  - 1 message de bienvenue';
+    RAISE NOTICE '';
     RAISE NOTICE 'Schéma mis à jour depuis dump Azure du 10 juin 2025';
+    RAISE NOTICE '====================================================';
 END
 $$;
