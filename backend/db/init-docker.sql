@@ -1,6 +1,7 @@
 -- =====================================================
 -- INITIALISATION DE LA BASE DE DONNÉES SUPCHAT
 -- Généré depuis le dump Azure - 10 juin 2025
+-- Mise à jour avec toutes les colonnes manquantes
 -- =====================================================
 
 -- Configuration initiale
@@ -76,8 +77,9 @@ CREATE TABLE public.utilisateur (
     id_utilisateur uuid DEFAULT public.random_uuid() NOT NULL,
     nom character varying(255) NOT NULL,
     email character varying(255) NOT NULL,
-    mot_de_passe character varying(255) NOT NULL,
-    photo_de_profil character varying(500),
+    mot_de_passe character varying(255),
+    photo_de_profil character varying(2048),
+    date_creation timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     fk_statut integer DEFAULT 1 NOT NULL,
     google_id character varying(255),
     is_activated boolean DEFAULT false,
@@ -161,10 +163,12 @@ CREATE TABLE public.canal (
 CREATE TABLE public.fichier (
     id_fichier uuid DEFAULT public.random_uuid() NOT NULL,
     nom_fichier character varying(255) NOT NULL,
-    url_fichier character varying(500) NOT NULL,
-    taille_fichier bigint,
-    type_fichier character varying(100),
+    url character varying(2048) NOT NULL,
+    type character varying(250),
     date_upload timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    taille_fichier bigint,
+    extension character varying(50),
+    mime_type character varying(100),
     fk_utilisateur uuid,
     CONSTRAINT fichier_pkey PRIMARY KEY (id_fichier),
     CONSTRAINT fichier_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE SET NULL
@@ -181,11 +185,13 @@ CREATE TABLE public.hashtag (
 -- Table des messages
 CREATE TABLE public.message (
     id_message uuid DEFAULT public.random_uuid() NOT NULL,
-    contenu text NOT NULL,
-    fk_utilisateur uuid NOT NULL,
+    contenu text,
+    type_message character varying(50),
+    date_envoi timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     fk_canal uuid NOT NULL,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    fk_utilisateur uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone,
     parent_id uuid,
     CONSTRAINT message_pkey PRIMARY KEY (id_message),
     CONSTRAINT message_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
@@ -227,7 +233,7 @@ CREATE TABLE public.workspace_invitations (
     email_invite character varying(255) NOT NULL,
     token_invitation character varying(255) NOT NULL,
     date_creation timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    date_expiration timestamp without time zone,
+    date_expiration timestamp without time zone NOT NULL,
     is_used boolean DEFAULT false,
     CONSTRAINT workspace_invitations_pkey PRIMARY KEY (id_invitation),
     CONSTRAINT workspace_invitations_fk_workspace_fkey FOREIGN KEY (fk_workspace) REFERENCES public.workspace(id_workspace) ON DELETE CASCADE,
@@ -299,6 +305,7 @@ CREATE TABLE public.push_subscriptions (
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now(),
     CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id),
+    CONSTRAINT push_subscriptions_endpoint_key UNIQUE (endpoint),
     CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE
 );
 
@@ -314,17 +321,18 @@ CREATE SEQUENCE public.push_subscriptions_id_seq
 ALTER SEQUENCE public.push_subscriptions_id_seq OWNED BY public.push_subscriptions.id;
 ALTER TABLE ONLY public.push_subscriptions ALTER COLUMN id SET DEFAULT nextval('public.push_subscriptions_id_seq'::regclass);
 
--- Table des réactions
+-- Table des réactions (avec reaction_type corrigé)
 CREATE TABLE public.reaction (
     id_reaction integer NOT NULL,
     fk_message uuid NOT NULL,
     fk_utilisateur uuid NOT NULL,
-    emoji character varying(10) NOT NULL,
+    emoji character varying(10),
+    reaction_type character varying(191) NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT reaction_pkey PRIMARY KEY (id_reaction),
     CONSTRAINT reaction_fk_message_fkey FOREIGN KEY (fk_message) REFERENCES public.message(id_message) ON DELETE CASCADE,
     CONSTRAINT reaction_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
-    CONSTRAINT reaction_utilisateur_message_emoji_key UNIQUE (fk_utilisateur, fk_message, emoji)
+    CONSTRAINT reaction_utilisateur_message_emoji_key UNIQUE (fk_message, fk_utilisateur, reaction_type)
 );
 
 -- Séquence pour reactions
@@ -339,17 +347,18 @@ CREATE SEQUENCE public.reaction_id_reaction_seq
 ALTER SEQUENCE public.reaction_id_reaction_seq OWNED BY public.reaction.id_reaction;
 ALTER TABLE ONLY public.reaction ALTER COLUMN id_reaction SET DEFAULT nextval('public.reaction_id_reaction_seq'::regclass);
 
--- Table des réactions aux messages privés
+-- Table des réactions aux messages privés (avec reaction_type corrigé)
 CREATE TABLE public.private_message_reaction (
     id_reaction integer NOT NULL,
     fk_message_prive uuid NOT NULL,
     fk_utilisateur uuid NOT NULL,
-    emoji character varying(10) NOT NULL,
+    emoji character varying(10),
+    reaction_type character varying(50) NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT private_message_reaction_pkey PRIMARY KEY (id_reaction),
     CONSTRAINT private_message_reaction_fk_message_prive_fkey FOREIGN KEY (fk_message_prive) REFERENCES public.message_prive(id_message_prive) ON DELETE CASCADE,
     CONSTRAINT private_message_reaction_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
-    CONSTRAINT private_message_reaction_utilisateur_message_emoji_key UNIQUE (fk_utilisateur, fk_message_prive, emoji)
+    CONSTRAINT private_message_reaction_utilisateur_message_emoji_key UNIQUE (fk_message_prive, fk_utilisateur, reaction_type)
 );
 
 -- Séquence pour private_message_reaction
@@ -367,13 +376,13 @@ ALTER TABLE ONLY public.private_message_reaction ALTER COLUMN id_reaction SET DE
 -- Table des lectures de messages
 CREATE TABLE public.message_read (
     id integer NOT NULL,
-    fk_utilisateur uuid NOT NULL,
+    fk_user uuid NOT NULL,
     fk_canal uuid NOT NULL,
     last_read_at timestamp without time zone DEFAULT now() NOT NULL,
     CONSTRAINT message_read_pkey PRIMARY KEY (id),
-    CONSTRAINT message_read_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
+    CONSTRAINT message_read_fk_user_fkey FOREIGN KEY (fk_user) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
     CONSTRAINT message_read_fk_canal_fkey FOREIGN KEY (fk_canal) REFERENCES public.canal(id_canal) ON DELETE CASCADE,
-    CONSTRAINT message_read_utilisateur_canal_key UNIQUE (fk_utilisateur, fk_canal)
+    CONSTRAINT message_read_user_canal_key UNIQUE (fk_user, fk_canal)
 );
 
 -- Séquence pour message_read
@@ -453,14 +462,14 @@ ALTER TABLE ONLY public.membre_canal ALTER COLUMN id_membre_canal SET DEFAULT ne
 -- Table des demandes d'adhésion aux workspaces
 CREATE TABLE public.workspace_join_requests (
     id_request integer NOT NULL,
-    fk_utilisateur uuid NOT NULL,
     fk_workspace uuid NOT NULL,
+    fk_utilisateur uuid NOT NULL,
     message text,
-    statut character varying(20) DEFAULT 'en_attente'::character varying NOT NULL,
-    date_demande timestamp with time zone DEFAULT now() NOT NULL,
-    date_traitement timestamp with time zone,
+    statut character varying(20) DEFAULT 'en_attente'::character varying,
+    date_creation timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    date_traitement timestamp without time zone,
     fk_administrateur uuid,
-    motif_refus text,
+    reject_reason text,
     CONSTRAINT workspace_join_requests_pkey PRIMARY KEY (id_request),
     CONSTRAINT workspace_join_requests_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
     CONSTRAINT workspace_join_requests_fk_workspace_fkey FOREIGN KEY (fk_workspace) REFERENCES public.workspace(id_workspace) ON DELETE CASCADE,
@@ -484,26 +493,31 @@ ALTER TABLE ONLY public.workspace_join_requests ALTER COLUMN id_request SET DEFA
 -- Table des rappels
 CREATE TABLE public.reminders (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
     title character varying(255) NOT NULL,
     description text,
     reminder_date timestamp with time zone NOT NULL,
-    fk_utilisateur uuid NOT NULL,
-    fk_workspace uuid,
-    fk_canal uuid,
-    is_completed boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    is_sent boolean DEFAULT false,
+    email_sent_at timestamp with time zone,
+    workspace_id uuid,
+    canal_id uuid,
+    email_failed boolean DEFAULT false,
     error_message text,
     CONSTRAINT reminders_pkey PRIMARY KEY (id),
-    CONSTRAINT reminders_fk_utilisateur_fkey FOREIGN KEY (fk_utilisateur) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
-    CONSTRAINT reminders_fk_workspace_fkey FOREIGN KEY (fk_workspace) REFERENCES public.workspace(id_workspace) ON DELETE CASCADE,
-    CONSTRAINT reminders_fk_canal_fkey FOREIGN KEY (fk_canal) REFERENCES public.canal(id_canal) ON DELETE CASCADE
+    CONSTRAINT reminders_fk_user_fkey FOREIGN KEY (user_id) REFERENCES public.utilisateur(id_utilisateur) ON DELETE CASCADE,
+    CONSTRAINT reminders_fk_workspace_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspace(id_workspace) ON DELETE CASCADE,
+    CONSTRAINT reminders_fk_canal_fkey FOREIGN KEY (canal_id) REFERENCES public.canal(id_canal) ON DELETE CASCADE
 );
 
 -- Vue pour la compatibilité des messages
 CREATE VIEW public.message_with_alias AS
  SELECT id_message,
     contenu,
+    type_message,
+    date_envoi,
+    fk_canal,
     fk_utilisateur,
     created_at,
     created_at AS date_creation,
@@ -637,6 +651,29 @@ CREATE INDEX IF NOT EXISTS idx_message_prive_expediteur ON public.message_prive(
 CREATE INDEX IF NOT EXISTS idx_message_prive_destinataire ON public.message_prive(fk_destinataire);
 CREATE INDEX IF NOT EXISTS idx_notification_utilisateur ON public.notification(fk_utilisateur);
 CREATE INDEX IF NOT EXISTS idx_notification_is_read ON public.notification(is_read);
+
+-- Index spécialisés basés sur le dump Azure
+CREATE INDEX IF NOT EXISTS idx_canal_lecture_canal ON public.canal_lecture USING btree (fk_canal);
+CREATE INDEX IF NOT EXISTS idx_canal_lecture_derniere_lecture ON public.canal_lecture USING btree (derniere_lecture);
+CREATE INDEX IF NOT EXISTS idx_canal_lecture_utilisateur ON public.canal_lecture USING btree (fk_utilisateur);
+CREATE INDEX IF NOT EXISTS idx_invitation_email ON public.workspace_invitations USING btree (email_invite);
+CREATE INDEX IF NOT EXISTS idx_invitation_workspace ON public.workspace_invitations USING btree (fk_workspace);
+CREATE INDEX IF NOT EXISTS idx_membre_canal_canal ON public.membre_canal USING btree (fk_canal);
+CREATE INDEX IF NOT EXISTS idx_membre_canal_user ON public.membre_canal USING btree (fk_utilisateur);
+CREATE INDEX IF NOT EXISTS idx_message_prive_conversation ON public.message_prive USING btree (fk_expediteur, fk_destinataire);
+CREATE INDEX IF NOT EXISTS idx_message_prive_date_envoi ON public.message_prive USING btree (date_envoi);
+CREATE INDEX IF NOT EXISTS idx_notification_utilisateur_read ON public.notification USING btree (fk_utilisateur, is_read);
+CREATE INDEX IF NOT EXISTS idx_private_message_reaction_message ON public.private_message_reaction USING btree (fk_message_prive);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON public.push_subscriptions USING btree (endpoint);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON public.push_subscriptions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_is_sent ON public.reminders USING btree (is_sent);
+CREATE INDEX IF NOT EXISTS idx_reminders_reminder_date ON public.reminders USING btree (reminder_date);
+CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON public.reminders USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_google_drive_enabled ON public.utilisateur USING btree (google_drive_enabled) WHERE (google_drive_enabled = true);
+CREATE INDEX IF NOT EXISTS idx_utilisateur_google_drive_expires ON public.utilisateur USING btree (google_drive_token_expires_at) WHERE (google_drive_token_expires_at IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_workspace_join_requests_statut ON public.workspace_join_requests USING btree (statut);
+CREATE INDEX IF NOT EXISTS idx_workspace_join_requests_utilisateur ON public.workspace_join_requests USING btree (fk_utilisateur);
+CREATE INDEX IF NOT EXISTS idx_workspace_join_requests_workspace ON public.workspace_join_requests USING btree (fk_workspace);
 
 -- =====================================================
 -- FINALISATION
