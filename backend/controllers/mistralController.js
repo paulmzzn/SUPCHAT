@@ -1,15 +1,14 @@
 import MessageModel from "../models/Message.js";
 import MessagePrive from "../models/MessagePrive.js";
 import pool from "../config/dbConnection.js";
-import dotenv from "dotenv";
+import { getMistralApiKey } from "../config/secrets.js";
 
-dotenv.config();
-
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
+const MISTRAL_API_KEY = getMistralApiKey();
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_USER_ID = "00000000-0000-0000-0000-000000000001";
 const MISTRAL_USERNAME = "Mistral AI";
-const MISTRAL_AVATAR = "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
+const MISTRAL_AVATAR =
+  "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
 
 /**
  * Récupère l'historique des messages d'un canal avec limitation
@@ -31,19 +30,23 @@ const getChannelMessageHistory = async (canalId, limit = 100) => {
 
     // Inverser l'ordre pour avoir les messages du plus ancien au plus récent
     const reversedMessages = messages.rows.reverse();
-    
-    return reversedMessages.map(msg => ({
+
+    return reversedMessages.map((msg) => ({
       role: msg.fk_utilisateur === MISTRAL_USER_ID ? "assistant" : "user",
-      content: msg.fk_utilisateur === MISTRAL_USER_ID 
-        ? msg.contenu 
-        : `${msg.nom}: ${msg.contenu}`,
+      content:
+        msg.fk_utilisateur === MISTRAL_USER_ID
+          ? msg.contenu
+          : `${msg.nom}: ${msg.contenu}`,
       timestamp: msg.date_envoi,
       messageId: msg.id_message,
       userId: msg.fk_utilisateur,
-      userName: msg.nom
+      userName: msg.nom,
     }));
   } catch (error) {
-    console.error("Erreur lors de la récupération de l'historique du canal:", error);
+    console.error(
+      "Erreur lors de la récupération de l'historique du canal:",
+      error
+    );
     return [];
   }
 };
@@ -55,7 +58,11 @@ const getChannelMessageHistory = async (canalId, limit = 100) => {
  * @param {number} limit - Nombre de messages à récupérer (défaut: 100)
  * @returns {Array} Historique des messages privés formatés pour Mistral
  */
-const getPrivateMessageHistory = async (userId1, userId2 = MISTRAL_USER_ID, limit = 100) => {
+const getPrivateMessageHistory = async (
+  userId1,
+  userId2 = MISTRAL_USER_ID,
+  limit = 100
+) => {
   try {
     const messages = await pool.query(
       `SELECT mp.contenu, mp.date_envoi, mp.fk_expediteur, 
@@ -71,19 +78,23 @@ const getPrivateMessageHistory = async (userId1, userId2 = MISTRAL_USER_ID, limi
 
     // Inverser l'ordre pour avoir les messages du plus ancien au plus récent
     const reversedMessages = messages.rows.reverse();
-    
-    return reversedMessages.map(msg => ({
+
+    return reversedMessages.map((msg) => ({
       role: msg.fk_expediteur === MISTRAL_USER_ID ? "assistant" : "user",
-      content: msg.fk_expediteur === MISTRAL_USER_ID 
-        ? msg.contenu 
-        : `${msg.nom_expediteur}: ${msg.contenu}`,
+      content:
+        msg.fk_expediteur === MISTRAL_USER_ID
+          ? msg.contenu
+          : `${msg.nom_expediteur}: ${msg.contenu}`,
       timestamp: msg.date_envoi,
       messageId: msg.id_message_prive,
       userId: msg.fk_expediteur,
-      userName: msg.nom_expediteur
+      userName: msg.nom_expediteur,
     }));
   } catch (error) {
-    console.error("Erreur lors de la récupération de l'historique des messages privés:", error);
+    console.error(
+      "Erreur lors de la récupération de l'historique des messages privés:",
+      error
+    );
     return [];
   }
 };
@@ -95,12 +106,20 @@ const getPrivateMessageHistory = async (userId1, userId2 = MISTRAL_USER_ID, limi
  * @param {string} contextType - Type de contexte ('channel' ou 'private')
  * @returns {Array} Messages formatés pour l'API Mistral
  */
-const createMistralContext = (messageHistory, currentQuestion, contextType = 'channel') => {
+const createMistralContext = (
+  messageHistory,
+  currentQuestion,
+  contextType = "channel"
+) => {
   const systemPrompt = {
     role: "system",
     content: `Tu es Mistral AI, un assistant intelligent intégré dans SUPCHAT, une plateforme de communication d'équipe. 
 
-Contexte: Tu es dans ${contextType === 'channel' ? 'un canal de discussion' : 'une conversation privée'}.
+Contexte: Tu es dans ${
+      contextType === "channel"
+        ? "un canal de discussion"
+        : "une conversation privée"
+    }.
 
 Comportement:
 - Réponds de manière naturelle et conversationnelle
@@ -111,22 +130,22 @@ Comportement:
 - Sois concis mais informatif
 - Si tu ne comprends pas le contexte, demande des clarifications
 
-L'historique des messages récents t'est fourni pour te permettre de suivre la conversation et de donner des réponses contextuelles.`
+L'historique des messages récents t'est fourni pour te permettre de suivre la conversation et de donner des réponses contextuelles.`,
   };
 
   const messages = [systemPrompt];
-  
+
   // Ajouter l'historique des messages (ne garder que role et content)
-  const cleanHistory = messageHistory.map(msg => ({
+  const cleanHistory = messageHistory.map((msg) => ({
     role: msg.role,
-    content: msg.content
+    content: msg.content,
   }));
   messages.push(...cleanHistory);
-  
+
   // Ajouter la question actuelle
   messages.push({
     role: "user",
-    content: currentQuestion
+    content: currentQuestion,
   });
 
   return messages;
@@ -139,11 +158,7 @@ L'historique des messages récents t'est fourni pour te permettre de suivre la c
  * @returns {string} Réponse de Mistral
  */
 const callMistralAPI = async (messages, options = {}) => {
-  const {
-    temperature = 0.7,
-    maxTokens = 64000,
-    timeout = 30000
-  } = options;
+  const { temperature = 0.7, maxTokens = 64000, timeout = 30000 } = options;
 
   if (!MISTRAL_API_KEY) {
     throw new Error("Clé API Mistral non configurée");
@@ -163,13 +178,16 @@ const callMistralAPI = async (messages, options = {}) => {
       max_tokens: maxTokens,
     };
 
-    console.log("Corps de la requête Mistral:", JSON.stringify(requestBody, null, 2));
+    console.log(
+      "Corps de la requête Mistral:",
+      JSON.stringify(requestBody, null, 2)
+    );
 
     const response = await fetch(MISTRAL_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${MISTRAL_API_KEY}`,
+        Authorization: `Bearer ${MISTRAL_API_KEY}`,
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -181,34 +199,44 @@ const callMistralAPI = async (messages, options = {}) => {
       const errorText = await response.text();
       console.error("Erreur API Mistral - Status:", response.status);
       console.error("Erreur API Mistral - Text:", errorText);
-      
+
       let errorDetails = "Erreur inconnue";
 
       try {
         const errorJson = JSON.parse(errorText);
-        errorDetails = errorJson.error?.message || errorJson.detail || errorJson.message || errorText;
+        errorDetails =
+          errorJson.error?.message ||
+          errorJson.detail ||
+          errorJson.message ||
+          errorText;
       } catch (e) {
         errorDetails = errorText;
       }
 
-      throw new Error(`Erreur API Mistral (${response.status}): ${errorDetails}`);
+      throw new Error(
+        `Erreur API Mistral (${response.status}): ${errorDetails}`
+      );
     }
 
     const result = await response.json();
-    
+
     // Extraction robuste de la réponse
-    if (result.choices && Array.isArray(result.choices) && result.choices.length > 0) {
+    if (
+      result.choices &&
+      Array.isArray(result.choices) &&
+      result.choices.length > 0
+    ) {
       if (result.choices[0].message && result.choices[0].message.content) {
         return result.choices[0].message.content;
       } else if (result.choices[0].content) {
         return result.choices[0].content;
       }
     }
-    
+
     if (result.response) {
       return result.response;
     }
-    
+
     if (result.output) {
       return result.output;
     }
@@ -228,38 +256,50 @@ const callMistralAPI = async (messages, options = {}) => {
  * @param {Object} options - Options supplémentaires
  * @returns {Object} Réponse et métadonnées
  */
-export const processMistralChannelQuestion = async (canalId, question, userId, options = {}) => {
+export const processMistralChannelQuestion = async (
+  canalId,
+  question,
+  userId,
+  options = {}
+) => {
   try {
     const { historyLimit = 100, includeContext = true } = options;
-    
+
     // Récupérer l'historique si demandé
     let messageHistory = [];
     if (includeContext) {
       messageHistory = await getChannelMessageHistory(canalId, historyLimit);
     }
-    
+
     // Créer le contexte pour Mistral
-    const mistralMessages = createMistralContext(messageHistory, question, 'channel');
-    
+    const mistralMessages = createMistralContext(
+      messageHistory,
+      question,
+      "channel"
+    );
+
     // Appeler l'API Mistral
     const response = await callMistralAPI(mistralMessages);
-    
+
     // Enregistrer la réponse en base de données
     const savedMessage = await MessageModel.create({
       contenu: response,
       fk_canal: canalId,
       fk_utilisateur: MISTRAL_USER_ID,
     });
-    
+
     return {
       success: true,
       response: response,
       messageId: savedMessage.id_message,
       contextUsed: messageHistory.length > 0,
-      historyLength: messageHistory.length
+      historyLength: messageHistory.length,
     };
   } catch (error) {
-    console.error("Erreur lors du traitement de la question Mistral (canal):", error);
+    console.error(
+      "Erreur lors du traitement de la question Mistral (canal):",
+      error
+    );
     throw error;
   }
 };
@@ -271,38 +311,53 @@ export const processMistralChannelQuestion = async (canalId, question, userId, o
  * @param {Object} options - Options supplémentaires
  * @returns {Object} Réponse et métadonnées
  */
-export const processMistralPrivateQuestion = async (userId, question, options = {}) => {
+export const processMistralPrivateQuestion = async (
+  userId,
+  question,
+  options = {}
+) => {
   try {
     const { historyLimit = 100, includeContext = true } = options;
-    
+
     // Récupérer l'historique si demandé
     let messageHistory = [];
     if (includeContext) {
-      messageHistory = await getPrivateMessageHistory(userId, MISTRAL_USER_ID, historyLimit);
+      messageHistory = await getPrivateMessageHistory(
+        userId,
+        MISTRAL_USER_ID,
+        historyLimit
+      );
     }
-    
+
     // Créer le contexte pour Mistral
-    const mistralMessages = createMistralContext(messageHistory, question, 'private');
-    
+    const mistralMessages = createMistralContext(
+      messageHistory,
+      question,
+      "private"
+    );
+
     // Appeler l'API Mistral
     const response = await callMistralAPI(mistralMessages);
-    
+
     // Enregistrer la réponse en base de données
     const savedMessage = await MessagePrive.create({
       contenu: response,
       fk_expediteur: MISTRAL_USER_ID,
       fk_destinataire: userId,
     });
-    
+
     return {
       success: true,
       response: response,
       messageId: savedMessage.id_message_prive,
       contextUsed: messageHistory.length > 0,
-      historyLength: messageHistory.length
+      historyLength: messageHistory.length,
     };
   } catch (error) {
-    console.error("Erreur lors du traitement de la question Mistral (privé):", error);
+    console.error(
+      "Erreur lors du traitement de la question Mistral (privé):",
+      error
+    );
     throw error;
   }
 };
@@ -316,10 +371,10 @@ export const askMistralInChannel = async (req, res) => {
     const { question, includeHistory = true, historyLimit = 100 } = req.body;
     const userId = req.user.id;
 
-    if (!question || question.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Question requise" 
+    if (!question || question.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Question requise",
       });
     }
 
@@ -333,23 +388,28 @@ export const askMistralInChannel = async (req, res) => {
     );
 
     if (accessCheck.rows.length === 0) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Accès au canal non autorisé" 
+      return res.status(403).json({
+        success: false,
+        message: "Accès au canal non autorisé",
       });
     }
 
-    const result = await processMistralChannelQuestion(canalId, question, userId, {
-      historyLimit: includeHistory ? historyLimit : 0,
-      includeContext: includeHistory
-    });
+    const result = await processMistralChannelQuestion(
+      canalId,
+      question,
+      userId,
+      {
+        historyLimit: includeHistory ? historyLimit : 0,
+        includeContext: includeHistory,
+      }
+    );
 
     res.json(result);
   } catch (error) {
     console.error("Erreur dans askMistralInChannel:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || "Erreur lors du traitement de la question" 
+    res.status(500).json({
+      success: false,
+      message: error.message || "Erreur lors du traitement de la question",
     });
   }
 };
@@ -362,24 +422,24 @@ export const askMistralPrivate = async (req, res) => {
     const { question, includeHistory = true, historyLimit = 100 } = req.body;
     const userId = req.user.id;
 
-    if (!question || question.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Question requise" 
+    if (!question || question.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Question requise",
       });
     }
 
     const result = await processMistralPrivateQuestion(userId, question, {
       historyLimit: includeHistory ? historyLimit : 0,
-      includeContext: includeHistory
+      includeContext: includeHistory,
     });
 
     res.json(result);
   } catch (error) {
     console.error("Erreur dans askMistralPrivate:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || "Erreur lors du traitement de la question" 
+    res.status(500).json({
+      success: false,
+      message: error.message || "Erreur lors du traitement de la question",
     });
   }
 };
@@ -394,7 +454,7 @@ export const getMistralHistory = async (req, res) => {
 
     let history = [];
 
-    if (type === 'channel' && canalId) {
+    if (type === "channel" && canalId) {
       // Vérifier l'accès au canal
       const accessCheck = await pool.query(
         `SELECT c.* FROM canal c 
@@ -405,32 +465,33 @@ export const getMistralHistory = async (req, res) => {
       );
 
       if (accessCheck.rows.length === 0) {
-        return res.status(403).json({ 
-          success: false, 
-          message: "Accès au canal non autorisé" 
+        return res.status(403).json({
+          success: false,
+          message: "Accès au canal non autorisé",
         });
       }
 
       history = await getChannelMessageHistory(canalId, limit);
-    } else if (type === 'private') {
+    } else if (type === "private") {
       history = await getPrivateMessageHistory(userId, MISTRAL_USER_ID, limit);
     } else {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Type et paramètres requis (type: 'channel' ou 'private')" 
+      return res.status(400).json({
+        success: false,
+        message: "Type et paramètres requis (type: 'channel' ou 'private')",
       });
     }
 
     res.json({
       success: true,
       history: history,
-      count: history.length
+      count: history.length,
     });
   } catch (error) {
     console.error("Erreur dans getMistralHistory:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || "Erreur lors de la récupération de l'historique" 
+    res.status(500).json({
+      success: false,
+      message:
+        error.message || "Erreur lors de la récupération de l'historique",
     });
   }
 };
@@ -442,5 +503,5 @@ export {
   callMistralAPI,
   MISTRAL_USER_ID,
   MISTRAL_USERNAME,
-  MISTRAL_AVATAR
+  MISTRAL_AVATAR,
 };

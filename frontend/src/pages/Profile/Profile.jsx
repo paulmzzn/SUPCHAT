@@ -19,6 +19,7 @@ import "./Profile.css";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Spinner from "../../components/Spinner/Spinner";
 import ActivitySection from "./ActivitySection";
+import { API_URL } from "../../config/config";
 
 function Profile() {
   const { userId } = useParams();
@@ -109,6 +110,7 @@ function Profile() {
 
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
+
     try {
       const apiUrl =
         (process.env.REACT_APP_API_URL || "http://185.98.137.166:3001") +
