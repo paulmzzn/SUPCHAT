@@ -1,4 +1,9 @@
-import AWS from "aws-sdk";
+import {
+  S3Client,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -12,17 +17,17 @@ const s3ConfigSecrets = getS3Config();
 
 // Configure AWS SDK with explicit credentials for Scaleway
 const s3Config = {
-  region: "https://s3.fr-par.scw.cloud/",
+  region: s3ConfigSecrets.region,
   endpoint: s3ConfigSecrets.endpoint,
   credentials: {
     accessKeyId: s3ConfigSecrets.accessKeyId,
     secretAccessKey: s3ConfigSecrets.secretAccessKey,
   },
-  s3ForcePathStyle: true, // Required for Scaleway S3 compatibility
+  forcePathStyle: true, // Required for Scaleway S3 compatibility
 };
 
 // Create S3 service object with explicit configuration
-const s3 = new AWS.S3(s3Config);
+const s3 = new S3Client(s3Config);
 
 // S3 bucket name
 const BUCKET_NAME = s3ConfigSecrets.bucketName;
@@ -105,14 +110,12 @@ export const uploadFileToS3 = async (
 
     console.log(
       `Uploading file to Scaleway S3 bucket: ${BUCKET_NAME}, path: ${destinationPath}`
-    );
-
-    // Téléverser vers S3
-    const uploadResult = await s3.upload(params).promise();
+    ); // Téléverser vers S3
+    const command = new PutObjectCommand(params);
+    const uploadResult = await s3.send(command);
 
     // Construire l'URL correcte pour Scaleway S3
     const fileUrl =
-      uploadResult.Location ||
       `${s3Config.endpoint}${BUCKET_NAME}/${destinationPath}`.replace(
         /([^:])\/\/+/g,
         "$1/"
@@ -156,13 +159,13 @@ export const deleteFileFromS3 = async (url) => {
     }
 
     console.log(`Deleting object with key: ${key} from bucket: ${BUCKET_NAME}`);
-
     const params = {
       Bucket: BUCKET_NAME,
       Key: key,
     };
 
-    await s3.deleteObject(params).promise();
+    const command = new DeleteObjectCommand(params);
+    await s3.send(command);
     console.log(`File successfully deleted from S3: ${key}`);
     return true;
   } catch (error) {
@@ -185,13 +188,13 @@ export const getObjectFromS3 = async (key) => {
     console.log(
       `Retrieving object with key: ${key} from bucket: ${BUCKET_NAME}`
     );
-
     const params = {
       Bucket: BUCKET_NAME,
       Key: key,
     };
 
-    const data = await s3.getObject(params).promise();
+    const command = new GetObjectCommand(params);
+    const data = await s3.send(command);
     return data;
   } catch (error) {
     console.error("Error retrieving file from Scaleway S3:", error);
