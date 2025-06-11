@@ -52,8 +52,7 @@ function Profile() {
     setLoading(true);
     setError(null);
 
-    const apiUrl =
-      `${API_URL}/api/users/${userId}`;
+    const apiUrl = `${API_URL}/api/users/${userId}`;
 
     console.log("Profile.jsx - Fetching user profile from:", apiUrl);
 
@@ -109,7 +108,6 @@ function Profile() {
 
   // Fonction pour récupérer les workspaces de l'utilisateur
   const fetchUserWorkspaces = async () => {
-
     try {
       const apiUrl = `${API_URL}/api/users/${userId}/workspaces`;
 

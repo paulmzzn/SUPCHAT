@@ -2,8 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import io from "socket.io-client";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-
+import { API_URL } from "../../../config/config";
 /**
  * Hook pour gérer la connexion socket et les événements associés
  * @param {string} currentUserId - ID de l'utilisateur courant

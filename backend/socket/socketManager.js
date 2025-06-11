@@ -10,7 +10,6 @@ import pool from "../config/dbConnection.js";
 import { getJwtSecret, getMistralApiKey } from "../config/secrets.js"; // Import des fonctions secrets
 import {
   processMistralChannelQuestion,
-  processMistralPrivateQuestion,
   MISTRAL_USER_ID,
   MISTRAL_USERNAME,
   MISTRAL_AVATAR,

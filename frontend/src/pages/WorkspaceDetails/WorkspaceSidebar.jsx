@@ -229,7 +229,7 @@ function WorkspaceSidebar({
 
       const response = await fetch(
         `${
-          process.env.REACT_APP_API_URL || "http://localhost:3001"
+          process.env.REACT_APP_API_URL || "http://185.98.137.166:3001"
         }/api/workspaces/${workspace.id}/invite`,
         {
           method: "POST",

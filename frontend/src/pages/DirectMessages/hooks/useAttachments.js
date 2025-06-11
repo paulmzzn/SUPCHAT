@@ -1,8 +1,7 @@
 // Hook personnalisé pour gérer les pièces jointes
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "../../../config/config";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
