@@ -19,7 +19,7 @@ export const googleStrategy = new GoogleStrategy(
     clientSecret: oauthConfig.google.clientSecret,
     callbackURL:
       process.env.GOOGLE_CALLBACK_URL ||
-      "http://185.98.137.166:3000/api/users/auth/google/callback",
+      "https://supchat.fr/api/users/auth/google/callback",
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -58,7 +58,7 @@ export const githubStrategy = new GitHubStrategy(
     clientSecret: oauthConfig.github.clientSecret,
     callbackURL:
       process.env.GITHUB_CALLBACK_URL ||
-      "http://185.98.137.166:3000/api/users/auth/github/callback",
+      "https://supchat.fr/api/users/auth/github/callback",
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
