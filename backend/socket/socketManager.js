@@ -6,6 +6,7 @@ import ReactionPrive from "../models/ReactionPrive.js";
 import Fichier from "../models/Fichier.js";
 import Canal from "../models/Canal.js"; // Importation directe du modèle Canal
 import { deleteFromS3 } from "../config/s3Config.js";
+import { getJwtSecret, getMistralApiKey } from "../config/secrets.js";
 import pool from "../config/dbConnection.js";
 import {
   processMistralChannelQuestion,
