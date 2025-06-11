@@ -2063,30 +2063,39 @@
 
 /* Styles pour la fenêtre modale de sélection d'emoji */
 .emoji-picker-modal {
-  background: linear-gradient(
-    145deg,
-    rgba(38, 38, 45, 0.95),
-    rgba(28, 28, 35, 0.98)
-  );
+  background: var(--color-bg-secondary, #23272f);
+  border: 1px solid var(--color-border-content, rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   padding: 1.5rem;
   width: 320px;
   max-width: 90%;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 30px rgba(147, 72, 183, 0.15);
-  color: white;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+  color: var(--color-text, #f5f6fa);
   animation: slideUp 0.3s ease;
   transform-origin: center;
   position: relative;
 }
 
+.theme-light .emoji-picker-modal {
+  background: #ffffff;
+  border: 1px solid #e1e4e8;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(0, 0, 0, 0.1);
+  color: #24292e;
+}
+
 .emoji-picker-modal h3 {
-  color: white;
+  color: var(--color-text, #f5f6fa);
   text-align: center;
   margin-top: 0;
   margin-bottom: 1.25rem;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 1.1rem;
+}
+
+.theme-light .emoji-picker-modal h3 {
+  color: #24292e;
 }
 
 .emoji-grid {
@@ -2097,8 +2106,8 @@
 }
 
 .emoji-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: var(--color-bg-form, rgba(255, 255, 255, 0.07));
+  border: 1px solid var(--color-border-content, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   width: 40px;
   height: 40px;
@@ -2108,16 +2117,50 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 1.2rem;
+  color: var(--color-text, #f5f6fa);
+}
+
+.theme-light .emoji-button {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  color: #24292e;
 }
 
 .emoji-button:hover {
-  background: rgba(147, 72, 183, 0.2);
-  transform: scale(1.1);
+  background: var(--color-tab-active, #9348b7);
+  color: white;
+  transform: scale(1.05);
+  border-color: var(--color-tab-active, #9348b7);
 }
 
 .emoji-picker-actions {
   display: flex;
   justify-content: center;
+  gap: 12px;
+}
+
+.emoji-picker-actions button {
+  background: var(--color-btn-secondary-bg, rgba(255, 255, 255, 0.1));
+  border: var(--color-btn-secondary-border, 1px solid rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: var(--color-text, #f5f6fa);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.theme-light .emoji-picker-actions button {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.emoji-picker-actions button:hover {
+  background: var(--color-tab-active, #9348b7);
+  color: white;
+  border-color: var(--color-tab-active, #9348b7);
 }
 
 /* Styles pour les réactions aux messages */
@@ -3254,12 +3297,23 @@ word-break: break-all;
   padding: 10px 12px;
   border-radius: 8px;
   margin-bottom: 8px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--surface-background);
+  border: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
 
+.theme-light .channel-member-item {
+  background-color: var(--surface-light);
+  border: 1px solid var(--border-light);
+}
+
 .channel-member-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--hover-background);
+  border-color: var(--accent-color);
+}
+
+.theme-light .channel-member-item:hover {
+  background-color: var(--hover-light);
 }
 
 .channel-member-avatar {
@@ -3277,13 +3331,21 @@ word-break: break-all;
 .channel-member-name {
   font-weight: 500;
   font-size: 0.95rem;
-  color: white;
+  color: var(--text-color);
   margin: 0 0 2px;
+}
+
+.theme-light .channel-member-name {
+  color: var(--text-dark);
 }
 
 .channel-member-role {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
+}
+
+.theme-light .channel-member-role {
+  color: var(--text-muted-light);
 }
 
 .access-controls {
@@ -3301,8 +3363,12 @@ word-break: break-all;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-color);
   font-size: 0.9rem;
+}
+
+.theme-light .access-radio-option {
+  color: var(--text-dark);
 }
 
 .access-radio-option input[type="radio"] {
@@ -3649,4 +3715,36 @@ word-break: break-all;
   height: 28px !important;
   border-radius: 50% !important;
   overflow: hidden !important;
+}
+
+/* Styles pour message-sidebar avec support des thèmes */
+.message-sidebar {
+  background-color: #e8e8e8; /* Gris très clair par défaut (mode sombre) */
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Texte sombre pour le mode sombre (fond clair) */
+.message-sidebar .message-text {
+  color: #2c2c2c !important;
+}
+
+.message-sidebar .message-date {
+  color: #666666 !important;
+}
+
+/* Mode clair - gris foncé */
+.theme-light .message-sidebar {
+  background-color: #4a4a4a; /* Gris foncé en mode clair */
+}
+
+/* Texte clair pour le mode clair (fond sombre) */
+.theme-light .message-sidebar .message-text {
+  color: #ffffff !important;
+}
+
+.theme-light .message-sidebar .message-date {
+  color: #cccccc !important;
 }
