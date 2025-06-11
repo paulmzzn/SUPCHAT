@@ -46,6 +46,15 @@ function DirectMessages() {
   const selectedUser = conv?.selectedUser;
   const currentUserId = conv?.currentUserId;
 
+  // Sélection automatique de la conversation si userId est présent dans l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get("userId");
+    if (userId && conv && typeof conv.handleSelectUser === "function" && selectedUser !== userId) {
+      conv.handleSelectUser(userId);
+    }
+  }, [location.search, conv, selectedUser]);
+
   // État local pour les attachments, qui sera partagé entre les hooks
   const [attachments, setAttachments] = useState([]);
 

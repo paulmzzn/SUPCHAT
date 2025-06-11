@@ -1347,7 +1347,7 @@ const socketManager = (io) => {
       }
     });
 
-    // Nouvel événement pour gérer les réactions aux messages
+    // Nouvel événement pour gérer les réactions aux messages (canal)
     socket.on("addReaction", async (data) => {
       try {
         console.log("Socket.IO: Réaction reçue", data);
@@ -1398,6 +1398,52 @@ const socketManager = (io) => {
           socket.emit("error", {
             message: "Erreur lors du traitement de la réaction",
           });
+        }
+      }
+    });
+
+    // Nouvel événement pour gérer les réactions aux messages privés
+    socket.on("addPrivateMessageReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Réaction privée reçue", data);
+        const { id, reaction } = data;
+        const userId = socket.user.id;
+
+        if (!id || !reaction) {
+          console.error("Socket.IO: Données de réaction privée incomplètes");
+          socket.emit("error", { message: "Données de réaction incomplètes" });
+          return;
+        }
+
+        // Vérifier que l'utilisateur est bien l'expéditeur ou le destinataire du message
+        const message = await MessagePrive.getById(id);
+        if (!message || (message.fk_expediteur !== userId && message.fk_destinataire !== userId)) {
+          socket.emit("error", { message: "Non autorisé à réagir à ce message privé" });
+          return;
+        }
+
+        // Ajouter la réaction
+        await ReactionPrive.create({
+          fk_message_prive: id,
+          fk_utilisateur: userId,
+          reaction_type: reaction,
+        });
+
+        // Récupérer les réactions à jour
+        const updatedReactions = await ReactionPrive.getByMessage(id, userId);
+
+        // Diffuser aux deux utilisateurs concernés
+        io.to(`dm:${message.fk_expediteur}`)
+          .to(`dm:${message.fk_destinataire}`)
+          .emit("privateMessageReaction", { messageId: id, reactions: updatedReactions });
+      } catch (error) {
+        if (error.code === "23505") {
+          // Contrainte unique (déjà réagi)
+          const currentReactions = await ReactionPrive.getByMessage(data.id, socket.user.id);
+          socket.emit("privateMessageReaction", { messageId: data.id, reactions: currentReactions });
+        } else {
+          console.error("Socket.IO: Erreur de réaction privée", error);
+          socket.emit("error", { message: "Erreur lors de la réaction privée" });
         }
       }
     });
