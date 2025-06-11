@@ -1,25 +1,11 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "stream";
-import dotenv from "dotenv";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import s3Client from "../config/s3Config.js";
+import { getS3Config } from "../config/secrets.js";
 import path from "path";
-import pool from "../config/dbConnection.js";
+import { Readable } from "stream";
 
-// Charger les variables d'environnement
-dotenv.config();
-
-// Configuration du client S3
-const s3Client = new S3Client({
-  region: process.env.SCW_REGION || "fr-par",
-  endpoint: process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud/",
-  credentials: {
-    accessKeyId: process.env.SCW_ACCESS_KEY_ID,
-    secretAccessKey: process.env.SCW_SECRET_ACCESS_KEY,
-  },
-  forcePathStyle: true,
-});
-
-// Nom du bucket depuis les variables d'environnement ou valeur par défaut
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "supchat-files";
+const s3Config = getS3Config();
+const BUCKET_NAME = s3Config.bucketName;
 
 // Fonction pour récupérer un fichier depuis S3 et le servir au client
 export const getFileFromS3 = async (req, res) => {
@@ -52,12 +38,15 @@ export const getFileFromS3 = async (req, res) => {
 
     // Définir les en-têtes pour le téléchargement
     res.setHeader("Content-Type", ContentType || "application/octet-stream");
-    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`); // Convertir le stream en buffer pour l'envoyer au client
+    const chunks = [];
+    for await (const chunk of Body) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
 
-    // Convertir le corps de la réponse en stream lisible et l'envoyer au client
-    const readableStream =
-      Body instanceof Readable ? Body : Readable.from(Body);
-    readableStream.pipe(res);
+    // Envoyer le fichier au client
+    res.send(buffer);
   } catch (error) {
     console.error(
       "Erreur lors de la récupération du fichier depuis S3:",
@@ -93,11 +82,9 @@ export const proxyS3Image = async (req, res) => {
       return res.status(400).json({ error: "Format d'URL S3 non reconnu" });
     }
 
-    console.log(`[fileController] Clé extraite: ${fileKey}`);
-
-    // Créer la commande pour récupérer l'objet depuis S3
+    console.log(`[fileController] Clé extraite: ${fileKey}`); // Créer la commande pour récupérer l'objet depuis S3
     const command = new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME || "s3-supchat",
+      Bucket: BUCKET_NAME, // Utilise les secrets Docker
       Key: fileKey,
     });
 
@@ -117,12 +104,15 @@ export const proxyS3Image = async (req, res) => {
 
     if (ContentLength) {
       res.setHeader("Content-Length", ContentLength);
+    } // Convertir le stream en buffer pour l'envoyer au client
+    const chunks = [];
+    for await (const chunk of Body) {
+      chunks.push(chunk);
     }
+    const buffer = Buffer.concat(chunks);
 
-    // Convertir le corps de la réponse en stream lisible et l'envoyer au client
-    const readableStream =
-      Body instanceof Readable ? Body : Readable.from(Body);
-    readableStream.pipe(res);
+    // Envoyer l'image au client
+    res.send(buffer);
 
     console.log(
       `[fileController] ✅ Image proxy servie avec succès: ${fileKey}`

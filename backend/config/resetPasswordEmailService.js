@@ -1,12 +1,20 @@
 import nodemailer from "nodemailer";
+import { getEmailConfig } from "./secrets.js";
+
+// Configuration sécurisée de l'email
+const emailConfig = getEmailConfig();
+
+console.log(
+  `📧 Configuration email reset: ${emailConfig.user}@${emailConfig.host}:${emailConfig.port}`
+);
 
 const transporter = nodemailer.createTransport({
-  host: "mail86.lwspanel.com",
-  port: 465,
-  secure: true,
+  host: emailConfig.host,
+  port: emailConfig.port,
+  secure: emailConfig.secure,
   auth: {
-    user: "noreply@supchat.fr",
-    pass: "Supchat!2025",
+    user: emailConfig.user,
+    pass: emailConfig.password,
   },
   tls: {
     rejectUnauthorized: false,

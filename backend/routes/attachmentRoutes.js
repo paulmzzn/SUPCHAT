@@ -7,10 +7,11 @@ import { v4 as uuidv4 } from "uuid";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
-import dotenv from "dotenv";
 import { getPrivateMessageAttachments } from "../controllers/attachmentController.js";
+import { getS3Config } from "../config/secrets.js";
 
-dotenv.config();
+// Configuration S3 sécurisée avec secrets Docker
+const s3Config = getS3Config();
 
 const router = express.Router();
 
@@ -108,16 +109,14 @@ router.get(
   async (req, res) => {
     try {
       const { messageId } = req.params;
-
       const fichiers = await Fichier.getByMessageId(messageId);
 
       // Générer des URLs S3 complètes pour chaque pièce jointe
-      const endpoint =
-        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
-      const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
       const fichiersWithUrls = fichiers.map((fichier) => ({
         ...fichier,
-        url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+        url: `${s3Config.endpoint.replace(/\/$/, "")}/${s3Config.bucketName}/${
+          fichier.url
+        }`,
       }));
 
       res.status(200).json(fichiersWithUrls);
@@ -141,16 +140,14 @@ router.get(
   async (req, res) => {
     try {
       const { messagePriveId } = req.params;
-
       const fichiers = await Fichier.getByPrivateMessageId(messagePriveId);
 
       // Générer des URLs S3 complètes pour chaque pièce jointe
-      const endpoint =
-        process.env.SCW_ENDPOINT || "https://s3.fr-par.scw.cloud";
-      const bucket = process.env.S3_BUCKET_NAME || "s3-supchat";
       const fichiersWithUrls = fichiers.map((fichier) => ({
         ...fichier,
-        url: `${endpoint.replace(/\/$/, "")}/${bucket}/${fichier.url}`,
+        url: `${s3Config.endpoint.replace(/\/$/, "")}/${s3Config.bucketName}/${
+          fichier.url
+        }`,
       }));
 
       res.status(200).json(fichiersWithUrls);

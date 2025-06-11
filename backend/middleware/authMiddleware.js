@@ -1,13 +1,12 @@
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import pool from "../config/dbConnection.js";  // Ajout de l'import pour pool
-import Canal from "../models/Canal.js"; // Import du modèle Canal pour vérifier l'accès
+import { getJwtSecret } from "../config/secrets.js";
+import pool from "../config/dbConnection.js";
+import Canal from "../models/Canal.js";
 
-// Charger les variables d'environnement
-dotenv.config();
+// Clé secrète sécurisée
+const SECRET_KEY = getJwtSecret();
 
-// Définition d'une clé secrète constante
-const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
+console.log("🔐 Middleware d'authentification configuré avec succès");
 
 export const verifyToken = (req, res, next) => {
   // Autoriser l'accès aux fichiers statiques sans authentification
@@ -28,13 +27,15 @@ export const verifyToken = (req, res, next) => {
   try {
     // Format attendu: "Bearer TOKEN"
     const bearer = bearerHeader.split(" ");
-    
+
     // Vérifier que le format est correct (Bearer + token)
     if (bearer.length !== 2 || bearer[0] !== "Bearer") {
       console.log("Format de token invalide:", bearerHeader);
-      return res.status(401).json({ message: "Format de token invalide. Format attendu: 'Bearer TOKEN'" });
+      return res.status(401).json({
+        message: "Format de token invalide. Format attendu: 'Bearer TOKEN'",
+      });
     }
-    
+
     const token = bearer[1];
 
     if (!token || token.trim() === "") {
@@ -43,9 +44,14 @@ export const verifyToken = (req, res, next) => {
     }
 
     // Vérification préliminaire du format JWT (doit avoir 2 points)
-    if (!token.includes('.') || token.split('.').length !== 3) {
-      console.log("Format JWT invalide (ne contient pas 3 segments):", token.substring(0, 20));
-      return res.status(401).json({ message: "Format JWT invalide. Le token doit contenir 3 segments." });
+    if (!token.includes(".") || token.split(".").length !== 3) {
+      console.log(
+        "Format JWT invalide (ne contient pas 3 segments):",
+        token.substring(0, 20)
+      );
+      return res.status(401).json({
+        message: "Format JWT invalide. Le token doit contenir 3 segments.",
+      });
     }
 
     // Vérification du token avec la clé constante
@@ -53,13 +59,23 @@ export const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("Erreur de vérification du token:", error.name, error.message);
+    console.error(
+      "Erreur de vérification du token:",
+      error.name,
+      error.message
+    );
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Token JWT malformé ou invalide." });
+      return res
+        .status(401)
+        .json({ message: "Token JWT malformé ou invalide." });
     } else if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expiré. Veuillez vous reconnecter." });
+      return res
+        .status(401)
+        .json({ message: "Token expiré. Veuillez vous reconnecter." });
     }
-    return res.status(401).json({ message: "Erreur d'authentification: " + error.message });
+    return res
+      .status(401)
+      .json({ message: "Erreur d'authentification: " + error.message });
   }
 };
 
@@ -74,17 +90,17 @@ export const optionalAuth = (req, res, next) => {
 
   try {
     const bearer = bearerHeader.split(" ");
-    
+
     // Vérifier le format mais sans bloquer l'accès
     if (bearer.length !== 2 || bearer[0] !== "Bearer") {
       console.log("Format de token invalide dans optionalAuth:", bearerHeader);
       req.user = null;
       return next();
     }
-    
+
     const token = bearer[1];
 
-    if (token && token.trim() !== "" && token.split('.').length === 3) {
+    if (token && token.trim() !== "" && token.split(".").length === 3) {
       const decoded = jwt.verify(token, SECRET_KEY);
       req.user = decoded;
     } else {
@@ -106,38 +122,43 @@ export const checkWorkspaceMembership = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Authentification requise." });
     }
-    
+
     // Récupérer l'ID du workspace depuis les paramètres de route
     const workspaceId = req.params.workspaceId || req.params.id;
-    
+
     if (!workspaceId) {
       return res.status(400).json({ message: "ID de workspace non fourni." });
     }
-    
+
     // Vérifier si l'utilisateur est membre du workspace
     const query = `
       SELECT COUNT(*) AS count 
       FROM membre_workspace 
       WHERE fk_utilisateur = $1 AND fk_workspace = $2
     `;
-    
+
     const { rows } = await pool.query(query, [req.user.id, workspaceId]);
-    
-    if (rows[0].count === '0') {
-      console.log(`Accès refusé: L'utilisateur ${req.user.id} n'est pas membre du workspace ${workspaceId}`);
-      return res.status(403).json({ 
+
+    if (rows[0].count === "0") {
+      console.log(
+        `Accès refusé: L'utilisateur ${req.user.id} n'est pas membre du workspace ${workspaceId}`
+      );
+      return res.status(403).json({
         message: "Vous n'êtes pas membre de ce workspace.",
-        error: "workspace_access_denied"
+        error: "workspace_access_denied",
       });
     }
-    
+
     // Si l'utilisateur est membre, poursuivre
     next();
   } catch (error) {
-    console.error("Erreur lors de la vérification d'appartenance au workspace:", error);
-    return res.status(500).json({ 
-      message: "Erreur lors de la vérification d'accès au workspace.", 
-      error: error.message 
+    console.error(
+      "Erreur lors de la vérification d'appartenance au workspace:",
+      error
+    );
+    return res.status(500).json({
+      message: "Erreur lors de la vérification d'accès au workspace.",
+      error: error.message,
     });
   }
 };
@@ -149,42 +170,45 @@ export const checkWorkspaceAdmin = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Authentification requise." });
     }
-    
+
     // Récupérer l'ID du workspace depuis les paramètres de route
     const workspaceId = req.params.workspaceId || req.params.id;
-    
+
     if (!workspaceId) {
       return res.status(400).json({ message: "ID de workspace non fourni." });
     }
-    
+
     // Vérifier si l'utilisateur est admin ou propriétaire du workspace
     const query = `
       SELECT fk_role 
       FROM membre_workspace 
       WHERE fk_utilisateur = $1 AND fk_workspace = $2
     `;
-    
+
     const { rows } = await pool.query(query, [req.user.id, workspaceId]);
-    
+
     if (rows.length === 0 || (rows[0].fk_role !== 1 && rows[0].fk_role !== 2)) {
       // 1 = propriétaire, 2 = admin
-      console.log(`Accès refusé: L'utilisateur ${req.user.id} n'est pas admin du workspace ${workspaceId}`);
-      return res.status(403).json({ 
-        message: "Permissions insuffisantes. Vous devez être administrateur ou propriétaire.", 
-        error: "insufficient_permissions"
+      console.log(
+        `Accès refusé: L'utilisateur ${req.user.id} n'est pas admin du workspace ${workspaceId}`
+      );
+      return res.status(403).json({
+        message:
+          "Permissions insuffisantes. Vous devez être administrateur ou propriétaire.",
+        error: "insufficient_permissions",
       });
     }
-    
+
     // Ajouter le rôle à la requête pour y accéder dans le contrôleur si nécessaire
     req.userWorkspaceRole = rows[0].fk_role;
-    
+
     // Si l'utilisateur est admin ou propriétaire, poursuivre
     next();
   } catch (error) {
     console.error("Erreur lors de la vérification des permissions:", error);
-    return res.status(500).json({ 
-      message: "Erreur lors de la vérification des permissions.", 
-      error: error.message 
+    return res.status(500).json({
+      message: "Erreur lors de la vérification des permissions.",
+      error: error.message,
     });
   }
 };
@@ -196,43 +220,46 @@ export const checkCanalAccess = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Authentification requise." });
     }
-    
+
     // Récupérer l'ID du canal depuis les paramètres de route
     const canalId = req.params.canalId || req.params.channelId;
-    
+
     if (!canalId) {
-      console.error("checkCanalAccess: ID de canal manquant dans les paramètres", { 
-        params: req.params, 
-        url: req.originalUrl 
-      });
-      return res.status(400).json({ 
+      console.error(
+        "checkCanalAccess: ID de canal manquant dans les paramètres",
+        {
+          params: req.params,
+          url: req.originalUrl,
+        }
+      );
+      return res.status(400).json({
         message: "ID de canal non fourni.",
         error: "canal_id_missing",
-        params: req.params
+        params: req.params,
       });
     }
-    
+
     // Utiliser la méthode du modèle Canal pour vérifier l'accès
     const accessCheck = await Canal.checkUserAccess(canalId, req.user.id);
-    
+
     if (!accessCheck.hasAccess) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: accessCheck.message || "Accès refusé à ce canal privé.",
-        error: "canal_access_denied"
+        error: "canal_access_denied",
       });
     }
-    
+
     // Ajouter le type d'accès à la requête pour y accéder dans le contrôleur
     req.canalAccessType = accessCheck.accessType;
     req.isAdmin = accessCheck.isAdmin || false;
-    
+
     // Si l'accès est autorisé, poursuivre
     next();
   } catch (error) {
     console.error("Erreur lors de la vérification d'accès au canal:", error);
-    return res.status(500).json({ 
-      message: "Erreur lors de la vérification d'accès au canal.", 
-      error: error.message 
+    return res.status(500).json({
+      message: "Erreur lors de la vérification d'accès au canal.",
+      error: error.message,
     });
   }
 };
@@ -244,66 +271,65 @@ export const checkCanalWriteAccess = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Authentification requise." });
     }
-      // Récupérer l'ID du canal depuis les paramètres de route OU depuis le body pour les créations de message
-    let canalId = req.params.canalId;
-    
+
+    // Récupérer l'ID du canal depuis les paramètres de route
+    const canalId = req.params.canalId;
+
     // Si pas trouvé dans les paramètres, chercher dans le body (pour POST /api/messages)
     if (!canalId && req.body && req.body.fk_canal) {
       canalId = req.body.fk_canal;
     }
-    
-    // Chercher aussi dans req.body.canalId pour les routes Google Drive
-    if (!canalId && req.body && req.body.canalId) {
-      canalId = req.body.canalId;
-    }
-    
+
     if (!canalId) {
       console.error("checkCanalWriteAccess: ID de canal manquant", {
         params: req.params,
         body: req.body,
         url: req.originalUrl,
-        method: req.method
+        method: req.method,
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "ID de canal non fourni.",
         error: "canal_id_missing",
         debug: {
           params: req.params,
-          hasBodyFkCanal: !!(req.body && req.body.fk_canal)
-        }
+          hasBodyFkCanal: !!(req.body && req.body.fk_canal),
+        },
       });
     }
-    
+
     // Utiliser la méthode du modèle Canal pour vérifier l'accès
     const accessCheck = await Canal.checkUserAccess(canalId, req.user.id);
-    
+
     if (!accessCheck.hasAccess) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: accessCheck.message || "Accès refusé à ce canal privé.",
-        error: "canal_access_denied"
+        error: "canal_access_denied",
       });
     }
-    
+
     // Vérifier que l'utilisateur a des droits d'écriture (lecture_ecriture)
-    if (accessCheck.accessType !== 'lecture_ecriture') {
-      return res.status(403).json({ 
+    if (accessCheck.accessType !== "lecture_ecriture") {
+      return res.status(403).json({
         message: "Vous n'avez pas les droits d'écriture dans ce canal.",
         error: "canal_write_access_denied",
-        accessType: accessCheck.accessType
+        accessType: accessCheck.accessType,
       });
     }
-    
+
     // Ajouter le type d'accès à la requête pour y accéder dans le contrôleur
     req.canalAccessType = accessCheck.accessType;
     req.isAdmin = accessCheck.isAdmin || false;
-    
+
     // Si l'utilisateur a des droits d'écriture, poursuivre
     next();
   } catch (error) {
-    console.error("Erreur lors de la vérification des droits d'écriture au canal:", error);
-    return res.status(500).json({ 
-      message: "Erreur lors de la vérification des droits d'écriture au canal.", 
-      error: error.message 
+    console.error(
+      "Erreur lors de la vérification des droits d'écriture au canal:",
+      error
+    );
+    return res.status(500).json({
+      message: "Erreur lors de la vérification des droits d'écriture au canal.",
+      error: error.message,
     });
   }
 };

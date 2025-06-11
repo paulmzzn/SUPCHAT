@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { getCompleteFileUrl } from "../utils/fileUtils";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.69:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 /**
  * Hook pour gérer les pièces jointes des messages (DM ou channel)
@@ -361,8 +361,11 @@ export const useAttachments = (options = {}) => {
    */
   const handleGoogleDriveFiles = useCallback(
     async (googleDriveFiles) => {
-      console.log("[useAttachments] Fichiers Google Drive reçus:", googleDriveFiles);
-      
+      console.log(
+        "[useAttachments] Fichiers Google Drive reçus:",
+        googleDriveFiles
+      );
+
       if (!googleDriveFiles || googleDriveFiles.length === 0) {
         console.log("[useAttachments] Aucun fichier Google Drive sélectionné");
         return;
@@ -374,15 +377,25 @@ export const useAttachments = (options = {}) => {
         // Traiter chaque fichier Google Drive
         const uploads = [];
         for (const file of googleDriveFiles) {
-          console.log("[useAttachments] Traitement fichier Google Drive:", file);
-          
+          console.log(
+            "[useAttachments] Traitement fichier Google Drive:",
+            file
+          );
+
           // Vérifier que le fichier a les propriétés nécessaires
           if (file.id_fichier || file.id) {
             uploads.push({
               id_fichier: file.id_fichier || file.id,
-              nom_fichier: file.nom_fichier || file.originalDriveFile?.name || "Fichier Google Drive",
-              type: file.type || file.originalDriveFile?.mimeType || "application/octet-stream",
-              taille_fichier: file.taille_fichier || file.originalDriveFile?.size || 0,
+              nom_fichier:
+                file.nom_fichier ||
+                file.originalDriveFile?.name ||
+                "Fichier Google Drive",
+              type:
+                file.type ||
+                file.originalDriveFile?.mimeType ||
+                "application/octet-stream",
+              taille_fichier:
+                file.taille_fichier || file.originalDriveFile?.size || 0,
               url: file.url,
               presignedUrl: file.presignedUrl,
             });
@@ -406,7 +419,9 @@ export const useAttachments = (options = {}) => {
             attachments: uploads.map((a) => a.id_fichier),
           });
 
-          console.log("[useAttachments] Fichiers Google Drive envoyés via WebSocket");
+          console.log(
+            "[useAttachments] Fichiers Google Drive envoyés via WebSocket"
+          );
         } else {
           console.warn(
             "[useAttachments] Impossible d'envoyer Google Drive via socket:",
@@ -419,9 +434,11 @@ export const useAttachments = (options = {}) => {
           // Si pas de socket, ajouter aux attachments locaux
           setAttachments((prev) => [...prev, ...uploads]);
         }
-
       } catch (error) {
-        console.error("[useAttachments] Erreur lors du traitement Google Drive:", error);
+        console.error(
+          "[useAttachments] Erreur lors du traitement Google Drive:",
+          error
+        );
         alert(
           "Une erreur est survenue lors du traitement des fichiers Google Drive : " +
             error.message

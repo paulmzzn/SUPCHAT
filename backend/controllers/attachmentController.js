@@ -1,4 +1,5 @@
 import Fichier from "../models/Fichier.js";
+import { getS3Config } from "../config/secrets.js";
 
 // Récupérer les pièces jointes d'un message privé
 export const getPrivateMessageAttachments = async (req, res) => {
@@ -37,13 +38,10 @@ export const getPrivateMessageAttachments = async (req, res) => {
       }
 
       // Si ce n'est qu'une clé S3, construire l'URL complète
-      const s3Base =
-        process.env.SCW_ENDPOINT && process.env.S3_BUCKET_NAME
-          ? `${process.env.SCW_ENDPOINT.replace(/\/$/, "")}/${
-              process.env.S3_BUCKET_NAME
-            }`
-          : "https://s3.fr-par.scw.cloud/s3-supchat";
-
+      const s3Config = getS3Config();
+      const s3Base = `${s3Config.endpoint.replace(/\/$/, "")}/${
+        s3Config.bucketName
+      }`;
       if (cleanUrl) {
         const fullUrl = cleanUrl.startsWith("/")
           ? `${s3Base}${cleanUrl}`

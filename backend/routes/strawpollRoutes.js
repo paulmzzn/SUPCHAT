@@ -1,31 +1,38 @@
-import express from 'express';
-import axios from 'axios';
+import express from "express";
+import axios from "axios";
+import { getStrawpollApiKey } from "../config/secrets.js";
+
 const router = express.Router();
 
-const STRAWPOLL_API_KEY = process.env.STRAWPOLL_API_KEY; // Mets ta clé dans .env
-const ENDPOINT = 'https://api.strawpoll.com/v3/polls';
+// Configuration sécurisée
+const STRAWPOLL_API_KEY = getStrawpollApiKey();
+const ENDPOINT = "https://api.strawpoll.com/v3/polls";
 
-router.post('/', async (req, res) => {
+console.log("🍓 API Strawpoll configurée avec succès");
+
+router.post("/", async (req, res) => {
   try {
     const { title, options } = req.body;
     if (!title || !options || options.length < 2) {
-      return res.status(400).json({ message: 'Titre et au moins 2 options requis.' });
+      return res
+        .status(400)
+        .json({ message: "Titre et au moins 2 options requis." });
     }
 
     const poll = {
       title,
-      poll_options: options.map(opt => ({ type: 'text', value: opt })),
+      poll_options: options.map((opt) => ({ type: "text", value: opt })),
       poll_config: {
         is_private: false,
-        vote_type: 'default',
+        vote_type: "default",
         allow_comments: true,
         allow_indeterminate: false,
         allow_other_option: false,
         custom_design_colors: null,
         deadline_at: null,
-        duplication_checking: 'ip',
+        duplication_checking: "ip",
         allow_vpn_voters: false,
-        edit_vote_permissions: 'nobody',
+        edit_vote_permissions: "nobody",
         force_appearance: null,
         hide_participants: false,
         is_multiple_choice: false,
@@ -34,26 +41,32 @@ router.post('/', async (req, res) => {
         number_of_winners: 1,
         randomize_options: false,
         require_voter_names: false,
-        results_visibility: 'always',
-        use_custom_design: false
+        results_visibility: "always",
+        use_custom_design: false,
       },
       poll_meta: {
-        description: '',
+        description: "",
         location: null,
       },
-      type: 'multiple_choice'
+      type: "multiple_choice",
     };
 
-    console.log('Envoi de la requête Strawpoll:', JSON.stringify(poll, null, 2));
+    console.log(
+      "Envoi de la requête Strawpoll:",
+      JSON.stringify(poll, null, 2)
+    );
 
     const strawRes = await axios.post(ENDPOINT, poll, {
       headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': STRAWPOLL_API_KEY
-      }
+        "Content-Type": "application/json",
+        "X-API-KEY": STRAWPOLL_API_KEY,
+      },
     });
 
-    console.log('Réponse complète de Strawpoll:', JSON.stringify(strawRes.data, null, 2));
+    console.log(
+      "Réponse complète de Strawpoll:",
+      JSON.stringify(strawRes.data, null, 2)
+    );
 
     // Extraire l'URL ou l'ID de différentes façons possibles
     let pollUrl = strawRes.data.url || strawRes.data.content_url;
@@ -65,10 +78,10 @@ router.post('/', async (req, res) => {
     }
 
     if (!pollUrl && !pollId) {
-      console.error('Aucune URL ou ID trouvé dans la réponse Strawpoll');
-      return res.status(500).json({ 
-        message: 'Erreur: Impossible de récupérer l\'URL du sondage',
-        debug: strawRes.data 
+      console.error("Aucune URL ou ID trouvé dans la réponse Strawpoll");
+      return res.status(500).json({
+        message: "Erreur: Impossible de récupérer l'URL du sondage",
+        debug: strawRes.data,
       });
     }
 
@@ -76,39 +89,45 @@ router.post('/', async (req, res) => {
       url: pollUrl,
       id: pollId,
       title: title,
-      options: options
+      options: options,
     };
 
-    console.log('Réponse envoyée au frontend:', response);
+    console.log("Réponse envoyée au frontend:", response);
     return res.json(response);
-
   } catch (err) {
-    console.error('Erreur Strawpoll complète:', err.response?.data || err.message);
-    console.error('Status:', err.response?.status);
-    console.error('Headers:', err.response?.headers);
-    
-    return res.status(500).json({ 
-      message: 'Erreur Strawpoll', 
+    console.error(
+      "Erreur Strawpoll complète:",
+      err.response?.data || err.message
+    );
+    console.error("Status:", err.response?.status);
+    console.error("Headers:", err.response?.headers);
+
+    return res.status(500).json({
+      message: "Erreur Strawpoll",
       details: err.response?.data || err.message,
-      status: err.response?.status
+      status: err.response?.status,
     });
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const pollId = req.params.id;
-    if (!pollId) return res.status(400).json({ message: 'ID du sondage requis.' });
+    if (!pollId)
+      return res.status(400).json({ message: "ID du sondage requis." });
     const strawRes = await axios.get(`${ENDPOINT}/${pollId}`, {
       headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': STRAWPOLL_API_KEY
-      }
+        "Content-Type": "application/json",
+        "X-API-KEY": STRAWPOLL_API_KEY,
+      },
     });
     return res.json(strawRes.data);
   } catch (err) {
     console.error(err.response?.data || err.message);
-    return res.status(500).json({ message: 'Erreur Strawpoll', details: err.response?.data || err.message });
+    return res.status(500).json({
+      message: "Erreur Strawpoll",
+      details: err.response?.data || err.message,
+    });
   }
 });
 
