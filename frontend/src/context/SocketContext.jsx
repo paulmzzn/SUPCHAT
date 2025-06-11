@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { io } from "socket.io-client";
 import { setupSocketDebugger } from "../utils/socketDebug";
+import { API_URL } from "../config/config";
 
 const SocketContext = createContext(null);
 
@@ -35,7 +36,7 @@ export function SocketProvider({ children }) {
   const [userStatuses, setUserStatuses] = useState({});
   const socketRef = useRef(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.63:3000";
+
 
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = async () => {

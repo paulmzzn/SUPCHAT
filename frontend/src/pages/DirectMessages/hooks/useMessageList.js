@@ -1,7 +1,7 @@
 // Hook pour la gestion de la liste des messages (chargement, suppression, édition, reply, etc.)
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+import { API_URL } from "../../../config/config";
 
 export function useMessageList({ selectedUser, socket, currentUserId }) {
   const [messages, setMessages] = useState([]);

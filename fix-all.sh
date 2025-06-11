@@ -55,14 +55,16 @@ log_info "Suppression des conteneurs et images pour forcer la reconstruction..."
 # Supprimer les conteneurs
 $DOCKER_COMPOSE -f docker-compose.vps.yml rm -f
 
-# Supprimer les images pour forcer la reconstruction
+# Supprimer les images pour forcer la reconstruction (TOUTES les images)
 docker rmi supchat-frontend:latest 2>/dev/null || true
 docker rmi supchat-backend:latest 2>/dev/null || true
+docker rmi postgres:16-alpine 2>/dev/null || true
 
-log_success "Nettoyage terminé"
+log_success "Nettoyage terminé (volumes de données préservés)"
 
 echo ""
 log_info "Reconstruction complète (cela va prendre plusieurs minutes)..."
+log_info "📋 PostgreSQL sera reconstruit mais les données seront préservées dans le volume"
 $DOCKER_COMPOSE -f docker-compose.vps.yml up -d --build
 
 log_success "Reconstruction terminée"
@@ -85,8 +87,8 @@ $DOCKER_COMPOSE -f docker-compose.vps.yml ps
 
 echo ""
 log_info "Test de connectivité:"
-echo "• Backend health: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "ERREUR")"
-echo "• Frontend: $(curl -s -o /dev/null -w "%{http_code}" http://localhost || echo "ERREUR")"
+echo "• Backend health: $(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166:3000/health || echo "ERREUR")"
+echo "• Frontend: $(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166 || echo "ERREUR")"
 
 echo ""
 log_success "Correction complète terminée !"

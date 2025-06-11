@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://185.98.137.166:3000';
 const TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIs...'; // Remplacer par un vrai token
 
 // Test des nouvelles routes Mistral

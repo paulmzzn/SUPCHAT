@@ -37,7 +37,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=supchat
       - POSTGRES_DB=supchat
-      - FRONTEND_URL=${VPS_DOMAIN:-http://localhost}
+      - FRONTEND_URL=${VPS_DOMAIN:-http://185.98.137.166}
       - LOG_LEVEL=info
       # Configuration email LWS
       - EMAIL_HOST=mail86.lwspanel.com
@@ -85,10 +85,11 @@ services:
     container_name: supchat-frontend-vps
     environment:
       - REACT_APP_API_URL=""
-      - REACT_APP_SOCKET_URL=${VPS_DOMAIN:-http://localhost}
+      - REACT_APP_SOCKET_URL=https://supchat.fr
     ports:
       - "80:80"
-      - "443:443" # Pour HTTPS futur
+    volumes:
+      - ./frontend/nginx.cloudflare.conf:/etc/nginx/nginx.conf:ro
     networks:
       - supchat-network
     depends_on:

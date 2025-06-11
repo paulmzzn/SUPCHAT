@@ -6,8 +6,7 @@ import { useMessageContextMenu } from "./useMessageContextMenu";
 import { useMessageReactions } from "./useMessageReactions";
 import { useRef, useState, useCallback, useEffect } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.63:3000";
-
+import { API_URL } from "../../../config/config";
 /**
  * Hook pour gérer les messages entre utilisateurs
  * @param {string} selectedUser - ID de l'utilisateur sélectionné
