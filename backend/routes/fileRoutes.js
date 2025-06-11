@@ -4,25 +4,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { getObjectFromS3 } from "../config/s3Service.js";
-import AWS from "aws-sdk";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
-import { getS3Config } from "../config/secrets.js";
-
-// Configuration S3 sécurisée avec secrets Docker
-const s3ConfigSecrets = getS3Config();
-const s3Config = {
-  region: s3ConfigSecrets.region,
-  endpoint: s3ConfigSecrets.endpoint,
-  credentials: {
-    accessKeyId: s3ConfigSecrets.accessKeyId,
-    secretAccessKey: s3ConfigSecrets.secretAccessKey,
-  },
-  s3ForcePathStyle: true, // Requis pour la compatibilité avec Scaleway S3
-};
-
-// Créer l'instance S3
-const s3 = new AWS.S3(s3Config);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,16 +42,21 @@ router.get("/download/:filePath(*)", verifyToken, async (req, res) => {
       const fileData = await getObjectFromS3(fileKey);
 
       // Extraire le nom du fichier depuis le chemin
-      const fileName = path.basename(fileKey);
-
-      // Définir l'en-tête Content-Disposition pour forcer le téléchargement
+      const fileName = path.basename(fileKey); // Définir l'en-tête Content-Disposition pour forcer le téléchargement
       res.set({
         "Content-Disposition": `attachment; filename="${fileName}"`,
         "Content-Type": fileData.ContentType || "application/octet-stream",
       });
 
+      // Convertir le stream en buffer pour l'envoyer au client
+      const chunks = [];
+      for await (const chunk of fileData.Body) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+
       // Envoyer le fichier au client
-      return res.send(fileData.Body);
+      return res.send(buffer);
     } catch (s3Error) {
       console.error(`[FileRoutes] Erreur S3:`, s3Error);
 
