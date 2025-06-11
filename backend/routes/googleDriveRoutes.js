@@ -20,7 +20,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI =
   process.env.GOOGLE_REDIRECT_URI ||
-  "http://185.98.137.166:3000/api/users/auth/google/callback";
+  "https://supchat.fr/api/users/auth/google/callback";
 
 // Logs pour le debugging
 console.log("Google Drive Configuration:");
