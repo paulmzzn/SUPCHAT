@@ -6,7 +6,7 @@ const getApiUrl = () => {
   if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
     return 'http://localhost:3001';
   }
-  return 'http://185.98.137.166:3001';
+  return 'http://192.168.71.234:3001';
 };
 
 const API_BASE_URL = getApiUrl();
@@ -110,7 +110,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // Chercher un onglet SUPCHAT déjà ouvert
       for (const client of clientList) {
-        if (client.url.includes('supchat') || client.url.includes('localhost') || client.url.includes('185.98.137.166')) {
+        if (client.url.includes('supchat') || client.url.includes('localhost') || client.url.includes('192.168.71.234')) {
           if ('focus' in client) {
             // Si l'URL cible est différente, naviguer vers celle-ci
             if (targetUrl !== '/') {

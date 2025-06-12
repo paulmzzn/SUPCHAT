@@ -114,9 +114,9 @@ echo.
 echo 🎉 Redemarrage termine avec succes !
 echo.
 echo 🌐 URLs de l'application:
-echo    Frontend: http://185.98.137.166:3000
-echo    Backend:  http://185.98.137.166:5000
-echo    PgAdmin:  http://185.98.137.166:8080
+echo    Frontend: http://192.168.71.234:3000
+echo    Backend:  http://192.168.71.234:5000
+echo    PgAdmin:  http://192.168.71.234:8080
 echo.
 
 REM Proposer d'afficher les logs
