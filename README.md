@@ -1,0 +1,1889 @@
+# 🚀 SUPCHAT - Plateforme de Communication Temps Réel
+
+<div align="center">
+  <img src="frontend/src/assets/icons/logo_supchat.svg" alt="SUPCHAT Logo" width="120" height="120">
+  
+  **Une plateforme de communication moderne multi-plateforme avec IA intégrée**
+  
+  [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+  [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
+  [![React Native](https://img.shields.io/badge/React%20Native-0.79-purple.svg)](https://reactnative.dev/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://postgresql.org/)
+  [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://docker.com/)
+  [![License](https://img.shields.io/badge/License-ISC-yellow.svg)](LICENSE)
+</div>
+
+---
+
+## 📋 **Table des Matières**
+
+- [🎯 Vue d'Ensemble](#-vue-densemble)
+- [✨ Fonctionnalités](#-fonctionnalités)
+- [🏗️ Architecture](#️-architecture)
+- [🛠️ Technologies](#️-technologies)
+- [🚀 Installation](#-installation)
+- [🐳 Guide de Déploiement Docker](#-guide-de-déploiement-docker)
+- [📱 Application Mobile (React Native)](#-application-mobile-react-native)
+- [📱 Applications](#-applications)
+- [🔧 Configuration](#-configuration)
+- [📊 Base de Données](#-base-de-données)
+- [🔐 Sécurité](#-sécurité)
+- [🤖 IA Mistral](#-ia-mistral)
+- [📱 API Documentation](#-api-documentation)
+- [🚀 Infrastructure de Déploiement](#-infrastructure-de-déploiement)
+- [📈 Performance](#-performance)
+- [🤝 Contribution](#-contribution)
+- [📄 Licence](#-licence)
+
+---
+
+## 🎯 **Vue d'Ensemble**
+
+SUPCHAT est une plateforme de communication temps réel moderne qui combine les meilleures fonctionnalités des applications de chat professionnelles avec une interface utilisateur intuitive et des technologies de pointe.
+
+### **Caractéristiques Principales**
+
+- 💬 **Communication temps réel** via WebSocket (Socket.IO)
+- 🏢 **Espaces de travail** (Workspaces) avec gestion des rôles
+- 📱 **Multi-plateforme** : Web, Mobile (iOS/Android)
+- 🤖 **Assistant IA** intégré (Mistral AI)
+- 📁 **Partage de fichiers** avec stockage cloud
+- 🔐 **Authentification OAuth** (Google, GitHub)
+- 🌙 **Mode sombre/clair**
+- 📊 **Notifications push** intelligentes
+
+---
+
+## ✨ **Fonctionnalités**
+
+### 💬 **Communication**
+
+- [x] Messages en temps réel (canaux + messages privés)
+- [x] Réactions avec emojis personnalisés
+- [x] Réponses imbriquées (threading)
+- [x] Mentions utilisateur (@username)
+- [x] Indicateurs de frappe en temps réel
+- [x] Statuts utilisateur (en ligne, absent, ne pas déranger)
+- [x] Compteurs de messages non lus
+
+### 🏢 **Gestion des Espaces**
+
+- [x] Workspaces publics et privés
+- [x] Canaux avec permissions granulaires
+- [x] Système de rôles (owner, admin, member)
+- [x] Invitations par email avec tokens
+- [x] Découverte d'espaces publics
+- [x] Favoris utilisateur
+
+### 📁 **Média & Fichiers**
+
+- [x] Upload de fichiers (images, documents, vidéos)
+- [x] Visionneuse intégrée (images, PDFs)
+- [x] Intégration Google Drive
+- [x] Stockage cloud sécurisé (Scaleway S3)
+- [x] Preview de liens automatique
+
+### 🤖 **Intelligence Artificielle**
+
+- [x] Assistant IA Mistral intégré
+- [x] Analyse contextuelle des conversations
+- [x] Réponses intelligentes en temps réel
+- [x] Gestion des erreurs et timeouts
+
+### 🔧 **Fonctionnalités Avancées**
+
+- [x] Sondages intégrés (Strawpoll)
+- [x] Système de rappels avec notifications email
+- [x] Recherche globale (messages, fichiers, utilisateurs)
+- [x] Notifications push (web + mobile)
+- [x] Mode hors ligne avec synchronisation
+- [x] Export de conversations
+
+---
+
+## 🏗️ **Architecture**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Mobile App    │    │   Backend API   │
+│   React 18.3    │◄──►│ React Native    │◄──►│   Node.js       │
+│   Socket.IO     │    │   Expo          │    │   Express       │
+└─────────────────┘    └─────────────────┘    │   Socket.IO     │
+                                              └─────────┬───────┘
+                                                        │
+                       ┌─────────────────┐              │
+                       │   PostgreSQL    │◄─────────────┘
+                       │   Database      │
+                       └─────────────────┘
+
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │   Scaleway S3   │    │   Mistral AI    │
+                       │   File Storage  │    │   Assistant     │
+                       └─────────────────┘    └─────────────────┘
+```
+
+### **Structure du Projet**
+
+```
+SUPCHAT/
+├── backend/              # API Node.js + Socket.IO
+│   ├── controllers/      # Logique métier
+│   ├── models/          # Modèles de données
+│   ├── routes/          # Endpoints API
+│   ├── socket/          # Gestion WebSocket
+│   ├── middleware/      # Authentification, validation
+│   └── config/          # Configuration base de données, services
+├── frontend/            # Application Web React
+│   ├── src/
+│   │   ├── components/  # Composants réutilisables
+│   │   ├── pages/       # Pages principales
+│   │   ├── context/     # État global (Socket, Auth, Thème)
+│   │   ├── hooks/       # Hooks personnalisés
+│   │   └── utils/       # Utilitaires
+├── mobile/              # Application React Native
+│   ├── src/
+│   │   ├── screens/     # Écrans de l'application
+│   │   ├── components/  # Composants natifs
+│   │   ├── navigation/  # Navigation stack/tabs
+│   │   └── context/     # État partagé
+├── secrets/             # Configuration sécurisée Docker
+└── scripts/             # Scripts de déploiement
+```
+
+---
+
+## 🛠️ **Technologies**
+
+### **Backend**
+
+- **Runtime** : Node.js 18+
+- **Framework** : Express.js 4.21.2
+- **Base de données** : PostgreSQL 16
+- **ORM** : pg (driver natif PostgreSQL)
+- **Temps réel** : Socket.IO 4.8.1
+- **Authentification** : JWT + Passport.js (OAuth Google/GitHub)
+- **Upload** : Multer + AWS SDK (Scaleway S3)
+- **Email** : Nodemailer + Mailjet
+- **IA** : Mistral AI API
+
+### **Frontend**
+
+- **Framework** : React 18.3.1
+- **Router** : React Router DOM 6.18.0
+- **Build** : Create React App (Webpack)
+- **UI** : CSS modules + React Icons
+- **État** : Context API
+- **Temps réel** : Socket.IO Client
+- **Charts** : Chart.js + React ChartJS 2
+- **Markdown** : React Markdown + remark-gfm
+
+### **Mobile**
+
+- **Framework** : React Native 0.79.2
+- **Platform** : Expo ~53.0.8
+- **Navigation** : React Navigation 7.x
+- **Storage** : AsyncStorage
+- **Icons** : Expo Vector Icons
+- **Media** : Expo Image Picker, Document Picker
+
+### **Infrastructure**
+
+- **Conteneurisation** : Docker + Docker Compose
+- **Reverse Proxy** : Nginx
+- **SSL/TLS** : Let's Encrypt (Certbot)
+- **CI/CD** : Scripts automatisés
+- **Monitoring** : Health checks intégrés
+
+---
+
+## 🚀 **Installation**
+
+### **Prérequis**
+
+- Node.js 18+
+- PostgreSQL 16+
+- Docker & Docker Compose (recommandé)
+- Git
+
+### **Installation Rapide avec Docker**
+
+```powershell
+# Cloner le repository
+git clone https://github.com/votre-username/supchat.git
+cd supchat
+
+# Copier et configurer les variables d'environnement
+Copy-Item deploy.env.example deploy.env
+# Éditer deploy.env avec vos configurations
+
+# Configurer les secrets Docker
+./setup-secrets.ps1
+
+# Lancer l'application
+docker-compose up -d
+
+# Vérifier que tous les services sont en cours d'exécution
+docker-compose ps
+```
+
+### **Installation Manuelle**
+
+#### **1. Base de Données**
+
+```powershell
+# Installer PostgreSQL 16
+# Créer la base de données
+createdb -U postgres supchat
+
+# Importer le schéma
+psql -U postgres -d supchat -f backend/db/init-docker.sql
+```
+
+#### **2. Backend**
+
+```powershell
+cd backend
+npm install
+cp .env.example .env
+# Configurer les variables dans .env
+
+# Démarrer le serveur
+npm run dev
+```
+
+#### **3. Frontend**
+
+```powershell
+cd frontend
+npm install
+
+# Démarrer en développement
+npm start
+
+# Build pour production
+npm run build
+```
+
+#### **4. Mobile (Optionnel)**
+
+```powershell
+cd mobile
+npm install
+
+# Installer Expo CLI
+npm install -g @expo/cli
+
+# Démarrer l'application
+expo start
+```
+
+---
+
+## 🐳 **Guide de Déploiement Docker**
+
+SUPCHAT utilise Docker pour simplifier le déploiement et garantir la cohérence entre les environnements de développement, staging et production.
+
+### **📋 Prérequis Docker**
+
+```powershell
+# Installer Docker Desktop (Windows)
+# Télécharger depuis https://docker.com/products/docker-desktop
+
+# Vérifier l'installation
+docker --version
+docker-compose --version
+
+# Version minimale requise
+# Docker: 24.0+
+# Docker Compose: 2.0+
+```
+
+### **🔧 Configuration Initiale**
+
+#### **1. Préparation des Secrets**
+
+```powershell
+# Créer le dossier secrets (déjà présent)
+cd secrets/
+
+# Vérifier que tous les fichiers secrets existent
+ls secrets/
+# db_user.txt, db_password.txt, jwt_secret.txt, etc.
+
+# Éditer les valeurs si nécessaire
+notepad secrets/db_password.txt
+```
+
+#### **2. Variables d'Environnement**
+
+```powershell
+# Copier le fichier d'exemple
+Copy-Item deploy.env.example deploy.env
+
+# Éditer la configuration
+notepad deploy.env
+```
+
+**Contenu `deploy.env` :**
+
+```env
+# Configuration globale
+VPS_DOMAIN=votre-domaine.com
+ADMIN_EMAIL=admin@votre-domaine.com
+PROJECT_DIR=/opt/supchat
+ENABLE_SSL=true
+
+# Base de données
+POSTGRES_VERSION=16-alpine
+DB_NAME=supchat
+
+# Frontend
+FRONTEND_PORT=80
+NGINX_VERSION=alpine
+
+# Email (LWS)
+EMAIL_HOST=mail86.lwspanel.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+```
+
+### **🚀 Déploiement par Environnement**
+
+#### **1. Développement Local**
+
+```powershell
+# Démarrage rapide - tous services
+docker-compose up -d
+
+# Ou utiliser le script de démarrage rapide
+./start-quick.bat
+
+# Vérifier que tous les services sont UP
+docker-compose ps
+```
+
+**Services lancés :**
+
+- **PostgreSQL 16** : Base de données (port interne 5432)
+- **Backend Node.js** : API + Socket.IO (port 3000)
+- **Frontend React** : Interface web via Nginx (port 80)
+- **PgAdmin** (optionnel) : Administration base de données (port 8080)
+
+**URLs disponibles :**
+
+- 🌐 **Frontend** : http://localhost
+- 🔧 **API** : http://localhost:3000
+- 📊 **PgAdmin** : http://localhost:8080
+
+#### **2. Production/Staging**
+
+```powershell
+# Déploiement production optimisé
+docker-compose -f docker-compose.prod.yml up -d
+
+# Vérifier les logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Surveillance des performances
+docker stats
+```
+
+**Optimisations Production :**
+
+- ✅ **Images multi-stage** pour taille réduite
+- ✅ **Health checks** automatiques
+- ✅ **Restart policies** configurées
+- ✅ **Secrets Docker** pour sécurité
+- ✅ **Réseaux isolés** entre services
+- ✅ **Volumes persistants** pour données
+
+#### **3. Déploiement VPS**
+
+```powershell
+# Déploiement sur serveur distant
+./deploy-vps.sh votre-domaine.com
+
+# Ou manuellement
+docker-compose -f docker-compose.vps.yml up -d
+```
+
+**Configuration VPS spécifique :**
+
+- 🌐 **Reverse proxy Nginx** avec SSL
+- 📁 **Volumes montés** sur filesystem hôte
+- 🔒 **PostgreSQL non exposé** publiquement
+- 📧 **Configuration email** LWS
+- 🛡️ **Firewall** et sécurité renforcée
+
+### **📦 Architecture des Services Docker**
+
+#### **Service PostgreSQL**
+
+```yaml
+postgres:
+  image: postgres:16-alpine
+  environment:
+    POSTGRES_DB: supchat
+    POSTGRES_USER_FILE: /run/secrets/db_user
+    POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+  secrets: [db_user, db_password]
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - ./backend/db/init-docker.sql:/docker-entrypoint-initdb.d/
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $(cat /run/secrets/db_user)"]
+    interval: 30s
+```
+
+**Caractéristiques :**
+
+- 🐘 **PostgreSQL 16 Alpine** (image légère)
+- 🔐 **Secrets Docker** pour authentification
+- 📊 **Health checks** intégrés
+- 💾 **Volumes persistants** pour données
+- 🗃️ **Initialisation automatique** du schéma
+
+#### **Service Backend**
+
+```yaml
+backend:
+  build:
+    context: ./backend
+    dockerfile: Dockerfile.backend
+  environment:
+    - NODE_ENV=production
+    - DB_HOST=postgres
+    - FRONTEND_URL=http://192.168.1.169
+  secrets: [db_user, db_password, jwt_secret, ...]
+  depends_on: [postgres]
+  networks: [REDACTED]
+```
+
+**Fonctionnalités :**
+
+- 🚀 **Node.js 18+** avec Express
+- 🔌 **Socket.IO** pour temps réel
+- 🔑 **JWT + OAuth** (Google, GitHub)
+- 📁 **Upload S3** (Scaleway)
+- 🤖 **Intégration Mistral AI**
+- 📧 **Service email** Nodemailer
+
+#### **Service Frontend**
+
+```yaml
+frontend:
+  build:
+    context: ./frontend
+    dockerfile: Dockerfile.frontend
+  ports: ["80:80", "443:443"]
+  volumes: [./nginx.conf:/etc/nginx/nginx.conf]
+  depends_on: [backend]
+```
+
+**Technologies :**
+
+- ⚛️ **React 18.3** avec build optimisé
+- 🌐 **Nginx Alpine** comme serveur web
+- 🗜️ **Compression gzip** automatique
+- 📱 **PWA** (Progressive Web App)
+- 🔄 **Proxy API** vers backend
+
+### **🛠️ Commandes Docker Utiles**
+
+#### **Gestion des Services**
+
+```powershell
+# Démarrer tous les services
+docker-compose up -d
+
+# Arrêter tous les services
+docker-compose down
+
+# Reconstruire un service spécifique
+docker-compose build backend
+docker-compose up -d backend
+
+# Redémarrer un service
+docker-compose restart frontend
+
+# Voir les logs en temps réel
+docker-compose logs -f backend
+
+# Entrer dans un conteneur
+docker-compose exec backend sh
+docker-compose exec postgres psql -U supchat_user supchat
+```
+
+#### **Maintenance et Debug**
+
+```powershell
+# Vérifier l'état des conteneurs
+docker-compose ps
+
+# Statistiques de performance
+docker stats
+
+# Nettoyage (attention: supprime tout)
+docker-compose down -v  # Avec volumes
+docker system prune -a  # Nettoyage complet
+
+# Backup base de données
+docker-compose exec postgres pg_dump -U supchat_user supchat > backup.sql
+
+# Restore base de données
+cat backup.sql | docker-compose exec -T postgres psql -U supchat_user supchat
+```
+
+#### **Scripts Automatisés**
+
+```powershell
+# Scripts PowerShell/Batch disponibles
+./start-quick.bat           # Démarrage rapide
+./stop.bat                  # Arrêt propre
+./rebuild-and-restart.bat   # Reconstruction complète
+./fix-and-restart.bat       # Réparation + redémarrage
+./update-and-start.bat      # Mise à jour + démarrage
+```
+
+### **🔄 Processus de Mise à Jour**
+
+#### **Mise à jour Standard**
+
+```powershell
+# 1. Arrêter les services
+docker-compose down
+
+# 2. Récupérer les dernières modifications
+git pull origin main
+
+# 3. Reconstruire les images
+docker-compose build
+
+# 4. Redémarrer
+docker-compose up -d
+
+# 5. Vérifier la santé
+docker-compose ps
+curl http://localhost:3000/health
+```
+
+#### **Mise à jour Zero-Downtime (Production)**
+
+```powershell
+# 1. Mise à jour backend sans interruption
+docker-compose build backend
+docker-compose up -d --no-deps backend
+
+# 2. Attendre stabilisation
+Start-Sleep 30
+
+# 3. Mise à jour frontend
+docker-compose build frontend
+docker-compose up -d --no-deps frontend
+
+# 4. Vérification
+curl http://localhost/health
+```
+
+### **📊 Monitoring et Logs**
+
+#### **Health Checks**
+
+```powershell
+# Vérifier la santé de tous les services
+docker-compose exec backend curl http://localhost:3000/health
+docker-compose exec postgres pg_isready -U supchat_user
+
+# Test de connectivité complète
+curl http://localhost/api/ping
+curl http://localhost/socket.io/
+```
+
+#### **Surveillance des Logs**
+
+```powershell
+# Logs globaux
+docker-compose logs -f
+
+# Logs par service avec couleurs
+docker-compose logs -f --tail=100 backend
+docker-compose logs -f --tail=100 postgres
+
+# Filtrage des logs
+docker-compose logs backend | Select-String "ERROR"
+docker-compose logs backend | Select-String "Socket.IO"
+```
+
+#### **Métriques de Performance**
+
+```powershell
+# Utilisation ressources temps réel
+docker stats --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"
+
+# Espace disque des volumes
+docker system df
+
+# Inspection détaillée d'un service
+docker inspect supchat-backend
+```
+
+---
+
+## 📱 **Application Mobile (React Native)**
+
+L'application mobile SUPCHAT n'est **pas dockerisée** et nécessite un environnement de développement React Native spécifique.
+
+### **🔧 Prérequis Mobile**
+
+#### **Outils Requis**
+
+```powershell
+# 1. Node.js (même version que backend)
+node --version  # 18+
+
+# 2. Expo CLI
+npm install -g @expo/cli
+
+# 3. EAS CLI (pour builds)
+npm install -g eas-cli
+
+# 4. Yarn (optionnel mais recommandé)
+npm install -g yarn
+```
+
+#### **Environnement Plateforme**
+
+**Pour iOS :**
+
+- 🍎 **macOS** requis
+- 📱 **Xcode 14+** installé
+- 📋 **iOS Simulator** configuré
+- 👨‍💻 **Apple Developer Account** (pour distribution)
+
+**Pour Android :**
+
+- 🤖 **Android Studio** installé
+- 📱 **Android SDK** configuré (API 33+)
+- 🔧 **Android Emulator** ou appareil physique
+- 🔑 **Variables d'environnement** ANDROID_HOME configurées
+
+### **🚀 Installation et Démarrage Mobile**
+
+#### **1. Installation des Dépendances**
+
+```powershell
+# Aller dans le dossier mobile
+cd mobile
+
+# Installer les dépendances
+npm install
+# ou
+yarn install
+
+# Vérifier l'installation
+expo doctor
+```
+
+#### **2. Configuration Environnement**
+
+```powershell
+# Créer le fichier de configuration
+Copy-Item .env.example .env
+
+# Éditer la configuration mobile
+notepad .env
+```
+
+**Contenu `.env` mobile :**
+
+```env
+# Configuration API (adapter l'IP à votre réseau local)
+EXPO_PUBLIC_API_URL=http://192.168.1.169:3000
+EXPO_PUBLIC_SOCKET_URL=http://192.168.1.169:3000
+
+# Stockage S3
+EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
+
+# Environnement
+EXPO_PUBLIC_ENV=development
+
+# Configuration push notifications (production)
+EXPO_PUBLIC_PROJECT_ID=your-expo-project-id
+```
+
+#### **3. Démarrage en Développement**
+
+```powershell
+# Dans le dossier mobile/
+cd mobile
+
+# Démarrer le serveur de développement
+expo start
+
+# Ou avec options spécifiques
+expo start --dev-client    # Mode développement
+expo start --clear         # Nettoyer le cache
+expo start --tunnel        # Accès via tunnel (pour tests externes)
+```
+
+**Options de test :**
+
+- 📱 **Expo Go** : Scanner le QR code avec l'app Expo Go
+- 🤖 **Android** : `expo run:android` (émulateur ou appareil)
+- 🍎 **iOS** : `expo run:ios` (simulateur ou appareil)
+- 🌐 **Web** : `expo start --web` (pour test navigateur)
+
+### **📱 Structure Application Mobile**
+
+```
+mobile/
+├── App.js                 # Point d'entrée principal
+├── app.json              # Configuration Expo
+├── babel.config.js       # Configuration Babel
+├── metro.config.js       # Configuration Metro bundler
+├── package.json          # Dépendances et scripts
+├── assets/               # Images, icônes, splash screen
+│   ├── icon.png
+│   ├── splash.png
+│   └── adaptive-icon.png
+└── src/                  # Code source application
+    ├── components/       # Composants réutilisables
+    │   ├── MessageInput/
+    │   ├── MessageList/
+    │   ├── UserItem/
+    │   └── WorkspaceCard/
+    ├── screens/          # Écrans de l'application
+    │   ├── AuthScreen.js
+    │   ├── HomeScreen.js
+    │   ├── ChatScreen.js
+    │   ├── WorkspaceScreen.js
+    │   └── ProfileScreen.js
+    ├── navigation/       # Configuration navigation
+    │   ├── AppNavigator.js
+    │   ├── AuthNavigator.js
+    │   └── TabNavigator.js
+    ├── context/         # État global (Context API)
+    │   ├── AuthContext.js
+    │   ├── SocketContext.js
+    │   └── ThemeContext.js
+    ├── services/        # Services API et utilitaires
+    │   ├── api.js
+    │   ├── socket.js
+    │   ├── storage.js
+    │   └── notifications.js
+    └── utils/           # Fonctions utilitaires
+        ├── constants.js
+        ├── helpers.js
+        └── validators.js
+```
+
+### **🔌 Connexion Backend**
+
+#### **Configuration Réseau Local**
+
+```powershell
+# 1. Trouver l'IP locale de votre machine
+ipconfig | Select-String "IPv4"
+
+# 2. Vérifier que le backend est accessible
+curl http://192.168.1.169:3000/api/ping
+
+# 3. Tester depuis l'appareil mobile
+# Scanner le QR code Expo avec cette IP configurée
+```
+
+#### **Services Intégrés**
+
+- 🔐 **Authentification** : JWT avec AsyncStorage
+- 💬 **Chat temps réel** : Socket.IO natif
+- 📁 **Upload fichiers** : Expo Document/Image Picker
+- 🔔 **Notifications push** : Expo Notifications
+- 💾 **Stockage local** : AsyncStorage pour cache
+- 🌙 **Mode sombre** : Support système + manuel
+
+### **📦 Build et Distribution**
+
+#### **1. Build Développement**
+
+```powershell
+# Build APK Android (développement)
+expo build:android -t apk
+
+# Build iOS (nécessite macOS)
+expo build:ios -t simulator
+```
+
+#### **2. Build Production (EAS)**
+
+```powershell
+# Configuration EAS
+eas login
+eas build:configure
+
+# Build Android (AAB pour Play Store)
+eas build --platform android --profile production
+
+# Build iOS (IPA pour App Store)
+eas build --platform ios --profile production
+
+# Soumettre aux stores
+eas submit --platform android
+eas submit --platform ios
+```
+
+### **🔄 Développement Mobile**
+
+#### **Hot Reload et Debug**
+
+```powershell
+# Démarrer avec reload automatique
+expo start --dev-client
+
+# Debug avec React DevTools
+expo install react-devtools
+npx react-devtools
+
+# Debug réseau
+expo install flipper
+```
+
+#### **Tests sur Appareils**
+
+```powershell
+# Tester sur Android (émulateur/appareil)
+expo run:android --device
+
+# Tester sur iOS (simulateur)
+expo run:ios --simulator
+
+# Tests sur appareil physique via tunnel
+expo start --tunnel
+```
+
+### **🚨 Dépannage Mobile**
+
+#### **Problèmes Courants**
+
+**1. Erreur de connexion API :**
+
+```powershell
+# Vérifier l'IP dans .env mobile
+ipconfig | Select-String "IPv4"
+
+# Tester l'API depuis le PC
+curl http://192.168.1.169:3000/api/ping
+
+# Vérifier que Docker expose le port
+docker-compose ps
+```
+
+**2. Cache Metro corrompu :**
+
+```powershell
+# Nettoyer le cache
+expo start --clear
+npx expo install --fix
+
+# Réinstaller node_modules
+Remove-Item -Recurse node_modules
+npm install
+```
+
+**3. Problèmes Socket.IO :**
+
+```javascript
+// Dans mobile/src/services/socket.js
+const socket = io("http://192.168.1.169:3000", {
+  transports: ["websocket"], // Forcer WebSocket
+  timeout: 20000,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+```
+
+**4. Erreurs de build :**
+
+```powershell
+# Nettoyer complètement
+expo prebuild --clear
+Remove-Item -Recurse .expo
+Remove-Item -Recurse node_modules
+npm install
+```
+
+### **📊 Synchronisation Web ↔ Mobile**
+
+| Fonctionnalité         | Web | Mobile | Synchronisation  |
+| ---------------------- | --- | ------ | ---------------- |
+| 💬 Messages temps réel | ✅  | ✅     | Socket.IO        |
+| 🔐 Authentification    | ✅  | ✅     | JWT partagé      |
+| 📁 Upload fichiers     | ✅  | ✅     | API commune      |
+| 🔔 Notifications       | ✅  | ✅     | Push + Socket    |
+| 💾 Cache offline       | ⚠️  | ✅     | AsyncStorage     |
+| 🌙 Mode sombre         | ✅  | ✅     | Préférences sync |
+| 👥 Gestion workspaces  | ✅  | ✅     | API REST         |
+| 🤖 Assistant IA        | ✅  | ✅     | Mistral API      |
+
+L'application mobile offre une expérience native complète avec synchronisation temps réel avec la version web, tout en conservant des fonctionnalités spécifiques mobile comme le mode offline et les notifications push natives.
+
+---
+
+## 📱 **Applications**
+
+### **Application Web**
+
+- **URL** : `http://localhost:3000` (dev) ou votre domaine
+- **Fonctionnalités complètes** : Chat, workspaces, gestion fichiers
+- **Responsive** : Optimisée mobile
+- **PWA** : Installation possible sur bureau
+
+### **Application Mobile**
+
+- **Platforms** : iOS 13+, Android 8+
+- **Build** : Expo EAS Build
+- **Distribution** : App Store / Google Play (à venir)
+- **Fonctionnalités** : Synchronisation complète avec le web
+
+### **Différences Plaformes**
+
+| Fonctionnalité     | Web | Mobile |
+| ------------------ | --- | ------ |
+| Chat temps réel    | ✅  | ✅     |
+| Upload fichiers    | ✅  | ✅     |
+| Notifications push | ✅  | ✅     |
+| Mode hors ligne    | ⚠️  | ✅     |
+| Google Drive       | ✅  | 🔄     |
+| Admin panel        | ✅  | ❌     |
+
+---
+
+## 🔧 **Configuration**
+
+### **Variables d'Environnement**
+
+#### **Backend (.env)**
+
+```env
+# Base de données
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=supchat
+POSTGRES_DB=supchat
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+
+# OAuth
+GOOGLE_CLIENT_ID=REDACTED
+GOOGLE_CLIENT_SECRET=REDACTED
+GITHUB_CLIENT_ID=REDACTED
+GITHUB_CLIENT_SECRET=REDACTED
+
+# Scaleway S3
+SCW_ACCESS_KEY=REDACTED
+SCW_SECRET_KEY=REDACTED
+SCW_ENDPOINT=https://s3.fr-par.scw.cloud
+SCW_REGION=fr-par
+SCW_BUCKET_NAME=your-bucket-name
+
+# Email
+EMAIL_HOST=smtp.your-provider.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@domain.com
+EMAIL_PASSWORD=your-email-password
+
+# Mistral AI
+MISTRAL_API_KEY=REDACTED
+
+# Strawpoll
+STRAWPOLL_API_KEY=your-strawpoll-api-key
+```
+
+#### **Frontend (.env)**
+
+```env
+REACT_APP_API_URL=http://localhost:3000
+REACT_APP_SOCKET_URL=http://localhost:3000
+```
+
+#### **Mobile (.env)**
+
+```env
+EXPO_PUBLIC_API_URL=http://192.168.1.169:3000
+EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
+EXPO_PUBLIC_ENV=development
+```
+
+### **Secrets Docker**
+
+Les secrets sensibles sont stockés dans `secrets/` :
+
+```
+secrets/
+├── db_user.txt
+├── db_password.txt
+├── jwt_secret.txt
+├── google_client_id.txt
+├── google_client_secret.txt
+├── github_client_id.txt
+├── github_client_secret.txt
+├── scw_access_key.txt
+├── scw_secret_key.txt
+├── mistral_api_key.txt
+└── strawpoll_api_key.txt
+```
+
+---
+
+## 📊 **Base de Données**
+
+### **Schéma Principal**
+
+La base de données PostgreSQL comprend 15+ tables optimisées :
+
+#### **Tables Core**
+
+- `utilisateur` - Gestion des utilisateurs et authentification
+- `workspace` - Espaces de travail avec bannières et icônes
+- `canal` - Canaux de communication (publics/privés)
+- `message` - Messages de canal avec threading
+- `message_prive` - Messages privés entre utilisateurs
+
+#### **Tables Relations**
+
+- `membre_workspace` - Appartenance aux workspaces avec rôles
+- `membre_canal` - Accès granulaire aux canaux privés
+- `reaction` / `private_message_reaction` - Système de réactions
+- `message_fichier` - Attachements aux messages
+
+#### **Tables Système**
+
+- `statut` - Statuts utilisateur (en ligne, absent, DND)
+- `role` / `permission` - Système de rôles et permissions
+- `notification` - Notifications utilisateur
+- `reminders` - Système de rappels
+- `workspace_favoris` - Favoris utilisateur
+
+### **Migrations**
+
+```powershell
+# Appliquer le schéma initial
+psql -U postgres -d supchat -f backend/db/init-docker.sql
+
+# Vérifier la structure
+psql -U postgres -d supchat -c "\dt"
+```
+
+### **Backup & Restore**
+
+```powershell
+# Backup
+pg_dump -U postgres supchat > backup.sql
+
+# Restore
+psql -U postgres -d supchat_new < backup.sql
+```
+
+---
+
+## 🔐 **Sécurité**
+
+### **Authentification**
+
+- **JWT Tokens** avec expiration configurable
+- **OAuth 2.0** Google et GitHub
+- **Hachage bcrypt** pour les mots de passe
+- **Codes de validation** email (6 chiffres)
+- **Reset password** avec tokens temporaires
+
+### **Autorisation**
+
+- **Middleware d'authentification** sur toutes les routes protégées
+- **RBAC** (Role-Based Access Control) granulaire
+- **Permissions par canal** (lecture/écriture)
+- **Validation des propriétaires** pour actions sensibles
+
+### **Sécurité Infrastructure**
+
+- **Docker Secrets** pour données sensibles
+- **CORS** configuré strictement
+- **Rate limiting** sur APIs sensibles
+- **SSL/TLS** en production (Let's Encrypt)
+- **Nginx** comme reverse proxy sécurisé
+
+### **Bonnes Pratiques**
+
+- Pas d'exposition directe de PostgreSQL
+- Variables d'environnement pour configuration
+- Logs de sécurité complets
+- Validation stricte des inputs
+- Sanitization des données utilisateur
+
+---
+
+## 🤖 **IA Mistral**
+
+### **Fonctionnalités**
+
+- **Assistant conversationnel** intégré dans les canaux
+- **Analyse contextuelle** des 100 derniers messages
+- **Réponses intelligentes** basées sur l'historique
+- **Gestion timeout** et récupération d'erreurs
+
+### **Configuration**
+
+```javascript
+// Utilisateur système Mistral
+MISTRAL_USER_ID = "00000000-0000-0000-0000-000000000001";
+MISTRAL_USERNAME = "Mistral AI";
+MISTRAL_AVATAR = "https://mistral-ai-avatar-url.jpg";
+```
+
+### **Utilisation**
+
+```javascript
+// Mentionner Mistral dans un canal
+@mistral Comment optimiser cette requête SQL ?
+
+// Réponse automatique avec contexte
+[Mistral AI] : Basé sur votre conversation précédente sur les performances...
+```
+
+### **API Integration**
+
+```javascript
+// backend/controllers/mistralController.js
+export const processMistralChannelQuestion = async (
+  channelId,
+  question,
+  userId,
+  options = {}
+) => {
+  // Récupération du contexte
+  // Appel API Mistral
+  // Formatage de la réponse
+  // Stockage en base
+};
+```
+
+---
+
+## 📱 **API Documentation**
+
+### **Endpoints Principaux**
+
+#### **Authentification**
+
+```http
+POST /api/users/login
+POST /api/users/register
+POST /api/users/validate-code
+POST /api/users/reset-password
+```
+
+#### **Workspaces**
+
+```http
+GET    /api/workspaces/user/workspaces
+POST   /api/workspaces
+PUT    /api/workspaces/:id
+DELETE /api/workspaces/:id
+POST   /api/workspaces/:id/join
+```
+
+#### **Messages**
+
+```http
+GET    /api/messages/canal/:channelId
+POST   /api/messages
+PUT    /api/messages/:id
+DELETE /api/messages/:id
+GET    /api/messages/unread
+```
+
+#### **Messages Privés**
+
+```http
+GET    /api/private-messages/:userId
+POST   /api/private-messages
+GET    /api/private-messages/unread-counts
+POST   /api/private-messages/mark-read
+```
+
+#### **Fichiers**
+
+```http
+POST   /api/attachments/upload
+GET    /api/files/:id
+DELETE /api/files/:id
+```
+
+### **WebSocket Events**
+
+#### **Messages**
+
+```javascript
+// Envoyer un message
+socket.emit("message", {
+  canal_id: "uuid",
+  content: "Hello world",
+  workspace_id: "uuid",
+});
+
+// Recevoir un message
+socket.on("message", (messageData) => {
+  // Traiter le nouveau message
+});
+```
+
+#### **Statuts**
+
+```javascript
+// Changer de statut
+socket.emit("setUserStatus", { status: "online", userId: "uuid" });
+
+// Écouter les changements
+socket.on("userStatusChanged", ({ userId, status }) => {
+  // Mettre à jour l'interface
+});
+```
+
+#### **Notifications**
+
+```javascript
+// Messages non lus
+socket.on("unreadChannelMessagesUpdated", ({ total, channels }) => {
+  // Mettre à jour les badges
+});
+```
+
+---
+
+## 🚀 **Infrastructure de Déploiement**
+
+SUPCHAT dispose d'une architecture de déploiement complète et flexible, adaptée à différents environnements de production.
+
+### **🏗️ Architecture de Déploiement**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLOUDFLARE CDN                           │
+│              (Cache, DDoS Protection, SSL)                     │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────────────┐
+│                    SERVEUR LWS (FRANCE)                        │
+│                    Apache + SSL Let's Encrypt                   │
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   DEVELOPMENT   │  │   PRODUCTION    │  │      VPS        │ │
+│  │ docker-compose  │  │docker-compose   │  │docker-compose   │ │
+│  │     .yml        │  │   .prod.yml     │  │   .vps.yml      │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │              CONTENEURS DOCKER                              │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │ │
+│  │  │ PostgreSQL  │ │  Backend    │ │  Frontend   │          │ │
+│  │  │  Database   │ │  Node.js    │ │   React     │          │ │
+│  │  │   Port      │ │ Port 3000   │ │ Port 80/443 │          │ │
+│  │  │   5432      │ │ Socket.IO   │ │   Nginx     │          │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘          │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### **🐳 Environnements Docker**
+
+#### **1. Développement (`docker-compose.yml`)**
+
+```yaml
+# Optimisé pour le développement local
+services:
+  postgres:
+    image: postgres:16
+    ports: ["5432:5432"]
+    volumes: [db_data, ./backend/db/init-docker.sql]
+
+  backend:
+    build: ./backend
+    ports: ["3000:3000"]
+    depends_on: [postgres]
+    environment:
+      - NODE_ENV=development
+    volumes: [hot-reload, logs, uploads]
+
+  frontend:
+    build: ./frontend
+    ports: ["80:80"]
+    depends_on: [backend]
+    volumes: [./frontend/src:/app/src]
+```
+
+**Caractéristiques** :
+
+- ✅ **Hot reload** activé pour développement rapide
+- ✅ **Ports exposés** pour debug et tests
+- ✅ **Volumes montés** pour édition en temps réel
+- ✅ **Logs détaillés** pour debugging
+
+#### **2. Production (`docker-compose.prod.yml`)**
+
+```yaml
+# Optimisé pour performance et sécurité production
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    volumes: [prod_db_data]
+    secrets: [db_user, db_password]
+    environment:
+      - POSTGRES_DB_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+
+  backend:
+    image: supchat-backend:latest
+    restart: unless-stopped
+    depends_on: [postgres]
+    secrets: [jwt_secret, db_password, scw_access_key]
+    environment:
+      - NODE_ENV=production
+
+  frontend:
+    image: supchat-frontend:latest
+    ports: ["443:443", "80:80"]
+    restart: unless-stopped
+    volumes: [./nginx.conf:/etc/nginx/nginx.conf]
+```
+
+**Caractéristiques** :
+
+- 🔒 **Docker Secrets** pour sécurité maximale
+- 🚀 **Images optimisées** (multi-stage builds)
+- 🔄 **Auto-restart** en cas de crash
+- 📊 **Health checks** intégrés
+- 🛡️ **Isolation réseau** entre services
+
+#### **3. VPS (`docker-compose.vps.yml`)**
+
+```yaml
+# Configuration spécifique VPS avec reverse proxy
+services:
+  postgres:
+    container_name: supchat-postgres-vps
+    networks: [REDACTED]
+    volumes: ["/opt/supchat/data:/var/lib/postgresql/data"]
+
+  backend:
+    container_name: supchat-backend-vps
+    environment:
+      - API_URL=https://votre-domaine.com
+    networks: [REDACTED]
+
+  frontend:
+    container_name: supchat-frontend-vps
+    volumes: ["./nginx.vps.conf:/etc/nginx/nginx.conf"]
+    networks: [REDACTED]
+
+  nginx:
+    image: nginx:alpine
+    container_name: supchat-proxy-vps
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx.vps.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+    networks: [REDACTED]
+```
+
+**Caractéristiques** :
+
+- 🌐 **Reverse proxy Nginx** pour gestion SSL
+- 📁 **Volumes persistants** sur système hôte
+- 🔗 **Réseau Docker** isolé et sécurisé
+- 🎯 **Configuration VPS** optimisée
+
+### **🌍 Configuration Serveur LWS (France)**
+
+#### **Spécificités LWS**
+
+```bash
+# Configuration Apache sur serveur mutualisé LWS
+# Fichier .htaccess pour redirection Docker
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^(www\.)?votre-domaine\.com$
+RewriteRule ^(.*)$ http://localhost:80/$1 [P,L]
+
+# Headers pour WebSocket (Socket.IO)
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+
+# Configuration SSL (certificat Let's Encrypt via LWS)
+SSLEngine on
+SSLCertificateFile /ssl/votre-domaine.com.crt
+SSLCertificateKeyFile /ssl/votre-domaine.com.key
+```
+
+#### **Déploiement LWS**
+
+```powershell
+# 1. Préparation serveur LWS
+ssh votre-login@votre-serveur.lws-hosting.com
+
+# 2. Installation Docker (si supporté)
+sudo apt update && sudo apt install docker.io docker-compose
+
+# 3. Configuration domaine
+# Via panel LWS : DNS A record vers IP serveur
+# Activation SSL Let's Encrypt dans panel LWS
+
+# 4. Déploiement application
+git clone votre-repo supchat
+cd supchat
+./deploy-vps.sh votre-domaine.lws-hosting.com
+```
+
+### **☁️ Intégration Cloudflare**
+
+#### **Configuration DNS Cloudflare**
+
+```dns
+# Enregistrements DNS requis
+Type    Name             Content              Proxy   TTL
+A       @                IP-SERVEUR-LWS       ✅      Auto
+A       www              IP-SERVEUR-LWS       ✅      Auto
+CNAME   api              votre-domaine.com    ✅      Auto
+TXT     _verification    cloudflare-token     ❌      Auto
+```
+
+#### **Optimisations Cloudflare**
+
+```javascript
+// Configuration Page Rules Cloudflare
+[
+  {
+    url: "votre-domaine.com/api/*",
+    settings: {
+      cache_level: "bypass", // Pas de cache pour API
+      security_level: "medium", // Protection DDoS
+      ssl: "full_strict", // SSL strict
+    },
+  },
+  {
+    url: "votre-domaine.com/socket.io/*",
+    settings: {
+      cache_level: "bypass", // WebSocket pas de cache
+      websockets: "on", // Support WebSocket
+    },
+  },
+  {
+    url: "votre-domaine.com/*",
+    settings: {
+      cache_level: "standard", // Cache assets statiques
+      browser_cache_ttl: 31536000, // 1 an
+      edge_cache_ttl: 2592000, // 30 jours
+    },
+  },
+];
+```
+
+#### **Sécurité Cloudflare**
+
+```yaml
+# Firewall Rules Cloudflare
+- name: "Block malicious countries"
+  expression: '(ip.geoip.country in {"CN" "RU"})'
+  action: "block"
+
+- name: "Rate limit API"
+  expression: '(http.request.uri.path contains "/api/")'
+  action: "challenge"
+  rate_limit: "100 requests per minute"
+
+- name: "Allow France prioritaire"
+  expression: '(ip.geoip.country eq "FR")'
+  action: "allow"
+```
+
+### **🔧 Scripts de Déploiement Automatique**
+
+#### **`deploy-vps.sh` - Déploiement Principal**
+
+```bash
+#!/bin/bash
+# Script de déploiement automatique VPS
+
+DOMAIN=$1
+VPS_IP=$2
+
+echo "🚀 Déploiement SUPCHAT sur VPS"
+echo "Domaine: $DOMAIN"
+echo "IP VPS: $VPS_IP"
+
+# 1. Vérification prérequis
+./check-requirements.sh
+
+# 2. Configuration sécurisée
+./setup-secrets.sh
+
+# 3. Déploiement Docker
+docker-compose -f docker-compose.vps.yml up -d
+
+# 4. Configuration SSL
+./setup-ssl.sh $DOMAIN
+
+# 5. Configuration Cloudflare
+./setup-cloudflare.sh $DOMAIN
+
+# 6. Tests de santé
+curl -f http://$DOMAIN/health || exit 1
+
+echo "✅ Déploiement terminé avec succès !"
+```
+
+#### **`setup-ssl.sh` - Configuration SSL Automatique**
+
+```bash
+#!/bin/bash
+# Configuration SSL Let's Encrypt
+
+DOMAIN=$1
+
+# Installation Certbot
+apt install -y certbot python3-certbot-nginx
+
+# Génération certificat
+certbot --nginx -d $DOMAIN -d www.$DOMAIN \
+  --non-interactive --agree-tos \
+  --email admin@$DOMAIN
+
+# Configuration auto-renewal
+echo "0 12 * * * /usr/bin/certbot renew --quiet" | crontab -
+
+# Test configuration
+nginx -t && systemctl reload nginx
+
+echo "🔒 SSL configuré pour $DOMAIN"
+```
+
+#### **`setup-cloudflare.sh` - Intégration Cloudflare**
+
+```bash
+#!/bin/bash
+# Configuration automatique Cloudflare
+
+DOMAIN=$1
+CLOUDFLARE_TOKEN=$2
+
+# Installation cloudflare CLI
+curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+dpkg -i cloudflared.deb
+
+# Configuration DNS automatique
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+  -H "Authorization: Bearer $CLOUDFLARE_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "type": "A",
+    "name": "@",
+    "content": "'$VPS_IP'",
+    "proxied": true
+  }'
+
+echo "☁️ Cloudflare configuré pour $DOMAIN"
+```
+
+### **📊 Monitoring et Maintenance**
+
+#### **Health Checks Automatiques**
+
+```yaml
+# Configuration health checks dans docker-compose
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 60s
+```
+
+#### **Monitoring VPS**
+
+```bash
+# Script de monitoring automatique
+#!/bin/bash
+# /opt/supchat/monitor.sh
+
+echo "🔍 Status SUPCHAT $(date)"
+echo "=================================="
+
+# Status containers
+docker-compose -f docker-compose.vps.yml ps
+
+# Utilisation ressources
+echo -e "\n📊 RESSOURCES:"
+docker stats --no-stream
+
+# Espace disque
+echo -e "\n💾 DISQUE:"
+df -h
+
+# Logs récents
+echo -e "\n📋 LOGS RÉCENTS:"
+docker-compose -f docker-compose.vps.yml logs --tail=10
+
+# Test connectivité
+echo -e "\n🌐 CONNECTIVITÉ:"
+curl -s -o /dev/null -w "Status: %{http_code}, Time: %{time_total}s\n" \
+  http://localhost/health
+```
+
+### **🔄 Processus de Mise à Jour**
+
+#### **Mise à jour Zero-Downtime**
+
+```bash
+#!/bin/bash
+# Mise à jour avec zero downtime
+
+echo "🔄 Mise à jour SUPCHAT..."
+
+# 1. Backup avant mise à jour
+./backup.sh
+
+# 2. Pull nouveaux changements
+git pull origin main
+
+# 3. Build nouvelles images
+docker-compose -f docker-compose.vps.yml build
+
+# 4. Mise à jour rolling
+docker-compose -f docker-compose.vps.yml up -d --no-deps backend
+docker-compose -f docker-compose.vps.yml up -d --no-deps frontend
+
+# 5. Vérification santé
+sleep 30
+curl -f http://localhost/health
+
+echo "✅ Mise à jour terminée !"
+```
+
+Cette infrastructure de déploiement offre une solution complète et professionnelle pour héberger SUPCHAT, avec une architecture évolutive, sécurisée et optimisée pour les performances.
+
+---
+
+## 📈 **Performance**
+
+### **Optimisations Base de Données**
+
+- **Index optimisés** sur colonnes fréquemment requêtées
+- **Pagination** des messages (30 par batch)
+- **Requêtes préparées** pour sécurité et performance
+- **Connection pooling** PostgreSQL
+
+### **Optimisations Frontend**
+
+- **Code splitting** par route React
+- **Lazy loading** des composants
+- **Mise en cache** des ressources statiques
+- **Compression gzip** via Nginx
+
+### **Optimisations Temps Réel**
+
+- **Debouncing** des événements de frappe
+- **Throttling** des mises à jour d'état
+- **Optimistic updates** pour UX fluide
+- **Reconnexion automatique** WebSocket
+
+### **Monitoring**
+
+```powershell
+# Vérification santé des services
+curl http://your-domain.com/health
+
+# Logs en temps réel
+docker-compose logs -f backend
+
+# Métriques PostgreSQL
+docker-compose exec postgres psql -U postgres -c "SELECT * FROM pg_stat_activity;"
+```
+
+### **Métriques de Performance**
+
+- **Time to First Byte** : < 200ms
+- **Socket.IO Latency** : < 50ms
+- **Database Query Time** : < 100ms moyenne
+- **Page Load** : < 2s (First Contentful Paint)
+
+---
+
+## 🤝 **Contribution**
+
+### **Workflow de Développement**
+
+1. **Fork** le repository
+2. **Créer** une branche feature (`git checkout -b feature/amazing-feature`)
+3. **Commit** vos changements (`git commit -m 'Add amazing feature'`)
+4. **Push** vers la branche (`git push origin feature/amazing-feature`)
+5. **Ouvrir** une Pull Request
+
+### **Standards de Code**
+
+#### **JavaScript/React**
+
+- **ESLint** pour le linting
+- **Prettier** pour le formatage
+- **Nomenclature** : camelCase pour variables, PascalCase pour composants
+- **Commentaires** JSDoc pour fonctions complexes
+
+#### **Base de Données**
+
+- **snake_case** pour noms de tables et colonnes
+- **UUID** pour clés primaires importantes
+- **Foreign keys** avec CASCADE approprié
+- **Index** sur colonnes de recherche
+
+### **Tests**
+
+```powershell
+# Tests backend
+cd backend
+npm test
+
+# Tests frontend
+cd frontend
+npm test
+
+# Tests e2e (à venir)
+npm run test:e2e
+```
+
+### **Structure des Commits**
+
+```
+type(scope): description
+
+feat(auth): add OAuth GitHub integration
+fix(socket): resolve connection timeout issue
+docs(readme): update installation instructions
+style(ui): improve dark mode contrast
+refactor(db): optimize message queries
+test(api): add private message endpoints tests
+```
+
+---
+
+## 🛠️ **Dépannage**
+
+### **Problèmes Courants**
+
+#### **Backend ne démarre pas**
+
+```powershell
+# Vérifier les variables d'environnement
+docker-compose exec backend env | grep -E "(DB_|JWT_|SCW_)"
+
+# Vérifier la connexion PostgreSQL
+docker-compose exec backend node check-db-connection.js
+
+# Relancer avec logs
+docker-compose up backend --force-recreate
+```
+
+#### **Frontend erreur de connexion**
+
+```powershell
+# Vérifier la configuration API
+cat frontend/.env
+
+# Tester l'API backend
+curl http://localhost:3000/api/ping
+
+# Reconstruire le frontend
+docker-compose build frontend
+```
+
+#### **Mobile app ne se connecte pas**
+
+```powershell
+# Vérifier l'IP dans mobile/.env
+ipconfig # Trouver l'IP locale
+
+# Tester depuis mobile
+curl http://[IP]:3000/api/ping
+
+# Redémarrer Metro
+cd mobile && npx expo start --clear
+```
+
+#### **Socket.IO déconnexions fréquentes**
+
+```javascript
+// Augmenter les timeouts dans backend/server.js
+const io = new Server(httpServer, {
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+});
+```
+
+### **Logs Utiles**
+
+```powershell
+# Logs généraux
+docker-compose logs -f
+
+# Logs spécifiques à un service
+docker-compose logs -f backend
+
+# Logs PostgreSQL
+docker-compose logs -f postgres
+
+# Logs en temps réel avec filtrage
+docker-compose logs -f backend | grep "Socket.IO"
+```
+
+---
+
+## 📄 **Licence**
+
+Ce projet est sous licence **ISC**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+---
+
+## 👥 **Équipe**
+
+- **Développement Full-Stack** : [Votre Nom]
+- **Architecture Base de Données** : [Nom]
+- **Design UI/UX** : [Nom]
+- **DevOps & Infrastructure** : [Nom]
+
+---
+
+## 🙏 **Remerciements**
+
+- [Socket.IO](https://socket.io/) pour la communication temps réel
+- [React](https://reactjs.org/) & [React Native](https://reactnative.dev/) pour les interfaces
+- [PostgreSQL](https://postgresql.org/) pour la robustesse de la base de données
+- [Mistral AI](https://mistral.ai/) pour l'assistant intelligent
+- [Expo](https://expo.dev/) pour le développement mobile simplifié
+- [Docker](https://docker.com/) pour la conteneurisation
+
+---
+
+## 📞 **Support**
+
+- **Issues** : [GitHub Issues](https://github.com/votre-repo/supchat/issues)
+- **Documentation** : [Wiki](https://github.com/votre-repo/supchat/wiki)
+- **Email** : support@supchat.com
+
+---
+
+<div align="center">
+  
+  **[⭐ Star ce projet](https://github.com/votre-repo/supchat)** si vous le trouvez utile !
+  
+  Fait avec ❤️ par l'équipe SUPCHAT
+  
+</div>

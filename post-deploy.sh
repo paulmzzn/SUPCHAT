@@ -88,7 +88,7 @@ setup_nginx_config() {
     cat > "/tmp/nginx-supchat.conf" << EOF
 # Configuration Nginx optimisée pour SUPCHAT
 upstream backend {
-    server 185.98.137.166:3000;
+    server 192.168.1.169:3000;
     keepalive 32;
 }
 
@@ -156,7 +156,7 @@ server {
     
     # Frontend React
     location / {
-        proxy_pass http://185.98.137.166:80;
+        proxy_pass http://192.168.1.169:80;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -262,8 +262,8 @@ check_containers() {
 }
 
 check_services() {
-    local backend_status=$(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166:3000/health)
-    local frontend_status=$(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166:80)
+    local backend_status=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.169:3000/health)
+    local frontend_status=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.169:80)
     
     if [[ $backend_status != "200" ]]; then
         log_with_timestamp "ALERT: Backend non accessible (HTTP $backend_status)"
