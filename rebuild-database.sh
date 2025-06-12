@@ -182,8 +182,8 @@ echo "• Tester la connexion et l'inscription"
 echo ""
 echo -e "${YELLOW}🌐 Accès :${NC}"
 if [[ -d "/opt/supchat" ]]; then
-    echo "• Frontend: http://185.98.137.166"
-    echo "• API Backend: http://185.98.137.166:3000"
+    echo "• Frontend: http://192.168.71.234"
+    echo "• API Backend: http://192.168.71.234:3000"
 else
     echo "• Frontend: http://localhost:3001"
     echo "• API Backend: http://localhost:3000"
