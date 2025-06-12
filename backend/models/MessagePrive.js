@@ -63,10 +63,15 @@ class MessagePrive {
     );
     return result.rows;
   }
-
   static async getById(id_message_prive) {
     const result = await pool.query(
-      `SELECT * FROM message_prive WHERE id_message_prive = $1`,
+      `SELECT mp.*, 
+              u_exp.nom as expediteur_nom, u_exp.photo_de_profil as expediteur_photo,
+              u_dest.nom as destinataire_nom, u_dest.photo_de_profil as destinataire_photo
+       FROM message_prive mp
+       LEFT JOIN utilisateur u_exp ON mp.fk_expediteur = u_exp.id_utilisateur
+       LEFT JOIN utilisateur u_dest ON mp.fk_destinataire = u_dest.id_utilisateur
+       WHERE mp.id_message_prive = $1`,
       [id_message_prive]
     );
     return result.rows[0] || null;
