@@ -79,11 +79,10 @@ class MessagePrive {
     }
     return counts;
   }
-
   static async markAsRead(id_message_prive, userId) {
     const result = await pool.query(
       `UPDATE message_prive
-       SET is_read = true
+       SET is_read = true, date_lecture = NOW()
        WHERE id_message_prive = $1 AND fk_destinataire = $2
        RETURNING *`,
       [id_message_prive, userId]
@@ -133,9 +132,9 @@ class MessagePrive {
     try {
       const result = await pool.query(
         `UPDATE message_prive
-         SET is_read = true
+         SET is_read = true, date_lecture = NOW()
          WHERE fk_expediteur = $1 AND fk_destinataire = $2 AND is_read = false
-         RETURNING id_message_prive, is_read`,
+         RETURNING id_message_prive, is_read, date_lecture`,
         [expediteurId, destinataireId]
       );
       return {

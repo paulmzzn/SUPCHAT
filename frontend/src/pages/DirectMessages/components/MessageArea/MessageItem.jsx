@@ -341,14 +341,25 @@ const MessageItem = ({
                     }
                   })}
               </div>
-            )}
-
-          {/* Statut de lecture pour les messages envoyés */}
+            )}          {/* Statut de lecture pour les messages envoyés */}
           {isOwn && (
             <div className="dm-msg-read">
-              {message.date_lecture
-                ? `✓ Lu ${formatMessageDate(message.date_lecture)}`
-                : "✓ Envoyé"}
+              {message.date_lecture ? (
+                <>
+                  <span className="read-icon">✓</span>
+                  <span className="read-text">Lu {formatMessageDate(message.date_lecture)}</span>
+                </>
+              ) : message.id_message_prive ? (
+                <>
+                  <span className="sent-icon">✓</span>
+                  <span className="sent-text">Envoyé</span>
+                </>
+              ) : (
+                <>
+                  <span className="sending-icon">⏳</span>
+                  <span className="sending-text">Envoi en cours...</span>
+                </>
+              )}
             </div>
           )}
         </div>
