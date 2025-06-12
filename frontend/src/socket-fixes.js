@@ -17,7 +17,10 @@ const refreshUnreadDM = async () => {
 
     clearTimeout(timeoutId); // Nettoyer le timeout
 
-    // Traitement de la réponse
+    if (res.ok) {
+      const data = await res.json();
+      // Traitement de la réponse...
+    }
   } catch (e) {
     console.error(
       "Erreur lors du rafraîchissement du compteur de messages:",
@@ -57,6 +60,22 @@ newSocket.on("reconnect", (attemptNumber) => {
 
 newSocket.on("reconnect_error", (error) => {
   console.error("[Socket] Erreur lors de la reconnexion:", error.message);
+});
+
+// Gestionnaires d'événements pour les statuts de lecture des messages privés
+newSocket.on("privateMessageRead", (data) => {
+  console.log("[Socket] Message privé marqué comme lu:", data);
+  refreshUnreadDM();
+});
+
+newSocket.on("allMessagesRead", (data) => {
+  console.log("[Socket] Tous les messages marqués comme lus:", data);
+  refreshUnreadDM();
+});
+
+newSocket.on("privateMessagesMarkedAsRead", (data) => {
+  console.log("[Socket] Messages privés marqués comme lus:", data);
+  refreshUnreadDM();
 });
 
 // Remplacer l'adresse IP par une valeur plus sûre :
