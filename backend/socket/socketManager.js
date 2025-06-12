@@ -280,7 +280,9 @@ const socketManager = (io) => {
                 attachmentId
               );
             }
-          }          // Récupérer le message complet avec pièces jointes
+          }
+
+          // Récupérer le message complet avec pièces jointes
           const fullMessage = await MessagePrive.getById(
             message.id_message_prive
           );
@@ -321,17 +323,23 @@ const socketManager = (io) => {
                 err
               );
             }
-          }
-
-          console.log(
+          }          console.log(
             "Socket.IO: Message privé créé avec ID:",
-            fullMessage.id_message_prive
+            fullMessage.id_message_prive,
+            "et", fullMessage.attachments?.length || 0, "pièces jointes"
           );
+
+          // Enrichir le message avec les informations utilisateur pour le frontend
+          const enrichedMessage = {
+            ...fullMessage,
+            nom: fullMessage.expediteur_nom,
+            photo_de_profil: fullMessage.expediteur_photo,
+          };
 
           // Émettre vers les deux utilisateurs
           io.to(`dm:${expediteurId}`)
             .to(`dm:${destinataireId}`)
-            .emit("privateMessage", fullMessage);
+            .emit("privateMessage", enrichedMessage);
 
           // IMPORTANT: Toujours répondre au callback
           if (callback) {
