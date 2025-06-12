@@ -11,10 +11,12 @@ import {
   markAllMessagesAsRead, // <-- Ajout ici
   uploadGoogleDriveFile, // <-- Nouveau import
 } from "../controllers/privateMessageController.js";
+import { getPrivateMessageAttachments } from "../controllers/attachmentController.js";
 import MessagePrive from "../models/MessagePrive.js";
 import multer from "multer";
 import { uploadToS3 } from "../config/s3Config.js";
 import Fichier from "../models/Fichier.js";
+import pool from "../config/dbConnection.js";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
@@ -124,20 +126,29 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
       newMessage.id_message_prive,
       newFichier.id_fichier
     );
-    console.log("Association réussie");
+    console.log("Association réussie");    // Récupérer le message complet avec pièces jointes pour l'émission WebSocket
+    const completeMessage = await MessagePrive.getById(newMessage.id_message_prive);
+    
+    // Récupérer explicitement les pièces jointes
+    const attachments = await Fichier.getPrivateMessageAttachments(newMessage.id_message_prive);
+    
+    // Ajouter les pièces jointes au message
+    completeMessage.attachments = attachments;
+    
+    // Enrichir le message avec les informations utilisateur pour le frontend
+    const enrichedMessage = {
+      ...completeMessage,
+      nom: completeMessage.expediteur_nom,
+      photo_de_profil: completeMessage.expediteur_photo,
+    };
 
-    // Envoyer une notification en temps réel via WebSocket
+    // Envoyer une notification en temps réel via WebSocket (utiliser le bon format)
     const io = req.app.get("io");
     if (io) {
-      io.to(recipientId).emit("new_private_message", {
-        message: newMessage,
-        sender: {
-          id: req.user.id,
-          nom: req.user.nom,
-          photo_de_profil: req.user.photo_de_profil,
-        },
-      });
-      console.log("Notification WebSocket envoyée");
+      io.to(`dm:${expediteurId}`)
+        .to(`dm:${recipientId}`)
+        .emit("privateMessage", enrichedMessage);
+      console.log(`[PrivateMessage] Notification WebSocket envoyée avec ${attachments.length} pièces jointes`);
     }
 
     res.status(201).json({
@@ -206,6 +217,9 @@ router.get("/:userId", verifyToken, getPrivateConversation);
 router.put("/message/:id", verifyToken, updatePrivateMessage);
 router.delete("/message/:id", verifyToken, deletePrivateMessage);
 router.post("/message/:id/read", verifyToken, markPrivateMessageAsRead);
+
+// Route pour récupérer les pièces jointes d'un message privé
+router.get("/:messageId/attachments", verifyToken, getPrivateMessageAttachments);
 
 // Route d'upload de fichier Google Drive pour les messages privés
 router.post("/upload-google-drive", verifyToken, async (req, res) => {
