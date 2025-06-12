@@ -850,6 +850,21 @@ const socketManager = (io) => {
                 const memberId = member.user_id;
 
                 try {
+                  // Vérifier si l'utilisateur est actuellement dans le canal
+                  const isUserInChannel = Array.from(io.sockets.adapter.rooms.get(`${canal_id}`) || [])
+                    .some(socketId => {
+                      const socket = io.sockets.sockets.get(socketId);
+                      return socket && socket.user && socket.user.id === memberId;
+                    });
+
+                  console.log(`🔔 Socket.IO: Utilisateur ${memberId} dans le canal ${canal_id}: ${isUserInChannel}`);
+
+                  // Si l'utilisateur est dans le canal, marquer automatiquement comme lu
+                  if (isUserInChannel) {
+                    console.log(`🔔 Socket.IO: Marquage automatique du canal ${canal_id} comme lu pour l'utilisateur ${memberId} (présent dans le canal)`);
+                    await MessageModel.markChannelAsRead(memberId, canal_id);
+                  }
+
                   // Récupérer les compteurs mis à jour pour ce membre
                   const updatedCounts =
                     await MessageModel.getUnreadCountByChannel(memberId);
@@ -873,7 +888,7 @@ const socketManager = (io) => {
                   );
 
                   console.log(
-                    `🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total}`
+                    `🔔 Socket.IO: Compteurs envoyés à l'utilisateur ${memberId}, total: ${total} ${isUserInChannel ? '(auto-marqué comme lu)' : ''}`
                   );
                 } catch (memberError) {
                   console.error(
