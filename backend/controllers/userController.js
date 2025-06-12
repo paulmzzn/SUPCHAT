@@ -97,17 +97,11 @@ const registerUser = async (req, res) => {
       date_naissance: date_naissance,
     });
 
-    // Envoyer le code de validation immédiatement après l'inscription
-    try {
-      await sendValidationEmail(email, user.validation_code);
-      console.log("Code de validation envoyé:", user.validation_code);
-    } catch (emailError) {
-      console.error("Erreur d'envoi email:", emailError);
-      // On continue même si l'email échoue, mais on log l'erreur
-    }
+    // Ne pas envoyer le code de validation à l'inscription
+    // Le code sera envoyé lors du premier login
 
     res.status(201).json({
-      message: "Inscription réussie, veuillez vérifier votre email",
+      message: "Inscription réussie, vous pouvez maintenant vous connecter",
       user: {
         id: user.id_utilisateur,
         email: user.email,
