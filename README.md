@@ -2182,12 +2182,6 @@ Utilisez les **GitHub Issues** avec :
 
 ---
 
-## 📄 **Licence**
-
-Ce projet est sous licence **ISC**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
 ## 📞 **Support**
 
 - **Documentation** : Ce README.md
