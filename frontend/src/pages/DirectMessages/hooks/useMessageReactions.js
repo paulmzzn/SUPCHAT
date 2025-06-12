@@ -35,6 +35,31 @@ export function useMessageReactions({
     },
     [socket, messageContextMenu]
   );
+  // Supprime une réaction
+  const handleRemoveReaction = useCallback(
+    (messageId, reactionType) => {
+      if (!socket || !messageId || !reactionType) return;
+      socket.emit("removePrivateMessageReaction", {
+        id: messageId,
+        reaction: reactionType,
+      });
+
+      // Optimistic UI update
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id_message_prive === messageId
+            ? {
+                ...msg,
+                reactions: (msg.reactions || []).filter(
+                  (r) => r.reaction_type !== reactionType
+                ),
+              }
+            : msg
+        )
+      );
+    },
+    [socket, setMessages]
+  );
 
   // Ferme le picker si clic en dehors
   useEffect(() => {
@@ -82,5 +107,6 @@ export function useMessageReactions({
     emojiPickerRef,
     handleAddReaction,
     handleEmojiSelect,
+    handleRemoveReaction,
   };
 }

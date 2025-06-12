@@ -80,9 +80,9 @@ function ChatContainer({
   onFilesSelected,
   workspaceId,
   socket,
-  commonEmojis,
-  showEmojiPicker,
-  handleAddReaction,
+  commonEmojis,  showEmojiPicker,  handleAddReaction,
+  handleRemoveReaction,
+  handleToggleReaction,
   renderTextWithLinks,
   isUuid,
   setShowVideoCallModal,
@@ -308,13 +308,54 @@ function ChatContainer({
     
     .cancel-edit:hover {
       color: rgba(255, 255, 255, 0.9);
-    }
-
-    .message-edited {
+    }    .message-edited {
       font-size: 0.8rem;
       font-style: italic;
       color: rgba(255, 255, 255, 0.5);
       margin-left: 4px;
+    }
+
+    .reaction-badge {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 4px 8px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.85rem;
+    }
+
+    .reaction-badge:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: scale(1.05);
+    }
+
+    .reaction-badge.user-reacted {
+      background: rgba(30, 144, 255, 0.2);
+      border-color: #1e90ff;
+      color: #1e90ff;
+    }
+
+    .reaction-badge.user-reacted:hover {
+      background: rgba(30, 144, 255, 0.3);
+      border-color: #4fa8ff;
+    }
+
+    .reaction-emoji {
+      font-size: 1rem;
+    }
+
+    .reaction-count {
+      font-weight: 500;
+      min-width: 12px;
+      text-align: center;
     }
   `;
 
@@ -756,12 +797,14 @@ function ChatContainer({
                       })()}
                       {!systemMsg &&
                         message.reactions &&
-                        message.reactions.length > 0 && (
-                          <div className="message-reactions">
+                        message.reactions.length > 0 && (                          <div className="message-reactions">
                             {message.reactions.map((reaction) => (
-                              <span
-                                className="reaction-badge"
-                                key={reaction.reaction_type}
+                              <button
+                                className={`reaction-badge ${reaction.user_reacted ? 'user-reacted' : ''}`}
+                                key={reaction.reaction_type}                                onClick={() => {
+                                  handleToggleReaction(message.id_message, reaction.reaction_type, reaction.user_reacted);
+                                }}
+                                title={reaction.user_reacted ? "Retirer cette réaction" : "Ajouter cette réaction"}
                               >
                                 <span className="reaction-emoji">
                                   {reaction.emoji}
@@ -769,7 +812,7 @@ function ChatContainer({
                                 <span className="reaction-count">
                                   {reaction.count}
                                 </span>
-                              </span>
+                              </button>
                             ))}
                           </div>
                         )}
