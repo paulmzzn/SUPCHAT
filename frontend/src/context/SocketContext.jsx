@@ -457,7 +457,7 @@ export function SocketProvider({ children }) {
     const refreshInterval = setInterval(() => {
       refreshUnreadDM();
       refreshUnreadChannels();
-    }, 30000); // Rafraîchir toutes les 30 secondes
+    }, 3000); // Rafraîchir toutes les 3 secondes (plus réactif)
 
     // Écouter les événements de storage pour la synchronisation entre onglets
     const handleStorageChange = (e) => {
