@@ -77,7 +77,7 @@ router.get(
   "/auth/google/callback",
 
   passport.authenticate("google", {
-    failureRedirect: "http://185.98.137.166:3001/login",
+    failureRedirect: "https://supchat.fr/login",
   }),
 
   async (req, res) => {
@@ -90,7 +90,7 @@ router.get(
 
     // Redirection directe vers le direct-messages via AuthCallback
     res.redirect(
-      `http://185.98.137.166:3001/auth/callback?token=${token}&email=${user.email}`
+      `https://supchat.fr/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );
@@ -104,7 +104,7 @@ router.get(
   "/auth/github/callback",
 
   passport.authenticate("github", {
-    failureRedirect: "http://185.98.137.166:3001/login",
+    failureRedirect: "https://supchat.fr/login",
   }),
 
   async (req, res) => {
@@ -115,7 +115,7 @@ router.get(
       { expiresIn: "7d" }
     );
     res.redirect(
-      `http://185.98.137.166:3001/auth/callback?token=${token}&email=${user.email}`
+      `https://supchat.fr/auth/callback?token=${token}&email=${user.email}`
     );
   }
 );

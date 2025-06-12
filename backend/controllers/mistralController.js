@@ -19,11 +19,11 @@ const MISTRAL_AVATAR =
 const getChannelMessageHistory = async (canalId, limit = 100) => {
   try {
     const messages = await pool.query(
-      `SELECT m.contenu, m.date_envoi, u.nom, m.fk_utilisateur, m.id_message
+      `SELECT m.contenu, m.created_at, u.nom, m.fk_utilisateur, m.id_message
        FROM message m
        JOIN utilisateur u ON m.fk_utilisateur = u.id_utilisateur
        WHERE m.fk_canal = $1
-       ORDER BY m.date_envoi DESC
+       ORDER BY m.created_at DESC
        LIMIT $2`,
       [canalId, limit]
     );
@@ -37,7 +37,7 @@ const getChannelMessageHistory = async (canalId, limit = 100) => {
         msg.fk_utilisateur === MISTRAL_USER_ID
           ? msg.contenu
           : `${msg.nom}: ${msg.contenu}`,
-      timestamp: msg.date_envoi,
+      timestamp: msg.created_at,
       messageId: msg.id_message,
       userId: msg.fk_utilisateur,
       userName: msg.nom,
@@ -65,13 +65,13 @@ const getPrivateMessageHistory = async (
 ) => {
   try {
     const messages = await pool.query(
-      `SELECT mp.contenu, mp.date_envoi, mp.fk_expediteur, 
+      `SELECT mp.contenu, mp.created_at, mp.fk_expediteur, 
               u_exp.nom as nom_expediteur, mp.id_message_prive
        FROM message_prive mp
        JOIN utilisateur u_exp ON mp.fk_expediteur = u_exp.id_utilisateur
        WHERE (mp.fk_expediteur = $1 AND mp.fk_destinataire = $2)
           OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1)
-       ORDER BY mp.date_envoi DESC
+       ORDER BY mp.created_at DESC
        LIMIT $3`,
       [userId1, userId2, limit]
     );
@@ -85,7 +85,7 @@ const getPrivateMessageHistory = async (
         msg.fk_expediteur === MISTRAL_USER_ID
           ? msg.contenu
           : `${msg.nom_expediteur}: ${msg.contenu}`,
-      timestamp: msg.date_envoi,
+      timestamp: msg.created_at,
       messageId: msg.id_message_prive,
       userId: msg.fk_expediteur,
       userName: msg.nom_expediteur,

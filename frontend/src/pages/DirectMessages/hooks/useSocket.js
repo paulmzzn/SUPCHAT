@@ -57,15 +57,16 @@ export const useSocket = (currentUserId) => {
 
         // Rejoindre le salon privé
         if (currentUserId) {
-          newSocket.emit(
-            "joinPrivate",
-            { userId: currentUserId },
-            (response) => {
-              if (!response.success) {
-                console.error("Erreur lors de la connexion au salon privé");
-              }
+          newSocket.emit("joinPrivate");
+          
+          // Écouter la confirmation du serveur
+          newSocket.on("privateRoomJoined", (response) => {
+            if (response.status === "success") {
+              console.log("Salon privé rejoint avec succès");
+            } else {
+              console.error("Erreur lors de la connexion au salon privé");
             }
-          );
+          });
         }
       });
 
@@ -100,7 +101,7 @@ export const useSocket = (currentUserId) => {
       });
 
       // Gestion des nouveaux messages privés
-      newSocket.on("private_message", async (msg) => {
+      newSocket.on("privateMessage", async (msg) => {
         console.log("[DM] Received private message:", msg);
 
         if (!currentUserId) return;
@@ -211,16 +212,24 @@ export const useSocket = (currentUserId) => {
    * @param {function} updateCallback - Fonction de mise à jour des compteurs
    */
   const refreshUnreadDM = useCallback(
-    (updateCallback) => {
-      if (!socket?.connected || !currentUserId) return;
+    async (updateCallback) => {
+      const token = localStorage.getItem("token");
+      if (!token || !currentUserId) return;
 
-      socket.emit("getUnreadDMCount", { userId: currentUserId }, (response) => {
-        if (response.success && updateCallback) {
-          updateCallback(response.counts || {});
+      try {
+        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok && updateCallback) {
+          const data = await res.json();
+          updateCallback(data || {});
         }
-      });
+      } catch (error) {
+        console.error("Erreur lors du rafraîchissement des compteurs DM:", error);
+      }
     },
-    [socket, currentUserId]
+    [currentUserId]
   );
 
   /**

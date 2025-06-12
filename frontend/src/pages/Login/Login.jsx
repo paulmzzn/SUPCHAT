@@ -63,6 +63,14 @@ function Login() {
         console.log('Email et token sauvegardés dans localStorage');
         console.log('Token présent:', localStorage.getItem('token') ? "oui" : "non");
         console.log('isValidated:', localStorage.getItem('isValidated') || 'non défini');
+
+        // IMPORTANT: Initialiser immédiatement le socket maintenant que le token est disponible
+        if (window.initializeSocket) {
+          console.log("Appel immédiat d'initializeSocket après login");
+          window.initializeSocket();
+        } else {
+          console.warn("initializeSocket non disponible, le socket s'initialisera par polling dans quelques secondes");
+        }
         
         // Handle pending workspace invitation if present
         if (pendingInvitation && pendingInvitation.workspaceId) {
