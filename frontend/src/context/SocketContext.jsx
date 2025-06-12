@@ -2,8 +2,10 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { io } from "socket.io-client";
 import { setupSocketDebugger } from "../utils/socketDebug";
@@ -17,6 +19,10 @@ export function useSocket() {
   return (
     context || {
       socket: null,
+      isSocketConnected: false,
+      hasJoinedPrivateRoom: false,
+      isInitializing: true,
+      ensurePrivateRoomJoined: () => false,
       refreshUnreadDM: () => {},
       refreshUnreadChannels: () => {},
       globalNotifications: { private: 0, workspace: 0 },
@@ -27,6 +33,9 @@ export function useSocket() {
 
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [hasJoinedPrivateRoom, setHasJoinedPrivateRoom] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [globalNotifications, setGlobalNotifications] = useState({
     private: 0,
     workspace: 0,
@@ -35,11 +44,13 @@ export function SocketProvider({ children }) {
   // Ajouter un state pour les statuts utilisateur
   const [userStatuses, setUserStatuses] = useState({});
   const socketRef = useRef(null);
+  const hasJoinedPrivateRoomRef = useRef(false);
+  const initializeSocketRef = useRef(null);
 
 
 
   // Fonction pour rafraîchir le compteur de messages privés non lus
-  const refreshUnreadDM = async () => {
+  const refreshUnreadDM = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) return; // Ne pas essayer sans token
 
@@ -100,9 +111,9 @@ export function SocketProvider({ children }) {
         }
       }
     }
-  };
+  }, []);
   // Nouvelle fonction pour rafraîchir le compteur de messages non lus par canal
-  const refreshUnreadChannels = async () => {
+  const refreshUnreadChannels = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) return; // Ne pas essayer sans token
 
@@ -193,18 +204,36 @@ export function SocketProvider({ children }) {
         }
       }
     }
-  };
-  // Initialisation du socket au démarrage de l'application
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      return;
-    }
+  }, []);
+  // Initialisation du socket au démarrage de l'application - IMMÉDIATE
+  useLayoutEffect(() => {
+    let tokenCheckInterval;
 
-    // Petite temporisation avant de tenter la connexion socket
-    // pour laisser le temps à l'application de s'initialiser
-    const timeoutId = setTimeout(() => {
+    // Fonction d'initialisation du socket
+    const initializeSocket = () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.log("[Socket] Pas de token, pas d'initialisation socket");
+        setIsInitializing(false);
+        return;
+      }
+
+      // Si un socket existe déjà et qu'il est connecté, ne pas le recréer
+      if (socketRef.current && socketRef.current.connected) {
+        console.log("[Socket] Socket déjà connecté, pas de réinitialisation");
+        setIsInitializing(false);
+        return;
+      }
+
+      console.log("[Socket] Initialisation immédiate du socket avec token:", token.substring(0, 20) + "...");
+
       try {
+        // Nettoyer l'ancien socket s'il existe
+        if (socketRef.current) {
+          socketRef.current.off();
+          socketRef.current.disconnect();
+        }
+
         const socketOptions = {
           auth: { token },
           transports: ["websocket", "polling"], // Try websocket first, fallback to polling
@@ -214,7 +243,7 @@ export function SocketProvider({ children }) {
           reconnectionDelayMax: 30000, // Délai maximal plus long (30 sec)
           timeout: 10000, // Timeout plus court pour détecter rapidement les problèmes
           autoConnect: true,
-          forceNew: false,
+          forceNew: true, // Forcer une nouvelle connexion
           query: { token }, // Inclure aussi le token dans la query pour plus de flexibilité
         };
 
@@ -225,6 +254,8 @@ export function SocketProvider({ children }) {
 
         newSocket.on("connect", () => {
           console.log("[Socket] Connexion établie");
+          setIsSocketConnected(true);
+          setIsInitializing(false);
           newSocket.emit("joinPrivate"); // Rejoindre la room privée
 
           // Fetch notifications on reconnect to ensure badges are up-to-date
@@ -234,8 +265,30 @@ export function SocketProvider({ children }) {
             refreshUnreadChannels();
           }, 500);
         });
+
+        // Écouter la confirmation de la room privée
+        newSocket.on("privateRoomJoined", (response) => {
+          if (response.status === "success") {
+            console.log("[Socket] Room privée rejointe avec succès");
+            setHasJoinedPrivateRoom(true);
+            hasJoinedPrivateRoomRef.current = true;
+          }
+        });
+
+        // Timeout de sécurité pour rejoindre la room privée
+        const privateRoomTimeout = setTimeout(() => {
+          if (!hasJoinedPrivateRoomRef.current) {
+            console.warn("[Socket] Timeout pour rejoindre la room privée, nouvelle tentative");
+            newSocket.emit("joinPrivate");
+          }
+        }, 3000);
+
         newSocket.on("connect_error", (err) => {
           console.error("[Socket] Erreur de connexion:", err.message);
+          setIsSocketConnected(false);
+          setHasJoinedPrivateRoom(false);
+          hasJoinedPrivateRoomRef.current = false;
+          setIsInitializing(false);
 
           // Si la connexion échoue en raison d'une erreur d'autorisation, rediriger vers la page de connexion
           if (
@@ -250,6 +303,9 @@ export function SocketProvider({ children }) {
         // Ajouter des gestionnaires d'événements pour la reconnexion
         newSocket.on("disconnect", (reason) => {
           console.warn("[Socket] Déconnecté:", reason);
+          setIsSocketConnected(false);
+          setHasJoinedPrivateRoom(false);
+          hasJoinedPrivateRoomRef.current = false;
 
           // Si le serveur nous a déconnecté intentionnellement, ne pas tenter de reconnexion automatique
           if (reason === "io server disconnect") {
@@ -261,6 +317,9 @@ export function SocketProvider({ children }) {
 
         newSocket.on("reconnect", (attemptNumber) => {
           console.log("[Socket] Reconnecté après", attemptNumber, "tentatives");
+          setIsSocketConnected(true);
+          setHasJoinedPrivateRoom(false); // Reset jusqu'à confirmation
+          hasJoinedPrivateRoomRef.current = false;
 
           // Rejoindre la room privée à nouveau
           newSocket.emit("joinPrivate");
@@ -287,6 +346,9 @@ export function SocketProvider({ children }) {
           console.error(
             "[Socket] Échec de la reconnexion après le nombre maximal de tentatives"
           );
+          setIsSocketConnected(false);
+          setHasJoinedPrivateRoom(false);
+          hasJoinedPrivateRoomRef.current = false;
           // Essayer de recréer un nouveau socket après un délai
           setTimeout(() => {
             if (socketRef.current) {
@@ -300,16 +362,90 @@ export function SocketProvider({ children }) {
 
         setSocket(newSocket);
         socketRef.current = newSocket;
-
-        return () => {
-          newSocket.off();
-          newSocket.disconnect();
-        };
+        setIsInitializing(false);
       } catch (error) {
         console.error("[Socket] Erreur lors de l'initialisation:", error);
+        setIsInitializing(false);
       }
-    }, 0); // Fermé avec un délai de 0
-  }, [API_URL]);
+    };
+
+    // Fonction pour vérifier périodiquement s'il y a un token
+    const checkForToken = () => {
+      const token = localStorage.getItem("token");
+      
+      if (token && !socketRef.current) {
+        console.log("[Socket] Token détecté, initialisation du socket");
+        initializeSocket();
+      } else if (!token && socketRef.current) {
+        console.log("[Socket] Token supprimé, déconnexion du socket");
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+          setSocket(null);
+          setIsSocketConnected(false);
+          setHasJoinedPrivateRoom(false);
+          hasJoinedPrivateRoomRef.current = false;
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    // Initialiser immédiatement si un token est présent
+    initializeSocket();
+
+    // Exposer la fonction d'initialisation globalement pour qu'elle puisse être appelée depuis les pages de login/validation
+    initializeSocketRef.current = initializeSocket;
+    window.initializeSocket = initializeSocket;
+
+    // Vérifier périodiquement s'il y a un token (toutes les 2 secondes, moins fréquent)
+    tokenCheckInterval = setInterval(checkForToken, 2000);
+
+    // Écouter les changements de token dans localStorage (pour les autres onglets)
+    const handleStorageChange = (e) => {
+      if (e.key === "token") {
+        if (e.newValue) {
+          console.log("[Socket] Nouveau token détecté (storage event), initialisation du socket");
+          // Si un nouveau token apparaît, initialiser le socket
+          if (!socketRef.current) {
+            initializeSocket();
+          }
+        } else {
+          console.log("[Socket] Token supprimé (storage event), déconnexion du socket");
+          // Si le token est supprimé, déconnecter le socket
+          if (socketRef.current) {
+            socketRef.current.disconnect();
+            socketRef.current = null;
+            setSocket(null);
+            setIsSocketConnected(false);
+            setHasJoinedPrivateRoom(false);
+            hasJoinedPrivateRoomRef.current = false;
+            setIsInitializing(false);
+          }
+        }
+      }
+    };
+
+    // Écouter les événements de storage pour réagir aux changements de token
+    window.addEventListener("storage", handleStorageChange);
+
+    // Fonction de nettoyage du useEffect
+    return () => {
+      clearInterval(tokenCheckInterval);
+      window.removeEventListener("storage", handleStorageChange);
+      // Nettoyer la fonction globale
+      delete window.initializeSocket;
+      if (socketRef.current) {
+        socketRef.current.off();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setSocket(null);
+      setIsSocketConnected(false);
+      setHasJoinedPrivateRoom(false);
+      hasJoinedPrivateRoomRef.current = false;
+      setIsInitializing(false);
+    };
+  }, []); // Pas de dépendances pour que ce soit exécuté une seule fois
   // Initialisation des compteurs de messages non lus au montage
   useEffect(() => {
     // Charger les compteurs au démarrage
@@ -353,31 +489,15 @@ export function SocketProvider({ children }) {
       clearInterval(refreshInterval);
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, []);
+  }, [refreshUnreadDM, refreshUnreadChannels]);
   // Gestion des notifications pour les messages privés
   useEffect(() => {
     if (!socket) return;
 
     // Mise à jour du compteur à chaque message reçu
     socket.on("privateMessage", (msg) => {
-      // Récupérer l'ID utilisateur actuel - essayer plusieurs sources
-      const tokenInfo = localStorage.getItem("token_info");
-      let userId;
-
-      try {
-        // Essayer de récupérer depuis token_info (si c'est un JSON)
-        if (tokenInfo) userId = JSON.parse(tokenInfo)?.id;
-
-        // Si pas d'ID, essayer d'autres sources courantes
-        if (!userId) userId = localStorage.getItem("userId");
-      } catch (e) {
-        console.error(
-          "[Socket] Erreur lors de la récupération de l'ID utilisateur:",
-          e
-        );
-        // Fallback: essayer avec userId directement
-        userId = localStorage.getItem("userId");
-      }
+      // Récupérer l'ID utilisateur actuel
+      const userId = localStorage.getItem("userId");
 
       // Si le message est destiné à l'utilisateur courant et qu'il n'en est pas l'expéditeur
       if (
@@ -556,6 +676,24 @@ export function SocketProvider({ children }) {
     };
   }, [socket]);
 
+  // Fonction pour forcer la connexion à la room privée
+  const ensurePrivateRoomJoined = useCallback(() => {
+    if (!socket || !isSocketConnected) {
+      console.warn("[Socket] Socket non connecté, impossible de rejoindre la room privée");
+      return false;
+    }
+
+    if (hasJoinedPrivateRoom) {
+      console.log("[Socket] Room privée déjà rejointe");
+      return true;
+    }
+
+    console.log("[Socket] Tentative de rejoindre la room privée...");
+    setHasJoinedPrivateRoom(false);
+    socket.emit("joinPrivate");
+    return true;
+  }, [socket, isSocketConnected, hasJoinedPrivateRoom]);
+
   // Fonction pour envoyer un changement de statut - simplifiée et directe
   const setUserStatus = (status) => {
     if (!socket || !socket.connected) {
@@ -617,6 +755,10 @@ export function SocketProvider({ children }) {
     <SocketContext.Provider
       value={{
         socket,
+        isSocketConnected,
+        hasJoinedPrivateRoom,
+        isInitializing,
+        ensurePrivateRoomJoined,
         globalNotifications,
         setGlobalNotifications,
         refreshUnreadDM, // Exposer la fonction pour l'utiliser dans d'autres composants

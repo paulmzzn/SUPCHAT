@@ -19,7 +19,10 @@ export const useMessages = (
   socket,
   currentUserId,
   attachments = [],
-  setAttachments = () => {}
+  setAttachments = () => {},
+  isSocketConnected = false,
+  hasJoinedPrivateRoom = false,
+  ensurePrivateRoomJoined = () => false
 ) => {
   // Toujours appeler le hook, même si les paramètres sont nuls (règle des hooks)
   const messageList = useMessageList({ selectedUser, socket, currentUserId });
@@ -40,6 +43,9 @@ export const useMessages = (
     setMessages: messageList.setMessages,
     newMessage, // <-- ajouté
     setNewMessage, // <-- ajouté
+    isSocketConnected, // <-- ajouté
+    hasJoinedPrivateRoom, // <-- ajouté
+    ensurePrivateRoomJoined, // <-- ajouté
   });
 
   // Menu contextuel

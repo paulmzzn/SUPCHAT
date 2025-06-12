@@ -1,8 +1,8 @@
-# Version sécurisée pour la production
+# Configuration optimisée pour déploiement VPS
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: supchat-postgres
+    container_name: supchat-postgres-vps
     environment:
       POSTGRES_DB: supchat
       POSTGRES_USER_FILE: /run/secrets/db_user
@@ -11,9 +11,7 @@ services:
     secrets:
       - db_user
       - db_password
-    # SÉCURITÉ: PostgreSQL ne doit PAS être exposé publiquement
-    # ports:
-    #   - "5432:5432"  # Port supprimé pour la sécurité
+    # SÉCURITÉ: PostgreSQL non exposé publiquement
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db/init-docker.sql:/docker-entrypoint-initdb.d/init-docker.sql:ro
@@ -31,7 +29,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
-    container_name: supchat-backend
+    container_name: supchat-backend-vps
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -39,7 +37,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=supchat
       - POSTGRES_DB=supchat
-      - FRONTEND_URL=http://192.168.1.64
+      - FRONTEND_URL=${VPS_DOMAIN:-http://185.98.137.166}
       - LOG_LEVEL=info
       # Configuration email LWS
       - EMAIL_HOST=mail86.lwspanel.com
@@ -74,7 +72,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://192.168.1.64:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -84,42 +82,24 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
-    container_name: supchat-frontend
+    container_name: supchat-frontend-vps
     environment:
-      # L'API est accessible via nginx proxy /api, donc pas besoin d'URL spécifique
       - REACT_APP_API_URL=""
-      - REACT_APP_SOCKET_URL=http://192.168.1.64
+      - REACT_APP_SOCKET_URL=https://supchat.fr
     ports:
       - "80:80"
+    volumes:
+      - ./frontend/nginx.cloudflare.conf:/etc/nginx/nginx.conf:ro
     networks:
       - REDACTED
     depends_on:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://192.168.1.64"]
+      test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # SÉCURITÉ: PgAdmin désactivé en production
-  # pgadmin:
-  #   image: dpage/pgadmin4:latest
-  #   container_name: supchat-pgadmin
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@supchat.fr
-  #     PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_password
-  #   secrets:
-  #     - pgadmin_password
-  #   ports:
-  #     - "8080:80"
-  #   volumes:
-  #     - pgadmin_data:/var/lib/pgadmin
-  #   networks:
-  #     - REDACTED
-  #   depends_on:
-  #     - postgres
-  #   restart: unless-stopped
 
 secrets:
   db_user:
@@ -154,13 +134,9 @@ secrets:
     file: ./secrets/strawpoll_api_key.txt
   mistral_api_key:
     file: ./secrets/mistral_api_key.txt
-  pgadmin_password:
-    file: ./secrets/pgadmin_password.txt
 
 volumes:
   postgres_data:
-    driver: local
-  pgadmin_data:
     driver: local
 
 networks:
