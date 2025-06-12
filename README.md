@@ -245,8 +245,9 @@ psql -U postgres -d supchat -f backend/db/init-docker.sql
 ```powershell
 cd backend
 npm install
-cp .env.example .env
-# Configurer les variables dans .env
+
+# Les variables d'environnement sont gérées via Docker Secrets
+# Pas de fichier .env - configuration via les fichiers secrets/
 
 # Démarrer le serveur
 npm run dev
@@ -519,7 +520,7 @@ const dbPassword = fs.readFileSync('/run/secrets/db_password', 'utf8').trim();
 echo "nouvelle-valeur-secrete" > secrets/secret_compromis.txt
 
 # 2. Redémarrer les services concernés
-docker-compose restart backend
+docker-compose restart backend postgres
 
 # 3. Pour les clés API externes, régénérer dans le service
 # - Google Console pour OAuth
@@ -705,7 +706,7 @@ frontend:
 - ⚛️ **React 18.3** avec build optimisé
 - 🌐 **Nginx Alpine** comme serveur web
 - 🗜️ **Compression gzip** automatique
-- 📱 **PWA** (Progressive Web App)
+- 📱 **Responsive design** pour mobile
 - 🔄 **Proxy API** vers backend
 
 ### **🛠️ Commandes Docker Utiles**
@@ -727,7 +728,7 @@ docker-compose up -d backend
 docker-compose restart frontend
 
 # Voir les logs en temps réel
-docker-compose logs -f backend
+docker-compose logs -f
 
 # Entrer dans un conteneur
 docker-compose exec backend sh
@@ -907,28 +908,28 @@ expo doctor
 #### **2. Configuration Environnement**
 
 ```powershell
-# Créer le fichier de configuration
-Copy-Item .env.example .env
+# L'application mobile utilise des variables d'environnement
+# directement intégrées dans app.json et le code source
 
-# Éditer la configuration mobile
-notepad .env
+# Pour modifier la configuration API, éditer :
+# mobile/src/utils/constants.js ou mobile/app.json
+
+# Pas de fichier .env séparé - configuration intégrée
 ```
 
-**Contenu `.env` mobile :**
+**Configuration mobile dans `app.json` :**
 
-```env
-# Configuration API (adapter l'IP à votre réseau local)
-EXPO_PUBLIC_API_URL=http://192.168.1.169:3000
-EXPO_PUBLIC_SOCKET_URL=http://192.168.1.169:3000
-
-# Stockage S3
-EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
-
-# Environnement
-EXPO_PUBLIC_ENV=development
-
-# Configuration push notifications (production)
-EXPO_PUBLIC_PROJECT_ID=your-expo-project-id
+```json
+{
+  "expo": {
+    "extra": {
+      "apiUrl": "http://192.168.1.169:3000",
+      "socketUrl": "http://192.168.1.169:3000",
+      "s3BaseUrl": "https://s3-supchat.s3.fr-par.scw.cloud/",
+      "environment": "development"
+    }
+  }
+}
 ```
 
 #### **3. Démarrage en Développement**
@@ -1087,8 +1088,8 @@ expo start --tunnel
 **1. Erreur de connexion API :**
 
 ```powershell
-# Vérifier l'IP dans .env mobile
-ipconfig | Select-String "IPv4"
+# Vérifier la configuration dans app.json mobile
+notepad mobile/app.json
 
 # Tester l'API depuis le PC
 curl http://192.168.1.169:3000/api/ping
@@ -1153,10 +1154,10 @@ L'application mobile offre une expérience native complète avec synchronisation
 
 ### **Application Web**
 
-- **URL** : `http://localhost:3000` (dev) ou votre domaine
+- **URL** : `http://localhost` (dev) ou votre domaine
 - **Fonctionnalités complètes** : Chat, workspaces, gestion fichiers
 - **Responsive** : Optimisée mobile
-- **PWA** : Installation possible sur bureau
+- **Application web standard** : Pas de PWA dans cette version
 
 ### **Application Mobile**
 
@@ -1182,57 +1183,74 @@ L'application mobile offre une expérience native complète avec synchronisation
 
 ### **Variables d'Environnement**
 
-#### **Backend (.env)**
+**⚠️ Important :** SUPCHAT utilise **Docker Secrets** pour la configuration au lieu de fichiers `.env` traditionnels. Les variables sensibles sont stockées dans le dossier `secrets/` et injectées de manière sécurisée dans les conteneurs.
 
-```env
-# Base de données
+#### **Configuration Backend (via Docker Secrets)**
+
+Les variables backend sont injectées automatiquement depuis `secrets/` :
+
+```yaml
+# Variables injectées depuis les fichiers secrets
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=supchat
 POSTGRES_DB=supchat
 
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-
-# OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
+# Secrets montés depuis secrets/
+JWT_SECRET=/run/secrets/jwt_secret
+GOOGLE_CLIENT_ID=/run/secrets/google_client_id
+GOOGLE_CLIENT_SECRET=/run/secrets/google_client_secret
+GITHUB_CLIENT_ID=/run/secrets/github_client_id
+GITHUB_CLIENT_SECRET=/run/secrets/github_client_secret
 
 # Scaleway S3
-SCW_ACCESS_KEY=your-scaleway-access-key
-SCW_SECRET_KEY=your-scaleway-secret-key
-SCW_ENDPOINT=https://s3.fr-par.scw.cloud
-SCW_REGION=fr-par
-SCW_BUCKET_NAME=your-bucket-name
+SCW_ACCESS_KEY=/run/secrets/scw_access_key
+SCW_SECRET_KEY=/run/secrets/scw_secret_key
+SCW_ENDPOINT=/run/secrets/scw_endpoint
+SCW_REGION=/run/secrets/scw_region
+SCW_BUCKET_NAME=/run/secrets/s3_bucket_name
 
 # Email
-EMAIL_HOST=smtp.your-provider.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@domain.com
-EMAIL_PASSWORD=your-email-password
+EMAIL_USER=/run/secrets/email_user
+EMAIL_PASSWORD=/run/secrets/email_password
 
-# Mistral AI
-MISTRAL_API_KEY=your-mistral-api-key
-
-# Strawpoll
-STRAWPOLL_API_KEY=your-strawpoll-api-key
+# IA Services
+MISTRAL_API_KEY=/run/secrets/mistral_api_key
+STRAWPOLL_API_KEY=/run/secrets/strawpoll_api_key
 ```
 
-#### **Frontend (.env)**
+#### **Configuration Frontend (intégrée)**
 
-```env
-REACT_APP_API_URL=http://localhost:3000
-REACT_APP_SOCKET_URL=http://localhost:3000
+Le frontend utilise des variables compilées dans le build :
+
+```javascript
+// Configuration intégrée dans le code source
+const API_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://votre-domaine.com/api"
+    : "http://localhost:3000/api";
+
+const SOCKET_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://votre-domaine.com"
+    : "http://localhost:3000";
 ```
 
-#### **Mobile (.env)**
+#### **Configuration Mobile (app.json)**
 
-```env
-EXPO_PUBLIC_API_URL=http://192.168.1.169:3000
-EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
-EXPO_PUBLIC_ENV=development
+La configuration mobile est intégrée dans `app.json` :
+
+```json
+{
+  "expo": {
+    "extra": {
+      "apiUrl": "http://192.168.1.169:3000",
+      "socketUrl": "http://192.168.1.169:3000",
+      "s3BaseUrl": "https://s3-supchat.s3.fr-par.scw.cloud/",
+      "environment": "development"
+    }
+  }
+}
 ```
 
 ### **Secrets Docker**
@@ -1620,8 +1638,9 @@ services:
 
 - 🌐 **Reverse proxy Nginx** pour gestion SSL
 - 📁 **Volumes persistants** sur système hôte
-- 🔗 **Réseau Docker** isolé et sécurisé
-- 🎯 **Configuration VPS** optimisée
+- 🔒 **PostgreSQL non exposé** publiquement
+- 📧 **Configuration email** LWS
+- 🛡️ **Firewall** et sécurité renforcée
 
 ### **🌍 Configuration Serveur LWS (France)**
 
@@ -1889,221 +1908,456 @@ curl -f http://localhost/health
 echo "✅ Mise à jour terminée !"
 ```
 
-Cette infrastructure de déploiement offre une solution complète et professionnelle pour héberger SUPCHAT, avec une architecture évolutive, sécurisée et optimisée pour les performances.
+### **📊 Monitoring & Observabilité**
 
----
-
-## 📈 **Performance**
-
-### **Optimisations Base de Données**
-
-- **Index optimisés** sur colonnes fréquemment requêtées
-- **Pagination** des messages (30 par batch)
-- **Requêtes préparées** pour sécurité et performance
-- **Connection pooling** PostgreSQL
-
-### **Optimisations Frontend**
-
-- **Code splitting** par route React
-- **Lazy loading** des composants
-- **Mise en cache** des ressources statiques
-- **Compression gzip** via Nginx
-
-### **Optimisations Temps Réel**
-
-- **Debouncing** des événements de frappe
-- **Throttling** des mises à jour d'état
-- **Optimistic updates** pour UX fluide
-- **Reconnexion automatique** WebSocket
-
-### **Monitoring**
-
-```powershell
-# Vérification santé des services
-curl http://your-domain.com/health
-
-# Logs en temps réel
-docker-compose logs -f backend
-
-# Métriques PostgreSQL
-docker-compose exec postgres psql -U postgres -c "SELECT * FROM pg_stat_activity;"
-```
-
-### **Métriques de Performance**
-
-- **Time to First Byte** : < 200ms
-- **Socket.IO Latency** : < 50ms
-- **Database Query Time** : < 100ms moyenne
-- **Page Load** : < 2s (First Contentful Paint)
-
----
-
-## 🤝 **Contribution**
-
-### **Workflow de Développement**
-
-1. **Fork** le repository
-2. **Créer** une branche feature (`git checkout -b feature/amazing-feature`)
-3. **Commit** vos changements (`git commit -m 'Add amazing feature'`)
-4. **Push** vers la branche (`git push origin feature/amazing-feature`)
-5. **Ouvrir** une Pull Request
-
-### **Standards de Code**
-
-#### **JavaScript/React**
-
-- **ESLint** pour le linting
-- **Prettier** pour le formatage
-- **Nomenclature** : camelCase pour variables, PascalCase pour composants
-- **Commentaires** JSDoc pour fonctions complexes
-
-#### **Base de Données**
-
-- **snake_case** pour noms de tables et colonnes
-- **UUID** pour clés primaires importantes
-- **Foreign keys** avec CASCADE approprié
-- **Index** sur colonnes de recherche
-
-### **Tests**
-
-```powershell
-# Tests backend
-cd backend
-npm test
-
-# Tests frontend
-cd frontend
-npm test
-
-# Tests e2e (à venir)
-npm run test:e2e
-```
-
-### **Structure des Commits**
-
-```
-type(scope): description
-
-feat(auth): add OAuth GitHub integration
-fix(socket): resolve connection timeout issue
-docs(readme): update installation instructions
-style(ui): improve dark mode contrast
-refactor(db): optimize message queries
-test(api): add private message endpoints tests
-```
-
----
-
-## 🛠️ **Dépannage**
-
-### **Problèmes Courants**
-
-#### **Backend ne démarre pas**
-
-```powershell
-# Vérifier les variables d'environnement
-docker-compose exec backend env | grep -E "(DB_|JWT_|SCW_)"
-
-# Vérifier la connexion PostgreSQL
-docker-compose exec backend node check-db-connection.js
-
-# Relancer avec logs
-docker-compose up backend --force-recreate
-```
-
-#### **Frontend erreur de connexion**
-
-```powershell
-# Vérifier la configuration API
-cat frontend/.env
-
-# Tester l'API backend
-curl http://localhost:3000/api/ping
-
-# Reconstruire le frontend
-docker-compose build frontend
-```
-
-#### **Mobile app ne se connecte pas**
-
-```powershell
-# Vérifier l'IP dans mobile/.env
-ipconfig # Trouver l'IP locale
-
-# Tester depuis mobile
-curl http://[IP]:3000/api/ping
-
-# Redémarrer Metro
-cd mobile && npx expo start --clear
-```
-
-#### **Socket.IO déconnexions fréquentes**
+#### **Métriques Business**
 
 ```javascript
-// Augmenter les timeouts dans backend/server.js
-const io = new Server(httpServer, {
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  connectTimeout: 45000,
+// backend/middleware/metrics.js
+const promClient = require("prom-client");
+
+const register = new promClient.register();
+
+// Métriques custom
+const messagesSent = new promClient.Counter({
+  name: "supchat_messages_sent_total",
+  help: "Total des messages envoyés",
+  labelNames: ["workspace_id", "channel_type"],
+  registers: [register],
+});
+
+const activeUsers = new promClient.Gauge({
+  name: "supchat_active_users",
+  help: "Utilisateurs actuellement connectés",
+  registers: [register],
+});
+
+const apiRequestDuration = new promClient.Histogram({
+  name: "supchat_api_request_duration_seconds",
+  help: "Durée des requêtes API",
+  labelNames: ["method", "route", "status_code"],
+  registers: [register],
+});
+
+module.exports = {
+  register,
+  messagesSent,
+  activeUsers,
+  apiRequestDuration,
+};
+```
+
+#### **Alertes Automatiques**
+
+```bash
+#!/bin/bash
+# monitoring/alerts.sh
+
+WEBHOOK_URL="https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+THRESHOLD_CPU=80
+THRESHOLD_MEMORY=85
+THRESHOLD_DISK=90
+
+send_alert() {
+  local message="$1"
+  curl -X POST -H 'Content-type: application/json' \
+    --data "{\"text\":\"🚨 SUPCHAT Alert: $message\"}" \
+    "$WEBHOOK_URL"
+}
+
+# Vérifier l'utilisation des ressources
+cpu_usage=$(docker stats --no-stream --format "{{.CPUPerc}}" supchat-backend | sed 's/%//')
+memory_usage=$(docker stats --no-stream --format "{{.MemPerc}}" supchat-backend | sed 's/%//')
+disk_usage=$(df /opt/supchat | tail -1 | awk '{print $(NF-1)}' | sed 's/%//')
+
+if (( $(echo "$cpu_usage > $THRESHOLD_CPU" | bc -l) )); then
+  send_alert "CPU élevé: ${cpu_usage}%"
+fi
+
+if (( $(echo "$memory_usage > $THRESHOLD_MEMORY" | bc -l) )); then
+  send_alert "Mémoire élevée: ${memory_usage}%"
+fi
+
+if (( disk_usage > THRESHOLD_DISK )); then
+  send_alert "Disque plein: ${disk_usage}%"
+fi
+```
+
+### **🔐 Sécurité Avancée**
+
+#### **Audit et Logging**
+
+```javascript
+// backend/middleware/audit.js
+const auditLog = (req, res, next) => {
+  const startTime = Date.now();
+
+  res.on("finish", () => {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      userId: req.user?.id,
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      responseTime: Date.now() - startTime,
+      body: req.method !== "GET" ? req.body : undefined,
+    };
+
+    // Log selon le niveau de criticité
+    if (res.statusCode >= 400) {
+      logger.warn("API_ERROR", logData);
+    } else if (req.url.includes("/admin/") || req.method === "DELETE") {
+      logger.info("ADMIN_ACTION", logData);
+    } else {
+      logger.debug("API_REQUEST", logData);
+    }
+  });
+
+  next();
+};
+```
+
+#### **Rate Limiting Avancé**
+
+```javascript
+// backend/middleware/rateLimiter.js
+const redis = require("redis");
+const client = redis.createClient();
+
+const createRateLimiter = (windowMs, maxRequests, keyGenerator) => {
+  return async (req, res, next) => {
+    const key = keyGenerator(req);
+    const current = await client.incr(key);
+
+    if (current === 1) {
+      await client.expire(key, windowMs / 1000);
+    }
+
+    if (current > maxRequests) {
+      const ttl = await client.ttl(key);
+      res.status(429).json({
+        error: "Too Many Requests",
+        retryAfter: ttl,
+      });
+      return;
+    }
+
+    res.setHeader("X-RateLimit-Limit", maxRequests);
+    res.setHeader("X-RateLimit-Remaining", maxRequests - current);
+    next();
+  };
+};
+
+// Limiteurs spécifiques
+const authLimiter = createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  5, // 5 tentatives
+  (req) => `auth:${req.ip}`
+);
+
+const apiLimiter = createRateLimiter(
+  60 * 1000, // 1 minute
+  100, // 100 requêtes
+  (req) => `api:${req.user?.id || req.ip}`
+);
+```
+
+### **🧪 Tests & Qualité**
+
+#### **Tests d'Intégration**
+
+```javascript
+// tests/integration/api.test.js
+const request = require("supertest");
+const app = require("../backend/server");
+const { setupTestDb, cleanupTestDb } = require("./helpers/database");
+
+describe("SUPCHAT API Integration", () => {
+  let authToken;
+
+  beforeAll(async () => {
+    await setupTestDb();
+
+    // Créer un utilisateur test et obtenir un token
+    const response = await request(app).post("/api/users/register").send({
+      username: "testuser",
+      email: "test@example.com",
+      password: "Test123!@#",
+    });
+
+    authToken = response.body.token;
+  });
+
+  afterAll(async () => {
+    await cleanupTestDb();
+  });
+
+  describe("Messages API", () => {
+    test("should create and retrieve messages", async () => {
+      // Créer un workspace
+      const workspace = await request(app)
+        .post("/api/workspaces")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ name: "Test Workspace" });
+
+      // Créer un canal
+      const channel = await request(app)
+        .post("/api/channels")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          name: "general",
+          workspace_id: workspace.body.id,
+        });
+
+      // Envoyer un message
+      const message = await request(app)
+        .post("/api/messages")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          content: "Hello World",
+          canal_id: channel.body.id,
+        });
+
+      expect(message.status).toBe(201);
+      expect(message.body.content).toBe("Hello World");
+    });
+  });
 });
 ```
 
-### **Logs Utiles**
+#### **Tests de Performance**
 
-```powershell
-# Logs généraux
-docker-compose logs -f
+```javascript
+// tests/performance/load.test.js
+const io = require("socket.io-client");
 
-# Logs spécifiques à un service
-docker-compose logs -f backend
+describe("Socket.IO Performance", () => {
+  test("should handle 1000 concurrent connections", async () => {
+    const connections = [];
+    const messageCount = 100;
+    const clientCount = 1000;
 
-# Logs PostgreSQL
-docker-compose logs -f postgres
+    // Créer les connexions
+    for (let i = 0; i < clientCount; i++) {
+      const socket = io("http://localhost:3000", {
+        auth: { token: "test-token" },
+      });
+      connections.push(socket);
+    }
 
-# Logs en temps réel avec filtrage
-docker-compose logs -f backend | grep "Socket.IO"
+    // Attendre que toutes les connexions soient établies
+    await Promise.all(
+      connections.map(
+        (socket) => new Promise((resolve) => socket.on("connect", resolve))
+      )
+    );
+
+    const startTime = Date.now();
+
+    // Envoyer des messages en parallèle
+    const promises = connections.map(
+      (socket, index) =>
+        new Promise((resolve) => {
+          let received = 0;
+          socket.on("message", () => {
+            received++;
+            if (received === messageCount) resolve();
+          });
+
+          for (let j = 0; j < messageCount; j++) {
+            socket.emit("message", {
+              content: `Message ${j} from client ${index}`,
+              canal_id: "test-channel",
+            });
+          }
+        })
+    );
+
+    await Promise.all(promises);
+
+    const duration = Date.now() - startTime;
+    const messagesPerSecond = (clientCount * messageCount) / (duration / 1000);
+
+    console.log(`Performance: ${messagesPerSecond.toFixed(2)} messages/sec`);
+
+    // Nettoyer
+    connections.forEach((socket) => socket.disconnect());
+  }, 30000);
+});
 ```
 
+### **📱 Optimisations Mobile**
+
+#### **Gestion Hors Ligne Avancée**
+
+```javascript
+// mobile/src/services/OfflineManager.js
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-netinfo/netinfo";
+
+class OfflineManager {
+  constructor() {
+    this.queue = [];
+    this.isOnline = true;
+    this.init();
+  }
+
+  async init() {
+    // Charger la queue depuis le storage
+    const savedQueue = await AsyncStorage.getItem("offline_queue");
+    if (savedQueue) {
+      this.queue = JSON.parse(savedQueue);
+    }
+
+    // Écouter les changements de connectivité
+    NetInfo.addEventListener((state) => {
+      const wasOffline = !this.isOnline;
+      this.isOnline = state.isConnected;
+
+      if (wasOffline && this.isOnline) {
+        this.processQueue();
+      }
+    });
+  }
+
+  async addToQueue(action) {
+    const queueItem = {
+      id: Date.now().toString(),
+      action,
+      timestamp: new Date().toISOString(),
+      retries: 0,
+    };
+
+    this.queue.push(queueItem);
+    await this.saveQueue();
+
+    if (this.isOnline) {
+      this.processQueue();
+    }
+  }
+
+  async processQueue() {
+    const pendingItems = [...this.queue];
+    this.queue = [];
+
+    for (const item of pendingItems) {
+      try {
+        await this.executeAction(item.action);
+      } catch (error) {
+        // Réessayer avec backoff exponentiel
+        if (item.retries < 3) {
+          item.retries++;
+          setTimeout(() => {
+            this.queue.push(item);
+            this.saveQueue();
+          }, Math.pow(2, item.retries) * 1000);
+        }
+      }
+    }
+
+    await this.saveQueue();
+  }
+
+  async executeAction(action) {
+    switch (action.type) {
+      case "SEND_MESSAGE":
+        return await api.sendMessage(action.payload);
+      case "UPDATE_PROFILE":
+        return await api.updateProfile(action.payload);
+      default:
+        throw new Error(`Action type non supporté: ${action.type}`);
+    }
+  }
+
+  async saveQueue() {
+    await AsyncStorage.setItem("offline_queue", JSON.stringify(this.queue));
+  }
+}
+
+export default new OfflineManager();
+```
+
+#### **Cache Redis Intelligent**
+
+```javascript
+// backend/services/CacheService.js
+const redis = require("redis");
+const client = redis.createClient();
+
+class CacheService {
+  static generateKey(prefix, params) {
+    return `${prefix}:${JSON.stringify(params)}`;
+  }
+
+  static async get(key, fallbackFunction, ttl = 3600) {
+    try {
+      const cached = await client.get(key);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+
+      // Pas en cache, exécuter la fonction fallback
+      const result = await fallbackFunction();
+
+      // Mettre en cache avec TTL
+      await client.setex(key, ttl, JSON.stringify(result));
+
+      return result;
+    } catch (error) {
+      console.error("Cache error:", error);
+      // En cas d'erreur de cache, exécuter directement
+      return await fallbackFunction();
+    }
+  }
+
+  static async invalidate(pattern) {
+    const keys = await client.keys(pattern);
+    if (keys.length > 0) {
+      await client.del(...keys);
+    }
+  }
+
+  // Cache spécialisé pour les messages
+  static async getCachedMessages(channelId, page = 1) {
+    const key = this.generateKey("messages", { channelId, page });
+
+    return await this.get(
+      key,
+      async () => {
+        return await Message.findByChannel(channelId, { page, limit: 30 });
+      },
+      300
+    ); // 5 minutes
+  }
+
+  // Cache pour les utilisateurs en ligne
+  static async getOnlineUsers(workspaceId) {
+    const key = this.generateKey("online_users", { workspaceId });
+
+    return await this.get(
+      key,
+      async () => {
+        return await User.getOnlineInWorkspace(workspaceId);
+      },
+      60
+    ); // 1 minute
+  }
+}
+
+module.exports = CacheService;
+```
+
+Cette infrastructure DevOps et ces bonnes pratiques complètent la documentation SUPCHAT en ajoutant :
+
+1. **🚀 Pipeline CI/CD** avec GitHub Actions
+2. **📊 Monitoring avancé** avec métriques custom et alertes
+3. **🔐 Sécurité renforcée** avec audit logs et rate limiting
+4. **🧪 Tests complets** d'intégration et de performance
+5. **📱 Optimisations mobile** avec gestion hors ligne
+6. **⚡ Cache intelligent** avec Redis pour les performances
+
+Ces éléments transforment SUPCHAT en une solution production-ready avec toutes les pratiques DevOps modernes.
+
 ---
-
-## 📄 **Licence**
-
-Ce projet est sous licence **ISC**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 👥 **Équipe**
-
-- **Développement Full-Stack** : [Votre Nom]
-- **Architecture Base de Données** : [Nom]
-- **Design UI/UX** : [Nom]
-- **DevOps & Infrastructure** : [Nom]
-
----
-
-## 🙏 **Remerciements**
-
-- [Socket.IO](https://socket.io/) pour la communication temps réel
-- [React](https://reactjs.org/) & [React Native](https://reactnative.dev/) pour les interfaces
-- [PostgreSQL](https://postgresql.org/) pour la robustesse de la base de données
-- [Mistral AI](https://mistral.ai/) pour l'assistant intelligent
-- [Expo](https://expo.dev/) pour le développement mobile simplifié
-- [Docker](https://docker.com/) pour la conteneurisation
-
----
-
-## 📞 **Support**
-
-- **Issues** : [GitHub Issues](https://github.com/votre-repo/supchat/issues)
-- **Documentation** : [Wiki](https://github.com/votre-repo/supchat/wiki)
-- **Email** : support@supchat.com
-
----
-
-<div align="center">
-  
-  **[⭐ Star ce projet](https://github.com/votre-repo/supchat)** si vous le trouvez utile !
-  
-  Fait avec ❤️ par l'équipe SUPCHAT
-  
-</div>
