@@ -6,6 +6,7 @@ import Spinner from "../../components/Spinner/Spinner";
 import defaultBanner from "../../assets/images/baniere_default.png";
 import "./Discover.css";
 import { API_URL } from "../../config/config";
+import defaultIcon from "../../assets/images/icon-dark.png";
 
 function Discover() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +81,7 @@ function Discover() {
             workspace.icon_url && !workspace.icon_url.startsWith("http")
               ? S3_BASE_URL + workspace.icon_url
               : workspace.icon_url ||
-                "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80",
+              defaultIcon,
           onlineUsers: workspace.online_users || 0,
           totalMembers: workspace.total_members || 0,
           isFavorite: workspace.is_favorite || false,
