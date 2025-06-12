@@ -123,7 +123,7 @@ const GoogleDriveSetup = ({ onClientIdSubmit, onCancel }) => {
                 </li>
                 <li>Créez des identifiants OAuth 2.0 dans "Credentials"</li>
                 <li>
-                  Ajoutez <code>http://192.168.1.29:3001</code> dans les
+                  Ajoutez <code>http://185.98.137.166:3001</code> dans les
                   "Authorized JavaScript origins"
                 </li>
                 <li>Copiez votre Client ID et collez-le ci-dessus</li>
