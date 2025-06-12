@@ -581,7 +581,7 @@ docker-compose up -d
 
 # Vérifier que tous les services sont UP
 docker-compose ps
-````
+```
 
 **Services lancés :**
 
@@ -1814,6 +1814,37 @@ healthcheck:
   retries: 3
   start_period: 60s
 ```
+
+---
+
+## 🗂️ Diagrammes Techniques
+
+### 📦 Architecture Docker Compose
+
+![Diagramme Docker](documentation/diagramme docker.png)
+
+Ce diagramme illustre l'orchestration des services principaux (Postgres, Backend Node.js, Frontend React/Nginx) via Docker Compose, l'utilisation des secrets Docker et la sécurisation des échanges.
+
+### 🔄 Diagramme de Séquence - Mention IA Mistral
+
+![Diagramme de Séquence](documentation/diagramme_sequence.png)
+
+Ce diagramme montre le flux complet lorsqu'un utilisateur mentionne @mistral dans un message, depuis le client jusqu'à la réponse IA, en passant par le backend, SocketIO, la base de données et MistralAI.
+
+### 🗃️ Modélisation de la Base de Données
+
+#### MCD Complet
+
+![MCD Complet](documentation/full-mcd.png)
+
+#### MCD Simplifié
+
+![MCD Simplifié](documentation/MCD-simplifié.png)
+
+Le MCD complet détaille toutes les entités et relations de la base PostgreSQL, tandis que le MCD simplifié donne une vue d'ensemble des concepts principaux (utilisateur, message, canal, workspace, fichier, rôle, etc.).
+
+---
+````
 
 ---
 
