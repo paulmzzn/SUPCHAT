@@ -27,8 +27,7 @@ export const useMessages = (
   // Toujours appeler le hook, même si les paramètres sont nuls (règle des hooks)
   const messageList = useMessageList({ selectedUser, socket, currentUserId });
 
-  const [messages, setMessages] = useState([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  // Ne pas dupliquer l'état des messages, utiliser celui de messageList
   const [newMessage, setNewMessage] = useState("");
 
   // Saisie et envoi de message
@@ -62,7 +61,6 @@ export const useMessages = (
   const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const emojiPickerRef = reactions.emojiPickerRef;
-
   // Fonction utilitaire pour recharger la conversation depuis l'API
   const refetchConversation = useCallback(async () => {
     if (!selectedUser) return;
@@ -72,14 +70,14 @@ export const useMessages = (
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        messageList.setMessages(data);
       } else {
         console.error("Erreur lors du rechargement des messages:", res.status);
       }
     } catch (err) {
       console.error("Erreur réseau lors du rechargement des messages:", err);
     }
-  }, [selectedUser, setMessages]);
+  }, [selectedUser, messageList.setMessages]);
 
   // Fonction pour supprimer un message via WebSocket
   const handleDeleteMessage = useCallback(
@@ -143,9 +141,7 @@ export const useMessages = (
         setEditingMessage(null);
         setEditMessageContent("");
       }
-    };
-
-    const handleMessageDeleted = ({ id }) => {
+    };    const handleMessageDeleted = ({ id }) => {
       messageList.setMessages((msgs) =>
         msgs.map((m) =>
           m.id_message_prive === id ? { ...m, is_deleted: true } : m
@@ -156,17 +152,42 @@ export const useMessages = (
         setEditingMessage(null);
         setEditMessageContent("");
       }
+    };    // Handler pour les statuts de lecture en temps réel
+    const handleMessageRead = ({ id, date_lecture }) => {
+      console.log("[DM] Message marqué comme lu:", { id, date_lecture });
+      messageList.setMessages((msgs) =>
+        msgs.map((m) =>
+          m.id_message_prive === id ? { ...m, date_lecture } : m
+        )
+      );
+    };
+
+    // Handler pour tous les messages marqués comme lus d'un coup
+    const handleAllMessagesRead = ({ readBy, count, timestamp }) => {
+      console.log("[DM] Tous les messages marqués comme lus:", { readBy, count, timestamp });
+      messageList.setMessages((msgs) =>
+        msgs.map((m) => {
+          // Marquer comme lu tous les messages envoyés par l'utilisateur actuel au destinataire
+          if (m.fk_expediteur === currentUserId && m.fk_destinataire === readBy && !m.date_lecture) {
+            return { ...m, date_lecture: timestamp };
+          }
+          return m;
+        })
+      );
     };
 
     socket.on("privateMessageUpdated", handleMessageUpdated);
     socket.on("privateMessageDeleted", handleMessageDeleted);
+    socket.on("privateMessageRead", handleMessageRead);
+    socket.on("allMessagesRead", handleAllMessagesRead);
 
     return () => {
       socket.off("privateMessageUpdated", handleMessageUpdated);
       socket.off("privateMessageDeleted", handleMessageDeleted);
+      socket.off("privateMessageRead", handleMessageRead);
+      socket.off("allMessagesRead", handleAllMessagesRead);
     };
-  }, [socket, messageList, editingMessage]);
-
+  }, [socket, messageList, editingMessage, currentUserId]); // Ajout de currentUserId dans les dépendances
   return {
     ...messageList,
     ...messageInput,
@@ -178,7 +199,7 @@ export const useMessages = (
     editingMessage,
     editMessageContent,
     setEditMessageContent,
-    setMessages,
+    setMessages: messageList.setMessages, // Correction: utiliser messageList.setMessages
     setNewMessage,
     messagesContainerRef,
     fileInputRef,

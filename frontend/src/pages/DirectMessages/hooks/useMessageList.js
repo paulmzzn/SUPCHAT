@@ -21,25 +21,56 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
   // Annuler la réponse
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
-  }, []);
-
-  // Marquer comme lus
+  }, []);  // Marquer comme lus
   const markMessagesAsRead = useCallback(
     (msgs) => {
+      console.log("[DM] markMessagesAsRead appelée avec:", {
+        selectedUser,
+        socketConnected: socket?.connected,
+        messagesCount: msgs?.length,
+        currentUserId
+      });
+
       if (
         !selectedUser ||
         !socket?.connected ||
         !msgs?.length ||
         !currentUserId
-      )
+      ) {
+        console.log("[DM] markMessagesAsRead annulée - conditions non remplies");
         return;
+      }
+      
       const unreadMessages = msgs.filter(
         (msg) =>
           msg.fk_expediteur === selectedUser &&
           msg.fk_destinataire === currentUserId &&
           !msg.date_lecture
       );
-      if (unreadMessages.length === 0) return;
+      
+      console.log("[DM] Messages non lus trouvés:", unreadMessages.length);
+      
+      if (unreadMessages.length === 0) {
+        console.log("[DM] Aucun message non lu à marquer");
+        return;
+      }
+      
+      // Envoyer un accusé de lecture pour chaque message non lu
+      unreadMessages.forEach((msg) => {
+        console.log("[DM] Envoi accusé de lecture pour message:", msg.id_message_prive);
+        socket.emit("readPrivateMessage", {
+          id: msg.id_message_prive,
+        }, (response) => {
+          if (response && !response.ok) {
+            console.error("Erreur lors de l'envoi de l'accusé de lecture pour le message:", msg.id_message_prive, response.message);
+          } else {
+            console.log("[DM] Accusé de lecture envoyé pour:", msg.id_message_prive);
+          }
+        });
+      });
+      
+      // Aussi envoyer l'accusé de lecture groupé pour la compatibilité
+      console.log("[DM] Envoi accusé de lecture groupé");
       socket.emit(
         "readAllPrivateMessages",
         {
@@ -47,11 +78,16 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
           recipientId: currentUserId,
         },
         (response) => {
-          if (!response.success) {
-            console.error("Erreur lors du marquage des messages comme lus");
+          if (!response || !response.success) {
+            console.error("Erreur lors du marquage des messages comme lus:", response);
+          } else {
+            console.log("[DM] Accusé de lecture groupé envoyé avec succès");
           }
         }
       );
+      
+      // Mettre à jour localement
+      console.log("[DM] Mise à jour locale des messages comme lus");
       setMessages((currentMessages) =>
         currentMessages.map((msg) => {
           if (msg.fk_expediteur === selectedUser && !msg.date_lecture) {
@@ -170,12 +206,29 @@ export function useMessageList({ selectedUser, socket, currentUserId }) {
         if (prev.some((m) => m.id_message_prive === msg.id_message_prive))
           return prev;
         return [...prev, { ...msg, attachments }];
-      });
-      // Marquer comme lu si c'est un message reçu
+      });      // Marquer comme lu si c'est un message reçu
       if (
         msg.fk_expediteur === selectedUser &&
         msg.fk_destinataire === currentUserId
       ) {
+        console.log("[DM] Nouveau message reçu, envoi accusé de lecture:", {
+          messageId: msg.id_message_prive,
+          from: msg.fk_expediteur,
+          to: msg.fk_destinataire
+        });
+        
+        // Envoyer un accusé de lecture individuel pour ce message spécifique
+        socket.emit("readPrivateMessage", {
+          id: msg.id_message_prive,
+        }, (response) => {
+          if (response && !response.ok) {
+            console.error("Erreur lors de l'envoi de l'accusé de lecture:", response.message);
+          } else {
+            console.log("[DM] Accusé de lecture envoyé avec succès pour:", msg.id_message_prive);
+          }
+        });
+        
+        // Marquer localement comme lu
         markMessagesAsRead([{ ...msg }]);
       }
     };

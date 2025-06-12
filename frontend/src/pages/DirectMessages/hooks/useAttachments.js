@@ -89,26 +89,11 @@ export const useAttachments = (options = {}) => {
             throw new Error(
               `Erreur lors de l'upload du fichier ${file.name}: ${errText}`
             );
-          }
-          const data = await response.json();
-          if (data.message_prive) {
-            let attachments = [];
-            try {
-              attachments = await fetchMessageAttachments(
-                data.message_prive.id_message_prive
-              );
-            } catch (err) {
-              attachments = [];
-            }
-            setMessages((prev) => [
-              ...prev,
-              { ...data.message_prive, attachments },
-            ]);
-            setNewMessage("");
-            setReplyingTo(null);
-            setAttachments([]);
-            return;
-          }
+          }          const data = await response.json();
+          
+          // Le message avec pièces jointes sera reçu via WebSocket
+          // Pas besoin de l'ajouter manuellement aux messages
+          console.log("[useAttachments] Upload réussi, message sera reçu via WebSocket:", data);
           console.log("[useAttachments] Réponse JSON:", data);
 
           // Debug: analyser la structure de la réponse

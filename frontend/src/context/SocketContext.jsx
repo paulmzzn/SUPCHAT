@@ -530,16 +530,21 @@ export function SocketProvider({ children }) {
           })
         );
       }
-    });
-
-    // Mise à jour du compteur à chaque lecture de message
+    });    // Mise à jour du compteur à chaque lecture de message
     socket.on("privateMessageRead", (data) => {
+      console.log("[SocketContext] Message privé marqué comme lu:", data);
       refreshUnreadDM();
     });
 
     // Écouter l'événement de réinitialisation des compteurs
     socket.on("privateMessagesMarkedAsRead", (data) => {
-      console.log("[Socket] Messages privés marqués comme lus:", data);
+      console.log("[SocketContext] Messages privés marqués comme lus:", data);
+      refreshUnreadDM();
+    });
+
+    // Écouter l'événement pour tous les messages marqués comme lus d'un coup
+    socket.on("allMessagesRead", (data) => {
+      console.log("[SocketContext] Tous les messages marqués comme lus:", data);
       refreshUnreadDM();
     });
 
@@ -547,6 +552,7 @@ export function SocketProvider({ children }) {
       socket.off("privateMessage");
       socket.off("privateMessageRead");
       socket.off("privateMessagesMarkedAsRead");
+      socket.off("allMessagesRead");
     };
   }, [socket]);
 
