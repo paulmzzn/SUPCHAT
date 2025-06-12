@@ -544,7 +544,7 @@ const dbPassword = fs.readFileSync('/run/secrets/db_password', 'utf8').trim();
 
 #### **⚠️ Que Faire si un Secret est Compromis**
 
-````powershell
+```powershell
 # 1. Changer immédiatement la valeur
 echo "nouvelle-valeur-secrete" > secrets/secret_compromis.txt
 
@@ -553,7 +553,9 @@ docker-compose restart backend postgres
 ```
 
 # 3. Pour les clés API externes, régénérer dans le service
+
 # - Google Console pour OAuth
+
 **⚡ Sans ces secrets, le projet NE PEUT PAS fonctionner :**
 
 - ❌ **Base de données** : Impossible de se connecter
@@ -1845,6 +1847,7 @@ Ce diagramme montre le flux complet lorsqu'un utilisateur mentionne @mistral dan
 Le MCD complet détaille toutes les entités et relations de la base PostgreSQL, tandis que le MCD simplifié donne une vue d'ensemble des concepts principaux (utilisateur, message, canal, workspace, fichier, rôle, etc.).
 
 ---
+
 ````
 
 ---
@@ -1955,3 +1958,4 @@ Get-Process -Name "node" | Stop-Process -Force
   <br>
   <em>Développé avec ❤️ pour des équipes performantes</em>
 </div>
+````
