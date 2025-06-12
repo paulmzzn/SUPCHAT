@@ -242,7 +242,7 @@ const GoogleDriveSetupIntegrated = ({
                 <li>Activez l'API Google Drive</li>
                 <li>Créez des identifiants OAuth 2.0</li>
                 <li>
-                  Ajoutez <code>http://185.98.137.166:3001</code> aux origines
+                  Ajoutez <code>http://192.168.1.29:3001</code> aux origines
                   autorisées
                 </li>
                 <li>Copiez votre Client ID ci-dessous</li>

@@ -37,7 +37,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=supchat
       - POSTGRES_DB=supchat
-      - FRONTEND_URL=${VPS_DOMAIN:-http://185.98.137.166}
+      - FRONTEND_URL=${VPS_DOMAIN:-http://192.168.1.29}
       - LOG_LEVEL=info
       # Configuration email LWS
       - EMAIL_HOST=mail86.lwspanel.com
