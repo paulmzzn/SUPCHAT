@@ -550,6 +550,7 @@ echo "nouvelle-valeur-secrete" > secrets/secret_compromis.txt
 
 # 2. Redémarrer les services concernés
 docker-compose restart backend postgres
+```
 
 # 3. Pour les clés API externes, régénérer dans le service
 # - Google Console pour OAuth
