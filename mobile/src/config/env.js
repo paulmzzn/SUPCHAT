@@ -9,7 +9,7 @@ import {
 
 // Provide fallbacks in case the env variables aren't set
 export default {
-  API_URL: EXPO_PUBLIC_API_URL || API_URL || "http://185.98.137.166:3000",
+  API_URL: EXPO_PUBLIC_API_URL || API_URL || "https://supchat.fr",
   ENV: EXPO_PUBLIC_ENV || ENV || "development",
   S3_BASE_URL:
     EXPO_PUBLIC_S3_BASE_URL ||
