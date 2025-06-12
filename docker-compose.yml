@@ -80,7 +80,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: supchat-frontend
     environment:
-      - REACT_APP_SOCKET_URL=http://192.168.71.234:3000
+      - REACT_APP_SOCKET_URL=http://185.98.137.166:3000
     ports:
       - "80:80"
     networks:
@@ -89,7 +89,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://192.168.71.234"]
+      test: ["CMD", "curl", "-f", "http://185.98.137.166"]
       interval: 30s
       timeout: 10s
       retries: 3
