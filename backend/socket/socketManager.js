@@ -55,9 +55,10 @@ const socketManager = (io) => {
   // Middleware pour authentifier les utilisateurs via socket.io
   io.use((socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
+      // Essayer de récupérer le token depuis auth ou query
+      const token = socket.handshake.auth.token || socket.handshake.query.token;
       if (!token) {
-        console.log("Socket.IO: Pas de token fourni");
+        console.log("Socket.IO: Pas de token fourni dans auth ou query");
         return next(new Error("Authentication error: Token required"));
       }
 
