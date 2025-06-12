@@ -229,7 +229,7 @@ function WorkspaceSidebar({
       }
 
       const response = await fetch(
-        `${185.98.137.166
+        `${192.168.1.29
           process.env.REACT_APP_API_URL || "http://192.168.71.234:3001"
         }/api/workspaces/${workspace.id}/invite`,
         {
