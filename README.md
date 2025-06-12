@@ -23,6 +23,7 @@
 - [🛠️ Technologies](#️-technologies)
 - [🚀 Installation](#-installation)
 - [🐳 Guide de Déploiement Docker](#-guide-de-déploiement-docker)
+  - [🔐 Secrets Docker - Configuration Essentielle](#-secrets-docker---configuration-essentielle)
 - [📱 Application Mobile (React Native)](#-application-mobile-react-native)
 - [📱 Applications](#-applications)
 - [🔧 Configuration](#-configuration)
@@ -346,6 +347,225 @@ EMAIL_HOST=mail86.lwspanel.com
 EMAIL_PORT=465
 EMAIL_SECURE=true
 ```
+
+### **🔐 Secrets Docker - Configuration Essentielle**
+
+SUPCHAT utilise **Docker Secrets** pour sécuriser toutes les données sensibles. Ces secrets sont **OBLIGATOIRES** pour le fonctionnement du projet.
+
+#### **📁 Structure des Secrets Requis**
+
+**Tous ces fichiers doivent être présents dans `secrets/` :**
+
+```
+secrets/
+├── 🗄️ Base de Données
+│   ├── db_user.txt              # Utilisateur PostgreSQL
+│   ├── db_password.txt          # Mot de passe PostgreSQL
+│   └── pgadmin_password.txt     # Mot de passe PgAdmin
+├── 🔑 Authentification
+│   ├── jwt_secret.txt           # Clé secrète JWT (256 bits)
+│   ├── google_client_id.txt     # OAuth Google Client ID
+│   ├── google_client_secret.txt # OAuth Google Secret
+│   ├── github_client_id.txt     # OAuth GitHub Client ID
+│   └── github_client_secret.txt # OAuth GitHub Secret
+├── 📧 Service Email
+│   ├── email_user.txt           # Adresse email SMTP
+│   └── email_password.txt       # Mot de passe SMTP
+├── ☁️ Stockage S3 (Scaleway)
+│   ├── scw_access_key.txt       # Clé d'accès Scaleway
+│   ├── scw_secret_key.txt       # Clé secrète Scaleway
+│   ├── scw_endpoint.txt         # Endpoint S3 Scaleway
+│   ├── scw_region.txt           # Région Scaleway
+│   └── s3_bucket_name.txt       # Nom du bucket S3
+├── 🤖 Services IA
+│   ├── mistral_api_key.txt      # Clé API Mistral AI
+│   └── strawpoll_api_key.txt    # Clé API Strawpoll
+└── 🔒 Autres Services
+    └── redis_password.txt       # Mot de passe Redis (futur)
+```
+
+#### **⚙️ Fonctionnement des Secrets Docker**
+
+```yaml
+# Dans docker-compose.yml
+services:
+  backend:
+    secrets:
+      - db_user
+      - db_password
+      - jwt_secret
+      - google_client_id
+      # ... tous les secrets nécessaires
+
+secrets:
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  # ... définition de tous les secrets
+```
+
+**Avantages Docker Secrets :**
+
+- 🔒 **Chiffrement** : Secrets chiffrés en mémoire
+- 🛡️ **Isolation** : Accessibles uniquement aux conteneurs autorisés
+- 📝 **Audit** : Traçabilité des accès aux secrets
+- 🚫 **Pas d'exposition** : Jamais visibles dans `docker inspect`
+- 💾 **Stockage sécurisé** : Montés en RAM (`/run/secrets/`)
+
+#### **🔧 Configuration des Secrets**
+
+**1. Vérification des Secrets Obligatoires**
+
+```powershell
+# Script de vérification des secrets
+$requiredSecrets = @(
+    "db_user.txt", "db_password.txt", "jwt_secret.txt",
+    "google_client_id.txt", "google_client_secret.txt",
+    "github_client_id.txt", "github_client_secret.txt",
+    "email_user.txt", "email_password.txt",
+    "scw_access_key.txt", "scw_secret_key.txt",
+    "scw_endpoint.txt", "scw_region.txt", "s3_bucket_name.txt",
+    "mistral_api_key.txt", "strawpoll_api_key.txt"
+)
+
+foreach ($secret in $requiredSecrets) {
+    if (!(Test-Path "secrets/$secret")) {
+        Write-Error "❌ Secret manquant : secrets/$secret"
+    } else {
+        Write-Host "✅ Secret présent : secrets/$secret" -ForegroundColor Green
+    }
+}
+```
+
+**2. Configuration des Valeurs**
+
+```powershell
+# Base de données (OBLIGATOIRE)
+echo "admin" > secrets/db_user.txt
+echo "VotreMotDePasseSecurise123!" > secrets/db_password.txt
+
+# JWT (OBLIGATOIRE - générer une clé forte)
+echo "votre-cle-jwt-super-secrete-256-bits-minimum!" > secrets/jwt_secret.txt
+
+# Email (OBLIGATOIRE pour notifications)
+echo "noreply@votre-domaine.com" > secrets/email_user.txt
+echo "VotreMotDePasseEmail!" > secrets/email_password.txt
+
+# S3 Scaleway (OBLIGATOIRE pour fichiers)
+echo "VOTRE_ACCESS_KEY_SCALEWAY" > secrets/scw_access_key.txt
+echo "votre-secret-key-scaleway" > secrets/scw_secret_key.txt
+echo "https://s3.fr-par.scw.cloud" > secrets/scw_endpoint.txt
+echo "fr-par" > secrets/scw_region.txt
+echo "votre-nom-bucket" > secrets/s3_bucket_name.txt
+```
+
+#### **🚨 Sécurité des Secrets**
+
+**Bonnes Pratiques :**
+
+```powershell
+# 1. Permissions restrictives sur les fichiers secrets
+icacls secrets /inheritance:d
+icacls secrets /grant:r "$env:USERNAME:(F)"
+icacls secrets /remove "Everyone"
+
+# 2. Jamais commit les secrets dans Git
+echo "secrets/*.txt" >> .gitignore
+
+# 3. Utiliser des valeurs fortes
+# JWT : minimum 256 bits (32 caractères)
+# Mots de passe : minimum 12 caractères avec symboles
+# API Keys : utiliser les vraies clés de production
+```
+
+**Génération de Secrets Sécurisés :**
+
+```powershell
+# Générer un JWT secret fort
+$jwt = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37,38,42,43,45,46,47,58,59,61,63,64,94,95,126) | Get-Random -Count 64 | % {[char]$_})
+echo $jwt > secrets/jwt_secret.txt
+
+# Générer un mot de passe base de données
+$dbPass = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37,38,42,43,45,46) | Get-Random -Count 20 | % {[char]$_})
+echo $dbPass > secrets/db_password.txt
+```
+
+#### **🔍 Accès aux Secrets dans les Conteneurs**
+
+```bash
+# Dans un conteneur Docker, les secrets sont montés dans /run/secrets/
+docker-compose exec backend ls -la /run/secrets/
+# -r--------    1 root     root            5 Dec 12 10:30 db_user
+# -r--------    1 root     root           25 Dec 12 10:30 db_password
+# -r--------    1 root     root           64 Dec 12 10:30 jwt_secret
+
+# Lire un secret dans le conteneur
+docker-compose exec backend cat /run/secrets/db_user
+# admin
+
+# Utilisation dans le code Node.js
+const fs = require('fs');
+const dbUser = fs.readFileSync('/run/secrets/db_user', 'utf8').trim();
+const dbPassword = fs.readFileSync('/run/secrets/db_password', 'utf8').trim();
+```
+
+#### **⚠️ Que Faire si un Secret est Compromis**
+
+```powershell
+# 1. Changer immédiatement la valeur
+echo "nouvelle-valeur-secrete" > secrets/secret_compromis.txt
+
+# 2. Redémarrer les services concernés
+docker-compose restart backend
+
+# 3. Pour les clés API externes, régénérer dans le service
+# - Google Console pour OAuth
+# - GitHub Settings pour OAuth
+# - Scaleway Console pour S3
+# - Mistral AI Dashboard pour API
+
+# 4. Vérifier les logs pour usage suspect
+docker-compose logs backend | Select-String "ERROR\|UNAUTHORIZED"
+```
+
+#### **🔄 Rotation des Secrets**
+
+```powershell
+# Script de rotation automatique (à adapter)
+$secrets = @("jwt_secret", "db_password")
+
+foreach ($secret in $secrets) {
+    # Backup ancien secret
+    Copy-Item "secrets/$secret.txt" "secrets/$secret.backup.txt"
+
+    # Générer nouveau secret
+    $newSecret = Generate-SecurePassword
+    echo $newSecret > "secrets/$secret.txt"
+
+    # Redémarrer services
+    docker-compose restart backend postgres
+
+    Write-Host "✅ Secret $secret mis à jour"
+}
+```
+
+**⚡ Sans ces secrets, le projet NE PEUT PAS fonctionner :**
+
+- ❌ **Base de données** : Impossible de se connecter
+- ❌ **Authentification** : JWT invalide, OAuth impossible
+- ❌ **Upload fichiers** : Pas d'accès S3
+- ❌ **Emails** : Notifications non envoyées
+- ❌ **IA** : Assistant Mistral non disponible
+
+**✅ Avec tous les secrets configurés :**
+
+- 🔐 **Sécurité maximale** avec chiffrement
+- 🚀 **Déploiement automatique** sans intervention
+- 🛡️ **Isolation complète** des données sensibles
+- 📊 **Monitoring** et audit des accès
 
 ### **🚀 Déploiement par Environnement**
 
