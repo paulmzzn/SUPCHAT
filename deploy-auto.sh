@@ -197,8 +197,8 @@ deploy_containers() {
     fi
     
     # Variables d'environnement
-    export VPS_DOMAIN="${VPS_DOMAIN:-192.168.1.29}"
-    export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@192.168.1.29}"
+    export VPS_DOMAIN="${VPS_DOMAIN:-185.98.137.166}"
+    export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@185.98.137.166}"
     
     # Démarrer les services
     $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
@@ -222,7 +222,7 @@ setup_monitoring() {
 check_service() {
     local service_name=$1
     local port=$2
-    if curl -f -s "http://192.168.1.29:$port/health" > /dev/null 2>&1; then
+    if curl -f -s "http://185.98.137.166:$port/health" > /dev/null 2>&1; then
         echo "✅ $service_name: OK"
     else
         echo "❌ $service_name: ERREUR"
