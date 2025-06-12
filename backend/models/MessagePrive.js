@@ -25,13 +25,39 @@ class MessagePrive {
     );
     return result.rows[0];
   }
-
   static async getConversation(userA, userB, limit = 50, offset = 0) {
     const result = await pool.query(
-      `SELECT mp.* 
+      `SELECT mp.*, 
+        COALESCE(
+          JSON_AGG(
+            CASE 
+              WHEN pmr.reaction_type IS NOT NULL 
+              THEN JSON_BUILD_OBJECT(
+                'reaction_type', pmr.reaction_type,
+                'count', pmr.reaction_count,
+                'user_reacted', CASE WHEN pmr.user_reacted_a OR pmr.user_reacted_b THEN true ELSE false END
+              )
+              ELSE NULL
+            END
+          ) FILTER (WHERE pmr.reaction_type IS NOT NULL), 
+          '[]'::json
+        ) as reactions
        FROM message_prive mp
+       LEFT JOIN (
+         SELECT 
+           fk_message_prive,
+           reaction_type,
+           COUNT(*) as reaction_count,
+           SUM(CASE WHEN fk_utilisateur = $1 THEN 1 ELSE 0 END) > 0 as user_reacted_a,
+           SUM(CASE WHEN fk_utilisateur = $2 THEN 1 ELSE 0 END) > 0 as user_reacted_b
+         FROM private_message_reaction 
+         GROUP BY fk_message_prive, reaction_type
+       ) pmr ON mp.id_message_prive = pmr.fk_message_prive
        WHERE (mp.fk_expediteur = $1 AND mp.fk_destinataire = $2)
           OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1)
+       GROUP BY mp.id_message_prive, mp.contenu, mp.fk_expediteur, mp.fk_destinataire, 
+                mp.created_at, mp.updated_at, mp.is_read, mp.date_lecture, mp.is_deleted, 
+                mp.pieces_jointes, mp.parent_id
        ORDER BY mp.created_at ASC`,
       [userA, userB]
     );

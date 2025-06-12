@@ -280,17 +280,23 @@ const socketManager = (io) => {
                 attachmentId
               );
             }
-          }
-
-          // Récupérer le message complet avec pièces jointes
+          }          // Récupérer le message complet avec pièces jointes
           const fullMessage = await MessagePrive.getById(
             message.id_message_prive
           );
 
+          // Récupérer explicitement les pièces jointes
+          const messageAttachments = await Fichier.getPrivateMessageAttachments(
+            message.id_message_prive
+          );
+
+          // Ajouter les pièces jointes au message
+          fullMessage.attachments = messageAttachments;
+
           // DEBUG: Vérifier la présence des attachments dans le message complet
           console.log(
             "Socket.IO: fullMessage.attachments:",
-            fullMessage.attachments
+            fullMessage.attachments?.length || 0
           );
 
           // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
