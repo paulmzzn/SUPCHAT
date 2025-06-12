@@ -287,10 +287,18 @@ const socketManager = (io) => {
             message.id_message_prive
           );
 
+          // Récupérer explicitement les pièces jointes
+          const messageAttachments = await Fichier.getPrivateMessageAttachments(
+            message.id_message_prive
+          );
+
+          // Ajouter les pièces jointes au message
+          fullMessage.attachments = messageAttachments;
+
           // DEBUG: Vérifier la présence des attachments dans le message complet
           console.log(
             "Socket.IO: fullMessage.attachments:",
-            fullMessage.attachments
+            fullMessage.attachments?.length || 0
           );
 
           // Ajouter le tempId au message émis pour que le frontend puisse faire la correspondance
@@ -315,17 +323,23 @@ const socketManager = (io) => {
                 err
               );
             }
-          }
-
-          console.log(
+          }          console.log(
             "Socket.IO: Message privé créé avec ID:",
-            fullMessage.id_message_prive
+            fullMessage.id_message_prive,
+            "et", fullMessage.attachments?.length || 0, "pièces jointes"
           );
+
+          // Enrichir le message avec les informations utilisateur pour le frontend
+          const enrichedMessage = {
+            ...fullMessage,
+            nom: fullMessage.expediteur_nom,
+            photo_de_profil: fullMessage.expediteur_photo,
+          };
 
           // Émettre vers les deux utilisateurs
           io.to(`dm:${expediteurId}`)
             .to(`dm:${destinataireId}`)
-            .emit("privateMessage", fullMessage);
+            .emit("privateMessage", enrichedMessage);
 
           // IMPORTANT: Toujours répondre au callback
           if (callback) {

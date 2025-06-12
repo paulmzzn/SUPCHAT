@@ -122,33 +122,35 @@ export const useSocket = (currentUserId) => {
             };
             return newCounts;
           });
-        }
-
-        // Ajouter à la conversation active si pertinent
+        }        // Ajouter à la conversation active si pertinent
         if (
           selectedUser &&
           (msg.fk_expediteur === selectedUser ||
             msg.fk_destinataire === selectedUser)
         ) {
-          let attachments = [];
-          try {
-            if (msg.id_message_prive) {
-              // Récupérer les pièces jointes du message
-              const response = await fetch(
-                `${API_URL}/api/private-messages/${msg.id_message_prive}/attachments`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  },
-                }
-              );
+          // Utiliser les pièces jointes du message WebSocket si disponibles
+          let attachments = msg.attachments || [];
+          
+          // Fallback: récupérer les pièces jointes via API si pas présentes dans le message
+          if (!attachments || attachments.length === 0) {
+            try {
+              if (msg.id_message_prive) {
+                const response = await fetch(
+                  `${API_URL}/api/private-messages/${msg.id_message_prive}/attachments`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                  }
+                );
 
-              if (response.ok) {
-                attachments = await response.json();
+                if (response.ok) {
+                  attachments = await response.json();
+                }
               }
+            } catch (error) {
+              console.error("Error fetching attachments:", error);
             }
-          } catch (error) {
-            console.error("Error fetching attachments:", error);
           }
 
           // Ajouter message à l'UI
