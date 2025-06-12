@@ -47,6 +47,7 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 - 💬 **Communication temps réel** via WebSocket (Socket.IO)
 - 🏢 **Espaces de travail** (Workspaces) avec gestion des rôles
 - 📱 **Multi-plateforme** : Web, Mobile (iOS/Android)
+- 💻 **Progressive Web App (PWA)** - Installable sur le bureau
 - 🤖 **Assistant IA** intégré (Mistral AI)
 - 📁 **Partage de fichiers** avec stockage cloud
 - 🔐 **Authentification OAuth** (Google, GitHub)
@@ -1152,12 +1153,27 @@ L'application mobile offre une expérience native complète avec synchronisation
 
 ## 📱 **Applications**
 
-### **Application Web**
+### **🌐 Application Web (PWA)**
 
 - **URL** : `http://localhost` (dev) ou votre domaine
+- **Progressive Web App** : ✅ Installable sur le bureau
+- **Installation** : Cliquez sur l'icône d'installation dans la barre d'adresse
 - **Fonctionnalités complètes** : Chat, workspaces, gestion fichiers
 - **Responsive** : Optimisée mobile
-- **Application web standard** : Pas de PWA dans cette version
+- **Mode hors ligne** : Support basique avec service worker
+- **Notifications push** : Support natif du navigateur
+
+#### **🖥️ Installation PWA sur Bureau**
+
+1. **Chrome/Edge** : Cliquez sur l'icône "Installer" dans la barre d'adresse
+2. **Firefox** : Menu → "Installer cette application"
+3. **Safari** : Partager → "Ajouter à l'écran d'accueil"
+
+L'application sera accessible comme une application native avec :
+- ✅ Icône sur le bureau/dock
+- ✅ Fenêtre dédiée sans barre d'adresse
+- ✅ Notifications push
+- ✅ Démarrage rapide
 
 ### **Application Mobile**
 
@@ -1166,16 +1182,18 @@ L'application mobile offre une expérience native complète avec synchronisation
 - **Distribution** : App Store / Google Play (à venir)
 - **Fonctionnalités** : Synchronisation complète avec le web
 
-### **Différences Plaformes**
+### **📊 Différences Plateformes**
 
-| Fonctionnalité     | Web | Mobile |
-| ------------------ | --- | ------ |
-| Chat temps réel    | ✅  | ✅     |
-| Upload fichiers    | ✅  | ✅     |
-| Notifications push | ✅  | ✅     |
-| Mode hors ligne    | ⚠️  | ✅     |
-| Google Drive       | ✅  | 🔄     |
-| Admin panel        | ✅  | ❌     |
+| Fonctionnalité        | Web (PWA) | Mobile |
+| --------------------- | --------- | ------ |
+| Chat temps réel       | ✅        | ✅     |
+| Upload fichiers       | ✅        | ✅     |
+| Notifications push    | ✅        | ✅     |
+| Installation bureau   | ✅        | N/A    |
+| Mode hors ligne       | ⚠️        | ✅     |
+| Google Drive          | ✅        | 🔄     |
+| Admin panel           | ✅        | ❌     |
+| Service Worker        | ✅        | N/A    |
 
 ---
 
@@ -1644,43 +1662,50 @@ services:
 
 ### **🌍 Configuration Serveur LWS (France)**
 
-#### **Spécificités LWS**
+#### **Hébergement & Services LWS Utilisés**
 
-```bash
-# Configuration Apache sur serveur mutualisé LWS
-# Fichier .htaccess pour redirection Docker
-RewriteEngine On
-RewriteCond %{HTTP_HOST} ^(www\.)?votre-domaine\.com$
-RewriteRule ^(.*)$ http://localhost:80/$1 [P,L]
-
-# Headers pour WebSocket (Socket.IO)
-Header always set Access-Control-Allow-Origin "*"
-Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
-Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-
-# Configuration SSL (certificat Let's Encrypt via LWS)
-SSLEngine on
-SSLCertificateFile /ssl/votre-domaine.com.crt
-SSLCertificateKeyFile /ssl/votre-domaine.com.key
+```yaml
+# Configuration LWS pour SUPCHAT
+Domaine: supchat.fr
+Email SMTP: mail86.lwspanel.com:465 (SSL)
+Compte email: REDACTED
+DNS: Géré via panel LWS → Cloudflare
+VPS: Serveur dédié avec Docker
 ```
 
-#### **Déploiement LWS**
+#### **Configuration Email LWS (Production)**
+
+```javascript
+// Configuration dans backend/config/secrets.js
+const emailConfig = {
+  host: "mail86.lwspanel.com", // Serveur SMTP LWS
+  port: 465, // Port SSL
+  secure: true, // SSL activé
+  user: "REDACTED", // Email LWS configuré
+  password: "[Mot de passe LWS]", // Via secrets Docker
+};
+```
+
+#### **Scripts de Déploiement VPS (Utilisés en Production)**
 
 ```powershell
-# 1. Préparation serveur LWS
-ssh votre-login@votre-serveur.lws-hosting.com
+# 1. Copier le projet sur le VPS
+./copy-to-vps.sh
+# → Transfère tous les fichiers vers /opt/supchat
 
-# 2. Installation Docker (si supporté)
-sudo apt update && sudo apt install docker.io docker-compose
+# 2. Se connecter au VPS et déployer
+ssh root@192.168.1.169
+cd /opt/supchat
+./deploy-auto.sh
+# → Installation complète automatique
 
-# 3. Configuration domaine
-# Via panel LWS : DNS A record vers IP serveur
-# Activation SSL Let's Encrypt dans panel LWS
+# 3. Corriger/Rebuilder les services (si nécessaire)
+./fix-all.sh
+# → Rebuild backend + frontend Docker
 
-# 4. Déploiement application
-git clone votre-repo supchat
-cd supchat
-./deploy-vps.sh votre-domaine.lws-hosting.com
+# 4. Rebuilder la base de données (si nécessaire)
+./rebuild-database.sh
+# → Reconstruction complète PostgreSQL
 ```
 
 ### **☁️ Intégration Cloudflare**
@@ -1747,38 +1772,76 @@ TXT     _verification    cloudflare-token     ❌      Auto
 
 ### **🔧 Scripts de Déploiement Automatique**
 
-#### **`deploy-vps.sh` - Déploiement Principal**
+#### **Scripts de Déploiement Automatique (Production)**
+
+**🚀 Workflow de Déploiement Réel :**
+
+```powershell
+# === ÉTAPE 1 : DÉVELOPPEMENT LOCAL ===
+# Développer et tester localement
+docker-compose up -d
+
+# === ÉTAPE 2 : TRANSFERT VERS VPS ===
+# Copier le projet complet sur le VPS
+./copy-to-vps.sh
+# ✅ Transfère vers /opt/supchat
+# ✅ Nettoie les attributs macOS
+# ✅ Préserve les secrets existants
+
+# === ÉTAPE 3 : DÉPLOIEMENT SUR VPS ===
+# Se connecter au VPS
+ssh root@192.168.1.169
+cd /opt/supchat
+
+# Déploiement automatique complet
+./deploy-auto.sh
+# ✅ Installation Docker
+# ✅ Configuration firewall
+# ✅ Vérification secrets
+# ✅ Build et démarrage conteneurs
+# ✅ Configuration monitoring/backup
+
+# === ÉTAPE 4 : MAINTENANCE ===
+# Corriger/Rebuilder si problème
+./fix-all.sh
+# ✅ Arrêt conteneurs
+# ✅ Rebuild backend/frontend
+# ✅ Redémarrage sécurisé
+
+# Rebuilder uniquement la base de données
+./rebuild-database.sh
+# ⚠️ ATTENTION: Supprime toutes les données !
+# ✅ Réinitialisation complète PostgreSQL
+```
+
+**📋 Détails des Scripts :**
 
 ```bash
-#!/bin/bash
-# Script de déploiement automatique VPS
+# copy-to-vps.sh
+- IP VPS: 192.168.1.169
+- Utilisateur: root
+- Destination: /opt/supchat
+- Préservation des secrets existants
 
-DOMAIN=$1
-VPS_IP=$2
+# deploy-auto.sh (sur VPS)
+- Vérifications prérequis
+- Installation Docker automatique
+- Configuration UFW firewall
+- Build des images Docker
+- Démarrage des services
+- Configuration monitoring
 
-echo "🚀 Déploiement SUPCHAT sur VPS"
-echo "Domaine: $DOMAIN"
-echo "IP VPS: $VPS_IP"
+# fix-all.sh (sur VPS)
+- Arrêt propre des conteneurs
+- Rebuild backend (Node.js)
+- Rebuild frontend (React)
+- Redémarrage avec vérifications
 
-# 1. Vérification prérequis
-./check-requirements.sh
-
-# 2. Configuration sécurisée
-./setup-secrets.sh
-
-# 3. Déploiement Docker
-docker-compose -f docker-compose.vps.yml up -d
-
-# 4. Configuration SSL
-./setup-ssl.sh $DOMAIN
-
-# 5. Configuration Cloudflare
-./setup-cloudflare.sh $DOMAIN
-
-# 6. Tests de santé
-curl -f http://$DOMAIN/health || exit 1
-
-echo "✅ Déploiement terminé avec succès !"
+# rebuild-database.sh (sur VPS)
+- Arrêt PostgreSQL
+- Suppression volumes de données
+- Reconstruction complète schéma
+- Redémarrage base vierge
 ```
 
 #### **`setup-ssl.sh` - Configuration SSL Automatique**
@@ -1878,486 +1941,14 @@ curl -s -o /dev/null -w "Status: %{http_code}, Time: %{time_total}s\n" \
   http://localhost/health
 ```
 
-### **🔄 Processus de Mise à Jour**
 
-#### **Mise à jour Zero-Downtime**
 
-```bash
-#!/bin/bash
-# Mise à jour avec zero downtime
 
-echo "🔄 Mise à jour SUPCHAT..."
 
-# 1. Backup avant mise à jour
-./backup.sh
 
-# 2. Pull nouveaux changements
-git pull origin main
 
-# 3. Build nouvelles images
-docker-compose -f docker-compose.vps.yml build
 
-# 4. Mise à jour rolling
-docker-compose -f docker-compose.vps.yml up -d --no-deps backend
-docker-compose -f docker-compose.vps.yml up -d --no-deps frontend
 
-# 5. Vérification santé
-sleep 30
-curl -f http://localhost/health
 
-echo "✅ Mise à jour terminée !"
-```
-
-### **📊 Monitoring & Observabilité**
-
-#### **Métriques Business**
-
-```javascript
-// backend/middleware/metrics.js
-const promClient = require("prom-client");
-
-const register = new promClient.register();
-
-// Métriques custom
-const messagesSent = new promClient.Counter({
-  name: "supchat_messages_sent_total",
-  help: "Total des messages envoyés",
-  labelNames: ["workspace_id", "channel_type"],
-  registers: [register],
-});
-
-const activeUsers = new promClient.Gauge({
-  name: "supchat_active_users",
-  help: "Utilisateurs actuellement connectés",
-  registers: [register],
-});
-
-const apiRequestDuration = new promClient.Histogram({
-  name: "supchat_api_request_duration_seconds",
-  help: "Durée des requêtes API",
-  labelNames: ["method", "route", "status_code"],
-  registers: [register],
-});
-
-module.exports = {
-  register,
-  messagesSent,
-  activeUsers,
-  apiRequestDuration,
-};
-```
-
-#### **Alertes Automatiques**
-
-```bash
-#!/bin/bash
-# monitoring/alerts.sh
-
-WEBHOOK_URL="https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
-THRESHOLD_CPU=80
-THRESHOLD_MEMORY=85
-THRESHOLD_DISK=90
-
-send_alert() {
-  local message="$1"
-  curl -X POST -H 'Content-type: application/json' \
-    --data "{\"text\":\"🚨 SUPCHAT Alert: $message\"}" \
-    "$WEBHOOK_URL"
-}
-
-# Vérifier l'utilisation des ressources
-cpu_usage=$(docker stats --no-stream --format "{{.CPUPerc}}" supchat-backend | sed 's/%//')
-memory_usage=$(docker stats --no-stream --format "{{.MemPerc}}" supchat-backend | sed 's/%//')
-disk_usage=$(df /opt/supchat | tail -1 | awk '{print $(NF-1)}' | sed 's/%//')
-
-if (( $(echo "$cpu_usage > $THRESHOLD_CPU" | bc -l) )); then
-  send_alert "CPU élevé: ${cpu_usage}%"
-fi
-
-if (( $(echo "$memory_usage > $THRESHOLD_MEMORY" | bc -l) )); then
-  send_alert "Mémoire élevée: ${memory_usage}%"
-fi
-
-if (( disk_usage > THRESHOLD_DISK )); then
-  send_alert "Disque plein: ${disk_usage}%"
-fi
-```
-
-### **🔐 Sécurité Avancée**
-
-#### **Audit et Logging**
-
-```javascript
-// backend/middleware/audit.js
-const auditLog = (req, res, next) => {
-  const startTime = Date.now();
-
-  res.on("finish", () => {
-    const logData = {
-      timestamp: new Date().toISOString(),
-      userId: req.user?.id,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      responseTime: Date.now() - startTime,
-      body: req.method !== "GET" ? req.body : undefined,
-    };
-
-    // Log selon le niveau de criticité
-    if (res.statusCode >= 400) {
-      logger.warn("API_ERROR", logData);
-    } else if (req.url.includes("/admin/") || req.method === "DELETE") {
-      logger.info("ADMIN_ACTION", logData);
-    } else {
-      logger.debug("API_REQUEST", logData);
-    }
-  });
-
-  next();
-};
-```
-
-#### **Rate Limiting Avancé**
-
-```javascript
-// backend/middleware/rateLimiter.js
-const redis = require("redis");
-const client = redis.createClient();
-
-const createRateLimiter = (windowMs, maxRequests, keyGenerator) => {
-  return async (req, res, next) => {
-    const key = keyGenerator(req);
-    const current = await client.incr(key);
-
-    if (current === 1) {
-      await client.expire(key, windowMs / 1000);
-    }
-
-    if (current > maxRequests) {
-      const ttl = await client.ttl(key);
-      res.status(429).json({
-        error: "Too Many Requests",
-        retryAfter: ttl,
-      });
-      return;
-    }
-
-    res.setHeader("X-RateLimit-Limit", maxRequests);
-    res.setHeader("X-RateLimit-Remaining", maxRequests - current);
-    next();
-  };
-};
-
-// Limiteurs spécifiques
-const authLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  5, // 5 tentatives
-  (req) => `auth:${req.ip}`
-);
-
-const apiLimiter = createRateLimiter(
-  60 * 1000, // 1 minute
-  100, // 100 requêtes
-  (req) => `api:${req.user?.id || req.ip}`
-);
-```
-
-### **🧪 Tests & Qualité**
-
-#### **Tests d'Intégration**
-
-```javascript
-// tests/integration/api.test.js
-const request = require("supertest");
-const app = require("../backend/server");
-const { setupTestDb, cleanupTestDb } = require("./helpers/database");
-
-describe("SUPCHAT API Integration", () => {
-  let authToken;
-
-  beforeAll(async () => {
-    await setupTestDb();
-
-    // Créer un utilisateur test et obtenir un token
-    const response = await request(app).post("/api/users/register").send({
-      username: "testuser",
-      email: "test@example.com",
-      password: "Test123!@#",
-    });
-
-    authToken = response.body.token;
-  });
-
-  afterAll(async () => {
-    await cleanupTestDb();
-  });
-
-  describe("Messages API", () => {
-    test("should create and retrieve messages", async () => {
-      // Créer un workspace
-      const workspace = await request(app)
-        .post("/api/workspaces")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({ name: "Test Workspace" });
-
-      // Créer un canal
-      const channel = await request(app)
-        .post("/api/channels")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({
-          name: "general",
-          workspace_id: workspace.body.id,
-        });
-
-      // Envoyer un message
-      const message = await request(app)
-        .post("/api/messages")
-        .set("Authorization", `Bearer ${authToken}`)
-        .send({
-          content: "Hello World",
-          canal_id: channel.body.id,
-        });
-
-      expect(message.status).toBe(201);
-      expect(message.body.content).toBe("Hello World");
-    });
-  });
-});
-```
-
-#### **Tests de Performance**
-
-```javascript
-// tests/performance/load.test.js
-const io = require("socket.io-client");
-
-describe("Socket.IO Performance", () => {
-  test("should handle 1000 concurrent connections", async () => {
-    const connections = [];
-    const messageCount = 100;
-    const clientCount = 1000;
-
-    // Créer les connexions
-    for (let i = 0; i < clientCount; i++) {
-      const socket = io("http://localhost:3000", {
-        auth: { token: "test-token" },
-      });
-      connections.push(socket);
-    }
-
-    // Attendre que toutes les connexions soient établies
-    await Promise.all(
-      connections.map(
-        (socket) => new Promise((resolve) => socket.on("connect", resolve))
-      )
-    );
-
-    const startTime = Date.now();
-
-    // Envoyer des messages en parallèle
-    const promises = connections.map(
-      (socket, index) =>
-        new Promise((resolve) => {
-          let received = 0;
-          socket.on("message", () => {
-            received++;
-            if (received === messageCount) resolve();
-          });
-
-          for (let j = 0; j < messageCount; j++) {
-            socket.emit("message", {
-              content: `Message ${j} from client ${index}`,
-              canal_id: "test-channel",
-            });
-          }
-        })
-    );
-
-    await Promise.all(promises);
-
-    const duration = Date.now() - startTime;
-    const messagesPerSecond = (clientCount * messageCount) / (duration / 1000);
-
-    console.log(`Performance: ${messagesPerSecond.toFixed(2)} messages/sec`);
-
-    // Nettoyer
-    connections.forEach((socket) => socket.disconnect());
-  }, 30000);
-});
-```
-
-### **📱 Optimisations Mobile**
-
-#### **Gestion Hors Ligne Avancée**
-
-```javascript
-// mobile/src/services/OfflineManager.js
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import NetInfo from "@react-native-netinfo/netinfo";
-
-class OfflineManager {
-  constructor() {
-    this.queue = [];
-    this.isOnline = true;
-    this.init();
-  }
-
-  async init() {
-    // Charger la queue depuis le storage
-    const savedQueue = await AsyncStorage.getItem("offline_queue");
-    if (savedQueue) {
-      this.queue = JSON.parse(savedQueue);
-    }
-
-    // Écouter les changements de connectivité
-    NetInfo.addEventListener((state) => {
-      const wasOffline = !this.isOnline;
-      this.isOnline = state.isConnected;
-
-      if (wasOffline && this.isOnline) {
-        this.processQueue();
-      }
-    });
-  }
-
-  async addToQueue(action) {
-    const queueItem = {
-      id: Date.now().toString(),
-      action,
-      timestamp: new Date().toISOString(),
-      retries: 0,
-    };
-
-    this.queue.push(queueItem);
-    await this.saveQueue();
-
-    if (this.isOnline) {
-      this.processQueue();
-    }
-  }
-
-  async processQueue() {
-    const pendingItems = [...this.queue];
-    this.queue = [];
-
-    for (const item of pendingItems) {
-      try {
-        await this.executeAction(item.action);
-      } catch (error) {
-        // Réessayer avec backoff exponentiel
-        if (item.retries < 3) {
-          item.retries++;
-          setTimeout(() => {
-            this.queue.push(item);
-            this.saveQueue();
-          }, Math.pow(2, item.retries) * 1000);
-        }
-      }
-    }
-
-    await this.saveQueue();
-  }
-
-  async executeAction(action) {
-    switch (action.type) {
-      case "SEND_MESSAGE":
-        return await api.sendMessage(action.payload);
-      case "UPDATE_PROFILE":
-        return await api.updateProfile(action.payload);
-      default:
-        throw new Error(`Action type non supporté: ${action.type}`);
-    }
-  }
-
-  async saveQueue() {
-    await AsyncStorage.setItem("offline_queue", JSON.stringify(this.queue));
-  }
-}
-
-export default new OfflineManager();
-```
-
-#### **Cache Redis Intelligent**
-
-```javascript
-// backend/services/CacheService.js
-const redis = require("redis");
-const client = redis.createClient();
-
-class CacheService {
-  static generateKey(prefix, params) {
-    return `${prefix}:${JSON.stringify(params)}`;
-  }
-
-  static async get(key, fallbackFunction, ttl = 3600) {
-    try {
-      const cached = await client.get(key);
-      if (cached) {
-        return JSON.parse(cached);
-      }
-
-      // Pas en cache, exécuter la fonction fallback
-      const result = await fallbackFunction();
-
-      // Mettre en cache avec TTL
-      await client.setex(key, ttl, JSON.stringify(result));
-
-      return result;
-    } catch (error) {
-      console.error("Cache error:", error);
-      // En cas d'erreur de cache, exécuter directement
-      return await fallbackFunction();
-    }
-  }
-
-  static async invalidate(pattern) {
-    const keys = await client.keys(pattern);
-    if (keys.length > 0) {
-      await client.del(...keys);
-    }
-  }
-
-  // Cache spécialisé pour les messages
-  static async getCachedMessages(channelId, page = 1) {
-    const key = this.generateKey("messages", { channelId, page });
-
-    return await this.get(
-      key,
-      async () => {
-        return await Message.findByChannel(channelId, { page, limit: 30 });
-      },
-      300
-    ); // 5 minutes
-  }
-
-  // Cache pour les utilisateurs en ligne
-  static async getOnlineUsers(workspaceId) {
-    const key = this.generateKey("online_users", { workspaceId });
-
-    return await this.get(
-      key,
-      async () => {
-        return await User.getOnlineInWorkspace(workspaceId);
-      },
-      60
-    ); // 1 minute
-  }
-}
-
-module.exports = CacheService;
-```
-
-Cette infrastructure DevOps et ces bonnes pratiques complètent la documentation SUPCHAT en ajoutant :
-
-1. **🚀 Pipeline CI/CD** avec GitHub Actions
-2. **📊 Monitoring avancé** avec métriques custom et alertes
-3. **🔐 Sécurité renforcée** avec audit logs et rate limiting
-4. **🧪 Tests complets** d'intégration et de performance
-5. **📱 Optimisations mobile** avec gestion hors ligne
-6. **⚡ Cache intelligent** avec Redis pour les performances
-
-Ces éléments transforment SUPCHAT en une solution production-ready avec toutes les pratiques DevOps modernes.
 
 ---
