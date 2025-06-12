@@ -25,8 +25,11 @@
 - [🐳 Guide de Déploiement Docker](#-guide-de-déploiement-docker)
   - [🔐 Secrets Docker - Configuration Essentielle](#-secrets-docker---configuration-essentielle)
 - [📱 Application Mobile (React Native)](#-application-mobile-react-native)
+- [🌐 Application Web (PWA)](#-application-web-pwa)
+- [📱 Configuration IP selon Environnement](#-configuration-ip-selon-environnement)
 - [📱 Applications](#-applications)
 - [🔧 Configuration](#-configuration)
+- [🛠️ Dépannage et Configuration Pratique](#️-dépannage-et-configuration-pratique)
 - [📊 Base de Données](#-base-de-données)
 - [🔐 Sécurité](#-sécurité)
 - [🤖 IA Mistral](#-ia-mistral)
@@ -214,18 +217,93 @@ SUPCHAT/
 git clone https://github.com/votre-username/supchat.git
 cd supchat
 
-# Copier et configurer les variables d'environnement
-Copy-Item deploy.env.example deploy.env
-# Éditer deploy.env avec vos configurations
+# 1. Configurer les secrets Docker (obligatoire)
+# Créer le dossier secrets/ et y placer vos fichiers de configuration
+# Voir la section "Secrets Docker" pour la liste complète
 
-# Configurer les secrets Docker
-./setup-secrets.ps1
+# 2. Adapter les adresses IP dans docker-compose.yml
+# Modifier les variables d'environnement selon votre configuration réseau
 
-# Lancer l'application
+# 3. Lancer l'application
 docker-compose up -d
 
 # Vérifier que tous les services sont en cours d'exécution
 docker-compose ps
+```
+
+### **🌐 Configuration des Adresses IP**
+
+#### **🏠 Déploiement Local (Développement)**
+
+Pour utiliser SUPCHAT sur votre réseau local :
+
+```yaml
+# docker-compose.yml (par défaut pour local)
+VITE_API_URL: "http://localhost:3000" # Accès depuis le même PC
+```
+
+**Pour accès depuis d'autres appareils (mobile, autre PC) :**
+
+1. **Trouvez votre IP locale :**
+
+```powershell
+# Windows
+ipconfig | Select-String "IPv4"
+# Exemple de résultat : 192.168.1.XXX (votre IP locale)
+```
+
+2. **Modifiez la configuration :**
+
+```yaml
+# docker-compose.yml - pour accès réseau local
+VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
+```
+
+#### **☁️ Déploiement VPS (Production)**
+
+**Ce projet a été déployé sur un VPS avec l'IP `192.168.1.169`**
+
+```yaml
+# docker-compose.vps.yml (configuration VPS du projet)
+VITE_API_URL: "http://192.168.1.169:3000" # IP VPS du projet
+```
+
+**Pour votre propre VPS, adaptez l'IP dans les scripts :**
+
+```bash
+# copy-to-vps.sh - modifier l'IP
+VPS_IP="VOTRE-IP-VPS"  # Remplacer par votre IP VPS
+```
+
+### **📱 Configuration Mobile**
+
+#### **🏠 Développement Local**
+
+```javascript
+// mobile/src/config/env.js
+export default {
+  API_URL: "http://192.168.1.XXX:3000", // Remplacer XXX par VOTRE IP locale
+  S3_BASE_URL: "https://s3-supchat.s3.fr-par.scw.cloud/",
+  ENV: "development",
+};
+```
+
+```bash
+# mobile/.env
+EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000  # VOTRE IP locale
+EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
+EXPO_PUBLIC_ENV=development
+```
+
+#### **☁️ Production VPS**
+
+```javascript
+// mobile/src/config/env.js (pour se connecter au VPS du projet)
+export default {
+  API_URL: "http://192.168.1.169:3000",  # IP VPS du projet
+  S3_BASE_URL: "https://s3-supchat.s3.fr-par.scw.cloud/",
+  ENV: "production"
+};
 ```
 
 ### **Installation Manuelle**
@@ -315,39 +393,6 @@ ls secrets/
 
 # Éditer les valeurs si nécessaire
 notepad secrets/db_password.txt
-```
-
-#### **2. Variables d'Environnement**
-
-```powershell
-# Copier le fichier d'exemple
-Copy-Item deploy.env.example deploy.env
-
-# Éditer la configuration
-notepad deploy.env
-```
-
-**Contenu `deploy.env` :**
-
-```env
-# Configuration globale
-VPS_DOMAIN=votre-domaine.com
-ADMIN_EMAIL=admin@votre-domaine.com
-PROJECT_DIR=/opt/supchat
-ENABLE_SSL=true
-
-# Base de données
-POSTGRES_VERSION=16-alpine
-DB_NAME=supchat
-
-# Frontend
-FRONTEND_PORT=80
-NGINX_VERSION=alpine
-
-# Email (LWS)
-EMAIL_HOST=mail86.lwspanel.com
-EMAIL_PORT=465
-EMAIL_SECURE=true
 ```
 
 ### **🔐 Secrets Docker - Configuration Essentielle**
@@ -516,7 +561,7 @@ const dbPassword = fs.readFileSync('/run/secrets/db_password', 'utf8').trim();
 
 #### **⚠️ Que Faire si un Secret est Compromis**
 
-```powershell
+````powershell
 # 1. Changer immédiatement la valeur
 echo "nouvelle-valeur-secrete" > secrets/secret_compromis.txt
 
@@ -525,35 +570,6 @@ docker-compose restart backend postgres
 
 # 3. Pour les clés API externes, régénérer dans le service
 # - Google Console pour OAuth
-# - GitHub Settings pour OAuth
-# - Scaleway Console pour S3
-# - Mistral AI Dashboard pour API
-
-# 4. Vérifier les logs pour usage suspect
-docker-compose logs backend | Select-String "ERROR\|UNAUTHORIZED"
-```
-
-#### **🔄 Rotation des Secrets**
-
-```powershell
-# Script de rotation automatique (à adapter)
-$secrets = @("jwt_secret", "db_password")
-
-foreach ($secret in $secrets) {
-    # Backup ancien secret
-    Copy-Item "secrets/$secret.txt" "secrets/$secret.backup.txt"
-
-    # Générer nouveau secret
-    $newSecret = Generate-SecurePassword
-    echo $newSecret > "secrets/$secret.txt"
-
-    # Redémarrer services
-    docker-compose restart backend postgres
-
-    Write-Host "✅ Secret $secret mis à jour"
-}
-```
-
 **⚡ Sans ces secrets, le projet NE PEUT PAS fonctionner :**
 
 - ❌ **Base de données** : Impossible de se connecter
@@ -582,7 +598,7 @@ docker-compose up -d
 
 # Vérifier que tous les services sont UP
 docker-compose ps
-```
+````
 
 **Services lancés :**
 
@@ -767,44 +783,40 @@ cat backup.sql | docker-compose exec -T postgres psql -U supchat_user supchat
 ./update-and-start.bat      # Mise à jour + démarrage
 ```
 
-### **🔄 Processus de Mise à Jour**
+### **📜 Scripts de Déploiement Disponibles**
 
-#### **Mise à jour Standard**
+#### **Scripts d'Automatisation Réels**
 
 ```powershell
-# 1. Arrêter les services
-docker-compose down
+# Scripts de démarrage rapide
+./start-quick.bat              # Démarrage développement local
+./stop.bat                     # Arrêt rapide
 
-# 2. Récupérer les dernières modifications
-git pull origin main
+# Scripts de déploiement VPS
+./copy-to-vps.sh              # Copie des fichiers vers VPS
+./deploy-auto.sh              # Déploiement automatique
+./fix-all.sh                  # Correction et redémarrage
+./rebuild-database.sh         # Reconstruction base de données
 
-# 3. Reconstruire les images
-docker-compose build
-
-# 4. Redémarrer
-docker-compose up -d
-
-# 5. Vérifier la santé
-docker-compose ps
-curl http://localhost:3000/health
+# Scripts de maintenance
+./rebuild-and-restart.bat     # Windows - reconstruction complète
+./update-and-start.bat        # Windows - mise à jour et démarrage
 ```
 
-#### **Mise à jour Zero-Downtime (Production)**
+#### **Workflow de Déploiement VPS**
 
-```powershell
-# 1. Mise à jour backend sans interruption
-docker-compose build backend
-docker-compose up -d --no-deps backend
+```bash
+# 1. Copier le projet vers le VPS
+./copy-to-vps.sh
 
-# 2. Attendre stabilisation
-Start-Sleep 30
+# 2. Déployer automatiquement
+ssh root@192.168.1.169 "cd /opt/supchat && ./deploy-auto.sh"
 
-# 3. Mise à jour frontend
-docker-compose build frontend
-docker-compose up -d --no-deps frontend
+# 3. En cas de problème
+ssh root@192.168.1.169 "cd /opt/supchat && ./fix-all.sh"
 
-# 4. Vérification
-curl http://localhost/health
+# 4. Reconstruire la base si nécessaire
+ssh root@192.168.1.169 "cd /opt/supchat && ./rebuild-database.sh"
 ```
 
 ### **📊 Monitoring et Logs**
@@ -906,31 +918,40 @@ yarn install
 expo doctor
 ```
 
-#### **2. Configuration Environnement**
+#### **2. Configuration Réseau et API**
 
-```powershell
-# L'application mobile utilise des variables d'environnement
-# directement intégrées dans app.json et le code source
+**⚠️ IMPORTANT** : L'application mobile doit pointer vers l'IP réelle de votre serveur backend.
 
-# Pour modifier la configuration API, éditer :
-# mobile/src/utils/constants.js ou mobile/app.json
+#### **Configuration pour Développement Local**
 
-# Pas de fichier .env séparé - configuration intégrée
+```javascript
+// mobile/src/config/env.js
+export default {
+  API_URL: "http://192.168.1.XXX:3000", // IP de votre machine/VPS
+  S3_BASE_URL: "https://s3-supchat.s3.fr-par.scw.cloud/",
+  ENV: "development",
+};
 ```
 
-**Configuration mobile dans `app.json` :**
+#### **Configuration via .env mobile**
 
-```json
-{
-  "expo": {
-    "extra": {
-      "apiUrl": "http://192.168.1.169:3000",
-      "socketUrl": "http://192.168.1.169:3000",
-      "s3BaseUrl": "https://s3-supchat.s3.fr-par.scw.cloud/",
-      "environment": "development"
-    }
-  }
-}
+```bash
+# mobile/.env
+EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000
+EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
+EXPO_PUBLIC_ENV=development
+```
+
+#### **🔍 Comment trouver votre IP :**
+
+```powershell
+# Windows - Trouver l'IP locale
+ipconfig | Select-String "IPv4"
+
+# Tester la connectivité depuis mobile
+# 1. Assurer que le backend est accessible : http://VOTRE-IP:3000/api/ping
+# 2. Vérifier que le firewall Windows autorise le port 3000
+# 3. S'assurer que mobile et serveur sont sur le même réseau
 ```
 
 #### **3. Démarrage en Développement**
@@ -1004,14 +1025,17 @@ mobile/
 #### **Configuration Réseau Local**
 
 ```powershell
-# 1. Trouver l'IP locale de votre machine
+# 1. Trouver votre IP locale
 ipconfig | Select-String "IPv4"
 
-# 2. Vérifier que le backend est accessible
-curl http://192.168.1.169:3000/api/ping
+# 2. Vérifier que l'API est accessible
+curl http://192.168.1.XXX:3000/api/ping
 
-# 3. Tester depuis l'appareil mobile
-# Scanner le QR code Expo avec cette IP configurée
+# 3. Tester Socket.IO
+curl http://192.168.1.XXX:3000/socket.io/
+
+# 4. Vérifier depuis votre téléphone (navigateur)
+# Ouvrir : http://192.168.1.XXX dans le navigateur mobile
 ```
 
 #### **Services Intégrés**
@@ -1147,7 +1171,123 @@ npm install
 | 👥 Gestion workspaces  | ✅  | ✅     | API REST         |
 | 🤖 Assistant IA        | ✅  | ✅     | Mistral API      |
 
-L'application mobile offre une expérience native complète avec synchronisation temps réel avec la version web, tout en conservant des fonctionnalités spécifiques mobile comme le mode offline et les notifications push natives.
+---
+
+## 🌐 **Application Web (PWA)**
+
+### **💻 Progressive Web App (PWA)**
+
+SUPCHAT est une **Progressive Web App** complète qui peut être installée sur tous les appareils :
+
+#### **🖥️ Installation Bureau**
+
+**Chrome/Edge/Brave :**
+
+1. Ouvrir `http://votre-ip/` dans le navigateur
+2. Cliquer sur l'icône "⊕ Installer" dans la barre d'adresse
+3. Confirmer l'installation
+4. L'application apparaît dans le menu Démarrer/Applications
+
+**Firefox :**
+
+1. Ouvrir `http://votre-ip/`
+2. Menu ≡ → "Installer cette application"
+3. Confirmer l'installation
+
+**Safari (macOS) :**
+
+1. Ouvrir `http://votre-ip/`
+2. Menu "Fichier" → "Ajouter au Dock"
+
+#### **📱 Installation Mobile**
+
+**Android :**
+
+1. Ouvrir dans Chrome/Firefox
+2. Menu → "Ajouter à l'écran d'accueil"
+3. L'application fonctionne comme une app native
+
+**iOS :**
+
+1. Ouvrir dans Safari
+2. Bouton Partage → "Sur l'écran d'accueil"
+3. Accès hors-ligne disponible
+
+#### **✨ Fonctionnalités PWA**
+
+- 📱 **Installation native** sur tous appareils
+- 🌐 **Fonctionnement hors-ligne** (cache intelligent)
+- 🔔 **Notifications push** (web et mobile)
+- ⚡ **Démarrage rapide** (cache service worker)
+- 🖥️ **Interface desktop** optimisée
+- 📲 **Icônes natives** dans menus système
+
+---
+
+## 📱 **Configuration IP selon Environnement**
+
+### **🏠 Déploiement Local (Votre IP Personnelle)**
+
+Pour un déploiement sur votre réseau local :
+
+#### **1. Trouver votre IP locale**
+
+```powershell
+# Windows
+ipconfig | findstr "IPv4"
+
+# Exemple de sortie : 192.168.1.XXX
+```
+
+#### **2. Configuration Mobile (IP Locale)**
+
+Éditez `mobile/src/config/env.js` :
+
+```javascript
+// Configuration pour votre IP personnelle
+const config = {
+  development: {
+    API_BASE_URL: "http://192.168.1.XXX:3000",
+    WS_URL: "ws://192.168.1.XXX:3000",
+  },
+
+  production: {
+    API_BASE_URL: "http://192.168.1.XXX:3000",
+    WS_URL: "ws://192.168.1.XXX:3000",
+  },
+};
+
+// Remplacez XXX par vos derniers chiffres IP
+```
+
+### **☁️ Déploiement VPS (IP Projet : 192.168.1.169)**
+
+Pour le VPS spécifique du projet :
+
+#### **Configuration mobile VPS**
+
+```javascript
+// Configuration pour le VPS du projet
+const config = {
+  development: {
+    API_BASE_URL: "http://192.168.1.169:3000",
+    WS_URL: "ws://192.168.1.169:3000",
+  },
+
+  production: {
+    API_BASE_URL: "http://192.168.1.169:3000",
+    WS_URL: "ws://192.168.1.169:3000",
+  },
+};
+```
+
+#### **Variables VPS**
+
+Les scripts de déploiement VPS utilisent automatiquement :
+
+- **IP VPS** : `192.168.1.169`
+- **Domaine** : Configurable via les scripts de déploiement
+- **Ports** : 80 (frontend), 3000 (backend), 5432 (postgres interne)
 
 ---
 
@@ -1185,16 +1325,17 @@ L'application sera accessible comme une application native avec :
 
 ### **📊 Différences Plateformes**
 
-| Fonctionnalité      | Web (PWA) | Mobile |
-| ------------------- | --------- | ------ |
-| Chat temps réel     | ✅        | ✅     |
-| Upload fichiers     | ✅        | ✅     |
-| Notifications push  | ✅        | ✅     |
-| Installation bureau | ✅        | N/A    |
-| Mode hors ligne     | ⚠️        | ✅     |
-| Google Drive        | ✅        | 🔄     |
-| Admin panel         | ✅        | ❌     |
-| Service Worker      | ✅        | N/A    |
+| Fonctionnalité         | Web (PWA) | Mobile |
+| ---------------------- | --------- | ------ |
+| 💬 Messages temps réel | ✅        | ✅     |
+| 🔐 Authentification    | ✅        | ✅     |
+| 📁 Upload fichiers     | ✅        | ✅     |
+| 🔔 Notifications       | ✅        | ✅     |
+| 💾 Cache offline       | ⚠️        | ✅     |
+| 🌙 Mode sombre         | ✅        | ✅     |
+| Google Drive           | ✅        | 🔄     |
+| Admin panel            | ✅        | ❌     |
+| Service Worker         | ✅        | N/A    |
 
 ---
 
@@ -1616,7 +1757,7 @@ services:
 
 **Caractéristiques** :
 
-- 🔒 **Docker Secrets** pour sécurité maximale
+- 🔒 **Secrets Docker** pour sécurité maximale
 - 🚀 **Images optimisées** (multi-stage builds)
 - 🔄 **Auto-restart** en cas de crash
 - 📊 **Health checks** intégrés
@@ -1687,162 +1828,39 @@ const emailConfig = {
 };
 ```
 
-#### **Scripts de Déploiement VPS (Utilisés en Production)**
+#### **🚀 Scripts de Déploiement VPS (Workflow Réel)**
 
-```powershell
-# 1. Copier le projet sur le VPS
+**Configuration VPS : IP `192.168.1.169` | Utilisateur `root` | Répertoire `/opt/supchat`**
+
+```bash
+# 1. Copier le projet vers le VPS (depuis votre machine locale)
 ./copy-to-vps.sh
-# → Transfère tous les fichiers vers /opt/supchat
+# → Utilise scp pour transférer tous les fichiers vers /opt/supchat
+# → IP VPS configurée : 192.168.1.169
+# → Évite les problèmes d'attributs étendus macOS
 
 # 2. Se connecter au VPS et déployer
 ssh root@192.168.1.169
 cd /opt/supchat
+
+# 3. Installation automatique complète
 ./deploy-auto.sh
-# → Installation complète automatique
+# → Installe Docker, Docker Compose
+# → Configure les permissions et répertoires
+# → Lance docker-compose.vps.yml
+# → Configure le firewall et la sécurité
 
-# 3. Corriger/Rebuilder les services (si nécessaire)
+# 4. Si problème : Rebuild complet
 ./fix-all.sh
-# → Rebuild backend + frontend Docker
+# → Arrête tous les conteneurs
+# → Rebuild backend et frontend
+# → Redémarre avec docker-compose.vps.yml
 
-# 4. Rebuilder la base de données (si nécessaire)
+# 5. Si problème base de données : Reset complet
 ./rebuild-database.sh
-# → Reconstruction complète PostgreSQL
-```
-
-### **☁️ Intégration Cloudflare**
-
-#### **Configuration DNS Cloudflare**
-
-```dns
-# Enregistrements DNS requis
-Type    Name             Content              Proxy   TTL
-A       @                IP-SERVEUR-LWS       ✅      Auto
-A       www              IP-SERVEUR-LWS       ✅      Auto
-CNAME   api              votre-domaine.com    ✅      Auto
-TXT     _verification    cloudflare-token     ❌      Auto
-```
-
-#### **Optimisations Cloudflare**
-
-```javascript
-// Configuration Page Rules Cloudflare
-[
-  {
-    url: "votre-domaine.com/api/*",
-    settings: {
-      cache_level: "bypass", // Pas de cache pour API
-      security_level: "medium", // Protection DDoS
-      ssl: "full_strict", // SSL strict
-    },
-  },
-  {
-    url: "votre-domaine.com/socket.io/*",
-    settings: {
-      cache_level: "bypass", // WebSocket pas de cache
-      websockets: "on", // Support WebSocket
-    },
-  },
-  {
-    url: "votre-domaine.com/*",
-    settings: {
-      cache_level: "standard", // Cache assets statiques
-      browser_cache_ttl: 31536000, // 1 an
-      edge_cache_ttl: 2592000, // 30 jours
-    },
-  },
-];
-```
-
-#### **Sécurité Cloudflare**
-
-```yaml
-# Firewall Rules Cloudflare
-- name: "Block malicious countries"
-  expression: '(ip.geoip.country in {"CN" "RU"})'
-  action: "block"
-
-- name: "Rate limit API"
-  expression: '(http.request.uri.path contains "/api/")'
-  action: "challenge"
-  rate_limit: "100 requests per minute"
-
-- name: "Allow France prioritaire"
-  expression: '(ip.geoip.country eq "FR")'
-  action: "allow"
-```
-
-### **🔧 Scripts de Déploiement Automatique**
-
-#### **Scripts de Déploiement Automatique (Production)**
-
-**🚀 Workflow de Déploiement Réel :**
-
-```powershell
-# === ÉTAPE 1 : DÉVELOPPEMENT LOCAL ===
-# Développer et tester localement
-docker-compose up -d
-
-# === ÉTAPE 2 : TRANSFERT VERS VPS ===
-# Copier le projet complet sur le VPS
-./copy-to-vps.sh
-# ✅ Transfère vers /opt/supchat
-# ✅ Nettoie les attributs macOS
-# ✅ Préserve les secrets existants
-
-# === ÉTAPE 3 : DÉPLOIEMENT SUR VPS ===
-# Se connecter au VPS
-ssh root@192.168.1.169
-cd /opt/supchat
-
-# Déploiement automatique complet
-./deploy-auto.sh
-# ✅ Installation Docker
-# ✅ Configuration firewall
-# ✅ Vérification secrets
-# ✅ Build et démarrage conteneurs
-# ✅ Configuration monitoring/backup
-
-# === ÉTAPE 4 : MAINTENANCE ===
-# Corriger/Rebuilder si problème
-./fix-all.sh
-# ✅ Arrêt conteneurs
-# ✅ Rebuild backend/frontend
-# ✅ Redémarrage sécurisé
-
-# Rebuilder uniquement la base de données
-./rebuild-database.sh
-# ⚠️ ATTENTION: Supprime toutes les données !
-# ✅ Réinitialisation complète PostgreSQL
-```
-
-**📋 Détails des Scripts :**
-
-```bash
-# copy-to-vps.sh
-- IP VPS: 192.168.1.169
-- Utilisateur: root
-- Destination: /opt/supchat
-- Préservation des secrets existants
-
-# deploy-auto.sh (sur VPS)
-- Vérifications prérequis
-- Installation Docker automatique
-- Configuration UFW firewall
-- Build des images Docker
-- Démarrage des services
-- Configuration monitoring
-
-# fix-all.sh (sur VPS)
-- Arrêt propre des conteneurs
-- Rebuild backend (Node.js)
-- Rebuild frontend (React)
-- Redémarrage avec vérifications
-
-# rebuild-database.sh (sur VPS)
-- Arrêt PostgreSQL
-- Suppression volumes de données
-- Reconstruction complète schéma
-- Redémarrage base vierge
+# → Supprime complètement la base PostgreSQL
+# → Recrée le volume Docker
+# → Réimporte le schéma initial
 ```
 
 #### **`setup-ssl.sh` - Configuration SSL Automatique**
@@ -1943,3 +1961,246 @@ curl -s -o /dev/null -w "Status: %{http_code}, Time: %{time_total}s\n" \
 ```
 
 ---
+
+## 🛠️ **Dépannage et Configuration Pratique**
+
+### **🚨 Problèmes Courants Docker**
+
+#### **1. Problèmes de Démarrage**
+
+```powershell
+# Vérifier que Docker est démarré
+docker --version
+docker-compose --version
+
+# Nettoyer les conteneurs arrêtés
+docker system prune -f
+
+# Forcer le rebuild complet
+docker-compose down --volumes
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+#### **2. Problèmes de Secrets Docker**
+
+```powershell
+# Vérifier que tous les fichiers secrets existent
+Get-ChildItem secrets/ | Select-Object Name, Length
+
+# Les fichiers secrets obligatoires :
+secrets/
+├── jwt_secret.txt           # Clé JWT (générer aléatoirement)
+├── db_password.txt          # Mot de passe PostgreSQL
+├── google_client_id.txt     # OAuth Google
+├── google_client_secret.txt
+├── scw_access_key.txt       # Scaleway S3
+└── email_user.txt           # Configuration email
+
+# Créer un secret manquant
+"votre-valeur-secrete" | Out-File -Encoding UTF8 secrets/nom_secret.txt
+```
+
+#### **3. Problèmes de Ports**
+
+```powershell
+# Vérifier les ports occupés
+netstat -an | findstr ":3000"
+netstat -an | findstr ":5432"
+
+# Arrêter les processus utilisant les ports
+Get-Process -Name "postgres" | Stop-Process -Force
+Get-Process -Name "node" | Stop-Process -Force
+
+# Changer les ports dans docker-compose.yml si nécessaire
+```
+
+### **📱 Guide Mobile Étape par Étape**
+
+#### **Configuration IP Personnalisée**
+
+**1. Déterminer votre environnement :**
+
+```powershell
+# Pour déploiement local (votre PC)
+ipconfig | findstr "IPv4"
+# Exemple : 192.168.1.123
+
+# Pour VPS du projet
+# IP fixe : 192.168.1.169
+```
+
+**2. Configurer l'application mobile :**
+
+```javascript
+// Éditez mobile/src/config/env.js
+const config = {
+  // OPTION A : Pour votre IP locale
+  development: {
+    API_BASE_URL: "http://192.168.1.123:3000", // Votre IP
+    WS_URL: "ws://192.168.1.123:3000",
+  },
+
+  // OPTION B : Pour le VPS du projet
+  development: {
+    API_BASE_URL: "http://192.168.1.169:3000", // VPS projet
+    WS_URL: "ws://192.168.1.169:3000",
+  },
+};
+```
+
+**3. Vérifications avant test mobile :**
+
+```powershell
+# 1. Vérifier que l'API est accessible
+curl http://192.168.1.XXX:3000/api/ping
+
+# 2. Vérifier que Docker expose les ports
+docker-compose ps
+
+# 3. Tester Socket.IO
+curl http://192.168.1.XXX:3000/socket.io/
+
+# 4. Vérifier depuis votre téléphone (navigateur)
+# Ouvrir : http://192.168.1.XXX dans le navigateur mobile
+```
+
+### **🔍 Logs et Debugging**
+
+#### **Logs Docker**
+
+```powershell
+# Logs de tous les services
+docker-compose logs -f
+
+# Logs d'un service spécifique
+docker-compose logs -f backend
+docker-compose logs -f postgres
+docker-compose logs -f frontend
+
+# Logs avec horodatage
+docker-compose logs -f -t backend
+
+# Dernières 50 lignes
+docker-compose logs --tail=50 backend
+```
+
+#### **Debug Backend**
+
+```powershell
+# Entrer dans le conteneur backend
+docker-compose exec backend bash
+
+# Vérifier les secrets montés
+docker-compose exec backend ls -la /run/secrets/
+
+# Tester la connexion base de données
+docker-compose exec backend node -e "const db = require('./config/dbConnection'); db.query('SELECT NOW()').then(console.log);"
+
+# Vérifier les variables d'environnement
+docker-compose exec backend printenv | grep -E "(DB_|JWT_|SCW_)"
+```
+
+#### **Debug Base de Données**
+
+```powershell
+# Se connecter à PostgreSQL
+docker-compose exec postgres psql -U admin -d supchat
+
+# Vérifier les tables
+docker-compose exec postgres psql -U admin -d supchat -c "\dt"
+
+# Vérifier les utilisateurs
+docker-compose exec postgres psql -U admin -d supchat -c "SELECT nom_utilisateur, email FROM utilisateur LIMIT 5;"
+
+# Sauvegarder la base
+docker-compose exec postgres pg_dump -U admin supchat > backup.sql
+```
+
+### **📋 Checklist de Déploiement**
+
+#### **Avant de Déployer :**
+
+- [ ] ✅ Tous les fichiers `secrets/` sont créés et remplis
+- [ ] ✅ L'IP VPS est configurée dans `copy-to-vps.sh`
+- [ ] ✅ L'IP est adaptée dans `docker-compose.vps.yml`
+- [ ] ✅ Les scripts de déploiement sont exécutables (`chmod +x`)
+- [ ] ✅ La connectivité SSH vers le VPS fonctionne
+- [ ] ✅ Docker est installé sur le VPS
+
+#### **Après Déploiement :**
+
+- [ ] ✅ Les conteneurs sont "Up" (`docker-compose ps`)
+- [ ] ✅ L'API répond (`curl http://ip:3000/api/ping`)
+- [ ] ✅ Le frontend est accessible (`curl http://ip`)
+- [ ] ✅ PostgreSQL accepte les connexions
+- [ ] ✅ Les logs ne montrent pas d'erreurs critiques
+
+#### **Test Mobile :**
+
+- [ ] ✅ L'IP est correcte dans `mobile/src/config/env.js`
+- [ ] ✅ L'API est accessible depuis le téléphone
+- [ ] ✅ Socket.IO se connecte
+- [ ] ✅ L'authentification fonctionne
+- [ ] ✅ Les messages s'affichent en temps réel
+
+#### **En cas de problème :**
+
+```powershell
+# Sur le VPS
+./fix-all.sh              # Premier essai
+./rebuild-database.sh     # Si problème DB persistant
+```
+
+---
+
+## 🤝 **Contribution**
+
+### **Comment Contribuer**
+
+1. **Fork** le repository
+2. **Créer une branche** feature (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. **Commit** vos changements (`git commit -m 'Ajout nouvelle fonctionnalité'`)
+4. **Push** vers la branche (`git push origin feature/nouvelle-fonctionnalité`)
+5. **Ouvrir une Pull Request**
+
+### **Standards de Code**
+
+- **ESLint** configuré pour backend et frontend
+- **Prettier** pour le formatage automatique
+- **Tests** obligatoires pour nouvelles fonctionnalités
+- **Documentation** à jour dans README.md
+
+### **Reporting de Bugs**
+
+Utilisez les **GitHub Issues** avec :
+
+- **Description** détaillée du problème
+- **Étapes** pour reproduire
+- **Logs** des erreurs si disponible
+- **Environnement** (OS, versions Docker, Node.js)
+
+---
+
+## 📄 **Licence**
+
+Ce projet est sous licence **ISC**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+---
+
+## 📞 **Support**
+
+- **Documentation** : Ce README.md
+- **Issues** : [GitHub Issues](https://github.com/votre-username/supchat/issues)
+- **Guides de déploiement** :
+  - `DEPLOY_VPS_GUIDE.md` - Guide détaillé VPS
+  - `GUIDE-RAPIDE.md` - Guide de démarrage rapide
+  - `README-DEPLOY.md` - Instructions de déploiement
+
+---
+
+<div align="center">
+  <strong>🚀 SUPCHAT - Communication temps réel moderne</strong>
+  <br>
+  <em>Développé avec ❤️ pour des équipes performantes</em>
+</div>
