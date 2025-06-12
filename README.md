@@ -1170,6 +1170,7 @@ L'application mobile offre une expérience native complète avec synchronisation
 3. **Safari** : Partager → "Ajouter à l'écran d'accueil"
 
 L'application sera accessible comme une application native avec :
+
 - ✅ Icône sur le bureau/dock
 - ✅ Fenêtre dédiée sans barre d'adresse
 - ✅ Notifications push
@@ -1184,16 +1185,16 @@ L'application sera accessible comme une application native avec :
 
 ### **📊 Différences Plateformes**
 
-| Fonctionnalité        | Web (PWA) | Mobile |
-| --------------------- | --------- | ------ |
-| Chat temps réel       | ✅        | ✅     |
-| Upload fichiers       | ✅        | ✅     |
-| Notifications push    | ✅        | ✅     |
-| Installation bureau   | ✅        | N/A    |
-| Mode hors ligne       | ⚠️        | ✅     |
-| Google Drive          | ✅        | 🔄     |
-| Admin panel           | ✅        | ❌     |
-| Service Worker        | ✅        | N/A    |
+| Fonctionnalité      | Web (PWA) | Mobile |
+| ------------------- | --------- | ------ |
+| Chat temps réel     | ✅        | ✅     |
+| Upload fichiers     | ✅        | ✅     |
+| Notifications push  | ✅        | ✅     |
+| Installation bureau | ✅        | N/A    |
+| Mode hors ligne     | ⚠️        | ✅     |
+| Google Drive        | ✅        | 🔄     |
+| Admin panel         | ✅        | ❌     |
+| Service Worker      | ✅        | N/A    |
 
 ---
 
@@ -1940,15 +1941,5 @@ echo -e "\n🌐 CONNECTIVITÉ:"
 curl -s -o /dev/null -w "Status: %{http_code}, Time: %{time_total}s\n" \
   http://localhost/health
 ```
-
-
-
-
-
-
-
-
-
-
 
 ---
