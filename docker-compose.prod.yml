@@ -82,6 +82,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
+      secrets:
+        - google_client_id
     container_name: supchat-frontend-vps
     environment:
       - REACT_APP_API_URL=""

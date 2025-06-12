@@ -568,7 +568,7 @@ export function SocketProvider({ children }) {
         // Rafraîchir le compteur pour tous les canaux
         refreshUnreadChannels();
       }
-    }); // Mise à jour quand un canal est marqué comme lu
+    });    // Mise à jour quand un canal est marqué comme lu
     socket.on("unreadChannelMessagesUpdated", (data) => {
       // Mettre à jour les compteurs globaux
       setGlobalNotifications((prev) => ({
@@ -584,16 +584,8 @@ export function SocketProvider({ children }) {
         JSON.stringify(data.channels)
       );
 
-      // Émettre un événement de manière asynchrone pour éviter les problèmes de rendu React
-      setTimeout(() => {
-        const event = new CustomEvent("unreadChannelMessagesUpdated", {
-          detail: {
-            total: data.total,
-            channels: data.channels,
-          },
-        });
-        window.dispatchEvent(event);
-      }, 0);
+      // L'événement global sera émis par NotificationContext
+      console.log("[SocketContext] Compteurs mis à jour, NotificationContext se charge de l'événement global");
     });
 
     // Confirmation qu'un canal a été marqué comme lu
