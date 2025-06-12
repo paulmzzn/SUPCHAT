@@ -42,7 +42,7 @@ else
 fi
 
 log_warning "Configuration sans SSL (domaine non configuré)"
-log_info "Pour SSL, configurez d'abord votre DNS supchat.fr → 185.98.137.166"
+log_info "Pour SSL, configurez d'abord votre DNS supchat.fr → 192.168.1.169"
 
 # Utiliser la configuration nginx standard (sans SSL)
 log_info "Utilisation de nginx.conf au lieu de nginx.vps.conf..."
@@ -60,17 +60,17 @@ sleep 10
 
 echo ""
 log_info "Test de connectivité:"
-echo "• Frontend: $(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166 || echo "ERREUR")"
-echo "• Backend: $(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166:3000/health || echo "ERREUR")"
+echo "• Frontend: $(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.169 || echo "ERREUR")"
+echo "• Backend: $(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.169:3000/health || echo "ERREUR")"
 
 echo ""
 log_success "Configuration HTTP terminée !"
 echo ""
 echo -e "${YELLOW}🌐 Votre application est accessible sur:${NC}"
-echo "• Frontend: http://185.98.137.166"
-echo "• API Backend: http://185.98.137.166:3000"
+echo "• Frontend: http://192.168.1.169"
+echo "• API Backend: http://192.168.1.169:3000"
 echo ""
 echo -e "${YELLOW}🔧 Pour activer SSL plus tard:${NC}"
-echo "1. Configurez DNS: supchat.fr → 185.98.137.166"
+echo "1. Configurez DNS: supchat.fr → 192.168.1.169"
 echo "2. Attendez la propagation DNS (quelques heures)"
 echo "3. Relancez: ./setup-ssl-domain.sh"

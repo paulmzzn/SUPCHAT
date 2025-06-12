@@ -19,7 +19,7 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Configuration par défaut
-VPS_IP="185.98.137.166"
+VPS_IP="192.168.1.169"
 VPS_USER="root"
 VPS_PASSWORD="SWXTnNoBPlh"
 

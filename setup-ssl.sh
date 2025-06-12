@@ -80,7 +80,7 @@ sleep 10
 echo ""
 log_info "Test de connectivité:"
 echo "• HTTPS via Cloudflare: $(curl -s -o /dev/null -w "%{http_code}" https://$DOMAIN || echo "ERREUR")"
-echo "• HTTP direct: $(curl -s -o /dev/null -w "%{http_code}" http://185.98.137.166 || echo "ERREUR")"
+echo "• HTTP direct: $(curl -s -o /dev/null -w "%{http_code}" http://192.168.1.169 || echo "ERREUR")"
 
 echo ""
 log_success "Configuration SSL terminée !"

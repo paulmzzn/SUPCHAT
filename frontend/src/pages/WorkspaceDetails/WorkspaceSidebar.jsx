@@ -229,7 +229,7 @@ function WorkspaceSidebar({
 
       const response = await fetch(
         `${
-          process.env.REACT_APP_API_URL || "http://185.98.137.166:3001"
+          process.env.REACT_APP_API_URL || "http://192.168.1.169:3001"
         }/api/workspaces/${workspace.id}/invite`,
         {
           method: "POST",
@@ -403,7 +403,7 @@ function WorkspaceSidebar({
                     ))}
                   </ul>
                 ) : (
-                  /* Sinon, on affiche la liste normale des canaux */                  <ChannelList
+                  /* Sinon, on affiche la liste normale des canaux */ <ChannelList
                     channels={channels}
                     canalsLoading={canalsLoading}
                     canalsError={canalsError}
