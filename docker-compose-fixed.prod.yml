@@ -39,7 +39,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=supchat
       - POSTGRES_DB=supchat
-      - FRONTEND_URL=http://192.168.71.234
+      - FRONTEND_URL=http://185.98.137.166
       - LOG_LEVEL=info
       # Configuration email LWS
       - EMAIL_HOST=mail86.lwspanel.com
@@ -74,7 +74,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://192.168.71.234:3000/health"]
+      test: ["CMD", "curl", "-f", "http://185.98.137.166:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -88,7 +88,7 @@ services:
     environment:
       # L'API est accessible via nginx proxy /api, donc pas besoin d'URL spécifique
       - REACT_APP_API_URL=""
-      - REACT_APP_SOCKET_URL=http://192.168.71.234
+      - REACT_APP_SOCKET_URL=http://185.98.137.166
     ports:
       - "80:80"
     networks:
@@ -97,7 +97,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://192.168.71.234"]
+      test: ["CMD", "curl", "-f", "http://185.98.137.166"]
       interval: 30s
       timeout: 10s
       retries: 3
