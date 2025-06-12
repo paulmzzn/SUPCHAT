@@ -25,22 +25,53 @@ class MessagePrive {
     );
     return result.rows[0];
   }
-
   static async getConversation(userA, userB, limit = 50, offset = 0) {
     const result = await pool.query(
-      `SELECT mp.* 
+      `SELECT mp.*, 
+        COALESCE(
+          JSON_AGG(
+            CASE 
+              WHEN pmr.reaction_type IS NOT NULL 
+              THEN JSON_BUILD_OBJECT(
+                'reaction_type', pmr.reaction_type,
+                'count', pmr.reaction_count,
+                'user_reacted', CASE WHEN pmr.user_reacted_a OR pmr.user_reacted_b THEN true ELSE false END
+              )
+              ELSE NULL
+            END
+          ) FILTER (WHERE pmr.reaction_type IS NOT NULL), 
+          '[]'::json
+        ) as reactions
        FROM message_prive mp
+       LEFT JOIN (
+         SELECT 
+           fk_message_prive,
+           reaction_type,
+           COUNT(*) as reaction_count,
+           SUM(CASE WHEN fk_utilisateur = $1 THEN 1 ELSE 0 END) > 0 as user_reacted_a,
+           SUM(CASE WHEN fk_utilisateur = $2 THEN 1 ELSE 0 END) > 0 as user_reacted_b
+         FROM private_message_reaction 
+         GROUP BY fk_message_prive, reaction_type
+       ) pmr ON mp.id_message_prive = pmr.fk_message_prive
        WHERE (mp.fk_expediteur = $1 AND mp.fk_destinataire = $2)
           OR (mp.fk_expediteur = $2 AND mp.fk_destinataire = $1)
+       GROUP BY mp.id_message_prive, mp.contenu, mp.fk_expediteur, mp.fk_destinataire, 
+                mp.created_at, mp.updated_at, mp.is_read, mp.date_lecture, mp.is_deleted, 
+                mp.pieces_jointes, mp.parent_id
        ORDER BY mp.created_at ASC`,
       [userA, userB]
     );
     return result.rows;
   }
-
   static async getById(id_message_prive) {
     const result = await pool.query(
-      `SELECT * FROM message_prive WHERE id_message_prive = $1`,
+      `SELECT mp.*, 
+              u_exp.nom as expediteur_nom, u_exp.photo_de_profil as expediteur_photo,
+              u_dest.nom as destinataire_nom, u_dest.photo_de_profil as destinataire_photo
+       FROM message_prive mp
+       LEFT JOIN utilisateur u_exp ON mp.fk_expediteur = u_exp.id_utilisateur
+       LEFT JOIN utilisateur u_dest ON mp.fk_destinataire = u_dest.id_utilisateur
+       WHERE mp.id_message_prive = $1`,
       [id_message_prive]
     );
     return result.rows[0] || null;
@@ -79,11 +110,10 @@ class MessagePrive {
     }
     return counts;
   }
-
   static async markAsRead(id_message_prive, userId) {
     const result = await pool.query(
       `UPDATE message_prive
-       SET is_read = true
+       SET is_read = true, date_lecture = NOW()
        WHERE id_message_prive = $1 AND fk_destinataire = $2
        RETURNING *`,
       [id_message_prive, userId]
@@ -133,9 +163,9 @@ class MessagePrive {
     try {
       const result = await pool.query(
         `UPDATE message_prive
-         SET is_read = true
+         SET is_read = true, date_lecture = NOW()
          WHERE fk_expediteur = $1 AND fk_destinataire = $2 AND is_read = false
-         RETURNING id_message_prive, is_read`,
+         RETURNING id_message_prive, is_read, date_lecture`,
         [expediteurId, destinataireId]
       );
       return {

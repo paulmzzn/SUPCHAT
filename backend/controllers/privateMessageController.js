@@ -244,13 +244,20 @@ export const uploadAttachment = async (req, res) => {
     await Fichier.addToPrivateMessage(
       newMessage.id_message_prive,
       newFichier.id_fichier
-    );
-    console.log("[PrivateMessage] Association réussie");
+    );    console.log("[PrivateMessage] Association réussie");
 
     // Récupérer le message complet avec pièces jointes
     const completeMessage = await MessagePrive.getById(
       newMessage.id_message_prive
     );
+
+    // Récupérer explicitement les pièces jointes
+    const attachments = await Fichier.getPrivateMessageAttachments(
+      newMessage.id_message_prive
+    );
+
+    // Ajouter les pièces jointes au message
+    completeMessage.attachments = attachments;
 
     // Envoyer une notification en temps réel via WebSocket
     const io = req.app.get("io");
@@ -263,7 +270,7 @@ export const uploadAttachment = async (req, res) => {
           photo_de_profil: req.user.photo_de_profil,
         },
       });
-      console.log("[PrivateMessage] Notification WebSocket envoyée");
+      console.log("[PrivateMessage] Notification WebSocket envoyée avec pièces jointes:", attachments.length);
     }
 
     res.status(201).json({
@@ -422,13 +429,20 @@ export const uploadGoogleDriveFile = async (req, res) => {
     await Fichier.addToPrivateMessage(
       newMessage.id_message_prive,
       newFichier.id_fichier
-    );
-    console.log("[PrivateMessage] Association fichier-message réussie");
+    );    console.log("[PrivateMessage] Association fichier-message réussie");
 
     // Récupérer le message complet avec pièces jointes
     const completeMessage = await MessagePrive.getById(
       newMessage.id_message_prive
     );
+
+    // Récupérer explicitement les pièces jointes
+    const attachments = await Fichier.getPrivateMessageAttachments(
+      newMessage.id_message_prive
+    );
+
+    // Ajouter les pièces jointes au message
+    completeMessage.attachments = attachments;
 
     // Envoyer une notification en temps réel via WebSocket
     const io = req.app.get("io");
@@ -441,7 +455,7 @@ export const uploadGoogleDriveFile = async (req, res) => {
           photo_de_profil: req.user.photo_de_profil,
         },
       });
-      console.log("[PrivateMessage] Notification WebSocket envoyée");
+      console.log("[PrivateMessage] Notification WebSocket envoyée avec pièces jointes:", attachments.length);
     }
 
     res.status(201).json({

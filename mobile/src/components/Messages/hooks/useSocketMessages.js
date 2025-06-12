@@ -88,11 +88,20 @@ export const useSocketMessages = ({
               return [...prev, msg];
             }
           }
-        });
-
-        setTimeout(() => {
+        });        setTimeout(() => {
           scrollToBottom(true);
         }, 50);
+
+        // Marquer comme lu si c'est un message reçu (pas envoyé par l'utilisateur actuel)
+        if (msg.fk_expediteur === userId && msg.fk_destinataire === currentUserId) {
+          socket.emit("readPrivateMessage", {
+            id: msg.id_message_prive,
+          }, (response) => {
+            if (response && !response.ok) {
+              console.error("Erreur lors de l'envoi de l'accusé de lecture:", response.message);
+            }
+          });
+        }
 
         await saveConversationTimestamp(userId);
       }
@@ -107,6 +116,30 @@ export const useSocketMessages = ({
           )
         );
       }
+    };
+
+    // Handler pour les statuts de lecture en temps réel
+    const handlePrivateMessageRead = ({ id, date_lecture }) => {
+      console.log("Message marked as read:", { id, date_lecture });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id_message_prive === id ? { ...m, date_lecture } : m
+        )
+      );
+    };
+
+    // Handler pour tous les messages marqués comme lus d'un coup
+    const handleAllMessagesRead = ({ readBy, count, timestamp }) => {
+      console.log("All messages marked as read:", { readBy, count, timestamp });
+      setMessages((prev) =>
+        prev.map((m) => {
+          // Marquer comme lu tous les messages envoyés par l'utilisateur actuel au destinataire
+          if (m.fk_expediteur === currentUserId && m.fk_destinataire === readBy && !m.date_lecture) {
+            return { ...m, date_lecture: timestamp };
+          }
+          return m;
+        })
+      );
     };
 
     const handlePrivateMessageDeleted = (data) => {
@@ -138,18 +171,20 @@ export const useSocketMessages = ({
           )
         );
       }
-    };
-
-    socket.on("privateMessage", handlePrivateMessage);
+    };    socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageReaction", handlePrivateMessageReaction);
+    socket.on("privateMessageRead", handlePrivateMessageRead);
+    socket.on("allMessagesRead", handleAllMessagesRead);
 
     return () => {
       socket.off("privateMessage", handlePrivateMessage);
       socket.off("privateMessageUpdated", handlePrivateMessageUpdated);
       socket.off("privateMessageDeleted", handlePrivateMessageDeleted);
       socket.off("privateMessageReaction", handlePrivateMessageReaction);
+      socket.off("privateMessageRead", handlePrivateMessageRead);
+      socket.off("allMessagesRead", handleAllMessagesRead);
     };
   }, [socket, userId, currentUserId, messages]);
 };
