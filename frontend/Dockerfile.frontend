@@ -3,6 +3,9 @@ FROM node:18-alpine as builder
 
 WORKDIR /app
 
+# Accepter les arguments de build
+ARG REACT_APP_GOOGLE_CLIENT_ID_FILE
+
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
@@ -12,8 +15,10 @@ RUN npm ci
 # Copier le code source
 COPY . .
 
-# Build de l'application
-RUN npm run build
+# Créer un script pour lire les secrets et builder
+RUN --mount=type=secret,id=google_client_id,target=/run/secrets/google_client_id \
+    export REACT_APP_GOOGLE_DRIVE_CLIENT_ID=$(cat /run/secrets/google_client_id 2>/dev/null || echo "") && \
+    npm run build
 
 # Image de production avec nginx
 FROM nginx:alpine
