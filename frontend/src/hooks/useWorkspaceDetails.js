@@ -1395,6 +1395,80 @@ return {
 
   const handleCancelReply = () => setReplyingTo(null);
 
+  const handleRemoveReaction = async (messageId, reactionType) => {
+    try {
+      if (!messageId || !reactionType || !socket || !socket.connected) return;
+
+      socket.emit("removeReaction", {
+        messageId: messageId,
+        reaction_type: reactionType,
+        canalId: activeChannel.id,
+      });
+
+      // Optimistic UI update
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (msg.id_message === messageId) {
+            const updatedReactions = (msg.reactions || []).filter(
+              (r) => r.reaction_type !== reactionType
+            );
+            return { ...msg, reactions: updatedReactions };
+          }
+          return msg;
+        })
+      );
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la réaction via socket:", error);
+    }
+  };
+
+  const handleToggleReaction = async (messageId, reactionType, userReacted) => {
+    try {
+      if (!messageId || !reactionType || !socket || !socket.connected) return;
+
+      if (userReacted) {
+        // Retirer la réaction
+        handleRemoveReaction(messageId, reactionType);
+      } else {
+        // Ajouter la réaction
+        socket.emit("addReaction", {
+          messageId: messageId,
+          reaction_type: reactionType,
+          canalId: activeChannel.id,
+        });
+
+        // Optimistic UI update pour l'ajout
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) => {
+            if (msg.id_message === messageId) {
+              const existingReactionIndex = (msg.reactions || []).findIndex(
+                (r) => r.reaction_type === reactionType
+              );
+              let updatedReactions = [...(msg.reactions || [])];
+              if (existingReactionIndex >= 0) {
+                updatedReactions[existingReactionIndex] = {
+                  ...updatedReactions[existingReactionIndex],
+                  count: (parseInt(updatedReactions[existingReactionIndex].count) || 0) + 1,
+                  user_reacted: true,
+                };
+              } else {
+                updatedReactions.push({
+                  reaction_type: reactionType,
+                  count: 1,
+                  user_reacted: true,
+                  emoji: getEmojiForType(reactionType),
+                });
+              }
+              return { ...msg, reactions: updatedReactions };
+            }
+            return msg;
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors du basculement de la réaction via socket:", error);
+    }
+  };
   const handleDeleteMessage = async () => {
     try {
       if (!messageContextMenu.messageId || !socket || !socket.connected) return;
@@ -1740,10 +1814,10 @@ return {
     handleSendMessage,
     formatMessageDate,
     handleMessageContextMenu,
-    handleCloseMessageContextMenu,
-    handleReplyMessage,
-    handleShowEmojiPicker,
-    handleAddReaction,
+    handleCloseMessageContextMenu,    handleReplyMessage,
+    handleShowEmojiPicker,    handleAddReaction,
+    handleRemoveReaction,
+    handleToggleReaction,
     handleCancelReply,
     toggleMembers,
     toggleOnlineMembers,

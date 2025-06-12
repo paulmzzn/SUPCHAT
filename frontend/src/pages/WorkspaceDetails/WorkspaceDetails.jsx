@@ -414,9 +414,9 @@ function WorkspaceDetails() {
     handleSendMessage,
     handleMessageContextMenu,
     handleCloseMessageContextMenu,
-    handleReplyMessage,
-    handleShowEmojiPicker,
-    handleAddReaction,
+    handleReplyMessage,    handleShowEmojiPicker,    handleAddReaction,
+    handleRemoveReaction,
+    handleToggleReaction,
     handleCancelReply,
     toggleMembers,
     toggleOnlineMembers,
@@ -938,9 +938,10 @@ function WorkspaceDetails() {
           handleOpenFileViewer={handleOpenFileViewer}
           handleDownloadFile={handleDownloadFile}
           isMistralTyping={isMistralTyping}
-          getEmojiForType={getEmojiForType}
-          handleReplyMessage={handleReplyMessage}
-          handleShowEmojiPicker={handleShowEmojiPicker}
+          getEmojiForType={getEmojiForType}          handleReplyMessage={handleReplyMessage}
+          handleShowEmojiPicker={handleShowEmojiPicker}          handleAddReaction={handleAddReaction}
+          handleRemoveReaction={handleRemoveReaction}
+          handleToggleReaction={handleToggleReaction}
           handleDeleteMessage={handleDeleteMessage}
           messageContextMenu={messageContextMenu}
           replyingTo={replyingTo}
@@ -972,10 +973,10 @@ function WorkspaceDetails() {
           handleCloseGoogleDrive={handleCloseGoogleDrive}
           onFilesSelected={handleGoogleDriveFiles}
           workspaceId={workspaceId}
-          socket={socket}
-          commonEmojis={commonEmojis}
+          socket={socket}          commonEmojis={commonEmojis}
           showEmojiPicker={showEmojiPicker}
           handleAddReaction={handleAddReaction}
+          handleRemoveReaction={handleRemoveReaction}
           renderTextWithLinks={(text) =>
             renderTextWithLinks(text, handleChannelClick, handleUserClick)
           }
