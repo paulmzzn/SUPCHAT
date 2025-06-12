@@ -1848,10 +1848,6 @@ Le MCD complet détaille toutes les entités et relations de la base PostgreSQL,
 
 ---
 
-````
-
----
-
 ## 🛠️ **Dépannage et Configuration Pratique**
 
 ### **🚨 Problèmes Courants Docker**
