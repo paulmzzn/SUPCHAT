@@ -108,24 +108,7 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 
 ## 🏗️ **Architecture**
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Mobile App    │    │   Backend API   │
-│   React 18.3    │◄──►│ React Native    │◄──►│   Node.js       │
-│   Socket.IO     │    │   Expo          │    │   Express       │
-└─────────────────┘    └─────────────────┘    │   Socket.IO     │
-                                              └─────────┬───────┘
-                                                        │
-                       ┌─────────────────┐              │
-                       │   PostgreSQL    │◄─────────────┘
-                       │   Database      │
-                       └─────────────────┘
-
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   Scaleway S3   │    │   Mistral AI    │
-                       │   File Storage  │    │   Assistant     │
-                       └─────────────────┘    └─────────────────┘
-```
+![Schéma Architecture](documentation/archi.gif)
 
 ### **Structure du Projet**
 
@@ -783,15 +766,11 @@ cat backup.sql | docker-compose exec -T postgres psql -U supchat_user supchat
 ./update-and-start.bat      # Mise à jour + démarrage
 ```
 
+Afin de déployer l'application le plus rapidement possible, nous vous conseillons de mettre à jours tous les secret, de mettre à jours toutes les id en les remplacant par la vôtre et d'executer le script `./update-and-start.bat`
+
 ### **📜 Scripts de Déploiement Disponibles**
 
-#### **Scripts d'Automatisation Réels**
-
 ```powershell
-# Scripts de démarrage rapide
-./start-quick.bat              # Démarrage développement local
-./stop.bat                     # Arrêt rapide
-
 # Scripts de déploiement VPS
 ./copy-to-vps.sh              # Copie des fichiers vers VPS
 ./deploy-auto.sh              # Déploiement automatique
@@ -846,19 +825,6 @@ docker-compose logs -f --tail=100 postgres
 # Filtrage des logs
 docker-compose logs backend | Select-String "ERROR"
 docker-compose logs backend | Select-String "Socket.IO"
-```
-
-#### **Métriques de Performance**
-
-```powershell
-# Utilisation ressources temps réel
-docker stats --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"
-
-# Espace disque des volumes
-docker system df
-
-# Inspection détaillée d'un service
-docker inspect supchat-backend
 ```
 
 ---
@@ -1334,8 +1300,6 @@ L'application sera accessible comme une application native avec :
 | 💾 Cache offline       | ⚠️        | ✅     |
 | 🌙 Mode sombre         | ✅        | ✅     |
 | Google Drive           | ✅        | 🔄     |
-| Admin panel            | ✅        | ❌     |
-| Service Worker         | ✅        | N/A    |
 
 ---
 
@@ -1664,33 +1628,7 @@ SUPCHAT dispose d'une architecture de déploiement complète et flexible, adapt�
 
 ### **🏗️ Architecture de Déploiement**
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        CLOUDFLARE CDN                           │
-│              (Cache, DDoS Protection, SSL)                     │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────────────┐
-│                    SERVEUR LWS (FRANCE)                        │
-│                    Apache + SSL Let's Encrypt                   │
-│                                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   DEVELOPMENT   │  │   PRODUCTION    │  │      VPS        │ │
-│  │ docker-compose  │  │docker-compose   │  │docker-compose   │ │
-│  │     .yml        │  │   .prod.yml     │  │   .vps.yml      │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │              CONTENEURS DOCKER                              │ │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │ │
-│  │  │ PostgreSQL  │ │  Backend    │ │  Frontend   │          │ │
-│  │  │  Database   │ │  Node.js    │ │   React     │          │ │
-│  │  │   Port      │ │ Port 3000   │ │ Port 80/443 │          │ │
-│  │  │   5432      │ │ Socket.IO   │ │   Nginx     │          │ │
-│  │  └─────────────┘ └─────────────┘ └─────────────┘          │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Schéma Architecture Globale](documentation/Archi-globale.gif)
 
 ### **🐳 Environnements Docker**
 
@@ -1863,58 +1801,6 @@ cd /opt/supchat
 # → Réimporte le schéma initial
 ```
 
-#### **`setup-ssl.sh` - Configuration SSL Automatique**
-
-```bash
-#!/bin/bash
-# Configuration SSL Let's Encrypt
-
-DOMAIN=$1
-
-# Installation Certbot
-apt install -y certbot python3-certbot-nginx
-
-# Génération certificat
-certbot --nginx -d $DOMAIN -d www.$DOMAIN \
-  --non-interactive --agree-tos \
-  --email admin@$DOMAIN
-
-# Configuration auto-renewal
-echo "0 12 * * * /usr/bin/certbot renew --quiet" | crontab -
-
-# Test configuration
-nginx -t && systemctl reload nginx
-
-echo "🔒 SSL configuré pour $DOMAIN"
-```
-
-#### **`setup-cloudflare.sh` - Intégration Cloudflare**
-
-```bash
-#!/bin/bash
-# Configuration automatique Cloudflare
-
-DOMAIN=$1
-CLOUDFLARE_TOKEN=$2
-
-# Installation cloudflare CLI
-curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
-dpkg -i cloudflared.deb
-
-# Configuration DNS automatique
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-  -H "Authorization: Bearer $CLOUDFLARE_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data '{
-    "type": "A",
-    "name": "@",
-    "content": "'$VPS_IP'",
-    "proxied": true
-  }'
-
-echo "☁️ Cloudflare configuré pour $DOMAIN"
-```
-
 ### **📊 Monitoring et Maintenance**
 
 #### **Health Checks Automatiques**
@@ -1927,37 +1813,6 @@ healthcheck:
   timeout: 10s
   retries: 3
   start_period: 60s
-```
-
-#### **Monitoring VPS**
-
-```bash
-# Script de monitoring automatique
-#!/bin/bash
-# /opt/supchat/monitor.sh
-
-echo "🔍 Status SUPCHAT $(date)"
-echo "=================================="
-
-# Status containers
-docker-compose -f docker-compose.vps.yml ps
-
-# Utilisation ressources
-echo -e "\n📊 RESSOURCES:"
-docker stats --no-stream
-
-# Espace disque
-echo -e "\n💾 DISQUE:"
-df -h
-
-# Logs récents
-echo -e "\n📋 LOGS RÉCENTS:"
-docker-compose -f docker-compose.vps.yml logs --tail=10
-
-# Test connectivité
-echo -e "\n🌐 CONNECTIVITÉ:"
-curl -s -o /dev/null -w "Status: %{http_code}, Time: %{time_total}s\n" \
-  http://localhost/health
 ```
 
 ---
@@ -2015,108 +1870,6 @@ Get-Process -Name "node" | Stop-Process -Force
 # Changer les ports dans docker-compose.yml si nécessaire
 ```
 
-### **📱 Guide Mobile Étape par Étape**
-
-#### **Configuration IP Personnalisée**
-
-**1. Déterminer votre environnement :**
-
-```powershell
-# Pour déploiement local (votre PC)
-ipconfig | findstr "IPv4"
-# Exemple : 192.168.1.123
-
-# Pour VPS du projet
-# IP fixe : 192.168.1.169
-```
-
-**2. Configurer l'application mobile :**
-
-```javascript
-// Éditez mobile/src/config/env.js
-const config = {
-  // OPTION A : Pour votre IP locale
-  development: {
-    API_BASE_URL: "http://192.168.1.123:3000", // Votre IP
-    WS_URL: "ws://192.168.1.123:3000",
-  },
-
-  // OPTION B : Pour le VPS du projet
-  development: {
-    API_BASE_URL: "http://192.168.1.169:3000", // VPS projet
-    WS_URL: "ws://192.168.1.169:3000",
-  },
-};
-```
-
-**3. Vérifications avant test mobile :**
-
-```powershell
-# 1. Vérifier que l'API est accessible
-curl http://192.168.1.XXX:3000/api/ping
-
-# 2. Vérifier que Docker expose les ports
-docker-compose ps
-
-# 3. Tester Socket.IO
-curl http://192.168.1.XXX:3000/socket.io/
-
-# 4. Vérifier depuis votre téléphone (navigateur)
-# Ouvrir : http://192.168.1.XXX dans le navigateur mobile
-```
-
-### **🔍 Logs et Debugging**
-
-#### **Logs Docker**
-
-```powershell
-# Logs de tous les services
-docker-compose logs -f
-
-# Logs d'un service spécifique
-docker-compose logs -f backend
-docker-compose logs -f postgres
-docker-compose logs -f frontend
-
-# Logs avec horodatage
-docker-compose logs -f -t backend
-
-# Dernières 50 lignes
-docker-compose logs --tail=50 backend
-```
-
-#### **Debug Backend**
-
-```powershell
-# Entrer dans le conteneur backend
-docker-compose exec backend bash
-
-# Vérifier les secrets montés
-docker-compose exec backend ls -la /run/secrets/
-
-# Tester la connexion base de données
-docker-compose exec backend node -e "const db = require('./config/dbConnection'); db.query('SELECT NOW()').then(console.log);"
-
-# Vérifier les variables d'environnement
-docker-compose exec backend printenv | grep -E "(DB_|JWT_|SCW_)"
-```
-
-#### **Debug Base de Données**
-
-```powershell
-# Se connecter à PostgreSQL
-docker-compose exec postgres psql -U admin -d supchat
-
-# Vérifier les tables
-docker-compose exec postgres psql -U admin -d supchat -c "\dt"
-
-# Vérifier les utilisateurs
-docker-compose exec postgres psql -U admin -d supchat -c "SELECT nom_utilisateur, email FROM utilisateur LIMIT 5;"
-
-# Sauvegarder la base
-docker-compose exec postgres pg_dump -U admin supchat > backup.sql
-```
-
 ### **📋 Checklist de Déploiement**
 
 #### **Avant de Déployer :**
@@ -2154,34 +1907,6 @@ docker-compose exec postgres pg_dump -U admin supchat > backup.sql
 
 ---
 
-## 🤝 **Contribution**
-
-### **Comment Contribuer**
-
-1. **Fork** le repository
-2. **Créer une branche** feature (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. **Commit** vos changements (`git commit -m 'Ajout nouvelle fonctionnalité'`)
-4. **Push** vers la branche (`git push origin feature/nouvelle-fonctionnalité`)
-5. **Ouvrir une Pull Request**
-
-### **Standards de Code**
-
-- **ESLint** configuré pour backend et frontend
-- **Prettier** pour le formatage automatique
-- **Tests** obligatoires pour nouvelles fonctionnalités
-- **Documentation** à jour dans README.md
-
-### **Reporting de Bugs**
-
-Utilisez les **GitHub Issues** avec :
-
-- **Description** détaillée du problème
-- **Étapes** pour reproduire
-- **Logs** des erreurs si disponible
-- **Environnement** (OS, versions Docker, Node.js)
-
----
-
 ## 📞 **Support**
 
 - **Documentation** : Ce README.md
@@ -2194,7 +1919,7 @@ Utilisez les **GitHub Issues** avec :
 ---
 
 <div align="center">
-  <strong>🚀 SUPCHAT - Communication temps réel moderne</strong>
+  <strong>🚀 SUPCHAT</strong>
   <br>
   <em>Développé avec ❤️ pour des équipes performantes</em>
 </div>
