@@ -207,7 +207,7 @@ netstat -tlnp
 sudo ufw status
 
 # Tester la connectivité
-curl -I http://192.168.71.234:3000/health
+curl -I http://185.98.137.166:3000/health
 ```
 
 #### Base de données
@@ -245,8 +245,8 @@ tail -f /var/log/nginx/supchat_error.log
 ./deploy-vps.sh  # Option 6 : Afficher le statut
 
 # Test de santé des services
-curl http://192.168.71.234:3000/health
-curl http://192.168.71.234/
+curl http://185.98.137.166:3000/health
+curl http://185.98.137.166/
 ```
 
 ## 🔄 Mise à jour
