@@ -18,7 +18,21 @@ import { API_URL } from "../../config/config";
 
 function Workspaces() {
   // Notifications context
-  const { unreadCounts } = useNotifications();
+  const { unreadCounts, refreshUnreadChannelCounts } = useNotifications();
+
+  // Écouter les événements globaux pour synchroniser les notifications
+  useEffect(() => {
+    const handleGlobalUnreadUpdate = (event) => {
+      // Le contexte NotificationContext se charge de la mise à jour, 
+      // nous forçons juste un re-render ici si nécessaire
+    };
+    
+    window.addEventListener('unreadChannelMessagesUpdated', handleGlobalUnreadUpdate);
+    
+    return () => {
+      window.removeEventListener('unreadChannelMessagesUpdated', handleGlobalUnreadUpdate);
+    };
+  }, []);
 
   // Agréger les notifications non lues par workspace
   const getWorkspaceUnreadCount = (workspaceId) => {

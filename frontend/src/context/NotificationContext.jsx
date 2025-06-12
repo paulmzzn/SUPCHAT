@@ -86,17 +86,27 @@ export function NotificationProvider({ children }) {
     console.log(`NotificationContext: Marquage du canal ${channelId} comme lu`);
     
     // Mise à jour optimiste de l'interface
-    setUnreadCounts(prev => ({
-      ...prev,
-      channels: {
-        ...prev.channels,
-        [channelId]: { count: 0 }
-      },
+    setUnreadCounts(prev => {
+      const newChannels = { ...prev.channels };
+      if (newChannels[channelId]) {
+        newChannels[channelId] = { ...newChannels[channelId], count: 0 };
+      }
+      
       // Recalculer le total en excluant le canal qu'on vient de lire
-      total: Object.entries(prev.channels).reduce((sum, [id, data]) => {
-        return id === channelId ? sum : sum + (data.count || 0);
-      }, 0)
-    }));
+      const newTotal = Object.values(newChannels).reduce((sum, data) => {
+        return sum + (data.count || 0);
+      }, 0);
+      
+      const newState = {
+        channels: newChannels,
+        total: newTotal
+      };
+      
+      // Note: L'événement global sera émis par le listener socket quand le serveur confirmera
+      // Pas besoin d'émettre ici pour éviter les doublons
+      
+      return newState;
+    });
 
     // Use debouncing to avoid making too many API calls
     markChannelTimerRef.current = setTimeout(async () => {
@@ -122,6 +132,8 @@ export function NotificationProvider({ children }) {
           
           if (markReadResponse.ok) {
             console.log(`Canal ${channelId} marqué comme lu via API REST`);
+            // Refresh pour s'assurer que les données sont synchronisées
+            setTimeout(() => refreshUnreadChannelCounts(), 100);
           } else {
             console.error("Erreur API lors du marquage du canal comme lu:", await markReadResponse.text());
           }
@@ -156,6 +168,15 @@ export function NotificationProvider({ children }) {
         channels: data.channels || {},
         total: data.total || 0
       });
+      
+      // Émettre un événement global pour synchroniser tous les composants
+      const event = new CustomEvent('unreadChannelMessagesUpdated', {
+        detail: { 
+          total: data.total,
+          channels: data.channels
+        }
+      });
+      window.dispatchEvent(event);
     });
     
     return () => {
