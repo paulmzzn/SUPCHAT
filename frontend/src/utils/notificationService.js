@@ -1,3 +1,5 @@
+import serviceWorkerManager from './serviceWorkerManager.js';
+
 class NotificationService {
   constructor() {
     this.permission = null;
@@ -14,6 +16,15 @@ class NotificationService {
 
     this.permission = Notification.permission;
     this.isEnabled = this.permission === 'granted';
+    
+    // Initialiser le service worker
+    this.initServiceWorker();
+  }
+
+  async initServiceWorker() {
+    if (serviceWorkerManager.isServiceWorkerSupported()) {
+      await serviceWorkerManager.registerServiceWorker();
+    }
   }
 
   async requestPermission() {
@@ -38,11 +49,8 @@ class NotificationService {
       this.isEnabled = permission === 'granted';
       
       if (permission === 'granted') {
-        console.log('Permission accordée pour les notifications push');
-        // Stocker la préférence dans localStorage
         localStorage.setItem('notifications_permission', 'granted');
       } else {
-        console.log('Permission refusée pour les notifications push');
         localStorage.setItem('notifications_permission', 'denied');
       }
       
@@ -55,13 +63,11 @@ class NotificationService {
 
   async showNotification(title, options = {}) {
     if (!this.isEnabled) {
-      console.log('Notifications désactivées ou non autorisées');
       return null;
     }
 
-    // Vérifier si l'onglet est actif
-    if (document.visibilityState === 'visible' && document.hasFocus()) {
-      console.log('Onglet actif, notification push ignorée');
+    // Vérifier si l'onglet est actif (sauf si force = true)
+    if (document.visibilityState === 'visible' && document.hasFocus() && !options.force) {
       return null;
     }
 
@@ -75,7 +81,19 @@ class NotificationService {
         ...options
       };
 
-      const notification = new Notification(title, defaultOptions);
+      // Supprimer 'force' et 'onClick' des options avant de les passer aux notifications
+      const { force, onClick, ...notificationOptions } = defaultOptions;
+
+      // Tenter d'utiliser le service worker en premier
+      if (serviceWorkerManager.isServiceWorkerSupported() && serviceWorkerManager.isActive()) {
+        const result = await serviceWorkerManager.showNotification(title, notificationOptions);
+        if (result) {
+          return result;
+        }
+      }
+
+      // Fallback vers les notifications normales
+      const notification = new Notification(title, notificationOptions);
 
       // Auto-fermer après 5 secondes
       setTimeout(() => {
@@ -87,8 +105,8 @@ class NotificationService {
       // Gérer le clic sur la notification
       notification.onclick = () => {
         window.focus();
-        if (options.onClick) {
-          options.onClick();
+        if (onClick) {
+          onClick();
         }
         notification.close();
       };
@@ -108,6 +126,7 @@ class NotificationService {
       body,
       icon: '/logo192.png',
       tag: `private-message-${userId}`,
+      data: { type: 'private-message', userId },
       onClick: () => {
         // Naviguer vers la conversation privée
         if (window.location.pathname !== '/direct-messages') {
@@ -125,6 +144,7 @@ class NotificationService {
       body,
       icon: '/logo192.png',
       tag: `mention-${workspaceId}-${channelId}`,
+      data: { type: 'mention', workspaceId, channelId },
       onClick: () => {
         // Naviguer vers le workspace et le canal
         if (window.location.pathname !== `/workspace/${workspaceId}`) {

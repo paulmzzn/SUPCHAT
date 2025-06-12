@@ -34,6 +34,7 @@ import MobileRedirect from "./components/MobileRedirect/MobileRedirect";
 import { isMobileDevice } from "./utils/deviceDetection";
 
 import CGU from "./pages/Settings/CGU"; // Importer la page CGU
+import serviceWorkerManager from "./utils/serviceWorkerManager";
 
 // Fonction utilitaire pour déboguer les événements de statut utilisateur - temporaire
 if (process.env.NODE_ENV === "development") {
@@ -70,6 +71,17 @@ function App() {
     
     // Détecter si c'est un appareil mobile
     setIsMobile(isMobileDevice());
+    
+    // Enregistrer le service worker pour les notifications (desktop et mobile)
+    serviceWorkerManager.registerServiceWorker().then((registered) => {
+      if (registered) {
+        console.log('[App] Service Worker enregistré avec succès');
+      } else {
+        console.log('[App] Échec de l\'enregistrement du Service Worker');
+      }
+    }).catch(error => {
+      console.error('[App] Erreur lors de l\'enregistrement du Service Worker:', error);
+    });
     
     setAuthChecked(true);
   }, []);
