@@ -58,29 +58,29 @@ if ! docker-compose -f docker-compose.prod.yml down --remove-orphans; then
 fi
 
 # Etape 2: Supprimer les volumes PostgreSQL pour reinitialiser
-echo "🗑️ Suppression des volumes PostgreSQL..."
-for volume in $(docker volume ls -q | grep -E "(postgres|supchat)"); do
-    if [ ! -z "$volume" ]; then
-        echo "   Suppression du volume: $volume"
-        docker volume rm "$volume" 2>/dev/null || true
-    fi
-done
+# echo "🗑️ Suppression des volumes PostgreSQL..."
+# for volume in $(docker volume ls -q | grep -E "(postgres|supchat)"); do
+#     if [ ! -z "$volume" ]; then
+#         echo "   Suppression du volume: $volume"
+#         docker volume rm "$volume" 2>/dev/null || true
+#     fi
+# done
 
 # Etape 3: Verifier le fichier init-docker.sql
-echo "✅ Verification du fichier init-docker.sql..."
-if [ ! -f "backend/db/init-docker.sql" ]; then
-    echo "❌ Fichier backend/db/init-docker.sql non trouve"
-    read -p "Appuyez sur Entree pour continuer..."
-    exit 1
-fi
+# echo "✅ Verification du fichier init-docker.sql..."
+# if [ ! -f "backend/db/init-docker.sql" ]; then
+#     echo "❌ Fichier backend/db/init-docker.sql non trouve"
+#     read -p "Appuyez sur Entree pour continuer..."
+#     exit 1
+# fi
 
 # Verifier que les roles corrects sont presents
-if ! grep -q "1, 'owner'" "backend/db/init-docker.sql"; then
-    echo "❌ Les roles corrects ne sont pas detectes dans init-docker.sql"
-    read -p "Appuyez sur Entree pour continuer..."
-    exit 1
-fi
-echo "   ✅ Roles detectes: owner, admin, member"
+# if ! grep -q "1, 'owner'" "backend/db/init-docker.sql"; then
+#     echo "❌ Les roles corrects ne sont pas detectes dans init-docker.sql"
+#     read -p "Appuyez sur Entree pour continuer..."
+#     exit 1
+# fi
+# echo "   ✅ Roles detectes: owner, admin, member"
 
 # Etape 4: Construire et demarrer les conteneurs avec la config securisee
 echo "🔨 Construction et demarrage des conteneurs (configuration securisee)..."

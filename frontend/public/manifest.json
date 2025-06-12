@@ -1,6 +1,7 @@
 {
-  "short_name": "Supchat",
-  "name": "Supchat - Chat with your friends",
+  "short_name": "SUPCHAT",
+  "name": "SUPCHAT - Plateforme de communication collaborative",
+  "description": "Communiquez en temps réel avec votre équipe",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,19 +11,26 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "theme_color": "#6A0DAD",
-  "background_color": "#ffffff",
+  "background_color": "#1a1a1a",
+  "categories": ["productivity", "social"],
+  "scope": "/",
   "permissions": [
-    "notifications"
-  ]
+    "notifications",
+    "push"
+  ],
+  "prefer_related_applications": false
 }
