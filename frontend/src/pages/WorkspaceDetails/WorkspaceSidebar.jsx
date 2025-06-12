@@ -16,6 +16,7 @@ import {
 import "../WorkspaceDetails/WorkspaceDetails.css";
 import ChannelList from "./ChannelList";
 import SearchResults from "../../components/SearchResults";
+import defaultIcon from "../../assets/images/icon-dark.png";
 
 function WorkspaceSidebar({
   workspace,
@@ -285,7 +286,7 @@ function WorkspaceSidebar({
                 style={{
                   backgroundImage: `url(${
                     workspace.icon ||
-                    "https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"
+                    defaultIcon
                   })`,
                 }}
               ></div>

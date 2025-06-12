@@ -84,7 +84,7 @@ router.get(
     const user = req.user;
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
-      SECRET_KEY,
+      SECRET_KEY, // Utiliser la même clé secrète que le middleware
       { expiresIn: "7d" } // Augmenté à 7 jours
     );
 
@@ -111,7 +111,7 @@ router.get(
     const user = req.user;
     const token = jwt.sign(
       { id: user.id_utilisateur, email: user.email },
-      process.env.JWT_SECRET || "REDACTED",
+      SECRET_KEY, // Utiliser la même clé secrète que le middleware
       { expiresIn: "7d" }
     );
     res.redirect(

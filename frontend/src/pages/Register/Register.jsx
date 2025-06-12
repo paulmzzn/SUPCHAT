@@ -155,8 +155,9 @@ function Register() {
         sessionStorage.setItem("pendingInvitation", JSON.stringify(pendingInvitation));
       }
 
-      // Redirection vers la page de validation avec l'email
-      navigate("/validate", {
+      // Redirection vers la page de login avec un message de succès
+      // Le code de validation sera envoyé lors du login
+      navigate("/login", {
         state: { 
           email: formData.email,
           // Pass the pending invitation info if available

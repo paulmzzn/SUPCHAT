@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_URL } from "../../config/config";
 import "./JoinWorkspace.css";
+import defaultIcon from "../../assets/images/icon-dark.png";
+import defaultBaniere from "../../assets/images/baniere_default.png";
 
 function JoinWorkspace() {
   const [searchParams] = useSearchParams();
@@ -219,7 +221,7 @@ function JoinWorkspace() {
             />
           ) : (
             <img 
-              src="https://images.unsplash.com/photo-1611162616475-46b635cb6868?ixlib=rb-4.0.3&auto=format&fit=crop&w=2574&q=80"
+              src={defaultIcon}
               alt="Workspace par défaut"
             />
           )}

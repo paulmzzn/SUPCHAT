@@ -136,11 +136,21 @@ const RegisterScreen = ({ navigation }) => {
       const data = await response.json();
       
       if (response.ok) {
-        // Store email for the verification screen
+        // Store email for the login screen
         await AsyncStorage.setItem('email', formData.email);
         
-        // Navigate to code verification screen
-        navigation.navigate('CodeVerification');
+        // Navigate to login screen with success message
+        // The validation code will be sent during login
+        Alert.alert(
+          'Inscription réussie !', 
+          'Connectez-vous maintenant pour recevoir votre code de validation.',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => navigation.navigate('Login') 
+            }
+          ]
+        );
       } else {
         Alert.alert(
           'Erreur', 

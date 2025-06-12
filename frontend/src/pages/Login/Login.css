@@ -322,6 +322,18 @@ body {
   .reset-message.error {
     color: #ff4d4d;
   }
+
+  .success-message {
+    color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease-in;
+  }
   
   /* Media queries pour la modal */
   @media (max-width: 576px) {
