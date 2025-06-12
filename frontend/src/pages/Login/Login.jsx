@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import googleIcon from "../../assets/icons/google-icon.svg";
-import "./Login.css";
-import { Link, useNavigate } from "react-router-dom";
 import { API_URL } from "../../config/config";
+import "./Login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState(""); // Nouveau state pour les messages de succès
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetStep, setResetStep] = useState(1); // 1: email, 2: code, 3: new password
   const [resetEmail, setResetEmail] = useState("");
@@ -19,6 +20,7 @@ function Login() {
   const [resetMessage, setResetMessage] = useState("");
   const [pendingInvitation, setPendingInvitation] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation(); // Ajout pour récupérer l'état de navigation
 
   useEffect(() => {
     // Check for pending invitation
@@ -31,10 +33,21 @@ function Login() {
       }
     }
     
+    // Vérifier si on vient de la page d'inscription avec un message de succès
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      if (location.state?.email) {
+        setEmail(location.state.email); // Pré-remplir l'email
+      }
+      if (location.state?.pendingInvitation) {
+        setPendingInvitation(location.state.pendingInvitation);
+      }
+    }
+    
     // IMPORTANT: Lors du chargement de la page de login, réinitialiser le statut de validation
     // pour forcer l'utilisateur à valider son code à chaque nouvelle connexion
     localStorage.removeItem('isValidated');
-  }, []);
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -329,7 +342,9 @@ function Login() {
               </div>
             </div>
 
+            {successMessage && <p className="success-message">{successMessage}</p>}
             {error && <p className="error-message">{error}</p>}
+            {successMessage && <p className="success-message">{successMessage}</p>} {/* Afficher le message de succès ici */}
 
             <button type="submit" className="login-button">
               Se connecter
