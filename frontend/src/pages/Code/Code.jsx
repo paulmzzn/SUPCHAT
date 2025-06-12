@@ -98,6 +98,14 @@ const Code = () => {
           const isValidated = localStorage.getItem("isValidated");
           console.log("Token vérifié après stockage:", storedToken ? "Présent" : "Absent");
           console.log("Validation vérifiée:", isValidated);
+
+          // IMPORTANT: Initialiser immédiatement le socket maintenant que le token est disponible
+          if (window.initializeSocket) {
+            console.log("Appel immédiat d'initializeSocket après validation");
+            window.initializeSocket();
+          } else {
+            console.warn("initializeSocket non disponible, le socket s'initialisera par polling dans quelques secondes");
+          }
           
           // Handle pending workspace invitation if present
           if (pendingInvitation && pendingInvitation.workspaceId) {

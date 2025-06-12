@@ -40,7 +40,7 @@ function DirectMessages() {
   const notifContext = useNotificationSettings();
   const { notificationSettings } = notifContext;
   const socketContext = useSocket();
-  const { socket } = socketContext;
+  const { socket, isSocketConnected, hasJoinedPrivateRoom, isInitializing, ensurePrivateRoomJoined } = socketContext;
   const conv = useConversations({ socket });
 
   const selectedUser = conv?.selectedUser;
@@ -64,7 +64,10 @@ function DirectMessages() {
     socket,
     currentUserId,
     attachments,
-    setAttachments
+    setAttachments,
+    isSocketConnected,
+    hasJoinedPrivateRoom,
+    ensurePrivateRoomJoined
   ); // Ensuite le hook des attachments
   const {
     uploadingFile,
@@ -270,7 +273,12 @@ function DirectMessages() {
           editMessageContent={(msg || {}).editMessageContent || ""}
           setEditMessageContent={
             (msg || {}).setEditMessageContent || (() => {})
-          } // --- Utilisation des props du hook useAttachments ---
+          }
+          // Statut de connexion WebSocket
+          isSocketConnected={isSocketConnected}
+          hasJoinedPrivateRoom={hasJoinedPrivateRoom}
+          isInitializing={isInitializing}
+          // --- Utilisation des props du hook useAttachments ---
           attachments={attachments}
           uploadingFile={uploadingFile}
           fileInputRef={fileInputRef}
