@@ -141,7 +141,6 @@
   overflow-y: auto;
   flex: 1;
   max-height: calc(90vh - 130px);
-  background-color: #ffffff;
 }
 
 /* Loading state */

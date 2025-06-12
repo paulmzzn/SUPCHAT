@@ -1526,7 +1526,53 @@ const socketManager = (io) => {
           socket.emit("error", {
             message: "Erreur lors de la réaction privée",
           });
+        }      }
+    });
+
+    // Nouvel événement pour gérer la suppression des réactions aux messages privés
+    socket.on("removePrivateMessageReaction", async (data) => {
+      try {
+        console.log("Socket.IO: Suppression de réaction privée", data);
+        const { id, reaction } = data;
+        const userId = socket.user.id;
+
+        if (!id || !reaction) {
+          console.error("Socket.IO: Données de suppression de réaction privée incomplètes");
+          socket.emit("error", { message: "Données de suppression incomplètes" });
+          return;
         }
+
+        // Vérifier que l'utilisateur est bien l'expéditeur ou le destinataire du message
+        const message = await MessagePrive.getById(id);
+        if (
+          !message ||
+          (message.fk_expediteur !== userId &&
+            message.fk_destinataire !== userId)
+        ) {
+          socket.emit("error", {
+            message: "Non autorisé à supprimer cette réaction",
+          });
+          return;
+        }
+
+        // Supprimer la réaction
+        await ReactionPrive.delete(id, userId, reaction);
+
+        // Récupérer les réactions à jour
+        const updatedReactions = await ReactionPrive.getByMessage(id, userId);
+
+        // Diffuser aux deux utilisateurs concernés
+        io.to(`dm:${message.fk_expediteur}`)
+          .to(`dm:${message.fk_destinataire}`)
+          .emit("privateMessageReaction", {
+            messageId: id,
+            reactions: updatedReactions,
+          });
+      } catch (error) {
+        console.error("Socket.IO: Erreur de suppression de réaction privée", error);
+        socket.emit("error", {
+          message: "Erreur lors de la suppression de la réaction privée",
+        });
       }
     });
 
