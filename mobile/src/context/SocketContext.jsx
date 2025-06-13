@@ -11,7 +11,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
 import env from "../config/env";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://supchat.fr";
+
+const API_URL = env.API_URL || "https://supchat.fr";
 
 const SocketContext = createContext(null);
 

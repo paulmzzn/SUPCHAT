@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Alert, Linking } from "react-native";
 import env from "../../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 export const useMediaPreview = () => {
   const [previewMedia, setPreviewMedia] = useState({
