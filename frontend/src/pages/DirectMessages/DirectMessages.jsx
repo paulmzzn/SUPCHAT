@@ -308,8 +308,8 @@ function DirectMessages() {
           }
           onReplyMessage={(msg || {}).handleReplyMessage || (() => {})}
           onEditMessage={msg.handleEditMessage}
-          onDeleteMessage={(msg || {}).handleDeleteMessage || (() => {})}
-          onAddReaction={(msg || {}).handleAddReaction || (() => {})}
+          onDeleteMessage={(msg || {}).handleDeleteMessage || (() => {})}          onAddReaction={(msg || {}).handleAddReaction || (() => {})}
+          onRemoveReaction={(msg || {}).handleRemoveReaction || (() => {})}
           onEmojiSelect={(msg || {}).handleEmojiSelect || (() => {})}
           onDownloadFile={handleDownloadFile || (() => {})}
           showMentionSuggestions={(msg || {}).showMentionSuggestions || false}

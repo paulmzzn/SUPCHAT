@@ -20,7 +20,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { getStyles } from './InviteModal.styles';
 import env from '../../../config/env';
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 const InviteModal = ({ visible, onClose, workspaceId, workspaceName }) => {
   const { colors: themeColors } = useTheme();

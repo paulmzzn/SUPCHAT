@@ -41,8 +41,8 @@ const MessageArea = ({
   onCloseMessageContextMenu,
   onReplyMessage,
   onEditMessage,
-  onDeleteMessage,
-  onAddReaction,
+  onDeleteMessage,  onAddReaction,
+  onRemoveReaction,
   onEmojiSelect,
   onDownloadFile,
   showMentionSuggestions,
@@ -119,10 +119,10 @@ const MessageArea = ({
         formatMessageDate={formatMessageDate || ((date) => date)}
         getFileIcon={getFileIcon || (() => null)}
         getCompleteFileUrl={getCompleteFileUrl || ((url) => url)}
-        formatFileSize={formatFileSize || ((size) => size)}
-        onDownloadFile={onDownloadFile || (() => {})}
+        formatFileSize={formatFileSize || ((size) => size)}        onDownloadFile={onDownloadFile || (() => {})}
         onImageClick={(file) => setFullscreenFile(file)}
         onReplyMessage={onReplyMessage || (() => {})}
+        onRemoveReaction={onRemoveReaction || (() => {})}
       />
       {/* Éditeur de message (si un message est en cours d'édition) */}
       {editingMessage && (

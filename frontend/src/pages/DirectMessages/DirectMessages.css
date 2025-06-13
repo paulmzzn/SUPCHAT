@@ -1371,11 +1371,25 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
 }
 
 .dm-msg-reaction:hover {
   background: rgba(147, 72, 183, 0.2);
   transform: translateY(-1px);
+  border-color: rgba(147, 72, 183, 0.4);
+}
+
+.dm-msg-reaction.user-reacted {
+  background: rgba(147, 72, 183, 0.25);
+  border-color: rgba(147, 72, 183, 0.5);
+  color: #9348b7;
+}
+
+.dm-msg-reaction.user-reacted:hover {
+  background: rgba(147, 72, 183, 0.35);
+  border-color: rgba(147, 72, 183, 0.6);
 }
 
 .dm-reaction-emoji {

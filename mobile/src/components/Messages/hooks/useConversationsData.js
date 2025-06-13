@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSocket } from "../../../context/SocketContext";
 import env from "../../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 export const useConversationsData = () => {
   const {

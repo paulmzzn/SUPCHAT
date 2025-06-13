@@ -551,9 +551,9 @@ export const useConversations = (options = {}) => {
       socket.off("allMessagesRead", handleAllMessagesRead);
     };
   }, [socket, currentUserId, selectedUser, resetUnreadCountForUser]);
-
   // Effet pour charger les compteurs de messages non lus au démarrage
   useEffect(() => {
+    // Charger d'abord depuis localStorage comme valeur par  défaut
     const unreadCountsFromStorage = safeJSONParse(
       localStorage.getItem("unreadDMCounts"),
       {}
@@ -571,10 +571,54 @@ export const useConversations = (options = {}) => {
     setUnreadMessageCounts(cleanCounts);
     const total = calculateTotalUnreadCount(cleanCounts);
     setTotalUnreadCount(total);
-    // Mettre à jour localStorage avec les valeurs nettoyées
-    localStorage.setItem("unreadDMCounts", JSON.stringify(cleanCounts));
-    localStorage.setItem("unreadPrivateMessages", total.toString());
-  }, [calculateTotalUnreadCount]); // Enlever selectedUser des dépendances // --- Gestion des messages non lus en temps réel ---
+    
+    // Puis récupérer les compteurs à jour depuis l'API
+    const fetchUnreadCountsFromAPI = async () => {
+      if (!currentUserId) return;
+      
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const apiCounts = await res.json();
+          console.log("[useConversations] Compteurs API récupérés:", apiCounts);
+          
+          // Mettre à jour avec les données de l'API
+          setUnreadMessageCounts(apiCounts || {});
+          const apiTotal = calculateTotalUnreadCount(apiCounts || {});
+          setTotalUnreadCount(apiTotal);
+          
+          // Sauvegarder les nouvelles données dans localStorage
+          localStorage.setItem("unreadDMCounts", JSON.stringify(apiCounts || {}));
+          localStorage.setItem("unreadPrivateMessages", apiTotal.toString());
+          
+          // Émettre un événement pour notifier les autres composants
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("unreadMessagesUpdated", {
+                detail: { count: apiTotal, counts: apiCounts || {} },
+              })
+            );
+          }, 0);
+        }
+      } catch (error) {
+        console.error("[useConversations] Erreur lors de la récupération des compteurs API:", error);
+        // En cas d'erreur, on garde les valeurs du localStorage déjà nettoyées
+        localStorage.setItem("unreadDMCounts", JSON.stringify(cleanCounts));
+        localStorage.setItem("unreadPrivateMessages", total.toString());
+      }
+    };
+    
+    // Appeler l'API seulement si on a un currentUserId
+    if (currentUserId) {
+      fetchUnreadCountsFromAPI();
+    }
+  }, [calculateTotalUnreadCount, currentUserId]); // Ajouter currentUserId aux dépendances// --- Gestion des messages non lus en temps réel ---
   useEffect(() => {
     if (!socket) return;
     const handlePrivateMessage = (msg) => {
