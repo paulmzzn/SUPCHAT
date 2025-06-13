@@ -50,6 +50,17 @@ const MISTRAL_USERNAME = "Mistral AI";
 const MISTRAL_AVATAR =
   "https://www.servicesmobiles.fr/wp-content/uploads/2024/10/Mistral-AI-660x440.jpg.webp";
 
+// Fonction utilitaire pour convertir les statuts de la base de données en chaînes
+const convertDbStatusToString = (statusId) => {
+  const statusMap = {
+    1: "online",
+    2: "away", 
+    3: "dnd",
+    4: "offline",
+  };
+  return statusMap[statusId] || "offline";
+};
+
 export const useWorkspaceDetails = (workspaceId) => {
   // Utiliser le contexte de notifications pour le marquage comme lu
   const { markChannelAsRead: markChannelAsReadFromContext } = useNotifications();
@@ -322,11 +333,9 @@ return {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_url || member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || "online",
+          status: userStatuses[member.id_utilisateur] || convertDbStatusToString(member.status),
           role: member.role.toLowerCase(),
-        }));
-
-      const offlineMembers = data
+        }));      const offlineMembers = data
         .filter((member) => {
           const wsStatus = userStatuses[member.id_utilisateur];
           // Logique inversée par rapport aux membres en ligne
@@ -339,9 +348,11 @@ return {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_url || member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || "offline",
+          status: userStatuses[member.id_utilisateur] || convertDbStatusToString(member.status),
           role: member.role.toLowerCase(),
-        })); // console.log("[HOOK] Online members count:", onlineMembers.length);
+        }));
+
+      // console.log("[HOOK] Online members count:", onlineMembers.length);
       // console.log("[HOOK] Offline members count:", offlineMembers.length);
 
       setMembers({

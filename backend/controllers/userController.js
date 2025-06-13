@@ -477,11 +477,11 @@ const changePassword = async (req, res) => {
 const convertStatus = (statusId) => {
   const statusMap = {
     1: "online",
-    2: "away",
+    2: "away", 
     3: "dnd",
     4: "invisible",
   };
-  return statusMap[statusId] || "online"; // Défaut à 'online' si statusId est inconnu
+  return statusMap[statusId] || "offline"; // Défaut à 'offline' si statusId est inconnu ou null
 };
 
 // Récupérer le profil d'un utilisateur
