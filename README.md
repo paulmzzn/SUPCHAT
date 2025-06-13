@@ -1,9 +1,10 @@
-# 🚀 SUPCHAT 
+# 🚀 SUPCHAT
 
 <div align="center">
   <img src="frontend/src/assets/icons/logo_supchat.svg" alt="SUPCHAT Logo" width="120" height="120">
   
   **Une plateforme de communication moderne multi-plateforme avec IA intégrée**
+  ** Accessible dès maintenant sur `https://supchat.fr/about.html` **
   
   [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
   [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
