@@ -34,13 +34,13 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" href="/logo192.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#9348b7">
+    <meta name="theme-color" content="#6366f1">
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://supchat.fr/features.html">
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- JSON-LD Schema.org -->
     <script type="application/ld+json">
@@ -93,320 +93,560 @@
             box-sizing: border-box;
         }
         
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --dark: #0f172a;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --white: #ffffff;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            --border-radius: 16px;
+        }
+        
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            color: var(--gray-800);
+            background: var(--gray-50);
+            scroll-behavior: smooth;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 1.5rem;
         }
         
-        /* Header SUPCHAT */
+        /* Header moderne fixe */
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 0;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--gray-200);
             z-index: 100;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
         
         .nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 1rem 0;
         }
         
         .logo {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #9348b7;
-            text-decoration: none;
-        }
-        
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-        
-        .nav-links a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        
-        .nav-links a:hover {
-            color: #9348b7;
-        }
-        
-        /* Hero Section SUPCHAT */
-        .hero {
-            text-align: center;
-            padding: 4rem 0;
-            color: white;
-        }
-        
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #fff, #f0f0f0);
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: var(--gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-decoration: none;
         }
         
-        .hero p {
-            font-size: 1.2rem;
+        .nav-center {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-center a {
+            text-decoration: none;
+            color: var(--gray-700);
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-center a:hover {
+            color: var(--primary);
+        }
+        
+        .nav-center a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-center a:hover::after {
+            width: 100%;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .btn-login {
+            background: var(--gradient);
+            color: var(--white);
+            padding: 0.75rem 2rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            font-size: 0.95rem;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn-register {
+            background: transparent;
+            color: var(--primary);
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--primary);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-register:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+        
+        /* Hero ultra moderne */
+        .hero {
+            background: var(--gradient);
+            padding: 12rem 0 6rem;
+            text-align: center;
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+            opacity: 0.4;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .hero h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
             margin-bottom: 2rem;
-            opacity: 0.9;
+            background: linear-gradient(45deg, #fff, #f0f9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
         }
         
-        /* Features Grid SUPCHAT */
-        .features-section {
-            background: white;
-            padding: 4rem 0;
+        .hero-subtitle {
+            font-size: 1.4rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: 400;
+        }
+        
+        /* Sections modernes */
+        .section {
+            padding: 6rem 0;
         }
         
         .section-title {
             text-align: center;
-            font-size: 2.5rem;
-            color: #333;
-            margin-bottom: 3rem;
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
         }
         
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.3rem;
+            color: var(--gray-600);
+            margin-bottom: 5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: 400;
+        }
+        
+        /* Grid de fonctionnalités */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
+            gap: 2.5rem;
+            margin-bottom: 5rem;
         }
         
         .feature-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 2px solid transparent;
+            background: var(--white);
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.4s ease;
+            border: 1px solid var(--gray-200);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--gradient);
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+        
+        .feature-card:hover::before {
+            transform: scaleX(1);
         }
         
         .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(147, 72, 183, 0.2);
-            border-color: #9348b7;
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
         }
         
         .feature-icon {
-            font-size: 3rem;
-            color: #9348b7;
-            margin-bottom: 1rem;
+            font-size: 3.5rem;
+            margin-bottom: 2rem;
+            display: block;
         }
         
         .feature-card h3 {
-            font-size: 1.5rem;
-            color: #333;
-            margin-bottom: 1rem;
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--gray-900);
         }
         
         .feature-card p {
-            color: #666;
-            line-height: 1.6;
+            color: var(--gray-600);
+            line-height: 1.8;
+            font-size: 1.05rem;
         }
         
-        /* CTA Section SUPCHAT */
+        /* CTA Section moderne */
         .cta-section {
-            background: linear-gradient(135deg, #9348b7 0%, #667eea 100%);
-            color: white;
+            background: var(--gradient);
+            color: var(--white);
             text-align: center;
-            padding: 4rem 0;
+            padding: 5rem 0;
+            margin: 6rem 0;
+            border-radius: 32px;
+            position: relative;
+            overflow: hidden;
         }
         
-        .cta-button {
-            display: inline-block;
-            background: white;
-            color: #9348b7;
-            padding: 1rem 2rem;
-            border-radius: 50px;
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="waves" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M0 50 Q25 25 50 50 T100 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></pattern></defs><rect width="100%" height="100%" fill="url(%23waves)"/></svg>');
+            opacity: 0.5;
+        }
+        
+        .cta-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .cta-content h2 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .cta-content p {
+            font-size: 1.3rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn-primary {
+            background: var(--white);
+            color: var(--primary);
+            padding: 1.2rem 3rem;
+            border-radius: var(--border-radius);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 1.1rem;
             transition: all 0.3s ease;
-            margin-top: 2rem;
+            box-shadow: var(--shadow);
+            border: 2px solid transparent;
         }
         
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            background: var(--gray-50);
         }
         
-        /* Footer SUPCHAT */
+        /* Footer moderne */
         .footer {
-            background: #333;
-            color: white;
-            text-align: center;
-            padding: 2rem 0;
+            background: var(--gray-900);
+            color: var(--gray-300);
+            padding: 4rem 0 2rem;
+            border-radius: 32px 32px 0 0;
+            margin-top: 6rem;
         }
         
-        .footer p {
-            margin-bottom: 1rem;
+        .footer-content {
+            text-align: center;
         }
         
         .footer-links {
             display: flex;
             justify-content: center;
-            gap: 2rem;
-            margin-top: 1rem;
+            gap: 3rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
         }
         
         .footer-links a {
-            color: white;
+            color: var(--gray-300);
             text-decoration: none;
             transition: color 0.3s ease;
+            font-weight: 500;
         }
         
         .footer-links a:hover {
-            color: #9348b7;
+            color: var(--primary);
         }
         
-        /* Responsive Design */
+        /* Mobile responsive */
         @media (max-width: 768px) {
-            .nav-links {
+            .nav-center {
                 display: none;
             }
             
+            .nav-actions {
+                gap: 0.5rem;
+            }
+            
+            .btn-login, .btn-register {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+            
+            .hero {
+                padding: 10rem 0 4rem;
+            }
+            
             .hero h1 {
-                font-size: 2.5rem;
+                font-size: 2.8rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.1rem;
             }
             
             .features-grid {
                 grid-template-columns: 1fr;
             }
             
+            .section-title {
+                font-size: 2.5rem;
+            }
+            
+            .cta-content h2 {
+                font-size: 2.2rem;
+            }
+            
             .footer-links {
                 flex-direction: column;
-                gap: 1rem;
+                gap: 1.5rem;
             }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        /* Smooth scrolling pour navigation */
+        html {
+            scroll-behavior: smooth;
         }
     </style>
 </head>
 <body>
-    <!-- Header Navigation SUPCHAT -->
+    <!-- Header moderne avec accès direct connexion -->
     <header class="header">
         <div class="container">
             <nav class="nav">
                 <a href="/" class="logo">SUPCHAT</a>
-                <ul class="nav-links">
-                    <li><a href="/">Accueil SUPCHAT</a></li>
+                <ul class="nav-center">
+                    <li><a href="/">Accueil</a></li>
                     <li><a href="/features.html">Fonctionnalités</a></li>
-                    <li><a href="/about.html">À propos SUPCHAT</a></li>
-                    <li><a href="/login">Connexion</a></li>
-                    <li><a href="/register">S'inscrire</a></li>
+                    <li><a href="/about.html">À propos</a></li>
                 </ul>
+                <div class="nav-actions">
+                    <a href="/register" class="btn-register">S'inscrire</a>
+                    <a href="/login" class="btn-login">Se connecter</a>
+                </div>
             </nav>
         </div>
     </header>
 
-    <!-- Hero Section -->
+    <!-- Hero ultra moderne -->
     <section class="hero">
         <div class="container">
-            <h1>Fonctionnalités SUPCHAT Révolutionnaires</h1>
-            <p>Découvrez pourquoi SUPCHAT est la plateforme collaborative française de référence</p>
+            <div class="hero-content">
+                <h1>Fonctionnalités SUPCHAT Révolutionnaires</h1>
+                <p class="hero-subtitle">Découvrez pourquoi SUPCHAT est la plateforme collaborative française de référence avec toutes ses fonctionnalités innovantes</p>
+            </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features-section">
-        <div class="container">
-            <h2 class="section-title">Toutes les fonctionnalités SUPCHAT en un coup d'œil</h2>
+    <!-- Section principale -->
+    <main class="container">
+        <!-- Fonctionnalités principales -->
+        <section class="section">
+            <h2 class="section-title">Toutes les fonctionnalités SUPCHAT</h2>
+            <p class="section-subtitle">La plateforme collaborative française qui transforme votre façon de travailler en équipe</p>
             
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">💬</div>
+                    <span class="feature-icon">💬</span>
                     <h3>Chat SUPCHAT Temps Réel</h3>
                     <p>Messagerie instantanée ultra-rapide avec SUPCHAT. Conversations fluides, notifications intelligentes et synchronisation parfaite sur tous vos appareils. L'expérience chat SUPCHAT redéfinit la communication d'équipe.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">👥</div>
+                    <span class="feature-icon">👥</span>
                     <h3>Espaces de Travail SUPCHAT</h3>
                     <p>Créez des workspaces collaboratifs avec SUPCHAT. Organisez vos équipes par projet, département ou thématique. Les espaces SUPCHAT s'adaptent à votre organisation pour une collaboration optimale.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">📁</div>
+                    <span class="feature-icon">📁</span>
                     <h3>Partage de Fichiers SUPCHAT</h3>
                     <p>Partagez vos documents en toute sécurité avec SUPCHAT. Stockage cloud intégré, prévisualisation des fichiers et gestion des versions. SUPCHAT simplifie le partage collaboratif.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
+                    <span class="feature-icon">🔒</span>
                     <h3>Sécurité SUPCHAT</h3>
                     <p>Protection maximale avec SUPCHAT. Chiffrement end-to-end, authentification sécurisée et conformité RGPD. Vos données sont protégées avec les standards de sécurité SUPCHAT.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
+                    <span class="feature-icon">🤖</span>
                     <h3>Intelligence Artificielle SUPCHAT</h3>
                     <p>IA intégrée dans SUPCHAT pour optimiser votre productivité. Assistant intelligent, résumés automatiques et suggestions personnalisées. L'IA SUPCHAT révolutionne votre workflow.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">📱</div>
+                    <span class="feature-icon">📱</span>
                     <h3>Applications SUPCHAT Mobile</h3>
                     <p>SUPCHAT disponible partout : web, iOS, Android. Synchronisation parfaite entre tous vos appareils. L'expérience SUPCHAT mobile vous suit dans tous vos déplacements.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🔗</div>
+                    <span class="feature-icon">🔗</span>
                     <h3>Intégrations SUPCHAT</h3>
                     <p>Connectez vos outils favoris à SUPCHAT. API complète, webhooks et intégrations natives. SUPCHAT s'intègre parfaitement dans votre écosystème digital.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">📊</div>
+                    <span class="feature-icon">📊</span>
                     <h3>Analytiques SUPCHAT</h3>
                     <p>Tableaux de bord et statistiques détaillées avec SUPCHAT. Mesurez l'engagement de vos équipes et optimisez votre collaboration. Les insights SUPCHAT guident vos décisions.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
+                    <span class="feature-icon">⚡</span>
                     <h3>Performance SUPCHAT</h3>
                     <p>Vitesse et fiabilité exceptionnelles avec SUPCHAT. Infrastructure française haute performance, temps de réponse minimal. SUPCHAT garantit une expérience utilisateur fluide.</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section">
-        <div class="container">
-            <h2>Prêt à découvrir SUPCHAT ?</h2>
-            <p>Rejoignez les milliers d'équipes qui font confiance à SUPCHAT pour révolutionner leur collaboration</p>
-            <a href="/register" class="cta-button">Essayer SUPCHAT Gratuitement</a>
-        </div>
-    </section>
+        <!-- CTA Section repositionnée -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2>Prêt à découvrir SUPCHAT ?</h2>
+                <p>Rejoignez les milliers d'équipes qui font confiance à SUPCHAT pour révolutionner leur collaboration</p>
+                <div style="margin-top: 2rem;">
+                    <a href="/register" class="btn-primary">Essayer SUPCHAT Gratuitement</a>
+                </div>
+            </div>
+        </section>
+    </main>
 
-    <!-- Footer -->
+    <!-- Footer moderne -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 SUPCHAT - La plateforme collaborative française révolutionnaire</p>
-            <p>SUPCHAT transforme la communication d'équipe avec des fonctionnalités innovantes</p>
-            <div class="footer-links">
-                <a href="/">Accueil SUPCHAT</a>
-                <a href="/about.html">À propos SUPCHAT</a>
-                <a href="/features.html">Fonctionnalités SUPCHAT</a>
-                <a href="/cgu">CGU SUPCHAT</a>
-                <a href="/login">Se connecter à SUPCHAT</a>
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="/">Accueil SUPCHAT</a>
+                    <a href="/about.html">À propos</a>
+                    <a href="/features.html">Fonctionnalités</a>
+                    <a href="/cgu">CGU</a>
+                    <a href="/login">Se connecter</a>
+                </div>
+                <p>&copy; 2025 SUPCHAT - La plateforme collaborative 100% française</p>
             </div>
         </div>
     </footer>

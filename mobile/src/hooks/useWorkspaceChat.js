@@ -126,8 +126,17 @@ export const useWorkspaceChat = (workspaceId, channelId, socket, markChannelAsRe
   const handleNewMessage = useCallback((message) => {
     if (message.fk_canal === channelId) {
       setMessages(prev => [message, ...prev]);
+
+      // Marquer automatiquement le canal comme lu quand un nouveau message arrive
+      // (l'utilisateur est dans le canal donc il "voit" le message)
+      if (workspaceId && channelId && markChannelAsRead) {
+        setTimeout(() => {
+          console.log("📖 [useWorkspaceChat] Marquage automatique du canal comme lu après réception de message");
+          markChannelAsRead(workspaceId, channelId);
+        }, 100); // Petit délai pour s'assurer que le message est affiché
+      }
     }
-  }, [channelId]);
+  }, [channelId, workspaceId, markChannelAsRead]);
 
   const handleReconnect = useCallback(() => {
     setConnectionError(false);

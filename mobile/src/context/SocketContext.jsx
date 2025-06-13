@@ -207,6 +207,37 @@ export const SocketProvider = ({ children }) => {
     ]);
   }, [fetchUnreadCounts, fetchWorkspaceUnreadCounts]);
 
+  // Écouter les événements globaux de rafraîchissement des compteurs
+  useEffect(() => {
+    // Attendre que global.AppEvents soit défini (par TabBar.jsx)
+    const checkAndSetupListener = () => {
+      if (global.AppEvents) {
+        console.log("🔄 [SocketContext] Écoute des événements globaux de rafraîchissement");
+
+        const handleForceRefresh = (eventData) => {
+          console.log("🔄 [SocketContext] Événement de rafraîchissement reçu:", eventData);
+          // Rafraîchir les compteurs
+          setTimeout(() => {
+            refreshUnreadCounts();
+          }, 100);
+        };
+
+        const subscription = global.AppEvents.addListener('forceUnreadCountsUpdate', handleForceRefresh);
+
+        return () => {
+          subscription.remove();
+        };
+      } else {
+        // Réessayer dans 500ms si global.AppEvents n'est pas encore défini
+        setTimeout(checkAndSetupListener, 500);
+      }
+    };
+
+    const cleanup = checkAndSetupListener();
+
+    return cleanup;
+  }, [refreshUnreadCounts]);
+
   // Connexion socket - AMÉLIORÉE
   useEffect(() => {
     const connectSocket = async () => {
@@ -242,7 +273,13 @@ export const SocketProvider = ({ children }) => {
           setConnected(true);
 
           // Rejoindre automatiquement la room privée
+          console.log("🚀 [SocketContext] Émission de joinPrivate");
           newSocket.emit("joinPrivate");
+
+          // Écouter la confirmation de jointure de room privée
+          newSocket.on("privateRoomJoined", (data) => {
+            console.log("✅ [SocketContext] Room privée jointe:", data);
+          });
 
           // Charger et rejoindre les workspaces de l'utilisateur
           loadWorkspaces(newSocket, token);
@@ -396,12 +433,43 @@ export const SocketProvider = ({ children }) => {
       }
     };
 
-    // Attacher les listeners
+    // Handler pour la lecture de messages privés
+    const handlePrivateMessageRead = (data) => {
+      console.log("📖 [SocketContext] Message privé lu - rafraîchissement des compteurs");
+      // Rafraîchir les compteurs pour mettre à jour la TabBar
+      setTimeout(() => {
+        refreshUnreadCounts();
+      }, 100);
+    };
+
+    // Handler pour tous les messages lus d'une conversation
+    const handleAllMessagesRead = (data) => {
+      console.log("📖 [SocketContext] Tous les messages lus - rafraîchissement des compteurs");
+      // Rafraîchir les compteurs pour mettre à jour la TabBar
+      setTimeout(() => {
+        refreshUnreadCounts();
+      }, 100);
+    };
+
+    // Handler pour la lecture de canal
+    const handleChannelRead = (data) => {
+      console.log("📖 [SocketContext] Canal lu:", data);
+      // Rafraîchir les compteurs pour mettre à jour la TabBar
+      setTimeout(() => {
+        refreshUnreadCounts();
+      }, 100);
+    };
+
+    // Attacher les listeners - SEULEMENT pour les messages privés et les compteurs
     socket.on("privateMessage", handlePrivateMessage);
-    socket.on("message", handleChannelMessage);
-    socket.on("newMessage", handleChannelMessage);
-    socket.on("channelMessage", handleChannelMessage);
-    socket.on("workspaceMessage", handleChannelMessage);
+    socket.on("privateMessageRead", handlePrivateMessageRead);
+    socket.on("allMessagesRead", handleAllMessagesRead);
+    socket.on("channelRead", handleChannelRead);
+    // NE PAS écouter les messages de canal ici - ils sont gérés par useSocketHandlers
+    // socket.on("message", handleChannelMessage);
+    // socket.on("newMessage", handleChannelMessage);
+    // socket.on("channelMessage", handleChannelMessage);
+    // socket.on("workspaceMessage", handleChannelMessage);
     socket.on(
       "unreadChannelMessagesUpdated",
       handleUnreadChannelMessagesUpdated
@@ -417,10 +485,14 @@ export const SocketProvider = ({ children }) => {
 
     return () => {
       socket.off("privateMessage", handlePrivateMessage);
-      socket.off("message", handleChannelMessage);
-      socket.off("newMessage", handleChannelMessage);
-      socket.off("channelMessage", handleChannelMessage);
-      socket.off("workspaceMessage", handleChannelMessage);
+      socket.off("privateMessageRead", handlePrivateMessageRead);
+      socket.off("allMessagesRead", handleAllMessagesRead);
+      socket.off("channelRead", handleChannelRead);
+      // NE PAS supprimer les listeners de messages de canal ici
+      // socket.off("message", handleChannelMessage);
+      // socket.off("newMessage", handleChannelMessage);
+      // socket.off("channelMessage", handleChannelMessage);
+      // socket.off("workspaceMessage", handleChannelMessage);
       socket.off(
         "unreadChannelMessagesUpdated",
         handleUnreadChannelMessagesUpdated
