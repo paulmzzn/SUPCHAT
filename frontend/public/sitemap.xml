@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- Page d'accueil -->
+  <url>
+    <loc>https://supchat.fr/</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- Page de connexion -->
+  <url>
+    <loc>https://supchat.fr/login</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Page d'inscription -->
+  <url>
+    <loc>https://supchat.fr/register</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Conditions Générales d'Utilisation -->
+  <url>
+    <loc>https://supchat.fr/cgu</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Page À propos -->
+  <url>
+    <loc>https://supchat.fr/about.html</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Ajoutez d'autres pages publiques ici si nécessaire -->
+  <!-- Exemple: page à propos, contact, politique de confidentialité, etc. -->
+  <!--
+  <url>
+    <loc>https://supchat.fr/about</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://supchat.fr/contact</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://supchat.fr/privacy</loc>
+    <lastmod>2025-06-12</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  -->
+  
+</urlset>

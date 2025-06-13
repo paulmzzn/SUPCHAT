@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import env from "../../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 export const useMessageActions = ({
   socket,

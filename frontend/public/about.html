@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <!-- Meta tags essentiels -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- SEO Meta Tags -->
+    <title>À propos de SUPCHAT - Plateforme collaborative moderne</title>
+    <meta name="description" content="Découvrez SUPCHAT, la plateforme collaborative révolutionnaire qui connecte vos équipes. Chat en temps réel, espaces de travail, messages privés et bien plus. Rejoignez des milliers d'utilisateurs qui font confiance à SUPCHAT.">
+    <meta name="keywords" content="SUPCHAT, collaboration, chat, équipe, workspace, messagerie, communication, entreprise, productivité">
+    <meta name="author" content="SUPCHAT Team">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="fr">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://supchat.fr/about.html">
+    <meta property="og:title" content="À propos de SUPCHAT - Plateforme collaborative moderne">
+    <meta property="og:description" content="Découvrez SUPCHAT, la plateforme collaborative révolutionnaire qui connecte vos équipes. Chat en temps réel, espaces de travail et messages privés.">
+    <meta property="og:image" content="https://supchat.fr/logo192.png">
+    <meta property="og:site_name" content="SUPCHAT">
+    <meta property="og:locale" content="fr_FR">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://supchat.fr/about.html">
+    <meta property="twitter:title" content="À propos de SUPCHAT - Plateforme collaborative moderne">
+    <meta property="twitter:description" content="Découvrez SUPCHAT, la plateforme collaborative révolutionnaire qui connecte vos équipes.">
+    <meta property="twitter:image" content="https://supchat.fr/logo192.png">
+    
+    <!-- Icons & Manifest -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/logo192.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#9348b7">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://supchat.fr/about.html">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- JSON-LD Schema.org -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "SUPCHAT",
+        "description": "Plateforme collaborative moderne pour les équipes",
+        "url": "https://supchat.fr",
+        "logo": "https://supchat.fr/logo192.png",
+        "sameAs": [
+            "https://github.com/supchat"
+        ],
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "contact@supchat.fr"
+        },
+        "foundingDate": "2024",
+        "applicationCategory": "Business Software",
+        "operatingSystem": "Web, iOS, Android"
+    }
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #9348b7;
+            --secondary-color: #b05fdf;
+            --dark-bg: #1e1e28;
+            --light-bg: #f5f5f7;
+            --text-primary: #23272f;
+            --text-secondary: #444950;
+            --text-muted: #b0b3b8;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --gradient-primary: linear-gradient(135deg, #9348b7, #b05fdf);
+            --gradient-hero: linear-gradient(135deg, #9348b7 0%, #b05fdf 50%, #6a2f88 100%);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --shadow-hero: 0 20px 60px rgba(147, 72, 183, 0.3);
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--light-bg);
+            overflow-x: hidden;
+        }
+        
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .logo::before {
+            content: "💬";
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        .cta-button {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-card);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(147, 72, 183, 0.4);
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: var(--gradient-hero);
+            color: white;
+            text-align: center;
+            padding: 8rem 2rem 6rem;
+            margin-top: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="50" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #ffffff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: var(--shadow-hero);
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            line-height: 1.7;
+        }
+        
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        .section {
+            padding: 5rem 0;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+        
+        .feature-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-card);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(147, 72, 183, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .feature-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Mission Section */
+        .mission {
+            background: var(--card-bg);
+            border-radius: 30px;
+            padding: 4rem;
+            box-shadow: var(--shadow-card);
+            text-align: center;
+            margin: 3rem 0;
+            border: 1px solid var(--border-color);
+        }
+        
+        .mission h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+        
+        .mission p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        
+        /* Team Section */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .team-member {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+        
+        .team-member:hover {
+            transform: translateY(-5px);
+        }
+        
+        .member-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .member-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .member-role {
+            color: var(--primary-color);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        
+        .member-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            background: var(--gradient-hero);
+            color: white;
+            text-align: center;
+            padding: 5rem 2rem;
+            border-radius: 30px;
+            margin: 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="white" opacity="0.1"/><circle cx="80" cy="80" r="1.5" fill="white" opacity="0.1"/><circle cx="60" cy="30" r="1" fill="white" opacity="0.05"/></svg>');
+        }
+        
+        .cta-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .cta-section h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-primary, .btn-secondary {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 255, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--text-primary);
+            color: white;
+            text-align: center;
+            padding: 3rem 2rem 2rem;
+            margin-top: 5rem;
+        }
+        
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            color: var(--secondary-color);
+        }
+        
+        .copyright {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem;
+            }
+            
+            .nav-links {
+                gap: 1rem;
+            }
+            
+            .hero {
+                padding: 6rem 1rem 4rem;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .feature-card {
+                padding: 2rem;
+            }
+            
+            .mission {
+                padding: 2.5rem;
+                margin: 2rem 0;
+            }
+            
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .cta-button {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .feature-card {
+                padding: 1.5rem;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-card, .team-member, .mission {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* Focus styles for accessibility */
+        .cta-button:focus,
+        .nav-links a:focus,
+        .btn-primary:focus,
+        .btn-secondary:focus {
+            outline: 3px solid rgba(147, 72, 183, 0.5);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="Navigation principale">
+        <div class="nav-container">
+            <a href="/" class="logo" aria-label="SUPCHAT - Retour à l'accueil">SUPCHAT</a>
+            <div class="nav-links">
+                <a href="/login">Connexion</a>
+                <a href="/register">Inscription</a>
+                <a href="/cgu">CGU</a>
+                <a href="/register" class="cta-button">Commencer</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" role="banner">
+        <div class="hero-content">
+            <h1>À propos de SUPCHAT</h1>
+            <p>La plateforme collaborative nouvelle génération qui révolutionne la communication d'équipe. Connectez, collaborez et créez ensemble, où que vous soyez.</p>
+            <div class="hero-stats" role="region" aria-label="Statistiques SUPCHAT">
+                <div class="stat">
+                    <span class="stat-number">10k+</span>
+                    <span class="stat-label">Utilisateurs actifs</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Équipes</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">99.9%</span>
+                    <span class="stat-label">Disponibilité</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Features Section -->
+        <section class="section" id="features" aria-labelledby="features-title">
+            <h2 class="section-title" id="features-title">Pourquoi choisir SUPCHAT ?</h2>
+            <div class="features-grid">
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">💬</div>
+                    <h3>Chat en temps réel</h3>
+                    <p>Échangez instantanément avec vos équipes grâce à notre système de messagerie ultra-rapide. Partagez des fichiers, des images et collaborez en direct.</p>
+                </article>
+                
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">🏢</div>
+                    <h3>Espaces de travail</h3>
+                    <p>Organisez vos projets dans des espaces dédiés. Créez des canaux thématiques et structurez vos discussions pour une meilleure productivité.</p>
+                </article>
+                
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">🔒</div>
+                    <h3>Messages privés</h3>
+                    <p>Conversations confidentielles chiffrées de bout en bout. Discutez en privé avec vos collègues en toute sécurité.</p>
+                </article>
+                
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">📱</div>
+                    <h3>Multi-plateforme</h3>
+                    <p>Accédez à SUPCHAT depuis votre ordinateur, tablette ou smartphone. Synchronisation parfaite entre tous vos appareils.</p>
+                </article>
+                
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">🤖</div>
+                    <h3>IA intégrée</h3>
+                    <p>Assistant intelligent pour vous aider dans vos tâches quotidiennes. Résumés automatiques, suggestions et bien plus.</p>
+                </article>
+                
+                <article class="feature-card">
+                    <div class="feature-icon" aria-hidden="true">🔧</div>
+                    <h3>Intégrations</h3>
+                    <p>Connectez vos outils favoris : Google Drive, GitHub, Calendrier et plus de 100 applications métier.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- Mission Section -->
+        <section class="section" aria-labelledby="mission-title">
+            <div class="mission">
+                <h2 id="mission-title">Notre mission</h2>
+                <p>Chez SUPCHAT, nous croyons que la communication est le pilier de toute collaboration réussie. Notre mission est de créer des outils qui rapprochent les équipes, simplifient les échanges et libèrent le potentiel créatif de chaque organisation. Nous nous engageons à fournir une plateforme sécurisée, intuitive et performante qui s'adapte aux besoins de chaque équipe, quelle que soit sa taille.</p>
+            </div>
+        </section>
+
+        <!-- Team Section -->
+        <section class="section" id="team" aria-labelledby="team-title">
+            <h2 class="section-title" id="team-title">Notre équipe</h2>
+            <div class="team-grid">
+                <article class="team-member">
+                    <div class="member-avatar" aria-hidden="true">👨‍💻</div>
+                    <h3 class="member-name">Équipe Développement</h3>
+                    <p class="member-role">Développeurs Full-Stack</p>
+                    <p class="member-description">Une équipe passionnée de développeurs experts en technologies modernes, dédiée à créer la meilleure expérience utilisateur possible.</p>
+                </article>
+                
+                <article class="team-member">
+                    <div class="member-avatar" aria-hidden="true">🎨</div>
+                    <h3 class="member-name">Équipe Design</h3>
+                    <p class="member-role">UX/UI Designers</p>
+                    <p class="member-description">Des designers créatifs qui pensent l'interface utilisateur pour qu'elle soit à la fois belle, intuitive et accessible à tous.</p>
+                </article>
+                
+                <article class="team-member">
+                    <div class="member-avatar" aria-hidden="true">🛡️</div>
+                    <h3 class="member-name">Équipe Sécurité</h3>
+                    <p class="member-role">Experts Cybersécurité</p>
+                    <p class="member-description">Spécialistes en sécurité informatique qui veillent à protéger vos données et garantir la confidentialité de vos échanges.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section" role="region" aria-labelledby="cta-title">
+            <div class="cta-content">
+                <h2 id="cta-title">Prêt à révolutionner votre communication ?</h2>
+                <p>Rejoignez des milliers d'équipes qui font déjà confiance à SUPCHAT pour collaborer efficacement.</p>
+                <div class="cta-buttons">
+                    <a href="/register" class="btn-primary">Créer un compte gratuit</a>
+                    <a href="/login" class="btn-secondary">Se connecter</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="/">Accueil</a>
+                <a href="/login">Connexion</a>
+                <a href="/register">Inscription</a>
+                <a href="/cgu">CGU</a>
+                <a href="mailto:contact@supchat.fr">Contact</a>
+            </div>
+            <p class="copyright">© 2025 SUPCHAT. Tous droits réservés. Plateforme collaborative française.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts for enhanced SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "À propos de SUPCHAT",
+        "description": "Découvrez SUPCHAT, la plateforme collaborative révolutionnaire qui connecte vos équipes",
+        "url": "https://supchat.fr/about.html",
+        "mainEntity": {
+            "@type": "Organization",
+            "name": "SUPCHAT",
+            "description": "Plateforme collaborative moderne",
+            "url": "https://supchat.fr"
+        }
+    }
+    </script>
+    
+    <!-- Basic Analytics (Privacy-friendly) -->
+    <script>
+        // Mesure de performance pour le SEO
+        window.addEventListener('load', function() {
+            if ('performance' in window) {
+                setTimeout(function() {
+                    const perfData = performance.getEntriesByType('navigation')[0];
+                    console.log('Page load time:', perfData.loadEventEnd - perfData.loadEventStart);
+                }, 0);
+            }
+        });
+        
+        // Amélioration de l'accessibilité
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus management for keyboard navigation
+            const focusableElements = document.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
+            
+            // Scroll to top functionality
+            const navbar = document.querySelector('.navbar');
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 100) {
+                    navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                } else {
+                    navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
