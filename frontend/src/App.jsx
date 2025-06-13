@@ -64,118 +64,75 @@ function App() {
   // Vérifier l'état de l'authentification et la détection mobile au chargement de l'application
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log(
-      "[App.jsx] useEffect - Token dans localStorage:",
-      token ? token.substring(0, 15) + "..." : "non trouvé"
-    );
-    
+
     // Détecter si c'est un appareil mobile
     setIsMobile(isMobileDevice());
-    
     // Enregistrer le service worker pour les notifications (desktop et mobile)
-    serviceWorkerManager.registerServiceWorker().then((registered) => {
-      if (registered) {
-        console.log('[App] Service Worker enregistré avec succès');
-      } else {
-        console.log('[App] Échec de l\'enregistrement du Service Worker');
-      }
-    }).catch(error => {
-      console.error('[App] Erreur lors de l\'enregistrement du Service Worker:', error);
-    });
-    
+    serviceWorkerManager
+      .registerServiceWorker()
+      .then((registered) => {
+        if (registered) {
+          // Service Worker enregistré avec succès
+        } else {
+          // Échec de l'enregistrement du Service Worker
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "[App] Erreur lors de l'enregistrement du Service Worker:",
+          error
+        );
+      });
+
     setAuthChecked(true);
   }, []);
-
   // Fonction pour vérifier si l'utilisateur est authentifié avec débogage renforcé
   const isAuthenticated = () => {
     const token = localStorage.getItem("token");
-    console.log("[App.jsx] isAuthenticated() appelé");
-    console.log("- Token présent:", token ? "Oui" : "Non");
     if (token) {
-      console.log("- Début du token:", token.substring(0, 20) + "...");
       try {
         const parts = token.split(".");
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
-          console.log("- Payload du token:", payload);
-          console.log(
-            "- Expiration:",
-            new Date(payload.exp * 1000).toLocaleString()
-          );
-          console.log(
-            "- Token expiré:",
-            Date.now() > payload.exp * 1000 ? "Oui" : "Non"
-          );
         } else {
-          console.log("- Format du token non valide");
+          // Format du token non valide
         }
       } catch (e) {
-        console.log("- Erreur lors du décodage du token:", e);
+        // Erreur lors du décodage du token
       }
     }
     const isAuth = token !== null && token !== undefined;
-    console.log("- Résultat final isAuthenticated():", isAuth);
     return isAuth;
   };
-
   // Fonction complète qui vérifie à la fois le token ET la validation du code
   const isFullyAuthenticated = () => {
     const token = localStorage.getItem("token");
     const isValidated = localStorage.getItem("isValidated") === "true";
-    console.log("[App.jsx] isFullyAuthenticated() appelé");
-    console.log("- Token présent:", token ? "Oui" : "Non");
-    console.log("- Code validé:", isValidated ? "Oui" : "Non");
     return token !== null && token !== undefined && isValidated;
   };
-
   // Composant amélioré pour les routes protégées
   const ProtectedRoute = ({ children }) => {
     const isAuth = isAuthenticated();
     const isValidated = localStorage.getItem("isValidated") === "true";
-    console.log(
-      "[App.jsx] ProtectedRoute rendu - authChecked:",
-      authChecked,
-      ", isAuth:",
-      isAuth,
-      ", isValidated:",
-      isValidated
-    );
     if (!authChecked) {
-      console.log(
-        "[App.jsx] ProtectedRoute - En attente de la vérification d'authentification"
-      );
       return <div>Vérification de l'authentification...</div>;
     }
     if (!isAuth) {
-      console.log(
-        "[App.jsx] ProtectedRoute - Redirection vers login car non authentifié"
-      );
       return <Navigate to="/login" replace />;
     }
     if (isAuth && !isValidated) {
-      console.log(
-        "[App.jsx] ProtectedRoute - Redirection vers /code car authentifié mais code non validé"
-      );
       return <Navigate to="/code" replace />;
     }
-    console.log(
-      "[App.jsx] ProtectedRoute - Utilisateur authentifié, affichage du contenu protégé"
-    );
     return children;
-  };
-  // Ne rien afficher jusqu'à ce que l'état de l'authentification soit vérifié
+  }; // Ne rien afficher jusqu'à ce que l'état de l'authentification soit vérifié
   if (!authChecked) {
-    console.log("[App.jsx] Rendu global - authChecked pas encore prêt");
     return <div>Chargement...</div>; // Ou un spinner de chargement
   }
 
   // Redirection mobile
   if (isMobile) {
-    console.log("[App.jsx] Appareil mobile détecté - affichage de la page de redirection");
     return <MobileRedirect />;
   }
-
-  console.log("[App.jsx] Rendu global - authChecked prêt, rendu des routes");
   return (
     <ThemeProvider>
       <NotificationSettingsProvider>
@@ -186,57 +143,18 @@ function App() {
               <Notifications />
               <NotificationPermissionRequest /> {/* Nouveau composant global */}
               <Routes>
-                <Route
-                  path="/login"
-                  element={
-                    <>
-                      <Login />
-                      <script>
-                        {console.log("[App.jsx] Route /login rendue")}
-                      </script>
-                    </>
-                  }
-                />
-                <Route
-                  path="/register"
-                  element={
-                    <>
-                      <Register />
-                      <script>
-                        {console.log("[App.jsx] Route /register rendue")}
-                      </script>
-                    </>
-                  }
-                />
+                {" "}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route
                   path="/code"
-                  element={
-                    <>
-                      <Code email={localStorage.getItem("email")} />
-                      <script>
-                        {console.log("[App.jsx] Route /code rendue")}
-                      </script>
-                    </>
-                  }
+                  element={<Code email={localStorage.getItem("email")} />}
                 />
-                <Route
-                  path="/auth/callback"
-                  element={
-                    <>
-                      <AuthCallback />
-                      <script>
-                        {console.log("[App.jsx] Route /auth/callback rendue")}
-                      </script>
-                    </>
-                  }
-                />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route
                   path="/workspaces"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /workspaces protégée rendue"
-                      )}
                       <Workspaces />
                     </ProtectedRoute>
                   }
@@ -245,9 +163,6 @@ function App() {
                   path="/workspace/:workspaceId"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /workspace/:workspaceId protégée rendue"
-                      )}
                       <WorkspaceDetails />
                     </ProtectedRoute>
                   }
@@ -256,7 +171,6 @@ function App() {
                   path="/discover"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /discover protégée rendue")}
                       <Discover />
                     </ProtectedRoute>
                   }
@@ -265,7 +179,6 @@ function App() {
                   path="/validate"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /validate protégée rendue")}
                       <Validate />
                     </ProtectedRoute>
                   }
@@ -274,7 +187,6 @@ function App() {
                   path="/settings"
                   element={
                     <ProtectedRoute>
-                      {console.log("[App.jsx] Route /settings protégée rendue")}
                       <Settings />
                     </ProtectedRoute>
                   }
@@ -283,9 +195,6 @@ function App() {
                   path="/profile/:userId"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /profile/:userId protégée rendue"
-                      )}
                       <Profile />
                     </ProtectedRoute>
                   }
@@ -294,9 +203,6 @@ function App() {
                   path="/direct-messages"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /direct-messages protégée rendue"
-                      )}
                       <DirectMessages />
                     </ProtectedRoute>
                   }
@@ -305,24 +211,11 @@ function App() {
                   path="/sound-test"
                   element={
                     <ProtectedRoute>
-                      {console.log(
-                        "[App.jsx] Route /sound-test protégée rendue"
-                      )}
                       <SoundTest />
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/join-workspace"
-                  element={
-                    <>
-                      <JoinWorkspace />
-                      <script>
-                        {console.log("[App.jsx] Route /join-workspace rendue")}
-                      </script>
-                    </>
-                  }
-                />
+                <Route path="/join-workspace" element={<JoinWorkspace />} />
                 {/* Route par défaut modifiée pour vérifier aussi l'indicateur isValidated */}
                 <Route
                   path="/"
@@ -338,8 +231,8 @@ function App() {
                     )
                   }
                 />
-              {/* Route CGU accessible publiquement */}
-              <Route path="/cgu" element={<CGU />} />
+                {/* Route CGU accessible publiquement */}
+                <Route path="/cgu" element={<CGU />} />
               </Routes>{" "}
             </Router>
           </NotificationProvider>

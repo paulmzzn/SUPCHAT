@@ -25,14 +25,20 @@ function Workspaces() {
   // Écouter les événements globaux pour synchroniser les notifications
   useEffect(() => {
     const handleGlobalUnreadUpdate = (event) => {
-      // Le contexte NotificationContext se charge de la mise à jour, 
+      // Le contexte NotificationContext se charge de la mise à jour,
       // nous forçons juste un re-render ici si nécessaire
     };
-    
-    window.addEventListener('unreadChannelMessagesUpdated', handleGlobalUnreadUpdate);
-    
+
+    window.addEventListener(
+      "unreadChannelMessagesUpdated",
+      handleGlobalUnreadUpdate
+    );
+
     return () => {
-      window.removeEventListener('unreadChannelMessagesUpdated', handleGlobalUnreadUpdate);
+      window.removeEventListener(
+        "unreadChannelMessagesUpdated",
+        handleGlobalUnreadUpdate
+      );
     };
   }, []);
 
@@ -72,12 +78,10 @@ function Workspaces() {
   const checkTokenValidity = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.log("Pas de token trouvé");
       return false;
     }
 
     try {
-      console.log("Vérification du token:", token.substring(0, 15) + "...");
       const response = await fetch(`${API_URL}/api/users/verify-token`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -91,10 +95,8 @@ function Workspaces() {
       }
 
       const data = await response.json();
-      console.log("Token valide, expiration dans:", data.expires_in);
       return true;
     } catch (error) {
-      console.error("Erreur lors de la vérification du token:", error);
       return false;
     }
   }, []);
@@ -133,7 +135,6 @@ function Workspaces() {
       }
 
       const data = await response.json();
-      console.log("Favoris récupérés:", data);
 
       const S3_BASE_URL = "https://s3-supchat.s3.fr-par.scw.cloud/";
 
@@ -144,8 +145,7 @@ function Workspaces() {
         banner:
           workspace.banner_url && !workspace.banner_url.startsWith("http")
             ? S3_BASE_URL + workspace.banner_url
-            : workspace.banner_url ||
-          defaultBaniere,
+            : workspace.banner_url || defaultBaniere,
         icon:
           workspace.icon_url && !workspace.icon_url.startsWith("http")
             ? S3_BASE_URL + workspace.icon_url
