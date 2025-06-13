@@ -48,15 +48,9 @@ export const useConversations = (options = {}) => {
   /**
    * Remet à zéro le compteur de non lus pour un utilisateur
    * @param {string} userId - ID de l'utilisateur
-   */
-  const resetUnreadCountForUser = useCallback(
+   */ const resetUnreadCountForUser = useCallback(
     (userId) => {
       if (!userId) return;
-
-      console.log(
-        "[useConversations] Réinitialisation du compteur pour",
-        userId
-      );
 
       setUnreadMessageCounts((prev) => {
         // Si le compteur est déjà à 0 ou n'existe pas, ne rien faire
@@ -87,7 +81,8 @@ export const useConversations = (options = {}) => {
         }, 0);
 
         return newCounts;
-      });    },
+      });
+    },
     [calculateTotalUnreadCount]
   );
 
@@ -112,7 +107,8 @@ export const useConversations = (options = {}) => {
         );
       }
 
-      const userData = await response.json();      setUsersInfo((prev) => ({
+      const userData = await response.json();
+      setUsersInfo((prev) => ({
         ...prev,
         [userId]: {
           id: userData.id_utilisateur,
@@ -128,7 +124,7 @@ export const useConversations = (options = {}) => {
       return null;
     }
   }, []);
-  
+
   /**
    * Sélectionne un utilisateur pour la conversation et réinitialise son compteur de messages non lus
    * @param {string} userId - ID de l'utilisateur
@@ -136,12 +132,12 @@ export const useConversations = (options = {}) => {
   const handleSelectUser = useCallback(
     async (userId) => {
       setSelectedUser(userId);
-      
+
       // Si l'utilisateur n'est pas dans usersInfo, on récupère ses infos avant la sélection
       if (!usersInfo[userId]) {
         await fetchUserInfo(userId);
       }
-      
+
       // Réinitialiser le compteur de messages non lus pour cet utilisateur
       resetUnreadCountForUser(userId); // Notifier le serveur que les messages de cet utilisateur ont été lus
       if (socket && socket.connected && userId) {
@@ -158,13 +154,9 @@ export const useConversations = (options = {}) => {
   );
   /**
    * Récupère la liste des conversations
-   */
-  const fetchConversations = useCallback(async () => {
+   */ const fetchConversations = useCallback(async () => {
     // Éviter les appels multiples en parallèle
     if (loading) {
-      console.log(
-        "[useConversations] Appel ignoré - récupération déjà en cours"
-      );
       return;
     }
 
@@ -172,7 +164,6 @@ export const useConversations = (options = {}) => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      console.log("[useConversations] Récupération des conversations...");
 
       if (!token) {
         console.error("[useConversations] Pas de token d'authentification");
@@ -208,11 +199,6 @@ export const useConversations = (options = {}) => {
         throw new Error("Format de données invalide pour les conversations");
       }
 
-      console.log(
-        `[useConversations] ${convList.length} conversations récupérées:`,
-        convList
-      );
-
       // Vérifier si la liste a changé pour éviter de déclencher des rendus inutiles
       setConversations((prev) => {
         // Tri des tableaux pour garantir une comparaison correcte
@@ -220,9 +206,6 @@ export const useConversations = (options = {}) => {
         const sortedNew = [...convList].sort();
 
         if (JSON.stringify(sortedPrev) === JSON.stringify(sortedNew)) {
-          console.log(
-            "[useConversations] Aucun changement dans les conversations"
-          );
           return prev;
         }
         return convList;
@@ -425,7 +408,7 @@ export const useConversations = (options = {}) => {
 
   /**
    * Ferme le modal de nouvelle conversation
-   */  const handleCloseNewConversationModal = useCallback(() => {
+   */ const handleCloseNewConversationModal = useCallback(() => {
     setShowNewConversationModal(false);
     setSearchUserQuery("");
   }, []);
@@ -433,14 +416,14 @@ export const useConversations = (options = {}) => {
   /**
    * Ouvre une conversation avec un utilisateur
    * @param {string} userId - ID de l'utilisateur
-   */  const handleOpenConversation = useCallback(
+   */ const handleOpenConversation = useCallback(
     async (userId) => {
       await handleSelectUser(userId);
       handleCloseConversationContextMenu();
     },
     [handleSelectUser, handleCloseConversationContextMenu]
   );
-  
+
   /**
    * Démarre une conversation avec un utilisateur depuis le modal
    * @param {string} userId - ID de l'utilisateur
@@ -495,7 +478,6 @@ export const useConversations = (options = {}) => {
       );
       const payload = JSON.parse(jsonPayload);
       if (payload && payload.id && !isInitialized) {
-        console.log("[useConversations] ID utilisateur récupéré:", payload.id);
         setCurrentUserId(payload.id);
         isInitialized = true;
 
@@ -573,32 +555,36 @@ export const useConversations = (options = {}) => {
     setUnreadMessageCounts(cleanCounts);
     const total = calculateTotalUnreadCount(cleanCounts);
     setTotalUnreadCount(total);
-    
+
     // Puis récupérer les compteurs à jour depuis l'API
     const fetchUnreadCountsFromAPI = async () => {
       if (!currentUserId) return;
-      
+
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        
-        const res = await fetch(`${API_URL}/api/private-messages/unread-counts`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
 
+        const res = await fetch(
+          `${API_URL}/api/private-messages/unread-counts`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (res.ok) {
           const apiCounts = await res.json();
-          console.log("[useConversations] Compteurs API récupérés:", apiCounts);
-          
+
           // Mettre à jour avec les données de l'API
           setUnreadMessageCounts(apiCounts || {});
           const apiTotal = calculateTotalUnreadCount(apiCounts || {});
           setTotalUnreadCount(apiTotal);
-          
+
           // Sauvegarder les nouvelles données dans localStorage
-          localStorage.setItem("unreadDMCounts", JSON.stringify(apiCounts || {}));
+          localStorage.setItem(
+            "unreadDMCounts",
+            JSON.stringify(apiCounts || {})
+          );
           localStorage.setItem("unreadPrivateMessages", apiTotal.toString());
-          
+
           // Émettre un événement pour notifier les autres composants
           setTimeout(() => {
             window.dispatchEvent(
@@ -609,13 +595,16 @@ export const useConversations = (options = {}) => {
           }, 0);
         }
       } catch (error) {
-        console.error("[useConversations] Erreur lors de la récupération des compteurs API:", error);
+        console.error(
+          "[useConversations] Erreur lors de la récupération des compteurs API:",
+          error
+        );
         // En cas d'erreur, on garde les valeurs du localStorage déjà nettoyées
         localStorage.setItem("unreadDMCounts", JSON.stringify(cleanCounts));
         localStorage.setItem("unreadPrivateMessages", total.toString());
       }
     };
-    
+
     // Appeler l'API seulement si on a un currentUserId
     if (currentUserId) {
       fetchUnreadCountsFromAPI();

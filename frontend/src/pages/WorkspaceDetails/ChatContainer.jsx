@@ -74,13 +74,16 @@ function ChatContainer({
   handleOpenStrawpoll,
   showStrawpollModal,
   handleCloseStrawpollModal,
-  handleStrawpollSubmit,  showGoogleDriveModal,
+  handleStrawpollSubmit,
+  showGoogleDriveModal,
   handleOpenGoogleDrive,
   handleCloseGoogleDrive,
   onFilesSelected,
   workspaceId,
   socket,
-  commonEmojis,  showEmojiPicker,  handleAddReaction,
+  commonEmojis,
+  showEmojiPicker,
+  handleAddReaction,
   handleRemoveReaction,
   handleToggleReaction,
   renderTextWithLinks,
@@ -125,7 +128,14 @@ function ChatContainer({
       // Charger plus de messages si le message n'est pas encore là
       loadMoreMessages();
     }
-  }, [pendingScrollToMessageId, messages, chatContainerRef, hasMoreMessages, loadMoreMessages, setPendingScrollToMessageId]);
+  }, [
+    pendingScrollToMessageId,
+    messages,
+    chatContainerRef,
+    hasMoreMessages,
+    loadMoreMessages,
+    setPendingScrollToMessageId,
+  ]);
   const navigate = useNavigate();
   const canWriteInChannel = activeChannel?.isPrivate
     ? currentUserAccessRight === "lecture_ecriture"
@@ -591,13 +601,6 @@ function ChatContainer({
                       )}
                       {(() => {
                         const fileData = parseFileContent(message.contenu);
-                        console.log("Message render branch check:", {
-                          messageId: message.id_message,
-                          contenu: message.contenu,
-                          hasFileData: !!fileData,
-                          isSystemMsg: systemMsg,
-                          willUseReactMarkdown: !fileData || systemMsg
-                        });
                         if (fileData && !systemMsg) {
                           const fullFileUrl = `https://s3-supchat.s3.fr-par.scw.cloud/${fileData.fileUrl}`;
                           if (fileData.isImage) {
@@ -663,15 +666,17 @@ function ChatContainer({
                               <ReactMarkdown
                                 components={{
                                   p: ({ node, ...props }) => {
-                                    console.log("ReactMarkdown p component called:", { children: props.children });
                                     // Traiter le texte avec renderTextWithLinks si c'est une chaîne
-                                    const processedChildren = React.Children.map(props.children, (child) => {
-                                      if (typeof child === 'string') {
-                                        console.log("Processing text child:", child);
-                                        return renderTextWithLinks(child);
-                                      }
-                                      return child;
-                                    });
+                                    const processedChildren =
+                                      React.Children.map(
+                                        props.children,
+                                        (child) => {
+                                          if (typeof child === "string") {
+                                            return renderTextWithLinks(child);
+                                          }
+                                          return child;
+                                        }
+                                      );
                                     return (
                                       <p
                                         {...props}
@@ -754,21 +759,25 @@ function ChatContainer({
                                     );
                                   },
                                   text: ({ node, ...props }) => {
-                                    console.log("ReactMarkdown text component called:", {
-                                      nodeValue: node.value,
-                                      hasRenderTextWithLinks: !!renderTextWithLinks,
-                                      renderTextWithLinksType: typeof renderTextWithLinks
-                                    });
-                                    return <>{renderTextWithLinks(node.value)}</>;
+                                    console.log(
+                                      "ReactMarkdown text component called:",
+                                      {
+                                        nodeValue: node.value,
+                                        hasRenderTextWithLinks:
+                                          !!renderTextWithLinks,
+                                        renderTextWithLinksType:
+                                          typeof renderTextWithLinks,
+                                      }
+                                    );
+                                    return (
+                                      <>{renderTextWithLinks(node.value)}</>
+                                    );
                                   },
                                 }}
                                 remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeRaw]}
                               >
-                                {(() => {
-                                  console.log("ReactMarkdown content:", message.contenu);
-                                  return message.contenu || "";
-                                })()}
+                                {message.contenu || ""}
                               </ReactMarkdown>
 
                               {message.file_url && (
@@ -797,14 +806,26 @@ function ChatContainer({
                       })()}
                       {!systemMsg &&
                         message.reactions &&
-                        message.reactions.length > 0 && (                          <div className="message-reactions">
+                        message.reactions.length > 0 && (
+                          <div className="message-reactions">
                             {message.reactions.map((reaction) => (
                               <button
-                                className={`reaction-badge ${reaction.user_reacted ? 'user-reacted' : ''}`}
-                                key={reaction.reaction_type}                                onClick={() => {
-                                  handleToggleReaction(message.id_message, reaction.reaction_type, reaction.user_reacted);
+                                className={`reaction-badge ${
+                                  reaction.user_reacted ? "user-reacted" : ""
+                                }`}
+                                key={reaction.reaction_type}
+                                onClick={() => {
+                                  handleToggleReaction(
+                                    message.id_message,
+                                    reaction.reaction_type,
+                                    reaction.user_reacted
+                                  );
                                 }}
-                                title={reaction.user_reacted ? "Retirer cette réaction" : "Ajouter cette réaction"}
+                                title={
+                                  reaction.user_reacted
+                                    ? "Retirer cette réaction"
+                                    : "Ajouter cette réaction"
+                                }
                               >
                                 <span className="reaction-emoji">
                                   {reaction.emoji}
@@ -902,7 +923,6 @@ function ChatContainer({
               </div>
             )}
           </div>
-
           {canWriteInChannel ? (
             <div className="chat-input-area">
               {showMentionSuggestions && (
@@ -983,7 +1003,9 @@ function ChatContainer({
                         <button
                           key={channel.id}
                           className={`supchat-channel-item ${
-                            index === activeChannelSuggestionIndex ? "active" : ""
+                            index === activeChannelSuggestionIndex
+                              ? "active"
+                              : ""
                           }`}
                           onClick={() => handleSelectChannelSuggestion(channel)}
                         >
@@ -999,7 +1021,9 @@ function ChatContainer({
                               #{channel.name}
                             </div>
                             <div className="supchat-channel-info">
-                              {channel.isPrivate ? "Canal privé" : "Canal public"}
+                              {channel.isPrivate
+                                ? "Canal privé"
+                                : "Canal public"}
                             </div>
                           </div>
                         </button>
@@ -1214,9 +1238,10 @@ function ChatContainer({
                 Vous êtes en lecture seule dans ce canal
               </p>
             </div>
-          )}        </div>
+          )}{" "}
+        </div>
       )}
-      
+
       {/* Google Drive Modal */}
       {showGoogleDriveModal && (
         <GoogleDriveModal

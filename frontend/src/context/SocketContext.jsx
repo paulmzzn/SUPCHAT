@@ -47,8 +47,6 @@ export function SocketProvider({ children }) {
   const hasJoinedPrivateRoomRef = useRef(false);
   const initializeSocketRef = useRef(null);
 
-
-
   // Fonction pour rafraîchir le compteur de messages privés non lus
   const refreshUnreadDM = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -207,25 +205,19 @@ export function SocketProvider({ children }) {
   }, []);
   // Initialisation du socket au démarrage de l'application - IMMÉDIATE
   useLayoutEffect(() => {
-    let tokenCheckInterval;
-
-    // Fonction d'initialisation du socket
+    let tokenCheckInterval; // Fonction d'initialisation du socket
     const initializeSocket = () => {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("[Socket] Pas de token, pas d'initialisation socket");
         setIsInitializing(false);
         return;
       }
 
       // Si un socket existe déjà et qu'il est connecté, ne pas le recréer
       if (socketRef.current && socketRef.current.connected) {
-        console.log("[Socket] Socket déjà connecté, pas de réinitialisation");
         setIsInitializing(false);
         return;
       }
-
-      console.log("[Socket] Initialisation immédiate du socket avec token:", token.substring(0, 20) + "...");
 
       try {
         // Nettoyer l'ancien socket s'il existe
@@ -251,9 +243,7 @@ export function SocketProvider({ children }) {
         console.debug("[Socket] Tentative de connexion au serveur", API_URL);
 
         const newSocket = io(API_URL, socketOptions);
-
         newSocket.on("connect", () => {
-          console.log("[Socket] Connexion établie");
           setIsSocketConnected(true);
           setIsInitializing(false);
           newSocket.emit("joinPrivate"); // Rejoindre la room privée
@@ -264,12 +254,9 @@ export function SocketProvider({ children }) {
             refreshUnreadDM();
             refreshUnreadChannels();
           }, 500);
-        });
-
-        // Écouter la confirmation de la room privée
+        }); // Écouter la confirmation de la room privée
         newSocket.on("privateRoomJoined", (response) => {
           if (response.status === "success") {
-            console.log("[Socket] Room privée rejointe avec succès");
             setHasJoinedPrivateRoom(true);
             hasJoinedPrivateRoomRef.current = true;
           }
@@ -278,7 +265,9 @@ export function SocketProvider({ children }) {
         // Timeout de sécurité pour rejoindre la room privée
         const privateRoomTimeout = setTimeout(() => {
           if (!hasJoinedPrivateRoomRef.current) {
-            console.warn("[Socket] Timeout pour rejoindre la room privée, nouvelle tentative");
+            console.warn(
+              "[Socket] Timeout pour rejoindre la room privée, nouvelle tentative"
+            );
             newSocket.emit("joinPrivate");
           }
         }, 3000);
@@ -314,9 +303,7 @@ export function SocketProvider({ children }) {
             );
           }
         });
-
         newSocket.on("reconnect", (attemptNumber) => {
-          console.log("[Socket] Reconnecté après", attemptNumber, "tentatives");
           setIsSocketConnected(true);
           setHasJoinedPrivateRoom(false); // Reset jusqu'à confirmation
           hasJoinedPrivateRoomRef.current = false;
@@ -330,10 +317,7 @@ export function SocketProvider({ children }) {
             refreshUnreadChannels();
           }, 1000);
         });
-
-        newSocket.on("reconnect_attempt", (attemptNumber) => {
-          console.log("[Socket] Tentative de reconnexion #", attemptNumber);
-        });
+        newSocket.on("reconnect_attempt", (attemptNumber) => {});
 
         newSocket.on("reconnect_error", (error) => {
           console.error(
@@ -372,12 +356,9 @@ export function SocketProvider({ children }) {
     // Fonction pour vérifier périodiquement s'il y a un token
     const checkForToken = () => {
       const token = localStorage.getItem("token");
-      
       if (token && !socketRef.current) {
-        console.log("[Socket] Token détecté, initialisation du socket");
         initializeSocket();
       } else if (!token && socketRef.current) {
-        console.log("[Socket] Token supprimé, déconnexion du socket");
         if (socketRef.current) {
           socketRef.current.disconnect();
           socketRef.current = null;
@@ -404,13 +385,11 @@ export function SocketProvider({ children }) {
     const handleStorageChange = (e) => {
       if (e.key === "token") {
         if (e.newValue) {
-          console.log("[Socket] Nouveau token détecté (storage event), initialisation du socket");
           // Si un nouveau token apparaît, initialiser le socket
           if (!socketRef.current) {
             initializeSocket();
           }
         } else {
-          console.log("[Socket] Token supprimé (storage event), déconnexion du socket");
           // Si le token est supprimé, déconnecter le socket
           if (socketRef.current) {
             socketRef.current.disconnect();
@@ -530,21 +509,18 @@ export function SocketProvider({ children }) {
           })
         );
       }
-    });    // Mise à jour du compteur à chaque lecture de message
+    }); // Mise à jour du compteur à chaque lecture de message
     socket.on("privateMessageRead", (data) => {
-      console.log("[SocketContext] Message privé marqué comme lu:", data);
       refreshUnreadDM();
     });
 
     // Écouter l'événement de réinitialisation des compteurs
     socket.on("privateMessagesMarkedAsRead", (data) => {
-      console.log("[SocketContext] Messages privés marqués comme lus:", data);
       refreshUnreadDM();
     });
 
     // Écouter l'événement pour tous les messages marqués comme lus d'un coup
     socket.on("allMessagesRead", (data) => {
-      console.log("[SocketContext] Tous les messages marqués comme lus:", data);
       refreshUnreadDM();
     });
 
@@ -568,7 +544,7 @@ export function SocketProvider({ children }) {
         // Rafraîchir le compteur pour tous les canaux
         refreshUnreadChannels();
       }
-    });    // Mise à jour quand un canal est marqué comme lu
+    }); // Mise à jour quand un canal est marqué comme lu
     socket.on("unreadChannelMessagesUpdated", (data) => {
       // Mettre à jour les compteurs globaux
       setGlobalNotifications((prev) => ({
@@ -585,7 +561,6 @@ export function SocketProvider({ children }) {
       );
 
       // L'événement global sera émis par NotificationContext
-      console.log("[SocketContext] Compteurs mis à jour, NotificationContext se charge de l'événement global");
     });
 
     // Confirmation qu'un canal a été marqué comme lu
@@ -615,32 +590,16 @@ export function SocketProvider({ children }) {
           data
         );
         return;
-      }
-
-      console.log(
-        `[WEBSOCKET] Changement de statut reçu: ${userId} -> ${status}`
-      );
-
-      // Mise à jour synchrone des statuts (mise à jour en DIRECT)
+      } // Mise à jour synchrone des statuts (mise à jour en DIRECT)
       setUserStatuses((prevStatuses) => {
         const newStatuses = { ...prevStatuses, [userId]: status };
-
-        // Déboguer les détails des statuts après mise à jour
-        const userIds = Object.keys(newStatuses);
-        console.log(
-          `[WEBSOCKET] ${userIds.length} statuts utilisateur dans le tableau:`,
-          userIds.map((id) => `${id}: ${newStatuses[id]}`).join(", ")
-        );
 
         return newStatuses;
       });
     };
 
     // Écouter UNIQUEMENT sur le socket
-    socket.on("userStatusChanged", handleStatusChange);
-
-    // Demander l'état des statuts au moment du chargement
-    console.log("[WEBSOCKET] Demande de l'état initial des statuts");
+    socket.on("userStatusChanged", handleStatusChange); // Demander l'état des statuts au moment du chargement
     socket.emit("getUserStatuses");
 
     // Configuration du débogage
@@ -656,9 +615,7 @@ export function SocketProvider({ children }) {
   // Ajouter un gestionnaire pour recevoir les statuts initiaux
   useEffect(() => {
     if (!socket) return;
-
     const handleInitialStatuses = (statusData) => {
-      console.log("[WEBSOCKET] Réception des statuts initiaux:", statusData);
       if (statusData && typeof statusData === "object") {
         setUserStatuses((currentStatuses) => ({
           ...currentStatuses,
@@ -673,20 +630,16 @@ export function SocketProvider({ children }) {
       socket.off("initialUserStatuses", handleInitialStatuses);
     };
   }, [socket]);
-
   // Fonction pour forcer la connexion à la room privée
   const ensurePrivateRoomJoined = useCallback(() => {
     if (!socket || !isSocketConnected) {
-      console.warn("[Socket] Socket non connecté, impossible de rejoindre la room privée");
       return false;
     }
 
     if (hasJoinedPrivateRoom) {
-      console.log("[Socket] Room privée déjà rejointe");
       return true;
     }
 
-    console.log("[Socket] Tentative de rejoindre la room privée...");
     setHasJoinedPrivateRoom(false);
     socket.emit("joinPrivate");
     return true;
@@ -700,18 +653,10 @@ export function SocketProvider({ children }) {
       );
       return false;
     }
-
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      console.error(
-        "[Socket] Impossible de définir le statut: ID utilisateur non trouvé"
-      );
       return false;
     }
-
-    console.log(
-      `[Socket] Envoi du changement de statut au serveur: ${userId} -> ${status}`
-    );
 
     // Mise à jour optimiste locale AVANT envoi au serveur
     setUserStatuses((prev) => ({ ...prev, [userId]: status }));

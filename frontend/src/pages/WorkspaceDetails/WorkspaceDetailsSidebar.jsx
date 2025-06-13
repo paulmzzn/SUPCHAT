@@ -22,7 +22,8 @@ import {
   FaEdit,
   FaEye,
   FaUserCog,
-  FaPlus,  FaEllipsisH,
+  FaPlus,
+  FaEllipsisH,
 } from "react-icons/fa";
 import { useSocket } from "../../context/SocketContext";
 import { API_URL } from "../../config/config";
@@ -83,7 +84,7 @@ function WorkspaceDetailsSidebar({
   const [showJoinRequests, setShowJoinRequests] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [requestError, setRequestError] = useState(null);
-  const [processingRequestId, setProcessingRequestId] = useState(null);  // States for reminders management
+  const [processingRequestId, setProcessingRequestId] = useState(null); // States for reminders management
   const [reminders, setReminders] = useState([]);
   const [showReminders, setShowReminders] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -357,7 +358,8 @@ function WorkspaceDetailsSidebar({
       });
     } finally {
       setIsInviting(false);
-    }  };
+    }
+  };
 
   // Reminder management functions
   const loadReminders = async () => {
@@ -376,11 +378,8 @@ function WorkspaceDetailsSidebar({
           },
         }
       );
-
       if (response.ok) {
         const data = await response.json();
-        console.log("DEBUG: Loaded reminders from API:", data);
-        console.log("DEBUG: First reminder structure:", data.length > 0 ? data[0] : "No reminders");
         setReminders(data);
       } else {
         const errorData = await response.json();
@@ -394,28 +393,32 @@ function WorkspaceDetailsSidebar({
     } finally {
       setLoadingReminders(false);
     }
-  };  const handleCreateReminder = async (reminderData) => {
+  };
+  const handleCreateReminder = async (reminderData) => {
     if (!activeChannel || !activeChannel.id) return;
 
     setCreatingReminder(true);
 
     try {
       const token = localStorage.getItem("token");
-      
+
       if (editingReminder) {
         // Mode édition - mettre à jour le rappel existant
-        const response = await fetch(`${API_URL}/api/reminders/${editingReminder.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: reminderData.title,
-            description: reminderData.description,
-            reminder_date: reminderData.reminder_date,
-          }),
-        });
+        const response = await fetch(
+          `${API_URL}/api/reminders/${editingReminder.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              title: reminderData.title,
+              description: reminderData.description,
+              reminder_date: reminderData.reminder_date,
+            }),
+          }
+        );
 
         if (response.ok) {
           console.log("Rappel modifié avec succès");
@@ -447,7 +450,7 @@ function WorkspaceDetailsSidebar({
         if (response.ok) {
           const newReminder = await response.json();
           console.log("Nouveau rappel créé:", newReminder);
-          
+
           // Instead of adding to the state, reload all reminders to ensure consistency
           // This prevents any display issues from data structure mismatches
           await loadReminders();
@@ -466,13 +469,14 @@ function WorkspaceDetailsSidebar({
     } finally {
       setCreatingReminder(false);
     }
-  };const handleEditReminder = async (reminderOrId, reminderData) => {
+  };
+  const handleEditReminder = async (reminderOrId, reminderData) => {
     try {
       // Si le premier paramètre est un objet (rappel complet), nous sommes appelés depuis ReminderList
       // Si c'est un ID, nous sommes appelés avec des données séparées
       let reminderId, dataToSend;
-      
-      if (typeof reminderOrId === 'object' && reminderOrId.id) {
+
+      if (typeof reminderOrId === "object" && reminderOrId.id) {
         // Appelé depuis ReminderList avec l'objet rappel complet - ouvrir la modal d'édition
         setEditingReminder(reminderOrId);
         setShowReminderModal(true);
@@ -547,14 +551,11 @@ function WorkspaceDetailsSidebar({
   const toggleReminders = () => {
     setShowReminders(!showReminders);
   };
+
   // Load reminders when channel changes
   useEffect(() => {
-    console.log("WorkspaceDetailsSidebar - activeChannel changed:", activeChannel);
     if (activeChannel && activeChannel.id) {
-      console.log("Loading reminders for channel:", activeChannel.id);
       loadReminders();
-    } else {
-      console.log("No active channel or channel ID");
     }
   }, [activeChannel?.id]);
 
@@ -617,15 +618,16 @@ function WorkspaceDetailsSidebar({
       return;
     }
 
-    e.preventDefault();    const statusMenu = document.createElement("div");
+    e.preventDefault();
+    const statusMenu = document.createElement("div");
     statusMenu.className = "status-context-menu";
     statusMenu.style.position = "absolute";
     statusMenu.style.top = `${e.pageY}px`;
     statusMenu.style.left = `${e.pageX}px`;
     statusMenu.style.zIndex = "2000";
-    
+
     // Appliquer les styles selon le thème
-    const isLightTheme = document.body.classList.contains('theme-light');
+    const isLightTheme = document.body.classList.contains("theme-light");
     if (isLightTheme) {
       statusMenu.style.background = "white";
       statusMenu.style.border = "1px solid rgba(0, 0, 0, 0.1)";
@@ -635,7 +637,7 @@ function WorkspaceDetailsSidebar({
       statusMenu.style.border = "1px solid rgba(255, 255, 255, 0.1)";
       statusMenu.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
     }
-    
+
     statusMenu.style.borderRadius = "8px";
     statusMenu.style.padding = "8px 0";
 
@@ -654,16 +656,17 @@ function WorkspaceDetailsSidebar({
         icon: FaRegMoon,
         color: "#9e9e9e",
       },
-    ];    statuses.forEach((status) => {
+    ];
+    statuses.forEach((status) => {
       const option = document.createElement("div");
       option.style.padding = "8px 16px";
       option.style.display = "flex";
       option.style.alignItems = "center";
       option.style.gap = "10px";
       option.style.cursor = "pointer";
-      
+
       // Appliquer la couleur selon le thème avec !important pour forcer
-      const isLightTheme = document.body.classList.contains('theme-light');
+      const isLightTheme = document.body.classList.contains("theme-light");
       if (isLightTheme) {
         option.style.color = "#333333";
         option.style.transition = "background-color 0.2s ease";
@@ -690,8 +693,9 @@ function WorkspaceDetailsSidebar({
           `[SIDEBAR] Changement de statut envoyé: ${status.id}, succès: ${success}`
         );
         document.body.removeChild(statusMenu);
-      });      option.addEventListener("mouseover", () => {
-        const isLightTheme = document.body.classList.contains('theme-light');
+      });
+      option.addEventListener("mouseover", () => {
+        const isLightTheme = document.body.classList.contains("theme-light");
         if (isLightTheme) {
           option.style.backgroundColor = "rgba(147, 72, 183, 0.08)";
           option.style.color = "#333333";
@@ -702,7 +706,7 @@ function WorkspaceDetailsSidebar({
       });
 
       option.addEventListener("mouseout", () => {
-        const isLightTheme = document.body.classList.contains('theme-light');
+        const isLightTheme = document.body.classList.contains("theme-light");
         option.style.backgroundColor = "transparent";
         if (isLightTheme) {
           option.style.color = "#333333";
@@ -852,9 +856,7 @@ function WorkspaceDetailsSidebar({
                           onClick={() =>
                             handleRespondToRequest(request.id_request, true)
                           }
-                          disabled={
-                            processingRequestId === request.id_request
-                          }
+                          disabled={processingRequestId === request.id_request}
                         >
                           <FaCheck /> Accepter
                         </button>
@@ -870,9 +872,7 @@ function WorkspaceDetailsSidebar({
                               reason
                             );
                           }}
-                          disabled={
-                            processingRequestId === request.id_request
-                          }
+                          disabled={processingRequestId === request.id_request}
                         >
                           <FaTimes /> Refuser
                         </button>
@@ -1036,18 +1036,21 @@ function WorkspaceDetailsSidebar({
                 <FaArrowDown className="context-menu-icon" />
                 Rétrograder en membre
               </div>
-          )}
+            )}
           {(currentUserRole === "owner" || currentUserRole === "admin") && (
             <div
               className="context-menu-item"
-              onClick={() => handleOpenMemberAccessModal(memberContextMenu.member)}
+              onClick={() =>
+                handleOpenMemberAccessModal(memberContextMenu.member)
+              }
             >
               <FaUserCog className="context-menu-icon" />
               Gérer les droits d'accès
             </div>
           )}
         </div>
-      )}      {files.length > 0 && (
+      )}{" "}
+      {files.length > 0 && (
         <div className="details-section">
           <div className="section-header" onClick={toggleFiles}>
             {showFiles ? (
@@ -1063,11 +1066,30 @@ function WorkspaceDetailsSidebar({
                 {(showAllFiles ? files : files.slice(0, 3)).map((file) => (
                   <li key={file.id} className="file-item">
                     {/* Nom du fichier au-dessus du bouton, crop si > 8 caractères */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      <span className="file-name" title={file.name} style={{ marginBottom: 4 }}>
-                        {file.name.length > 8 ? file.name.slice(0, 8) + '…' : file.name}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <span
+                        className="file-name"
+                        title={file.name}
+                        style={{ marginBottom: 4 }}
+                      >
+                        {file.name.length > 8
+                          ? file.name.slice(0, 8) + "…"
+                          : file.name}
                       </span>
-                      <div className="file-icon-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div
+                        className="file-icon-meta"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
                         <div className="file-icon">
                           {(() => {
                             switch (file.type) {
@@ -1083,14 +1105,17 @@ function WorkspaceDetailsSidebar({
                           })()}
                         </div>
                         <span className="file-meta">
-                          {file.size} •{' '}
-                          {file.uploadedAt && formatMessageDate(file.uploadedAt)}
+                          {file.size} •{" "}
+                          {file.uploadedAt &&
+                            formatMessageDate(file.uploadedAt)}
                         </span>
                         <div className="file-actions">
                           <button
                             className="file-download-button"
                             title="Télécharger"
-                            onClick={() => handleDownloadFile(file.url, file.name)}
+                            onClick={() =>
+                              handleDownloadFile(file.url, file.name)
+                            }
                           >
                             <FaDownload />
                           </button>
@@ -1112,7 +1137,8 @@ function WorkspaceDetailsSidebar({
                       </>
                     ) : (
                       <>
-                        <FaEllipsisH /> Voir {files.length - 3} fichier{files.length - 3 > 1 ? 's' : ''} de plus
+                        <FaEllipsisH /> Voir {files.length - 3} fichier
+                        {files.length - 3 > 1 ? "s" : ""} de plus
                       </>
                     )}
                   </button>
@@ -1139,7 +1165,9 @@ function WorkspaceDetailsSidebar({
                 maxHeight: "220px",
                 overflowY: images.length > 5 ? "auto" : "visible",
               }}
-            >              {images.slice(0, 5).map((image) => (
+            >
+              {" "}
+              {images.slice(0, 5).map((image) => (
                 <div key={image.id} className="image-item">
                   <img
                     src={S3_BASE_URL + image.url}
@@ -1159,7 +1187,6 @@ function WorkspaceDetailsSidebar({
           )}
         </div>
       )}
-      
       {/* Reminders Section - Always visible */}
       <div className="details-section">
         <div className="section-header" onClick={toggleReminders}>
@@ -1168,8 +1195,16 @@ function WorkspaceDetailsSidebar({
           ) : (
             <FaChevronRight className="toggle-icon" />
           )}
-          <h3>Rappels ({reminders.length})</h3>            <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>            <button
-              className={`reminder-create-btn ${activeChannel ? 'channel-active' : ''}`}
+          <h3>Rappels ({reminders.length})</h3>{" "}
+          <div
+            className="reminder-actions"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {" "}
+            <button
+              className={`reminder-create-btn ${
+                activeChannel ? "channel-active" : ""
+              }`}
               onClick={() => {
                 console.log("Bouton rappel cliqué!");
                 setEditingReminder(null); // Reset editing state for new reminder
@@ -1178,29 +1213,30 @@ function WorkspaceDetailsSidebar({
               title="Créer un rappel"
             >
               <FaPlus />
-              <span style={{ marginLeft: '4px' }}>Nouveau</span>
+              <span style={{ marginLeft: "4px" }}>Nouveau</span>
             </button>
           </div>
         </div>
-        
+
         {showReminders && (
           <div className="reminders-content">
             {!activeChannel ? (
               <div className="reminders-info">
-                <p>Sélectionnez un canal pour voir les rappels ou créer un nouveau rappel.</p>
+                <p>
+                  Sélectionnez un canal pour voir les rappels ou créer un
+                  nouveau rappel.
+                </p>
               </div>
             ) : loadingReminders ? (
               <div className="reminders-loading">Chargement des rappels...</div>
             ) : reminderError ? (
               <div className="reminders-error">
                 {reminderError}
-                <button 
-                  onClick={loadReminders}
-                  className="retry-btn"
-                >
+                <button onClick={loadReminders} className="retry-btn">
                   Réessayer
                 </button>
-              </div>            ) : (
+              </div>
+            ) : (
               <ReminderList
                 reminders={reminders}
                 onEditReminder={handleEditReminder}
@@ -1211,8 +1247,9 @@ function WorkspaceDetailsSidebar({
           </div>
         )}
       </div>
-        {/* Reminder Modal */}
-      {showReminderModal && (        <ReminderModal
+      {/* Reminder Modal */}
+      {showReminderModal && (
+        <ReminderModal
           show={showReminderModal}
           onClose={() => {
             setShowReminderModal(false);
@@ -1225,7 +1262,6 @@ function WorkspaceDetailsSidebar({
           editingReminder={editingReminder} // Pass editing reminder to modal
         />
       )}
-      
       {/* Invitation Modal */}
       {showInviteModal && (
         <div className="modal-overlay" onClick={handleCloseInviteModal}>

@@ -19,16 +19,12 @@ const MessageContainer = ({
   formatMessageDate,
   getFileIcon,
   getCompleteFileUrl,
-  formatFileSize,  onDownloadFile,
+  formatFileSize,
+  onDownloadFile,
   onImageClick,
   onReplyMessage, // Ajout explicite de la prop pour le bouton "Répondre"
   onRemoveReaction,
 }) => {
-  // Debug : log le nombre de messages reçus
-  React.useEffect(() => {
-    console.log("[MessageContainer] messages:", messages);
-  }, [messages]);
-
   const lastMessageIdRef = React.useRef();
   const prevMessagesLengthRef = React.useRef(0);
 
@@ -102,7 +98,8 @@ const MessageContainer = ({
               formatMessageDate={formatMessageDate}
               getFileIcon={getFileIcon}
               getCompleteFileUrl={getCompleteFileUrl}
-              formatFileSize={formatFileSize}              onMessageContextMenu={onMessageContextMenu}
+              formatFileSize={formatFileSize}
+              onMessageContextMenu={onMessageContextMenu}
               onDownloadFile={onDownloadFile}
               onImageClick={onImageClick}
               onReply={onReplyMessage} // Passe le handler pour le bouton "Répondre" (clic droit ou bouton)

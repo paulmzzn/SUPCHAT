@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { API_URL } from '../../config/config';
-import './Code.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { API_URL } from "../../config/config";
+import "./Code.css";
 
 const Code = () => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -14,53 +14,49 @@ const Code = () => {
   // Vérifier au chargement que nous avons bien un email
   useEffect(() => {
     // S'assurer que nous avons un email stocké
-    const storedEmail = localStorage.getItem('email');
+    const storedEmail = localStorage.getItem("email");
     const stateEmail = location.state?.email;
-    
     if (stateEmail && !storedEmail) {
-      localStorage.setItem('email', stateEmail);
-      console.log("Email sauvegardé dans localStorage:", stateEmail);
+      localStorage.setItem("email", stateEmail);
     }
-    
+
     const emailToUse = storedEmail || stateEmail;
-    console.log("Code.jsx - Email utilisé:", emailToUse || "Non défini");
-    
+
     if (!emailToUse) {
-      console.error("Aucun email trouvé, redirection vers login");
-      navigate('/login');
+      navigate("/login");
       return;
     }
-    
-    console.log("Code.jsx - Token présent:", localStorage.getItem('token') ? "oui" : "non");
-    
+
     // Vérifier les invitations en attente
     const pendingInviteData = sessionStorage.getItem("pendingInvitation");
     if (pendingInviteData) {
       try {
         setPendingInvitation(JSON.parse(pendingInviteData));
       } catch (e) {
-        console.error("Erreur lors de l'analyse des données d'invitation en attente:", e);
+        console.error(
+          "Erreur lors de l'analyse des données d'invitation en attente:",
+          e
+        );
       }
     }
-    
+
     // Vérifier si déjà validé pour éviter une double validation
-    if (localStorage.getItem('isValidated') === 'true') {
-      navigate('/workspaces');
+    if (localStorage.getItem("isValidated") === "true") {
+      navigate("/workspaces");
     }
   }, [navigate, location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Utiliser l'email stocké ou celui passé en props
     const emailToUse = localStorage.getItem("email") || location.state?.email;
     if (!emailToUse) {
       setError("Email non disponible. Veuillez vous reconnecter.");
       return;
     }
-    
+
     const validationCode = code.join("");
-    console.log("Envoi de la requête de validation:", { email: emailToUse, code: validationCode });
 
     try {
       const response = await fetch(`${API_URL}/api/users/validate-code`, {
@@ -75,47 +71,50 @@ const Code = () => {
       });
 
       const data = await response.json();
-      console.log("Réponse du serveur:", data);
 
       if (response.ok) {
         // IMPORTANT: Stocker le token correctement et s'assurer qu'il est bien enregistré
         if (data.token) {
-          console.log("Sauvegarde du token après validation:", data.token.substring(0, 15) + "...");
-          
           // Nettoyer d'abord le localStorage pour éviter tout conflit
           localStorage.removeItem("token");
           localStorage.removeItem("userToken");
-          
+
           // Stocker le token avec les deux noms possibles pour la compatibilité
           localStorage.setItem("token", data.token);
           localStorage.setItem("userToken", data.token);
-          
+
           // CRUCIAL: Définir l'indicateur de validation
           localStorage.setItem("isValidated", "true");
-          
+
           // Vérifier que le token et l'indicateur ont bien été stockés
           const storedToken = localStorage.getItem("token");
           const isValidated = localStorage.getItem("isValidated");
-          console.log("Token vérifié après stockage:", storedToken ? "Présent" : "Absent");
-          console.log("Validation vérifiée:", isValidated);
 
           // IMPORTANT: Initialiser immédiatement le socket maintenant que le token est disponible
           if (window.initializeSocket) {
-            console.log("Appel immédiat d'initializeSocket après validation");
             window.initializeSocket();
           } else {
-            console.warn("initializeSocket non disponible, le socket s'initialisera par polling dans quelques secondes");
+            console.warn(
+              "initializeSocket non disponible, le socket s'initialisera par polling dans quelques secondes"
+            );
           }
-          
+
           // Handle pending workspace invitation if present
           if (pendingInvitation && pendingInvitation.workspaceId) {
             // Remove the pending invitation from sessionStorage
             sessionStorage.removeItem("pendingInvitation");
-            
+
             // Redirect to the join-workspace page after a slight delay to ensure token is stored
             setTimeout(() => {
-              console.log("Redirection vers l'invitation de workspace avec token:", localStorage.getItem("token") ? "Présent" : "Absent");
-              navigate(`/join-workspace?id=${pendingInvitation.workspaceId}&email=${pendingInvitation.email || emailToUse}`);
+              console.log(
+                "Redirection vers l'invitation de workspace avec token:",
+                localStorage.getItem("token") ? "Présent" : "Absent"
+              );
+              navigate(
+                `/join-workspace?id=${pendingInvitation.workspaceId}&email=${
+                  pendingInvitation.email || emailToUse
+                }`
+              );
             }, 300);
           } else {
             // Regular flow - redirect to workspaces
@@ -137,7 +136,8 @@ const Code = () => {
   };
 
   const handleResendCode = async () => {
-    const email = localStorage.getItem("email") || localStorage.getItem("userEmail");
+    const email =
+      localStorage.getItem("email") || localStorage.getItem("userEmail");
     if (!email) {
       setError("Email non disponible. Veuillez vous reconnecter.");
       return;
@@ -212,7 +212,10 @@ const Code = () => {
   };
 
   // Récupérer l'email pour l'afficher
-  const emailToDisplay = localStorage.getItem("email") || location.state?.email || "votre adresse email";
+  const emailToDisplay =
+    localStorage.getItem("email") ||
+    location.state?.email ||
+    "votre adresse email";
 
   return (
     <div className="login-container">
@@ -223,7 +226,8 @@ const Code = () => {
         <div className="login-card">
           <h2 className="login-title">Vérification par email</h2>
           <p className="verification-text">
-            Veuillez entrer le code à 6 chiffres envoyé à <strong>{emailToDisplay}</strong>
+            Veuillez entrer le code à 6 chiffres envoyé à{" "}
+            <strong>{emailToDisplay}</strong>
           </p>
 
           {error && (
@@ -255,7 +259,11 @@ const Code = () => {
 
             <p className="resend-text">
               Vous n'avez pas reçu de code?
-              <button type="button" onClick={handleResendCode} className="resend-link">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                className="resend-link"
+              >
                 Renvoyer
               </button>
             </p>
@@ -266,6 +274,6 @@ const Code = () => {
       <div className="glow-circle-left bottom-left"></div>
     </div>
   );
-}
+};
 
 export default Code;
