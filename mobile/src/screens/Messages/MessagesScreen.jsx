@@ -123,7 +123,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const fileUploadHandlers = useFileUpload({
     currentUserId,
-    actualUserId,
+    userId: actualUserId, // Utiliser le même nom que dans useSocketMessages pour la cohérence
     setMessages,
     addAnimatingMessage,
     scrollToBottom,
