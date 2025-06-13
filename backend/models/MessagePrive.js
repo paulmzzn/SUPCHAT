@@ -181,11 +181,55 @@ class MessagePrive {
 
   static async getUserConversationsExtended(userId) {
     try {
-      const conversationUsers = await this.getUserConversations(userId);
-      if (!conversationUsers || conversationUsers.length === 0) {
-        return [];
-      }
-      return conversationUsers.map((otherUserId) => ({ userId: otherUserId }));
+      const result = await pool.query(
+        `SELECT 
+          CASE
+            WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire
+            ELSE mp.fk_expediteur
+          END AS other_user_id,
+          MAX(mp.created_at) as last_message_date,
+          (SELECT contenu FROM message_prive 
+           WHERE (fk_expediteur = $1 AND fk_destinataire = CASE WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire ELSE mp.fk_expediteur END)
+              OR (fk_expediteur = CASE WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire ELSE mp.fk_expediteur END AND fk_destinataire = $1)
+              AND is_deleted = false
+           ORDER BY created_at DESC 
+           LIMIT 1) as last_message_content,
+          (SELECT created_at FROM message_prive 
+           WHERE (fk_expediteur = $1 AND fk_destinataire = CASE WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire ELSE mp.fk_expediteur END)
+              OR (fk_expediteur = CASE WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire ELSE mp.fk_expediteur END AND fk_destinataire = $1)
+              AND is_deleted = false
+           ORDER BY created_at DESC 
+           LIMIT 1) as last_message_date_exact,
+          u.nom,
+          u.photo_de_profil,
+          u.username
+        FROM message_prive mp
+        JOIN utilisateur u ON u.id_utilisateur = CASE
+          WHEN mp.fk_expediteur = $1 THEN mp.fk_destinataire
+          ELSE mp.fk_expediteur
+        END
+        WHERE (mp.fk_expediteur = $1 OR mp.fk_destinataire = $1) 
+          AND mp.is_deleted = false
+        GROUP BY other_user_id, u.nom, u.photo_de_profil, u.username
+        ORDER BY last_message_date DESC`,
+        [userId]
+      );
+
+      return result.rows.map((row) => ({
+        userId: row.other_user_id,
+        lastActivity: row.last_message_date,
+        userInfo: {
+          id_utilisateur: row.other_user_id,
+          nom: row.nom,
+          username: row.username,
+          photo_de_profil: row.photo_de_profil,
+        },
+        lastMessage: row.last_message_content ? {
+          contenu: row.last_message_content,
+          date_creation: row.last_message_date_exact,
+          date_envoi: row.last_message_date_exact,
+        } : null,
+      }));
     } catch (error) {
       console.error(
         "Erreur dans MessagePrive.getUserConversationsExtended:",

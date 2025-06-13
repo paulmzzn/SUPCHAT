@@ -227,10 +227,9 @@ function WorkspaceSidebar({
         console.error("Erreur lors du décodage du token:", e);
         throw new Error("Impossible de récupérer l'utilisateur");
       }
-
       const response = await fetch(
         `${
-          process.env.REACT_APP_API_URL || "http://192.168.1.169:3001"
+          process.env.REACT_APP_API_URL || "http://192.168.71.234:3001"
         }/api/workspaces/${workspace.id}/invite`,
         {
           method: "POST",
@@ -284,10 +283,7 @@ function WorkspaceSidebar({
               <div
                 className="workspace-avatar"
                 style={{
-                  backgroundImage: `url(${
-                    workspace.icon ||
-                    defaultIcon
-                  })`,
+                  backgroundImage: `url(${workspace.icon || defaultIcon})`,
                 }}
               ></div>
               <h2 className="workspace-name">{workspace.name}</h2>

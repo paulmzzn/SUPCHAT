@@ -17,11 +17,11 @@ const MessageItem = ({
   formatMessageDate,
   getFileIcon,
   getCompleteFileUrl,
-  formatFileSize,
-  onMessageContextMenu,
+  formatFileSize,  onMessageContextMenu,
   onDownloadFile,
   onImageClick,
   onReply, // <-- nouvelle prop
+  onRemoveReaction,
 }) => {
   // Get the sender info, with strong fallbacks if missing
   const senderId = message.fk_expediteur;
@@ -101,21 +101,25 @@ const MessageItem = ({
 
           <div className="dm-msg-bubble">
             {renderTextWithMentions(message.contenu)}
-          </div>
-
-          {/* Afficher les réactions */}
+          </div>          {/* Afficher les réactions */}
           {message.reactions && message.reactions.length > 0 && (
             <div className="dm-msg-reactions">
               {message.reactions.map((reaction, index) => (
-                <div
+                <button
                   key={`${reaction.reaction_type}-${index}`}
-                  className="dm-msg-reaction"
+                  className={`dm-msg-reaction ${reaction.user_reacted ? 'user-reacted' : ''}`}
+                  onClick={() => {
+                    if (reaction.user_reacted && onRemoveReaction) {
+                      onRemoveReaction(message.id_message_prive, reaction.reaction_type);
+                    }
+                  }}
+                  title={reaction.user_reacted ? "Retirer cette réaction" : `${reaction.count} réaction(s)`}
                 >
                   <span className="dm-reaction-emoji">
                     {reaction.reaction_type}
                   </span>
                   <span className="dm-reaction-count">{reaction.count}</span>
-                </div>
+                </button>
               ))}
             </div>
           )}

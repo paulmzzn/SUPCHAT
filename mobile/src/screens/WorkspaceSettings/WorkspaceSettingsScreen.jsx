@@ -24,7 +24,7 @@ import ManageJoinRequestsModal from './modals/ManageJoinRequestsModal';
 import ManageMembersModal from './modals/ManageMembersModal';
 import env from '../../config/env';
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 const S3_BASE_URL = env.S3_BASE_URL;
 
 const WorkspaceSettingsScreen = ({ route, navigation }) => {
