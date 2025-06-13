@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import env from "../../config/env";
 
 const S3_BASE_URL = env.S3_BASE_URL || 'https://s3-supchat.s3.fr-par.scw.cloud/';
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 const formatFileSize = (bytes) => {
   if (!bytes || isNaN(bytes)) return "Unknown size";

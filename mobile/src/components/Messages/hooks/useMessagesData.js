@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSocket } from "../../../context/SocketContext";
 import env from "../../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 export const useMessagesData = (userId) => {
   const [messages, setMessages] = useState([]);
