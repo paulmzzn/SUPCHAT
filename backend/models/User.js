@@ -177,9 +177,7 @@ class UserModel {
       const existingUser = await pool.query(
         'SELECT * FROM utilisateur WHERE email = $1',
         [email]
-      );
-
-      const defaultStatus = 2;
+      );      const defaultStatus = 4; // 4 = Hors ligne par défaut
 
       if (existingUser.rows.length > 0) {
         // Mettre à jour avec les infos Google même si l'utilisateur existe déjà
@@ -215,9 +213,7 @@ class UserModel {
     try {
       if (!mot_de_passe) {
         throw new Error('Le mot de passe est obligatoire pour l\'inscription classique');
-      }
-
-      const defaultStatus = 1;
+      }      const defaultStatus = 4; // 4 = Hors ligne par défaut
       const validationCode = Math.floor(100000 + Math.random() * 900000).toString();
       
       // Vérifier si l'utilisateur existe

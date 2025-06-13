@@ -89,19 +89,41 @@ const socketManager = (io) => {
       next(new Error("Authentication error: " + error.message));
     }
   });
-
   // Événements de connexion
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     console.log(
       `Utilisateur connecté: ${socket.id}, User ID: ${socket.user?.id}`
     );
 
-    const userId = socket.user?.id;
-
-    // Si l'utilisateur est authentifié, mettre à jour son statut
+    const userId = socket.user?.id;    // Si l'utilisateur est authentifié, mettre à jour son statut
     if (userId) {
-      // Mettre à jour le statut dans la BD (1 = en ligne)
-      updateUserStatus(userId, 1);
+      // Récupérer le statut actuel de l'utilisateur depuis la base de données
+      try {
+        const userResult = await pool.query(
+          "SELECT fk_statut FROM utilisateur WHERE id_utilisateur = $1",
+          [userId]
+        );
+        
+        if (userResult.rows.length > 0) {
+          const currentStatus = userResult.rows[0].fk_statut;
+          
+          // Si l'utilisateur était hors ligne (statut 4), le mettre en ligne (statut 1)
+          // Sinon, conserver son statut actuel (away, dnd, etc.)
+          if (currentStatus === 4) {
+            await updateUserStatus(userId, 1);
+            console.log(`🟢 Utilisateur ${userId} reconnecté: statut mis à jour de offline à online`);
+          } else {
+            console.log(`🔄 Utilisateur ${userId} reconnecté: statut conservé (${currentStatus})`);
+          }
+        } else {
+          // Utilisateur non trouvé, mettre en ligne par défaut
+          await updateUserStatus(userId, 1);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du statut utilisateur:", error);
+        // En cas d'erreur, mettre en ligne par défaut
+        await updateUserStatus(userId, 1);
+      }
 
       // *** NOUVEAU : Rejoindre la room personnelle pour recevoir les mises à jour de compteurs ***
       socket.join(`user:${userId}`);
@@ -1737,17 +1759,37 @@ const socketManager = (io) => {
           error
         );
       }
-    });
-
-    // Gérer la déconnexion
+    });    // Gérer la déconnexion
     socket.on("disconnect", async () => {
       const userId = socket.user?.id;
 
       if (userId) {
         console.log(`Utilisateur déconnecté: ${socket.id}, User ID: ${userId}`);
 
-        // Mettre à jour le statut dans la BD (4 = invisible/déconnecté)
-        await updateUserStatus(userId, 4);
+        // Récupérer le statut actuel avant de le modifier
+        try {
+          const userResult = await pool.query(
+            "SELECT fk_statut FROM utilisateur WHERE id_utilisateur = $1",
+            [userId]
+          );
+          
+          if (userResult.rows.length > 0) {
+            const currentStatus = userResult.rows[0].fk_statut;
+            
+            // Si l'utilisateur était en ligne (statut 1), le mettre hors ligne (statut 4)
+            // Mais conserver les autres statuts (away=2, dnd=3, invisible=4)
+            if (currentStatus === 1) {
+              await updateUserStatus(userId, 4);
+              console.log(`🔴 Utilisateur ${userId} déconnecté: statut mis à jour de online à offline`);
+            } else {
+              console.log(`🔄 Utilisateur ${userId} déconnecté: statut conservé (${currentStatus})`);
+            }
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération du statut utilisateur:", error);
+          // En cas d'erreur, mettre hors ligne par défaut
+          await updateUserStatus(userId, 4);
+        }
 
         // Informer tous les workspaces où l'utilisateur était en ligne
         Object.keys(onlineUsers).forEach((workspaceId) => {
