@@ -76,8 +76,18 @@ export const getPrivateConversation = async (req, res) => {
     const userA = req.user.id;
     const userB = req.params.userId;
     const messages = await MessagePrive.getConversation(userA, userB);
+    
+    // Ajouter les pièces jointes à chaque message, comme fait dans la route d'upload
+    for (const message of messages) {
+      if (message.id_message_prive) {
+        const attachments = await Fichier.getPrivateMessageAttachments(message.id_message_prive);
+        message.attachments = attachments;
+      }
+    }
+    
     res.status(200).json(messages);
   } catch (error) {
+    console.error('Erreur dans getPrivateConversation:', error);
     res.status(500).json({ message: error.message });
   }
 };
