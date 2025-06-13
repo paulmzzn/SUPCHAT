@@ -15,12 +15,7 @@ const GOOGLE_DRIVE_CONFIG = {
 
 // Vérification de la configuration
 const isConfigurationValid = () => {
-  console.log("🔍 [Google Drive] Vérification de la configuration...");
-  console.log("🔍 [Google Drive] Variables d'environnement:", {
-    REACT_APP_GOOGLE_DRIVE_API_KEY: process.env.REACT_APP_GOOGLE_DRIVE_API_KEY,
-    REACT_APP_GOOGLE_DRIVE_CLIENT_ID:
-      process.env.REACT_APP_GOOGLE_DRIVE_CLIENT_ID,
-  });
+  // Variables d'environnement de vérification
 
   // ⚠️ TEMPORAIRE : Nettoyer l'ancien Client ID du localStorage pour forcer l'utilisation du nouveau
   const personalClientId = localStorage.getItem("google_drive_client_id");
@@ -28,41 +23,25 @@ const isConfigurationValid = () => {
     personalClientId &&
     personalClientId !== process.env.REACT_APP_GOOGLE_DRIVE_CLIENT_ID
   ) {
-    console.log(
-      "🧹 [Google Drive] Nettoyage de l'ancien Client ID du localStorage:",
-      personalClientId
-    );
     localStorage.removeItem("google_drive_client_id");
   }
-
-  console.log(
-    "🔍 [Google Drive] Client ID personnel stocké:",
-    localStorage.getItem("google_drive_client_id")
-  );
 
   // Priorité au Client ID de l'environnement maintenant
   if (
     GOOGLE_DRIVE_CONFIG.clientId &&
     GOOGLE_DRIVE_CONFIG.clientId !== "your-client-id"
   ) {
-    console.log(
-      "✅ [Google Drive] Utilisation du Client ID de l'environnement:",
-      GOOGLE_DRIVE_CONFIG.clientId
-    );
     return {
       valid: true,
       mode: "auth-only",
       clientId: GOOGLE_DRIVE_CONFIG.clientId,
     };
   }
-
   // Vérifier le Client ID personnel stocké localement en dernier recours
   const storedClientId = localStorage.getItem("google_drive_client_id");
   if (storedClientId) {
-    console.log("✅ [Google Drive] Utilisation du Client ID personnel stocké");
     return { valid: true, mode: "auth-only", clientId: storedClientId };
   }
-
   // Si on a une config complète (API Key + Client ID)
   if (
     GOOGLE_DRIVE_CONFIG.apiKey &&
@@ -70,25 +49,17 @@ const isConfigurationValid = () => {
     GOOGLE_DRIVE_CONFIG.apiKey !== "your-api-key" &&
     GOOGLE_DRIVE_CONFIG.clientId !== "your-client-id"
   ) {
-    console.log(
-      "✅ [Google Drive] Configuration complète détectée (API Key + Client ID)"
-    );
     return {
       valid: true,
       mode: "full",
       clientId: GOOGLE_DRIVE_CONFIG.clientId,
     };
   }
-
   // Si on a juste un Client ID dans l'env
   if (
     GOOGLE_DRIVE_CONFIG.clientId &&
     GOOGLE_DRIVE_CONFIG.clientId !== "your-client-id"
   ) {
-    console.log(
-      "✅ [Google Drive] Client ID détecté dans l'environnement:",
-      GOOGLE_DRIVE_CONFIG.clientId
-    );
     return {
       valid: true,
       mode: "auth-only",
@@ -96,7 +67,6 @@ const isConfigurationValid = () => {
     };
   }
 
-  console.log("❌ [Google Drive] Aucune configuration valide trouvée");
   return { valid: false, mode: "none", clientId: null };
 };
 
@@ -137,32 +107,19 @@ export const useGoogleDrive = (options = {}) => {
    * Initialise l'API Google Drive avec la nouvelle Google Identity Services (GIS)
    */
   const initializeGoogleApi = useCallback(async () => {
-    console.log(
-      "🚀 [Google Drive] Début d'initialisation de l'API Google (GIS)"
-    );
-
     if (gapiInitialized.current) {
-      console.log("⚠️ [Google Drive] API déjà initialisée, abandon");
       return;
     }
 
     // Vérifier la configuration avant d'initialiser
     const configCheck = isConfigurationValid();
-    console.log(
-      "🔧 [Google Drive] Résultat de la vérification de config:",
-      configCheck
-    );
 
     if (!configCheck.valid) {
-      console.log(
-        "❌ [Google Drive] Configuration invalide, activation du mode setup"
-      );
       setNeedsSetup(true);
       return;
     }
 
     setAuthMode(configCheck.mode);
-    console.log("📋 [Google Drive] Mode d'authentification:", configCheck.mode);
     try {
       // Charger les scripts Google Identity Services et API avec timeout
       await Promise.race([
@@ -177,8 +134,6 @@ export const useGoogleDrive = (options = {}) => {
           )
         ),
       ]);
-
-      console.log("✅ [Google Drive] Scripts GIS et API chargés");
 
       // Initialiser Google API client avec timeout
       await Promise.race([
@@ -196,17 +151,9 @@ export const useGoogleDrive = (options = {}) => {
       // Initialiser le client avec la configuration
       await window.gapi.client.init({
         discoveryDocs: [GOOGLE_DRIVE_CONFIG.discoveryDoc],
-      });
-
-      console.log("✅ [Google Drive] Client API initialisé");
-
-      // Initialiser Google Identity Services
+      }); // Initialiser Google Identity Services
       initGoogleIdentity(configCheck.clientId);
     } catch (error) {
-      console.error(
-        "❌ [Google Drive] Erreur lors du chargement de l'API Google:",
-        error
-      );
       setConfigurationError("Erreur lors du chargement de l'API Google Drive");
     }
   }, []); // Fonction utilitaire pour charger les scripts
@@ -224,14 +171,8 @@ export const useGoogleDrive = (options = {}) => {
       document.head.appendChild(script);
     });
   };
-
   // Initialise Google Identity Services
   const initGoogleIdentity = useCallback((clientId) => {
-    console.log(
-      "🔧 [Google Drive] Initialisation Google Identity Services avec Client ID:",
-      clientId
-    );
-
     try {
       // Initialiser Google Identity Services avec les bons scopes
       window.google.accounts.id.initialize({
@@ -247,8 +188,6 @@ export const useGoogleDrive = (options = {}) => {
         scope:
           "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
         callback: (tokenResponse) => {
-          console.log("🔐 [Google Drive] Token OAuth2 reçu", tokenResponse);
-
           if (tokenResponse.access_token) {
             // Stocker le token avec une expiration
             const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
@@ -260,14 +199,8 @@ export const useGoogleDrive = (options = {}) => {
               "google_token_expires_at",
               expiresAt.toString()
             );
-
             setIsSignedIn(true);
             setIsAuthenticating(false);
-
-            console.log(
-              "✅ [Google Drive] Utilisateur authentifié avec succès, token expire le:",
-              new Date(expiresAt)
-            );
           }
         },
       });
@@ -276,10 +209,6 @@ export const useGoogleDrive = (options = {}) => {
       setConfigurationError(null);
       setNeedsSetup(false);
       gapiInitialized.current = true;
-
-      console.log(
-        "✅ [Google Drive] Google Identity Services initialisé avec succès"
-      );
     } catch (error) {
       console.error(
         "❌ [Google Drive] Erreur lors de l'initialisation GIS:",
@@ -290,14 +219,11 @@ export const useGoogleDrive = (options = {}) => {
       );
     }
   }, []);
-
   // Gestion de la réponse d'authentification
   const handleCredentialResponse = useCallback((response) => {
-    console.log("🔐 [Google Drive] Réponse d'authentification reçue");
     // Pour l'instant, on utilise principalement le token OAuth2 pour les API
   }, []); // Gestion de la réponse du token OAuth2
   const handleTokenResponse = useCallback((response) => {
-    console.log("🔐 [Google Drive] Token OAuth2 reçu");
     if (response.access_token) {
       localStorage.setItem("google_access_token", response.access_token);
 
@@ -307,12 +233,7 @@ export const useGoogleDrive = (options = {}) => {
 
       setIsSignedIn(true);
       setIsAuthenticating(false);
-      console.log(
-        "✅ [Google Drive] Utilisateur authentifié avec succès, token expire le:",
-        new Date(expiryTime)
-      );
     } else {
-      console.error("❌ [Google Drive] Pas de token d'accès reçu");
       setIsSignedIn(false);
       setIsAuthenticating(false);
     }
@@ -326,12 +247,9 @@ export const useGoogleDrive = (options = {}) => {
       setError("Erreur d'initialisation de l'authentification Google");
       return;
     }
-
     try {
       setIsAuthenticating(true);
       setError(null);
-
-      console.log("🔐 [Google Drive] Demande d'autorisation OAuth2...");
 
       // Demander l'autorisation avec les scopes Drive
       tokenClient.current.requestAccessToken({
@@ -357,11 +275,9 @@ export const useGoogleDrive = (options = {}) => {
         localStorage.removeItem("google_access_token");
         localStorage.removeItem("google_token_expires_at");
       }
-
       setIsSignedIn(false);
       setDriveFiles([]);
       setSelectedFiles([]);
-      console.log("✅ [Google Drive] Déconnexion réussie");
     } catch (error) {
       console.error("❌ [Google Drive] Erreur lors de la déconnexion:", error);
     }
@@ -374,7 +290,6 @@ export const useGoogleDrive = (options = {}) => {
       try {
         // Vérifier si l'utilisateur est authentifié
         if (!isSignedIn) {
-          console.log("❌ [Google Drive] Utilisateur non connecté");
           setError(
             "Vous devez vous connecter à Google Drive pour accéder à vos fichiers"
           );
@@ -386,19 +301,14 @@ export const useGoogleDrive = (options = {}) => {
         // Vérifier que le token est disponible et valide
         const accessToken = localStorage.getItem("google_access_token");
         const tokenExpiry = localStorage.getItem("google_token_expires_at");
-
         if (!accessToken) {
-          console.log("❌ [Google Drive] Aucun token d'accès trouvé");
           setError("Session expirée, veuillez vous reconnecter");
           setIsSignedIn(false);
           setDriveFiles([]);
           setIsLoadingFiles(false);
           return;
-        }
-
-        // Vérifier l'expiration du token
+        } // Vérifier l'expiration du token
         if (tokenExpiry && Date.now() > parseInt(tokenExpiry)) {
-          console.log("❌ [Google Drive] Token expiré");
           setError(
             "Votre session Google Drive a expiré. Veuillez vous reconnecter."
           );
@@ -422,12 +332,9 @@ export const useGoogleDrive = (options = {}) => {
           searchQuery +=
             " and (mimeType contains 'image/' or mimeType contains 'application/' or mimeType contains 'text/' or mimeType contains 'video/' or mimeType contains 'audio/' or mimeType='application/vnd.google-apps.folder')";
         }
-
         if (query) {
           searchQuery += ` and name contains '${query}'`;
         }
-
-        console.log("🔍 [Google Drive] Recherche avec query:", searchQuery);
 
         // Utiliser l'API REST Google Drive
         const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
@@ -435,8 +342,6 @@ export const useGoogleDrive = (options = {}) => {
         )}&pageSize=50&orderBy=modifiedTime desc&fields=${encodeURIComponent(
           "files(id,name,mimeType,size,thumbnailLink,webViewLink,webContentLink,modifiedTime,parents)"
         )}`;
-
-        console.log("🌐 [Google Drive] URL API:", apiUrl);
 
         const apiResponse = await fetch(apiUrl, {
           headers: {
@@ -450,10 +355,8 @@ export const useGoogleDrive = (options = {}) => {
           apiResponse.status,
           apiResponse.statusText
         );
-
         if (!apiResponse.ok) {
           if (apiResponse.status === 401) {
-            console.log("❌ [Google Drive] Token invalide ou expiré (401)");
             setError(
               "Votre session Google Drive a expiré. Veuillez vous reconnecter."
             );
@@ -464,9 +367,6 @@ export const useGoogleDrive = (options = {}) => {
             setIsLoadingFiles(false);
             return;
           } else if (apiResponse.status === 403) {
-            console.log(
-              "❌ [Google Drive] Accès refusé (403) - Permissions insuffisantes"
-            );
             setError(
               "Permissions insuffisantes pour accéder à Google Drive. Veuillez vous reconnecter et accorder les permissions nécessaires."
             );
@@ -478,11 +378,8 @@ export const useGoogleDrive = (options = {}) => {
             `Erreur API: ${apiResponse.status} ${apiResponse.statusText}`
           );
         }
-
         const data = await apiResponse.json();
         const files = data.files || [];
-
-        console.log(`✅ [Google Drive] ${files.length} fichiers chargés`);
 
         // Traitement des fichiers pour ajouter les propriétés formatées
         const processedFiles = files.map((file) => ({
@@ -1061,10 +958,6 @@ export const useGoogleDrive = (options = {}) => {
           console.log("✅ [Google Drive] Token valide trouvé en localStorage");
           return;
         }
-
-        console.log(
-          "🔄 [Google Drive] Aucun token valide, initialisation nécessaire"
-        );
       } catch (error) {
         console.error("❌ [Google Drive] Erreur d'initialisation:", error);
         setError("Erreur lors de l'initialisation de Google Drive");
