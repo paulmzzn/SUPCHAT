@@ -113,14 +113,6 @@ export const debugMistralInteraction = (message) => {
 
 // Helper pour rendre les liens cliquables dans un texte
 export const renderTextWithLinks = (text, onChannelClick, onUserClick) => {
-  // Logs de débogage activés temporairement
-  console.log("renderTextWithLinks appelé avec:", {
-    text,
-    hasChannelCallback: !!onChannelClick,
-    hasUserCallback: !!onUserClick,
-    containsHash: text && text.includes("#"),
-  });
-
   if (!text) return "";
 
   // Regex pour les URLs
@@ -232,7 +224,7 @@ export const renderTextWithLinks = (text, onChannelClick, onUserClick) => {
       console.log("Rendu d'une mention de canal:", {
         channelName: match.channelName,
         hasCallback: !!onChannelClick,
-        content: match.content
+        content: match.content,
       });
 
       parts.push(

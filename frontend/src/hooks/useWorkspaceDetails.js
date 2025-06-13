@@ -54,7 +54,7 @@ const MISTRAL_AVATAR =
 const convertDbStatusToString = (statusId) => {
   const statusMap = {
     1: "online",
-    2: "away", 
+    2: "away",
     3: "dnd",
     4: "offline",
   };
@@ -63,8 +63,9 @@ const convertDbStatusToString = (statusId) => {
 
 export const useWorkspaceDetails = (workspaceId) => {
   // Utiliser le contexte de notifications pour le marquage comme lu
-  const { markChannelAsRead: markChannelAsReadFromContext } = useNotifications();
-  
+  const { markChannelAsRead: markChannelAsReadFromContext } =
+    useNotifications();
+
   const [workspace, setWorkspace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -136,7 +137,7 @@ export const useWorkspaceDetails = (workspaceId) => {
           return null;
         }
         if (parsed && parsed.type === "file") {
-return {
+          return {
             id: msg.id_message,
             name: parsed.fileName || "Fichier",
             type: parsed.fileType || "file",
@@ -220,7 +221,7 @@ return {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   // Replying state
   const [replyingTo, setReplyingTo] = useState(null);
-  
+
   // Editing state
   const [editingMessage, setEditingMessage] = useState(null);
 
@@ -333,9 +334,12 @@ return {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_url || member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || convertDbStatusToString(member.status),
+          status:
+            userStatuses[member.id_utilisateur] ||
+            convertDbStatusToString(member.status),
           role: member.role.toLowerCase(),
-        }));      const offlineMembers = data
+        }));
+      const offlineMembers = data
         .filter((member) => {
           const wsStatus = userStatuses[member.id_utilisateur];
           // Logique inversée par rapport aux membres en ligne
@@ -348,7 +352,9 @@ return {
           id: member.id_utilisateur,
           name: member.nom,
           avatar: member.photo_url || member.photo_de_profil || null,
-          status: userStatuses[member.id_utilisateur] || convertDbStatusToString(member.status),
+          status:
+            userStatuses[member.id_utilisateur] ||
+            convertDbStatusToString(member.status),
           role: member.role.toLowerCase(),
         }));
 
@@ -369,76 +375,82 @@ return {
   }, [workspaceId, userStatuses]);
 
   // Fonction pour récupérer les détails d'un canal spécifique
-  const fetchActiveChannel = useCallback(async (canalId) => {
-    if (!canalId) {
-      console.error("fetchActiveChannel: ID de canal non fourni");
-      return;
-    }
-    try {
-      setLoadingMessages(true);
-      setMessageOffset(0);
-      setHasMoreMessages(true);
-      setLastChannelId(canalId); // Mémorise l'id du canal courant
-      const token = localStorage.getItem("token");
-      // 1. Récupérer les détails du canal actif
-      const canalDetailsResponse = await fetch(
-        `${API_URL}/api/workspace/${workspaceId}/canals/${canalId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!canalDetailsResponse.ok) {
-        const errorData = await canalDetailsResponse.json();
-        throw new Error(errorData.message || "Erreur lors du chargement des détails du canal");
+  const fetchActiveChannel = useCallback(
+    async (canalId) => {
+      if (!canalId) {
+        console.error("fetchActiveChannel: ID de canal non fourni");
+        return;
       }
-      const canalDetails = await canalDetailsResponse.json();
-      setActiveChannel({
-        id: canalDetails.id_canal,
-        name: canalDetails.nom,
-        isPrivate: canalDetails.is_private || false,
-        description: canalDetails.description || "",
-        droitAcces: canalDetails.droitAcces || "lecture_ecriture",
-        isCreator: canalDetails.isCreator || false,
-        memberAccess: canalDetails.droitAcces || null
-      });
-      // 2. Charger les messages du canal (premier lot)
-      const response = await fetch(
-        `${API_URL}/api/messages/canal/${canalId}?limit=${MESSAGE_LIMIT}&offset=0`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+      try {
+        setLoadingMessages(true);
+        setMessageOffset(0);
+        setHasMoreMessages(true);
+        setLastChannelId(canalId); // Mémorise l'id du canal courant
+        const token = localStorage.getItem("token");
+        // 1. Récupérer les détails du canal actif
+        const canalDetailsResponse = await fetch(
+          `${API_URL}/api/workspace/${workspaceId}/canals/${canalId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!canalDetailsResponse.ok) {
+          const errorData = await canalDetailsResponse.json();
+          throw new Error(
+            errorData.message ||
+              "Erreur lors du chargement des détails du canal"
+          );
         }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors du chargement des messages");
+        const canalDetails = await canalDetailsResponse.json();
+        setActiveChannel({
+          id: canalDetails.id_canal,
+          name: canalDetails.nom,
+          isPrivate: canalDetails.is_private || false,
+          description: canalDetails.description || "",
+          droitAcces: canalDetails.droitAcces || "lecture_ecriture",
+          isCreator: canalDetails.isCreator || false,
+          memberAccess: canalDetails.droitAcces || null,
+        });
+        // 2. Charger les messages du canal (premier lot)
+        const response = await fetch(
+          `${API_URL}/api/messages/canal/${canalId}?limit=${MESSAGE_LIMIT}&offset=0`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Erreur lors du chargement des messages"
+          );
+        }
+        const data = await response.json();
+        // Ajout du mapping des emojis sur les réactions (pour affichage correct)
+        let messagesWithEmojis = data.map((msg) => {
+          if (msg.reactions && Array.isArray(msg.reactions)) {
+            msg.reactions = msg.reactions.map((r) => ({
+              ...r,
+              emoji: r.emoji || getEmojiForType(r.reaction_type),
+            }));
+          }
+          return msg;
+        });
+        // Inverser pour afficher du plus ancien au plus récent
+        messagesWithEmojis = messagesWithEmojis.reverse();
+        setMessages(messagesWithEmojis);
+        setIsPrependingMessages(false); // Reset le flag prepend lors d'un changement de canal        setMessageOffset(data.length);
+        setHasMoreMessages(data.length === MESSAGE_LIMIT);
+        // Marquer le canal comme lu en utilisant le contexte de notifications
+        await markChannelAsReadFromContext(canalId);
+      } catch (error) {
+        setMessages([]);
+        alert("Erreur lors du chargement des messages: " + error.message);
+      } finally {
+        setLoadingMessages(false);
       }
-      const data = await response.json();
-      // Ajout du mapping des emojis sur les réactions (pour affichage correct)
-      let messagesWithEmojis = data.map((msg) => {
-        if (msg.reactions && Array.isArray(msg.reactions)) {
-          msg.reactions = msg.reactions.map((r) => ({
-            ...r,
-            emoji: r.emoji || getEmojiForType(r.reaction_type),
-          }));
-        }
-        return msg;
-      });
-      // Inverser pour afficher du plus ancien au plus récent
-      messagesWithEmojis = messagesWithEmojis.reverse();
-      setMessages(messagesWithEmojis);
-      setIsPrependingMessages(false); // Reset le flag prepend lors d'un changement de canal
-      setMessageOffset(data.length);
-      setHasMoreMessages(data.length === MESSAGE_LIMIT);
-      // Marquer le canal comme lu en utilisant le contexte de notifications
-      console.log(`Marquage du canal ${canalId} comme lu via NotificationContext`);
-      await markChannelAsReadFromContext(canalId);
-    } catch (error) {
-      setMessages([]);
-      alert("Erreur lors du chargement des messages: " + error.message);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, [workspaceId, socket, setActiveChannel, setMessages, setLoadingMessages]);  // Fonction pour signaler à ChatContainer que le scroll a été correctement restauré
+    },
+    [workspaceId, socket, setActiveChannel, setMessages, setLoadingMessages]
+  ); // Fonction pour signaler à ChatContainer que le scroll a été correctement restauré
   const resetPrependingState = useCallback(() => {
     setIsPrependingMessages(false);
   }, []);
@@ -458,7 +470,9 @@ return {
       );
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors du chargement des messages");
+        throw new Error(
+          errorData.message || "Erreur lors du chargement des messages"
+        );
       }
       const data = await response.json();
       let messagesWithEmojis = data.map((msg) => {
@@ -472,13 +486,13 @@ return {
       });
       // Inverser pour afficher du plus ancien au plus récent
       messagesWithEmojis = messagesWithEmojis.reverse();
-      
+
       // Préfixer les nouveaux messages (plus anciens) au début du tableau
       // C'est ce qui va déclencher le mécanisme de restauration du scroll dans ChatContainer
       setMessages((prev) => [...messagesWithEmojis, ...prev]);
       setMessageOffset((prev) => prev + data.length);
       setHasMoreMessages(data.length === MESSAGE_LIMIT);
-      
+
       // Ne pas désactiver l'état de prepend ici - ChatContainer s'en occupe désormais
       // via son propre effet qui réinitialise automatiquement isPaginatingRef.current à false
     } catch (error) {
@@ -625,15 +639,8 @@ return {
 
   // Socket message listener effect
   useEffect(() => {
-    if (!socket) return;    // Abonnement à l'événement "message"
+    if (!socket) return; // Abonnement à l'événement "message"
     socket.on("message", (message) => {
-      console.log("[DEBUG] 📨 Message reçu via WebSocket:", message);
-      console.log("[DEBUG] 📝 Type de message:", typeof message);
-      console.log("[DEBUG] 🔑 Propriétés:", Object.keys(message));
-      console.log("[DEBUG] 🏢 Canal du message:", message.fk_canal);
-      console.log("[DEBUG] 🏢 Canal actif:", activeChannel?.id);
-      console.log("[DEBUG] 📎 A des pièces jointes:", message.attachments?.length > 0);
-
       // Vérifie si c'est un message système pour l'appel vidéo
       const isVideoCallMessage =
         message.contenu &&
@@ -641,24 +648,13 @@ return {
           message.contenu.includes("video call"));
 
       if (isVideoCallMessage) {
-        console.log("[DEBUG] 📞 Message d'appel vidéo détecté");
         message.is_system_message = true;
-      }
-
-      // Vérification spéciale pour les fichiers Google Drive
-      if (message.attachments && message.attachments.length > 0) {
-        console.log("[DEBUG] 🗂️ Message avec pièces jointes Google Drive détecté");
-        console.log("[DEBUG] 📎 Pièces jointes:", message.attachments);
       }
 
       handleNewMessage(message);
     });
 
     const handleNewMessage = (message) => {
-      console.log("[DEBUG] Traitement du message:", message);
-      // Reste de la fonction handleNewMessage
-      console.log("🎉 Nouveau message reçu via socket:", message);
-
       // S'assurer que le format de date est cohérent
       if (message.created_at && !message.date_creation) {
         message.date_creation = message.created_at;
@@ -695,13 +691,8 @@ return {
           }
         }, 150); // Légère augmentation du délai
       }
-    };
-
-    // Abonnement aux réactions
+    }; // Abonnement aux réactions
     socket.on("messageReaction", ({ messageId, reactions }) => {
-      console.log(`Réaction reçue pour le message ${messageId}:`, reactions);
-      console.log("Détail des réactions reçues:", JSON.stringify(reactions));
-
       setMessages((prevMessages) =>
         prevMessages.map((msg) => {
           if (msg.id_message === messageId) {
@@ -794,7 +785,8 @@ return {
     // *** End typing event listeners ***
 
     // Nettoyage lors du démontage du composant
-    return () => {      socket.off("message", handleNewMessage);
+    return () => {
+      socket.off("message", handleNewMessage);
       socket.off("messageReaction");
       socket.off("messageDeleted"); // Remove the listener
       socket.off("deleteMessage"); // Make sure to remove both listeners
@@ -819,33 +811,19 @@ return {
       socket.off("memberRoleChanged", handleRoleChange);
     };
   }, [socket, workspaceId, fetchWorkspaceMembers]);
-
   useEffect(() => {
     if (socket && workspaceId) {
       socket.emit("joinWorkspace", { workspaceId, userId: currentUserId });
-      console.log(
-        "[WS DEBUG] Demande de joinWorkspace envoyée pour",
-        workspaceId,
-        "avec userId:",
-        currentUserId
-      );
     }
   }, [socket, workspaceId, currentUserId]);
-
   // Socket: join canal à chaque changement de canal actif
   useEffect(() => {
     if (!socket || !activeChannel || !workspaceId) return;
     // Rejoindre la room du canal à chaque sélection
     socket.emit("joinCanal", { canalId: activeChannel.id, workspaceId });
-    console.log("[WS DEBUG] joinCanal envoyé", {
-      canalId: activeChannel.id,
-      workspaceId,
-    });
   }, [socket, activeChannel, workspaceId]);
-
   // Écouter les changements de statut utilisateur et mettre à jour les membres en temps réel
   useEffect(() => {
-    console.log("[HOOK] userStatuses changed, refetching members");
     if (workspaceId) {
       fetchWorkspaceMembers();
     }
@@ -862,7 +840,8 @@ return {
     // Sinon, scroll en bas (nouveau message ou changement de canal)
     setTimeout(() => {
       if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
       }
     }, 100);
   }, [messages, isPrependingMessages, activeChannel, lastChannelId]);
@@ -956,7 +935,9 @@ return {
 
     setIsSearching(true);
     try {
-      console.log(`Recherche dans le workspace ${workspaceId} pour: ${searchQuery}`);
+      console.log(
+        `Recherche dans le workspace ${workspaceId} pour: ${searchQuery}`
+      );
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/search/workspace/${workspaceId}?query=${encodeURIComponent(
@@ -983,7 +964,7 @@ return {
           data.canaux?.map((channel) => ({
             id: channel.id_canal,
             name: channel.nom, // Assurer la présence de la propriété 'name'
-            nom: channel.nom,   // Conserver 'nom' pour la compatibilité
+            nom: channel.nom, // Conserver 'nom' pour la compatibilité
             description: channel.description || "",
             isPrivate: channel.is_private || false,
           })) || [],
@@ -1037,12 +1018,17 @@ return {
             // Vérifier si le message est déjà dans le DOM
             const messageElement = document.getElementById(`msg-${result.id}`);
             if (messageElement) {
-              messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+              messageElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
               messageElement.classList.add("highlighted-message");
               setTimeout(() => {
                 messageElement.classList.remove("highlighted-message");
               }, 5000);
-            } else if (typeof window.setPendingScrollToMessageId === "function") {
+            } else if (
+              typeof window.setPendingScrollToMessageId === "function"
+            ) {
               // Demander au composant parent de gérer le scroll après chargement
               window.setPendingScrollToMessageId(result.id);
             }
@@ -1059,7 +1045,7 @@ return {
           console.error("handleSelectChannel: canal sans ID");
           return;
         }
-        
+
         await fetchActiveChannel(channel.id);
       } catch (error) {
         console.error("Erreur lors de la sélection du canal:", error);
@@ -1254,14 +1240,8 @@ return {
       e.preventDefault();
     }
 
-    if (!displayMessage.trim() || !socket || !activeChannel) return;
-
-    // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
+    if (!displayMessage.trim() || !socket || !activeChannel) return; // Convertir les mentions @Nom en @[Nom](uuid) avant l'envoi
     const messageToSend = convertMentionsForSending(displayMessage);
-
-    console.log(
-      `Envoi du message: "${messageToSend}" dans le canal ${activeChannel.id}`
-    );
 
     // Envoyer via socket.io
     socket.emit("message", {
@@ -1325,19 +1305,22 @@ return {
         socket.emit("editChannelMessage", {
           messageId: editingMessage.id_message,
           contenu: newMessage.trim(),
-          canalId: activeChannel.id
+          canalId: activeChannel.id,
         });
       } else {
         // Fallback: utiliser l'API REST si le socket n'est pas disponible
         const token = localStorage.getItem("token");
-        const response = await fetch(`${API_URL}/api/messages/${editingMessage.id_message}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ contenu: newMessage.trim() }),
-        });
+        const response = await fetch(
+          `${API_URL}/api/messages/${editingMessage.id_message}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ contenu: newMessage.trim() }),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Erreur lors de la mise à jour du message");
@@ -1429,7 +1412,10 @@ return {
         })
       );
     } catch (error) {
-      console.error("Erreur lors de la suppression de la réaction via socket:", error);
+      console.error(
+        "Erreur lors de la suppression de la réaction via socket:",
+        error
+      );
     }
   };
 
@@ -1459,7 +1445,9 @@ return {
               if (existingReactionIndex >= 0) {
                 updatedReactions[existingReactionIndex] = {
                   ...updatedReactions[existingReactionIndex],
-                  count: (parseInt(updatedReactions[existingReactionIndex].count) || 0) + 1,
+                  count:
+                    (parseInt(updatedReactions[existingReactionIndex].count) ||
+                      0) + 1,
                   user_reacted: true,
                 };
               } else {
@@ -1477,7 +1465,10 @@ return {
         );
       }
     } catch (error) {
-      console.error("Erreur lors du basculement de la réaction via socket:", error);
+      console.error(
+        "Erreur lors du basculement de la réaction via socket:",
+        error
+      );
     }
   };
   const handleDeleteMessage = async () => {
@@ -1583,19 +1574,8 @@ return {
     } else {
       setShowMentionSuggestions(false);
       setMentionQuery("");
-    }
-
-    // Vérifier pour les mentions de canaux (#)
+    } // Vérifier pour les mentions de canaux (#)
     const lastHashIndex = value.lastIndexOf("#");
-
-    console.log("Détection de #:", {
-      lastHashIndex,
-      lastBreakIndex,
-      condition:
-        lastHashIndex !== -1 &&
-        (lastHashIndex > lastBreakIndex || lastBreakIndex === -1),
-      channels: channels.length,
-    });
 
     if (
       lastHashIndex !== -1 &&
@@ -1825,8 +1805,10 @@ return {
     handleSendMessage,
     formatMessageDate,
     handleMessageContextMenu,
-    handleCloseMessageContextMenu,    handleReplyMessage,
-    handleShowEmojiPicker,    handleAddReaction,
+    handleCloseMessageContextMenu,
+    handleReplyMessage,
+    handleShowEmojiPicker,
+    handleAddReaction,
     handleRemoveReaction,
     handleToggleReaction,
     handleCancelReply,
