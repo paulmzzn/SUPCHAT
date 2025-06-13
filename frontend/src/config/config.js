@@ -6,10 +6,10 @@
 const API_URL =
   process.env.REACT_APP_API_URL === "" || !process.env.REACT_APP_API_URL
     ? ""
-    : process.env.REACT_APP_API_URL || "http://192.168.1.169:3000";
+    : process.env.REACT_APP_API_URL || "http://185.98.137.166:3000";
 
 // Configuration des WebSockets
 const SOCKET_URL =
-  process.env.REACT_APP_SOCKET_URL || "http://192.168.1.169:3000";
+  process.env.REACT_APP_SOCKET_URL || "http://185.98.137.166:3000";
 
 export { API_URL, SOCKET_URL };

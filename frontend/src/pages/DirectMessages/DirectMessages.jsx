@@ -45,13 +45,13 @@ function DirectMessages() {
 
   const selectedUser = conv?.selectedUser;
   const currentUserId = conv?.currentUserId;
-
   // Sélection automatique de la conversation si userId est présent dans l'URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const userId = params.get("userId");
     if (userId && conv && typeof conv.handleSelectUser === "function" && selectedUser !== userId) {
-      conv.handleSelectUser(userId);
+      // Appel asynchrone pour s'assurer que les informations utilisateur sont chargées
+      conv.handleSelectUser(userId).catch(console.error);
     }
   }, [location.search, conv, selectedUser]);
 

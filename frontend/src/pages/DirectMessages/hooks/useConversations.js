@@ -87,29 +87,8 @@ export const useConversations = (options = {}) => {
         }, 0);
 
         return newCounts;
-      });
-    },
+      });    },
     [calculateTotalUnreadCount]
-  );
-  /**
-   * Sélectionne un utilisateur pour la conversation et réinitialise son compteur de messages non lus
-   * @param {string} userId - ID de l'utilisateur
-   */ const handleSelectUser = useCallback(
-    (userId) => {
-      setSelectedUser(userId);
-      // Réinitialiser le compteur de messages non lus pour cet utilisateur
-      resetUnreadCountForUser(userId); // Notifier le serveur que les messages de cet utilisateur ont été lus
-      if (socket && socket.connected && userId) {
-        console.log(
-          `[useConversations] Marquage des messages de ${userId} comme lus`
-        );
-        socket.emit("readAllPrivateMessages", {
-          senderId: userId,
-          recipientId: currentUserId,
-        });
-      }
-    },
-    [resetUnreadCountForUser, socket]
   );
 
   /**
@@ -133,15 +112,13 @@ export const useConversations = (options = {}) => {
         );
       }
 
-      const userData = await response.json();
-
-      setUsersInfo((prev) => ({
+      const userData = await response.json();      setUsersInfo((prev) => ({
         ...prev,
         [userId]: {
           id: userData.id_utilisateur,
           name: userData.nom,
           avatar: userData.photo_de_profil,
-          status: userData.status || "offline",
+          status: userData.status || "offline", // Le backend renvoie maintenant "offline" par défaut
         },
       }));
 
@@ -151,6 +128,34 @@ export const useConversations = (options = {}) => {
       return null;
     }
   }, []);
+  
+  /**
+   * Sélectionne un utilisateur pour la conversation et réinitialise son compteur de messages non lus
+   * @param {string} userId - ID de l'utilisateur
+   */
+  const handleSelectUser = useCallback(
+    async (userId) => {
+      setSelectedUser(userId);
+      
+      // Si l'utilisateur n'est pas dans usersInfo, on récupère ses infos avant la sélection
+      if (!usersInfo[userId]) {
+        await fetchUserInfo(userId);
+      }
+      
+      // Réinitialiser le compteur de messages non lus pour cet utilisateur
+      resetUnreadCountForUser(userId); // Notifier le serveur que les messages de cet utilisateur ont été lus
+      if (socket && socket.connected && userId) {
+        console.log(
+          `[useConversations] Marquage des messages de ${userId} comme lus`
+        );
+        socket.emit("readAllPrivateMessages", {
+          senderId: userId,
+          recipientId: currentUserId,
+        });
+      }
+    },
+    [resetUnreadCountForUser, socket, usersInfo, fetchUserInfo]
+  );
   /**
    * Récupère la liste des conversations
    */
@@ -325,14 +330,13 @@ export const useConversations = (options = {}) => {
     setShowNewConversationModal(true);
     fetchAvailableUsers();
   }, [fetchAvailableUsers]);
-
   /**
    * Démarre une conversation avec un utilisateur
    * @param {string} userId - ID de l'utilisateur
    * @returns {string} - ID de l'utilisateur ajouté
    */
   const startConversationWith = useCallback(
-    (userId) => {
+    async (userId) => {
       if (!userId) return null;
 
       // Vérifier si l'utilisateur est déjà dans les conversations
@@ -342,7 +346,7 @@ export const useConversations = (options = {}) => {
 
       // Si l'utilisateur n'est pas dans usersInfo, on récupère ses infos
       if (!usersInfo[userId]) {
-        fetchUserInfo(userId);
+        await fetchUserInfo(userId);
       }
 
       return userId;
@@ -421,8 +425,7 @@ export const useConversations = (options = {}) => {
 
   /**
    * Ferme le modal de nouvelle conversation
-   */
-  const handleCloseNewConversationModal = useCallback(() => {
+   */  const handleCloseNewConversationModal = useCallback(() => {
     setShowNewConversationModal(false);
     setSearchUserQuery("");
   }, []);
@@ -430,23 +433,22 @@ export const useConversations = (options = {}) => {
   /**
    * Ouvre une conversation avec un utilisateur
    * @param {string} userId - ID de l'utilisateur
-   */
-  const handleOpenConversation = useCallback(
-    (userId) => {
-      handleSelectUser(userId);
+   */  const handleOpenConversation = useCallback(
+    async (userId) => {
+      await handleSelectUser(userId);
       handleCloseConversationContextMenu();
     },
     [handleSelectUser, handleCloseConversationContextMenu]
   );
-
+  
   /**
    * Démarre une conversation avec un utilisateur depuis le modal
    * @param {string} userId - ID de l'utilisateur
    */
   const handleStartConversation = useCallback(
-    (userId) => {
-      startConversationWith(userId);
-      handleSelectUser(userId);
+    async (userId) => {
+      await startConversationWith(userId);
+      await handleSelectUser(userId);
       handleCloseNewConversationModal();
     },
     [startConversationWith, handleSelectUser, handleCloseNewConversationModal]
