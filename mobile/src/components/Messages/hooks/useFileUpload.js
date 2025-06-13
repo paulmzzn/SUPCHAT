@@ -6,7 +6,7 @@ export const useFileUpload = ({
   setMessages, 
   addAnimatingMessage, 
   scrollToBottom, 
-  saveConversationTimestamp 
+  saveConversationTimestamp
 }) => {
   const [uploadingFile, setUploadingFile] = useState(false);
 
@@ -21,37 +21,20 @@ export const useFileUpload = ({
   const handleUploadComplete = useCallback((result) => {
     console.log('Upload terminé:', result);
     
-    if (result.message_prive && result.fichier) {
-      const optimisticMessageWithAttachment = {
-        id_message_prive: `temp-upload-${Date.now()}`,
-        contenu: result.message_prive.contenu || "",
-        fk_expediteur: currentUserId,
-        fk_destinataire: userId,
-        date_envoi: new Date().toISOString(),
-        isOptimistic: true,
-        isFileUpload: true,
-        attachments: [{
-          id_fichier: result.fichier.id_fichier,
-          nom_fichier: result.fichier.nom_fichier,
-          type: result.fichier.type || result.fichier.mime_type,
-          taille_fichier: result.fichier.taille_fichier,
-          url: result.fichier.url,
-          presignedUrl: result.fichier.presignedUrl
-        }]
-      };
-
-      setMessages((prev) => [...prev, optimisticMessageWithAttachment]);
-
-      const messageId = optimisticMessageWithAttachment.id_message_prive;
-      addAnimatingMessage(messageId);
-    }
+    // LOGIQUE SIMPLIFIÉE: Le backend a déjà créé le message privé avec la pièce jointe
+    // et l'a envoyé via WebSocket. Pas besoin d'envoyer un autre message.
+    
+    console.log('Upload terminé, le message avec pièce jointe sera reçu via WebSocket depuis le backend');
+    
+    // Le message complet avec pièce jointe sera reçu automatiquement via WebSocket
+    // grâce à la logique backend qui émet le message après création
     
     setTimeout(() => {
       scrollToBottom(true);
     }, 100);
     
     saveConversationTimestamp(userId);
-  }, [currentUserId, userId, setMessages, addAnimatingMessage, scrollToBottom, saveConversationTimestamp]);
+  }, [userId, scrollToBottom, saveConversationTimestamp]);
 
   const handleUploadError = useCallback((error) => {
     console.error('Erreur d\'upload:', error);

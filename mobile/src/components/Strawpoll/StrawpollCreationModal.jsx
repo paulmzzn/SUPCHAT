@@ -97,14 +97,23 @@ const StrawpollCreationModal = ({ visible, onClose, onPollCreated, theme, channe
             error: messageError,
             message: messageError.message,
             channelId,
-            messageText
+            messageText,
+            stack: messageError.stack
           });
           
-          // Afficher une erreur plus détaillée
-          Alert.alert(
-            'Erreur', 
-            `Sondage créé mais erreur lors du partage: ${messageError.message}\n\nVous pouvez partager manuellement le lien: ${result.url}`
-          );
+          // Gestion spécifique des erreurs de droits d'accès
+          if (messageError.message && messageError.message.includes('droits d\'écriture')) {
+            Alert.alert(
+              'Sondage créé mais erreur lors du partage', 
+              `Erreur lors de la vérification des droits d'écriture au canal. Vous pouvez partager manuellement le lien: ${result.url}`
+            );
+          } else {
+            // Afficher une erreur plus détaillée
+            Alert.alert(
+              'Erreur', 
+              `Sondage créé mais erreur lors du partage: ${messageError.message || 'Erreur inconnue'}\n\nVous pouvez partager manuellement le lien: ${result.url}`
+            );
+          }
         }
       } else {
         console.error('Réponse invalide du serveur:', result);

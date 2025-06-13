@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { getStyles } from './MessageInputWithMentions.styles';
 import { useMentions } from '../../hooks/useMentions';
+import { useChannelMentions } from '../../hooks/useChannelMentions';
 import MentionSuggestions from '../MentionSuggestions';
+import ChannelSuggestions from '../ChannelSuggestions';
 import ReplyPreview from './ReplyPreview';
 import FileUploader from '../FileUploader';
 
@@ -48,32 +50,53 @@ const MessageInputWithMentions = ({
     closeMentionSuggestions,
   } = useMentions();
 
-  // Charger les utilisateurs mentionnables quand workspaceId change
+  const {
+    showChannelSuggestions,
+    channelSuggestions,
+    activeChannelIndex,
+    fetchMentionableChannels,
+    handleChannelInput,
+    selectChannel,
+    closeChannelSuggestions,
+  } = useChannelMentions();
+
+  // Charger les utilisateurs et canaux mentionnables quand workspaceId change
   React.useEffect(() => {
     if (workspaceId) {
       fetchMentionableUsers(workspaceId);
+      fetchMentionableChannels(workspaceId);
     }
-  }, [workspaceId, fetchMentionableUsers]);
+  }, [workspaceId, fetchMentionableUsers, fetchMentionableChannels]);
 
-  // Gérer les changements de texte avec détection des mentions
+  // Gérer les changements de texte avec détection des mentions et canaux
   const handleTextChange = useCallback((text) => {
     onChangeText(text);
     
     // Utiliser la position du curseur actuelle ou la fin du texte
     const position = cursorPosition || text.length;
-    handleMentionInput(text, position);
-  }, [onChangeText, cursorPosition, handleMentionInput]);
+    
+    // Vérifier d'abord les mentions de canaux (#)
+    const hasChannelMention = handleChannelInput(text, position);
+    
+    // Si pas de mention de canal, vérifier les mentions d'utilisateurs (@)
+    if (!hasChannelMention) {
+      handleMentionInput(text, position);
+    }
+  }, [onChangeText, cursorPosition, handleMentionInput, handleChannelInput]);
 
   // Gérer les changements de position du curseur
   const handleSelectionChange = useCallback((event) => {
     const { selection } = event.nativeEvent;
     setCursorPosition(selection.start);
     
-    // Re-vérifier les mentions à la nouvelle position
-    handleMentionInput(value, selection.start);
-  }, [value, handleMentionInput]);
+    // Re-vérifier les mentions et canaux à la nouvelle position
+    const hasChannelMention = handleChannelInput(value, selection.start);
+    if (!hasChannelMention) {
+      handleMentionInput(value, selection.start);
+    }
+  }, [value, handleMentionInput, handleChannelInput]);
 
-  // Sélectionner une mention
+  // Sélectionner une mention d'utilisateur
   const handleSelectMention = useCallback((user) => {
     const result = selectMention(user, value, cursorPosition);
     
@@ -92,11 +115,31 @@ const MessageInputWithMentions = ({
     }
   }, [selectMention, value, cursorPosition, onChangeText, textInputRef]);
 
+  // Sélectionner une mention de canal
+  const handleSelectChannel = useCallback((channel) => {
+    const result = selectChannel(channel, value, cursorPosition);
+    
+    if (result) {
+      onChangeText(result.newText);
+      
+      // Mettre le focus et positionner le curseur
+      setTimeout(() => {
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+          textInputRef.current.setNativeProps({
+            selection: { start: result.newCursorPosition, end: result.newCursorPosition }
+          });
+        }
+      }, 50);
+    }
+  }, [selectChannel, value, cursorPosition, onChangeText, textInputRef]);
+
   // Gérer l'envoi du message
   const handleSend = useCallback(() => {
     closeMentionSuggestions();
+    closeChannelSuggestions();
     onSend();
-  }, [closeMentionSuggestions, onSend]);
+  }, [closeMentionSuggestions, closeChannelSuggestions, onSend]);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -107,6 +150,15 @@ const MessageInputWithMentions = ({
         onSelectMention={handleSelectMention}
         themeColors={themeColors}
         visible={showMentionSuggestions}
+      />
+      
+      {/* Suggestions de canaux */}
+      <ChannelSuggestions
+        suggestions={channelSuggestions}
+        activeChannelIndex={activeChannelIndex}
+        onSelectChannel={handleSelectChannel}
+        themeColors={themeColors}
+        visible={showChannelSuggestions}
       />
       
       {/* Container principal */}

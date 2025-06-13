@@ -23,6 +23,8 @@ const MessagesList = ({
   setMessages,
   scrollRef,
   onScrollToBottom,
+  onUserPress, // Handler pour les clics sur les mentions d'utilisateurs
+  onChannelPress, // Handler pour les clics sur les mentions de canaux
 }) => {
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
@@ -130,6 +132,8 @@ const MessagesList = ({
                 onRemoveReaction={onRemoveReaction}
                 socket={socket}
                 setMessages={setMessages}
+                onUserPress={onUserPress}
+                onChannelPress={onChannelPress}
               />
             </Swipeable>
           );

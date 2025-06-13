@@ -71,6 +71,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
   } = useWorkspaceChat(workspaceId, channelId, socket, markChannelAsRead);
 
   const [currentUserName, setCurrentUserName] = useState('Utilisateur');
+  const [workspaceChannels, setWorkspaceChannels] = useState([]);
 
   // Récupérer le nom d'utilisateur actuel
   useEffect(() => {
@@ -92,6 +93,29 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
 
     fetchUserProfile();
   }, []);
+
+  // Récupérer les canaux du workspace pour la navigation des tags de canaux
+  useEffect(() => {
+    const fetchWorkspaceChannels = async () => {
+      if (!workspaceId) return;
+
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(`${env.API_URL}/api/workspace/${workspaceId}/canals`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const channels = await response.json();
+          setWorkspaceChannels(channels);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des canaux du workspace:', error);
+      }
+    };
+
+    fetchWorkspaceChannels();
+  }, [workspaceId]);
 
   const {
     newMessage,
@@ -233,6 +257,41 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
     });
   }, [navigation]);
 
+  // Handler pour les clics sur les mentions de canaux
+  const handleChannelPress = useCallback((channelName) => {
+    console.log('Canal cliqué:', channelName);
+    
+    // Rechercher le canal par nom dans la liste des canaux du workspace
+    const targetChannel = workspaceChannels.find(channel => 
+      channel.nom.toLowerCase() === channelName.toLowerCase()
+    );
+
+    if (targetChannel) {
+      console.log('Canal trouvé:', targetChannel);
+      
+      // Si c'est le même canal que celui actuel, ne rien faire
+      if (targetChannel.id_canal === channelId) {
+        console.log('Déjà dans ce canal');
+        return;
+      }
+      
+      // Mettre à jour les paramètres de l'écran actuel au lieu de naviguer
+      navigation.setParams({
+        channelId: targetChannel.id_canal,
+        channelName: targetChannel.nom,
+      });
+    } else {
+      console.warn(`Canal "${channelName}" non trouvé dans le workspace`);
+      
+      // Optionnel: afficher un toast à l'utilisateur
+      Toast.show({
+        type: 'error',
+        text1: 'Canal introuvable',
+        text2: `Le canal #${channelName} n'existe plus ou vous n'y avez pas accès`
+      });
+    }
+  }, [workspaceChannels, navigation, channelId]);
+
   const renderConnectionError = useCallback(() => {
     if (!connectionError) return null;
 
@@ -314,6 +373,7 @@ const WorkspaceDetailScreen = ({ route, navigation }) => {
         onStrawpollVote={handleStrawpollVote}
         onStrawpollViewResults={handleStrawpollViewResults}
         onUserPress={handleUserPress}
+        onChannelPress={handleChannelPress}
       />
 
       <TypingIndicator typingUsers={typingUsers} styles={styles} />

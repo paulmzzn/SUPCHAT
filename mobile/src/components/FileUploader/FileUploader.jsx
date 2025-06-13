@@ -137,8 +137,9 @@ const FileUploader = ({
         endpoint = `${env.API_URL}/api/private-messages/upload`;
         // Vérifier si recipientId est défini pour les messages privés
         if (recipientId) {
-          console.log('recipientId trouvé:', recipientId);
-          formData.append('recipientId', recipientId);
+          console.log('recipientId trouvé:', recipientId, 'Type:', typeof recipientId);
+          formData.append('recipientId', String(recipientId)); // Conversion explicite en string
+          console.log('recipientId ajouté au FormData');
         } else {
           console.log('recipientId manquant! Valeur reçue:', recipientId);
           throw new Error("recipientId manquant pour l'upload de message privé");

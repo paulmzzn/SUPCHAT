@@ -11,10 +11,11 @@ export const useSocketMessages = ({
   saveConversationTimestamp,
 }) => {
   useEffect(() => {
-    if (!socket || !currentUserId || !userId) return;
+    if (!socket || !currentUserId || !userId) {
+      return;
+    }
 
     const handlePrivateMessage = async (msg) => {
-      console.log("Received message:", msg);
 
       if (msg.fk_expediteur === userId || msg.fk_destinataire === userId) {
         const isNewMessage = !messages.some(
@@ -92,13 +93,29 @@ export const useSocketMessages = ({
           scrollToBottom(true);
         }, 50);
 
-        // Marquer comme lu si c'est un message reçu (pas envoyé par l'utilisateur actuel)
+        // Marquer comme lu si c'est un message reçu (envoyé par l'utilisateur avec qui on discute vers nous)
         if (msg.fk_expediteur === userId && msg.fk_destinataire === currentUserId) {
+          console.log("📖 [useSocketMessages] Marquage automatique du message comme lu:", msg.id_message_prive);
           socket.emit("readPrivateMessage", {
             id: msg.id_message_prive,
           }, (response) => {
             if (response && !response.ok) {
-              console.error("Erreur lors de l'envoi de l'accusé de lecture:", response.message);
+              console.error("❌ [useSocketMessages] Erreur lors de l'envoi de l'accusé de lecture:", response.message);
+            } else {
+              console.log("✅ [useSocketMessages] Message marqué comme lu avec succès");
+              
+              // Forcer le rafraîchissement des compteurs immédiatement
+              setTimeout(() => {
+                console.log("🔄 [useSocketMessages] Rafraîchissement forcé des compteurs");
+                if (global.AppEvents) {
+                  global.AppEvents.emit('forceUnreadCountsUpdate', {
+                    timestamp: Date.now(),
+                    source: 'useSocketMessages-autoRead',
+                    messageId: msg.id_message_prive,
+                    userId: userId
+                  });
+                }
+              }, 200); // Délai pour s'assurer que le backend a traité la requête
             }
           });
         }
@@ -171,7 +188,9 @@ export const useSocketMessages = ({
           )
         );
       }
-    };    socket.on("privateMessage", handlePrivateMessage);
+    };
+
+    socket.on("privateMessage", handlePrivateMessage);
     socket.on("privateMessageUpdated", handlePrivateMessageUpdated);
     socket.on("privateMessageDeleted", handlePrivateMessageDeleted);
     socket.on("privateMessageReaction", handlePrivateMessageReaction);
@@ -186,5 +205,5 @@ export const useSocketMessages = ({
       socket.off("privateMessageRead", handlePrivateMessageRead);
       socket.off("allMessagesRead", handleAllMessagesRead);
     };
-  }, [socket, userId, currentUserId, messages]);
+  }, [socket, userId, currentUserId, messages]); // Remise de messages pour éviter stale closures
 };
