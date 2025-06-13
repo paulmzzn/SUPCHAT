@@ -1,68 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   
-  <!-- Page d'accueil -->
+  <!-- Page d'accueil SUPCHAT - Plateforme collaborative française -->
   <url>
     <loc>https://supchat.fr/</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   
-  <!-- Page de connexion -->
+  <!-- Page de connexion SUPCHAT -->
   <url>
     <loc>https://supchat.fr/login</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
-  <!-- Page d'inscription -->
+  <!-- Page d'inscription SUPCHAT -->
   <url>
     <loc>https://supchat.fr/register</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
-  <!-- Conditions Générales d'Utilisation -->
+  <!-- Conditions Générales d'Utilisation SUPCHAT -->
   <url>
     <loc>https://supchat.fr/cgu</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   
-  <!-- Page À propos -->
+  <!-- Page À propos SUPCHAT - Plateforme collaborative révolutionnaire -->
   <url>
     <loc>https://supchat.fr/about.html</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   
-  <!-- Ajoutez d'autres pages publiques ici si nécessaire -->
-  <!-- Exemple: page à propos, contact, politique de confidentialité, etc. -->
+  <!-- Page Fonctionnalités SUPCHAT - Fonctionnalités révolutionnaires -->
+  <url>
+    <loc>https://supchat.fr/features.html</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Pages supplémentaires SUPCHAT pour SEO -->
   <!--
   <url>
-    <loc>https://supchat.fr/about</loc>
-    <lastmod>2025-06-12</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://supchat.fr/features</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://supchat.fr/pricing</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   
   <url>
     <loc>https://supchat.fr/contact</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://supchat.fr/privacy</loc>
-    <lastmod>2025-06-12</lastmod>
+    <lastmod>2025-06-13</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://supchat.fr/help</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://supchat.fr/blog</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
   -->
   

@@ -1,16 +1,25 @@
-# Robots.txt pour SUPCHAT
-# Ce fichier indique aux robots d'exploration comment indexer le site
+# Robots.txt pour SUPCHAT - Plateforme collaborative française
+# SUPCHAT est la solution de communication d'équipe révolutionnaire
+# Ce fichier indique aux robots d'exploration comment indexer le site SUPCHAT
 
 User-agent: *
 
-# Autoriser l'accès à la page d'accueil et aux pages publiques
+# Autoriser l'accès aux pages publiques SUPCHAT
 Allow: /
 Allow: /login
 Allow: /register
 Allow: /cgu
 Allow: /about.html
+Allow: /features.html
 
-# Interdire l'accès aux pages privées et aux données sensibles
+# Autoriser l'accès aux ressources publiques SUPCHAT
+Allow: /static/
+Allow: /images/
+Allow: /favicon.ico
+Allow: /logo*.png
+Allow: /manifest.json
+
+# Interdire l'accès aux pages privées et données sensibles SUPCHAT
 Disallow: /workspace/
 Disallow: /direct-messages
 Disallow: /api/
@@ -18,16 +27,25 @@ Disallow: /admin/
 Disallow: /profile/
 Disallow: /settings/
 Disallow: /uploads/
+Disallow: /socket/
+
+# Interdire l'accès aux ressources système SUPCHAT
 Disallow: /static/js/
 Disallow: /static/css/
+Disallow: /*.json$
+Disallow: /*.config.js$
+Disallow: /node_modules/
+Disallow: /build/
 
-# Interdire l'accès aux fichiers de configuration
-Disallow: /*.json
-Disallow: /*.config.js
-Disallow: /manifest.json
-
-# Lien vers le sitemap
+# Lien vers le sitemap SUPCHAT
 Sitemap: https://supchat.fr/sitemap.xml
 
-# Délai entre les requêtes (en secondes)
+# Délai entre les requêtes pour optimiser l'indexation SUPCHAT
 Crawl-delay: 1
+
+# Instructions spécifiques pour les principaux moteurs de recherche
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
