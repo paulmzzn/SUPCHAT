@@ -10,6 +10,108 @@ import { uploadToS3, deleteFromS3 } from "../config/s3Config.js";
 import { getPrivateMessageAttachments } from "../controllers/attachmentController.js";
 import { getS3Config } from "../config/secrets.js";
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Attachment:
+ *       type: object
+ *       properties:
+ *         id_fichier:
+ *           type: integer
+ *         nom_fichier:
+ *           type: string
+ *         taille:
+ *           type: integer
+ *         type_mime:
+ *           type: string
+ *         url_s3:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *
+ * /attachments/upload:
+ *   post:
+ *     summary: Upload une pièce jointe
+ *     tags: [Attachments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               messageId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Pièce jointe uploadée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Attachment'
+ *       401:
+ *         description: Non autorisé
+ *       500:
+ *         description: Erreur lors de l'upload
+ *
+ * /attachments/messages/{messageId}:
+ *   get:
+ *     summary: Récupère les pièces jointes d'un message
+ *     tags: [Attachments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du message
+ *     responses:
+ *       200:
+ *         description: Liste des pièces jointes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attachment'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /attachments/private-messages/{messageId}:
+ *   get:
+ *     summary: Récupère les pièces jointes d'un message privé
+ *     tags: [Attachments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du message privé
+ *     responses:
+ *       200:
+ *         description: Liste des pièces jointes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attachment'
+ *       401:
+ *         description: Non autorisé
+ */
+
 // Configuration S3 sécurisée avec secrets Docker
 const s3Config = getS3Config();
 

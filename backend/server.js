@@ -29,6 +29,9 @@ import fs from "fs"; // Import fs
 import strawpollRoutes from "./routes/strawpollRoutes.js"; // Import ES module
 import mistralRoutes from "./routes/mistralRoutes.js"; // Ajout des routes Mistral
 
+// Swagger (OpenAPI) documentation
+import setupSwagger from "./swagger.js";
+
 // Système de logging simple
 // Niveaux: error, warn, info, debug
 const LOG_LEVELS = {
@@ -79,6 +82,9 @@ console.log = (message, ...args) => {
 
 const app = express();
 const httpServer = createServer(app);
+
+// Activer la documentation Swagger sur /api-docs
+setupSwagger(app);
 
 // Obtenir l'équivalent de __dirname pour ES modules
 const __filename = fileURLToPath(import.meta.url);

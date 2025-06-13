@@ -7,6 +7,210 @@ import { getObjectFromS3 } from "../config/s3Service.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { getFileFromS3, proxyS3Image } from "../controllers/fileController.js";
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     File:
+ *       type: object
+ *       properties:
+ *         id_fichier:
+ *           type: integer
+ *         nom_fichier:
+ *           type: string
+ *         taille:
+ *           type: integer
+ *         type_mime:
+ *           type: string
+ *         url_s3:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *
+ * /files/proxy:
+ *   get:
+ *     summary: Proxy pour les images S3 (résout les problèmes CORS)
+ *     tags: [Files]
+ *     parameters:
+ *       - in: query
+ *         name: url
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: URL de l'image S3
+ *     responses:
+ *       200:
+ *         description: Image proxifiée
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: URL manquante
+ *       500:
+ *         description: Erreur lors de la récupération
+ *
+ * /files/download/{filePath}:
+ *   get:
+ *     summary: Télécharge un fichier depuis S3
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filePath
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Chemin du fichier sur S3
+ *     responses:
+ *       200:
+ *         description: Fichier téléchargé
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Chemin de fichier manquant
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ *       500:
+ *         description: Erreur lors du téléchargement
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     File:
+ *       type: object
+ *       properties:
+ *         id_fichier:
+ *           type: integer
+ *         nom_fichier:
+ *           type: string
+ *         taille:
+ *           type: integer
+ *         type_mime:
+ *           type: string
+ *         url_s3:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *
+ * /files/proxy:
+ *   get:
+ *     summary: Proxy pour les images S3 (résout les problèmes CORS)
+ *     tags: [Files]
+ *     parameters:
+ *       - in: query
+ *         name: url
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: URL de l'image S3
+ *     responses:
+ *       200:
+ *         description: Image proxifiée
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: URL manquante
+ *       500:
+ *         description: Erreur lors de la récupération
+ *
+ * /files/download/{filePath}:
+ *   get:
+ *     summary: Télécharge un fichier depuis S3
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filePath
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Chemin du fichier sur S3
+ *     responses:
+ *       200:
+ *         description: Fichier téléchargé
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Chemin de fichier manquant
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ *       500:
+ *         description: Erreur lors du téléchargement
+ *
+ * /files/content/{path}:
+ *   get:
+ *     summary: Récupère le contenu d'un fichier
+ *     tags: [Files]
+ *     parameters:
+ *       - in: path
+ *         name: path
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Chemin du fichier
+ *     responses:
+ *       200:
+ *         description: Contenu du fichier
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Fichier non trouvé
+ *       500:
+ *         description: Erreur lors de la lecture
+ *
+ * /files/{id}:
+ *   get:
+ *     summary: Récupère un fichier par son ID
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du fichier
+ *     responses:
+ *       200:
+ *         description: Fichier récupéré
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ *       500:
+ *         description: Erreur lors de la récupération
+ */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

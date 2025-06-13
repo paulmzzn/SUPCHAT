@@ -29,6 +29,441 @@ import pool from "../config/dbConnection.js"; // Ajout de l'import de pool
 import { uploadToS3 } from "../config/s3Config.js"; // Import de la fonction d'upload S3
 import { getJwtSecret } from "../config/secrets.js";
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         nom:
+ *           type: string
+ *         email:
+ *           type: string
+ *         photo_de_profil:
+ *           type: string
+ *         statut:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *     UserInput:
+ *       type: object
+ *       properties:
+ *         nom:
+ *           type: string
+ *         email:
+ *           type: string
+ *         mot_de_passe:
+ *           type: string
+ *     LoginInput:
+ *       type: object
+ *       properties:
+ *         email:
+ *           type: string
+ *         mot_de_passe:
+ *           type: string
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * 
+ * /users/register:
+ *   post:
+ *     summary: Enregistre un nouvel utilisateur
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       201:
+ *         description: Utilisateur créé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Données invalides
+ *       409:
+ *         description: Utilisateur déjà existant
+ *
+ * /users:
+ *   get:
+ *     summary: Récupère tous les utilisateurs
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Liste des utilisateurs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *
+ * /users/login:
+ *   post:
+ *     summary: Connecte un utilisateur
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginInput'
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Identifiants invalides
+ *
+ * /users/update/{id}:
+ *   put:
+ *     summary: Met à jour un utilisateur
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       200:
+ *         description: Utilisateur mis à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: Utilisateur non trouvé
+ *
+ * /users/delete/{id}:
+ *   delete:
+ *     summary: Supprime un utilisateur
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       204:
+ *         description: Utilisateur supprimé
+ *       404:
+ *         description: Utilisateur non trouvé
+ *
+ * /users/send-invitation:
+ *   post:
+ *     summary: Envoie une invitation par email
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Invitation envoyée
+ *       400:
+ *         description: Email invalide
+ *
+ * /users/validate-code:
+ *   post:
+ *     summary: Valide un code de vérification
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Code validé
+ *       400:
+ *         description: Code invalide
+ *
+ * /users/resend-validation:
+ *   post:
+ *     summary: Renvoie un code de validation
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Code renvoyé
+ *       400:
+ *         description: Email invalide
+ *
+ * /users/validate:
+ *   get:
+ *     summary: Valide un utilisateur via token
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Token de validation
+ *     responses:
+ *       200:
+ *         description: Utilisateur validé
+ *       400:
+ *         description: Token invalide
+ *
+ * /users/request-reset:
+ *   post:
+ *     summary: Demande une réinitialisation de mot de passe
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email de réinitialisation envoyé
+ *       404:
+ *         description: Utilisateur non trouvé
+ *
+ * /users/reset-password:
+ *   post:
+ *     summary: Réinitialise le mot de passe
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Mot de passe réinitialisé
+ *       400:
+ *         description: Token invalide
+ *
+ * /users/profile:
+ *   get:
+ *     summary: Récupère le profil de l'utilisateur connecté
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profil utilisateur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /users/profile/update:
+ *   put:
+ *     summary: Met à jour le profil utilisateur
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nom:
+ *                 type: string
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profil mis à jour
+ *       401:
+ *         description: Non autorisé
+ *
+ * /users/verify-token:
+ *   get:
+ *     summary: Vérifie la validité du token
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token valide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user_id:
+ *                   type: integer
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Token invalide
+ *
+ * /users/{id}:
+ *   get:
+ *     summary: Récupère un utilisateur par ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       200:
+ *         description: Utilisateur trouvé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: Utilisateur non trouvé
+ *
+ * /users/auth/google:
+ *   get:
+ *     summary: Authentification Google OAuth
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers Google
+ *
+ * /users/auth/google/callback:
+ *   get:
+ *     summary: Callback Google OAuth
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection après authentification
+ *
+ * /users/auth/github:
+ *   get:
+ *     summary: Authentification GitHub OAuth
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers GitHub
+ *
+ * /users/auth/github/callback:
+ *   get:
+ *     summary: Callback GitHub OAuth
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection après authentification
+ *
+ * /users/export-rgpd:
+ *   get:
+ *     summary: Exporte les données RGPD de l'utilisateur
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Données RGPD exportées
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Non autorisé
+ *
+ * /users/change-password:
+ *   post:
+ *     summary: Change le mot de passe de l'utilisateur
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Mot de passe changé
+ *       400:
+ *         description: Mot de passe actuel incorrect
+ *       401:
+ *         description: Non autorisé
+ *
+ * /users/activity-stats:
+ *   get:
+ *     summary: Récupère les statistiques d'activité de l'utilisateur
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistiques d'activité
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       401:
+ *         description: Non autorisé
+ */
+
 // Configuration de multer pour le stockage en mémoire (pour S3)
 const storage = multer.memoryStorage();
 

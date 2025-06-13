@@ -11,6 +11,228 @@ import {
   getMemberChannelAccess,
   updateMemberChannelAccess
 } from "../controllers/canalController.js";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Canal:
+ *       type: object
+ *       properties:
+ *         id_canal:
+ *           type: integer
+ *         nom:
+ *           type: string
+ *         description:
+ *           type: string
+ *         is_private:
+ *           type: boolean
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_workspace:
+ *           type: integer
+ *         fk_utilisateur_createur:
+ *           type: integer
+ *     CanalInput:
+ *       type: object
+ *       properties:
+ *         nom:
+ *           type: string
+ *         description:
+ *           type: string
+ *         is_private:
+ *           type: boolean
+ * 
+ * /workspace/{workspaceId}/canals:
+ *   post:
+ *     summary: Crée un nouveau canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CanalInput'
+ *     responses:
+ *       201:
+ *         description: Canal créé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ *   get:
+ *     summary: Récupère les canaux d'un workspace
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     responses:
+ *       200:
+ *         description: Liste des canaux
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ * /workspace/{workspaceId}/canals/{canalId}:
+ *   get:
+ *     summary: Récupère un canal spécifique
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       200:
+ *         description: Détails du canal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ *   put:
+ *     summary: Met à jour un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CanalInput'
+ *     responses:
+ *       200:
+ *         description: Canal mis à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ *   delete:
+ *     summary: Supprime un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       204:
+ *         description: Canal supprimé
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ * /workspace/{workspaceId}/canals/{canalId}/files:
+ *   get:
+ *     summary: Récupère les fichiers d'un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       200:
+ *         description: Liste des fichiers du canal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ */
 import { 
   verifyToken, 
   checkWorkspaceMembership, 
@@ -19,6 +241,340 @@ import {
   checkCanalWriteAccess
 } from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Canal:
+ *       type: object
+ *       properties:
+ *         id_canal:
+ *           type: integer
+ *         nom:
+ *           type: string
+ *         description:
+ *           type: string
+ *         is_private:
+ *           type: boolean
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_workspace:
+ *           type: integer
+ *         fk_utilisateur_createur:
+ *           type: integer
+ *     CanalInput:
+ *       type: object
+ *       properties:
+ *         nom:
+ *           type: string
+ *         description:
+ *           type: string
+ *         is_private:
+ *           type: boolean
+ * 
+ * /workspace/{workspaceId}/canals:
+ *   post:
+ *     summary: Crée un nouveau canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CanalInput'
+ *     responses:
+ *       201:
+ *         description: Canal créé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ *   get:
+ *     summary: Récupère les canaux d'un workspace
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     responses:
+ *       200:
+ *         description: Liste des canaux
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ * /workspace/{workspaceId}/canals/{canalId}:
+ *   get:
+ *     summary: Récupère un canal spécifique
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       200:
+ *         description: Détails du canal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ *   put:
+ *     summary: Met à jour un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CanalInput'
+ *     responses:
+ *       200:
+ *         description: Canal mis à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ *   delete:
+ *     summary: Supprime un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       204:
+ *         description: Canal supprimé
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Canal non trouvé
+ *
+ * /workspace/{workspaceId}/canals/{canalId}/files:
+ *   get:
+ *     summary: Récupère les fichiers d'un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *     responses:
+ *       200:
+ *         description: Liste des fichiers du canal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ * /workspace/{workspaceId}/canals/private:
+ *   get:
+ *     summary: Récupère les canaux privés de l'utilisateur
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     responses:
+ *       200:
+ *         description: Liste des canaux privés
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Canal'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ * /workspace/{workspaceId}/canals/{canalId}/members/{userId}/access:
+ *   get:
+ *     summary: Récupère les droits d'accès d'un membre sur un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       200:
+ *         description: Droits d'accès du membre
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 can_read:
+ *                   type: boolean
+ *                 can_write:
+ *                   type: boolean
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ *
+ *   put:
+ *     summary: Met à jour les droits d'accès d'un membre sur un canal
+ *     tags: [Canals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *       - in: path
+ *         name: canalId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du canal
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               can_read:
+ *                 type: boolean
+ *               can_write:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Droits d'accès mis à jour
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé
+ */
 
 const router = express.Router();
 
