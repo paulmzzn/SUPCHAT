@@ -18,7 +18,8 @@ const MessageGroup = memo(({
   onOpenAttachment,
   onStrawpollVote,
   onStrawpollViewResults,
-  onUserPress // Nouvelle prop pour les mentions
+  onUserPress, // Handler pour les clics sur les mentions d'utilisateurs
+  onChannelPress // Handler pour les clics sur les mentions de canaux
 }) => {
   const chronologicalMessages = [...group.messages].reverse();
   
@@ -96,6 +97,7 @@ const MessageGroup = memo(({
               onStrawpollVote={onStrawpollVote}
               onStrawpollViewResults={onStrawpollViewResults}
               onUserPress={onUserPress}
+              onChannelPress={onChannelPress}
             />
             
             {group.isOwn && isLastMessage && (

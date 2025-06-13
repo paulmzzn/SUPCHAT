@@ -5,6 +5,7 @@ import { useTheme } from "../../theme/ThemeContext";
 import { getStyles } from "../../screens/Messages/MessagesScreen.styles";
 import MessageAttachments from "./MessageAttachments";
 import MessageReactions from "./MessageReactions";
+import { renderTextWithMentionsAndChannels } from "../../utils/mentionUtils";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000003";
 
@@ -34,6 +35,8 @@ const MessageBubble = ({
   onRemoveReaction,
   socket,
   setMessages,
+  onUserPress, // Handler pour les clics sur les mentions d'utilisateurs
+  onChannelPress, // Handler pour les clics sur les mentions de canaux
 }) => {
   const { colors: themeColors } = useTheme();
   const styles = getStyles(themeColors);
@@ -105,13 +108,14 @@ const MessageBubble = ({
       >
         {renderMessageReply()}
 
-        <Text
-          style={
-            isOwn ? styles.ownMessageText : styles.otherMessageText
-          }
-        >
-          {message.contenu}
-        </Text>
+        {renderTextWithMentionsAndChannels(
+          message.contenu,
+          themeColors,
+          onUserPress,
+          onChannelPress,
+          isOwn ? styles.ownMessageText : styles.otherMessageText,
+          isOwn
+        )}
 
         <MessageAttachments
           attachments={message.attachments}

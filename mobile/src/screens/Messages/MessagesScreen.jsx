@@ -123,7 +123,7 @@ const MessagesScreen = ({ navigation, route }) => {
 
   const fileUploadHandlers = useFileUpload({
     currentUserId,
-    actualUserId,
+    userId: actualUserId, // Utiliser le même nom que dans useSocketMessages pour la cohérence
     setMessages,
     addAnimatingMessage,
     scrollToBottom,
@@ -133,7 +133,7 @@ const MessagesScreen = ({ navigation, route }) => {
   useSocketMessages({
     socket,
     currentUserId,
-    actualUserId,
+    userId: actualUserId, // Correction: utiliser userId au lieu de actualUserId
     messages,
     setMessages,
     addAnimatingMessage,
@@ -168,6 +168,18 @@ const MessagesScreen = ({ navigation, route }) => {
       return;
     console.log("User opened conversation, marking messages as read");
     markMessagesAsRead(messages);
+
+    // Forcer le rafraîchissement des compteurs après marquage comme lu
+    setTimeout(() => {
+      if (global.AppEvents) {
+        console.log("🔄 [MessagesScreen] Émission d'événement pour rafraîchir les compteurs après ouverture");
+        global.AppEvents.emit('forceUnreadCountsUpdate', {
+          timestamp: Date.now(),
+          source: 'MessagesScreen-opened',
+          userId: actualUserId
+        });
+      }
+    }, 10); // Délai pour s'assurer que les messages sont marqués
   }, [
     messages,
     isInitialLoad,
@@ -256,6 +268,47 @@ const MessagesScreen = ({ navigation, route }) => {
     setSelectedMessageForReaction(null);
   };
 
+  // Handler pour les clics sur les mentions d'utilisateurs
+  const handleUserPress = useCallback(
+    (userId, userName) => {
+      console.log("Mention cliquée:", userName, "ID:", userId);
+
+      // Vérifier si c'est Mistral AI
+      if (userId === "00000000-0000-0000-0000-000000000001") {
+        // Optionnel : action spéciale pour Mistral AI
+        return;
+      }
+
+      // Si c'est l'utilisateur actuel, ne pas faire d'action
+      if (userId === currentUserId) {
+        return;
+      }
+
+      // Naviguer vers la conversation privée avec l'utilisateur
+      navigation.replace("Conversation", {
+        recipientId: userId,
+        recipientName: userName,
+      });
+    },
+    [navigation, currentUserId]
+  );
+
+  // Handler pour les clics sur les mentions de canaux
+  const handleChannelPress = useCallback(
+    (channelName) => {
+      console.log("Canal cliqué:", channelName);
+
+      // Dans les messages privés, on ne peut pas naviguer directement vers un canal
+      // car on n'a pas le contexte de workspace ni la liste des canaux.
+      // Pour l'instant, on affiche juste un message dans la console.
+      console.log("Navigation vers canal non supportée dans les messages privés");
+      
+      // TODO: On pourrait potentiellement stocker le contexte de workspace
+      // ou afficher une modal d'information à l'utilisateur
+    },
+    []
+  );
+
   if (!actualUserId) {
     return (
       <View style={styles.errorContainer}>
@@ -306,6 +359,8 @@ const MessagesScreen = ({ navigation, route }) => {
                 setMessages={setMessages}
                 scrollRef={messagesScrollRef}
                 onScrollToBottom={scrollToBottom}
+                onUserPress={handleUserPress} // Ajout du handler pour les mentions d'utilisateurs
+                onChannelPress={handleChannelPress} // Ajout du handler pour les mentions de canaux
               />
             </View>
           )}
