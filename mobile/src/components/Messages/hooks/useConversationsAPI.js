@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import env from "../../../config/env";
 
-const API_URL = env.API_URL;
+const API_URL = env.API_URL || "https://supchat.fr";
 
 export const useConversationsAPI = (conversationsData) => {
   const {
@@ -62,6 +62,7 @@ export const useConversationsAPI = (conversationsData) => {
 
       const extendedData = await res.json();
       console.log("Extended conversations data received:", extendedData.length);
+      console.log("Sample conversation data:", extendedData[0]); // Debug: montrer le premier élément
 
       extendedData.forEach((convo) => {
         if (!timestamps[convo.userId]) {
@@ -81,6 +82,7 @@ export const useConversationsAPI = (conversationsData) => {
 
       sortedData.forEach((convo) => {
         if (convo.userInfo) {
+          console.log(`Processing userInfo for ${convo.userId}:`, convo.userInfo); // Debug
           newUsersInfo[convo.userId] = {
             id: convo.userId,
             name: convo.userInfo.nom || convo.userInfo.name || "User",
@@ -88,9 +90,12 @@ export const useConversationsAPI = (conversationsData) => {
               convo.userInfo.photo_de_profil || convo.userInfo.avatar || null,
             ...convo.userInfo,
           };
+        } else {
+          console.log(`No userInfo for ${convo.userId}`); // Debug
         }
 
         if (convo.lastMessage) {
+          console.log(`Processing lastMessage for ${convo.userId}:`, convo.lastMessage); // Debug
           newLastMessages[convo.userId] = {
             contenu: convo.lastMessage.contenu || "",
             date_envoi:
@@ -98,6 +103,8 @@ export const useConversationsAPI = (conversationsData) => {
               convo.lastMessage.date_creation ||
               new Date().toISOString(),
           };
+        } else {
+          console.log(`No lastMessage for ${convo.userId}`); // Debug
         }
       });
 
