@@ -186,3 +186,253 @@ export const stripMentionFormatting = (text) => {
   
   return result;
 };
+
+// Fonction pour rendre les mentions de canaux et d'utilisateurs
+export const renderTextWithMentionsAndChannels = (text, themeColors, onUserPress, onChannelPress, textStyle = {}, isOwnMessage = false) => {
+  console.log('🔍 renderTextWithMentionsAndChannels called with text:', text);
+  
+  if (!text || typeof text !== 'string') {
+    return <Text style={textStyle}>{text}</Text>;
+  }
+
+  // Regex pour détecter les mentions d'utilisateurs et de canaux
+  // Mentions utilisateurs: @[id:nom], @[nom](id:uuid), @[nom](uuid)
+  const mentionRegex1 = /@\[([^:]+):([^\]]+)\]/g;
+  const mentionRegex2 = /@\[([^\]]+)\]\(id:([^)]+)\)/g;
+  const mentionRegex3 = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  
+  // Mentions de canaux: #nom-du-canal (comme dans le frontend)
+  const channelRegex = /#([a-zA-Z0-9_-]+)(\s|$)/g;
+  
+  const parts = [];
+  let lastIndex = 0;
+  
+  // Trouver toutes les mentions et tags dans le texte
+  const allTags = [];
+  
+  // Mentions utilisateurs - Format 1: @[id:nom]
+  let match1;
+  while ((match1 = mentionRegex1.exec(text)) !== null) {
+    allTags.push({
+      type: 'user',
+      match: match1,
+      index: match1.index,
+      userId: match1[1],
+      userName: match1[2],
+      fullMatch: match1[0]
+    });
+  }
+  
+  // Mentions utilisateurs - Format 2: @[nom](id:uuid)
+  let match2;
+  while ((match2 = mentionRegex2.exec(text)) !== null) {
+    allTags.push({
+      type: 'user',
+      match: match2,
+      index: match2.index,
+      userId: match2[2],
+      userName: match2[1],
+      fullMatch: match2[0]
+    });
+  }
+  
+  // Mentions utilisateurs - Format 3: @[nom](uuid)
+  let match3;
+  while ((match3 = mentionRegex3.exec(text)) !== null) {
+    // Vérifier que ce n'est pas déjà traité par le format 2
+    const isAlreadyProcessed = allTags.some(m => m.index === match3.index);
+    if (!isAlreadyProcessed) {
+      allTags.push({
+        type: 'user',
+        match: match3,
+        index: match3.index,
+        userId: match3[2],
+        userName: match3[1],
+        fullMatch: match3[0]
+      });
+    }
+  }
+  
+  // Mentions de canaux - Format: #nom-du-canal
+  let channelMatch;
+  while ((channelMatch = channelRegex.exec(text)) !== null) {
+    allTags.push({
+      type: 'channel',
+      match: channelMatch,
+      index: channelMatch.index,
+      channelName: channelMatch[1], // Le nom du canal sans le #
+      fullMatch: '#' + channelMatch[1] // Juste #nom sans l'espace
+    });
+  }
+  
+  // Trier les tags par position dans le texte
+  allTags.sort((a, b) => a.index - b.index);
+  
+  console.log('📝 Found tags:', allTags.length, allTags);
+
+  for (const tag of allTags) {
+    // Ajouter le texte avant le tag
+    if (tag.index > lastIndex) {
+      parts.push(
+        <Text key={`text-${lastIndex}`} style={[textStyle, { color: 'inherit' }]}>
+          {text.substring(lastIndex, tag.index)}
+        </Text>
+      );
+    }
+
+    if (tag.type === 'user') {
+      // Ajouter la mention d'utilisateur avec style de badge
+      const userId = tag.userId;
+      const userName = tag.userName;
+      
+      // Couleurs selon le type de message
+      const badgeColors = isOwnMessage 
+        ? {
+            backgroundColor: '#F3F4F6', // Gris clair pour mes messages
+            textColor: '#374151'        // Texte sombre
+          }
+        : {
+            backgroundColor: '#8B5CF6', // Violet pour les autres messages
+            textColor: '#FFFFFF'        // Texte blanc
+          };
+      
+      parts.push(
+        <View
+          key={`mention-wrapper-${tag.index}`}
+          style={{
+            alignSelf: 'baseline',
+            marginHorizontal: 3,
+            marginVertical: 0,
+          }}
+        >
+          <TouchableOpacity
+            style={{
+              backgroundColor: badgeColors.backgroundColor,
+              borderRadius: 25,
+              paddingHorizontal: 14,
+              paddingVertical: 5,
+              minWidth: 60,
+              height: 30,
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3,
+              elevation: 3,
+            }}
+            onPress={() => onUserPress && onUserPress(userId, userName)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={{
+                color: badgeColors.textColor,
+                fontWeight: '700',
+                fontSize: 13,
+                textAlign: 'center',
+                includeFontPadding: false,
+                lineHeight: 13,
+              }}
+            >
+              @{userName}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    } else if (tag.type === 'channel') {
+      // Ajouter la mention de canal avec style de badge
+      const channelName = tag.channelName;
+      
+      // Couleurs spécifiques pour les canaux
+      const channelBadgeColors = {
+        backgroundColor: '#3B82F6', // Bleu pour les canaux
+        textColor: '#FFFFFF'        // Texte blanc
+      };
+      
+      parts.push(
+        <View
+          key={`channel-wrapper-${tag.index}`}
+          style={{
+            alignSelf: 'baseline',
+            marginHorizontal: 3,
+            marginVertical: 0,
+          }}
+        >
+          <TouchableOpacity
+            style={{
+              backgroundColor: channelBadgeColors.backgroundColor,
+              borderRadius: 25,
+              paddingHorizontal: 14,
+              paddingVertical: 5,
+              minWidth: 60,
+              height: 30,
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 3,
+              elevation: 3,
+            }}
+            onPress={() => onChannelPress && onChannelPress(channelName, channelName)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={{
+                color: channelBadgeColors.textColor,
+                fontWeight: '700',
+                fontSize: 13,
+                textAlign: 'center',
+                includeFontPadding: false,
+                lineHeight: 13,
+              }}
+            >
+              #{channelName}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    lastIndex = tag.index + tag.fullMatch.length;
+  }
+
+  // Ajouter le texte restant après le dernier tag
+  if (lastIndex < text.length) {
+    parts.push(
+      <Text key={`text-${lastIndex}`} style={[textStyle, { color: 'inherit' }]}>
+        {text.substring(lastIndex)}
+      </Text>
+    );
+  }
+
+  // Si aucun tag trouvé, retourner le texte normal
+  if (parts.length === 0) {
+    return <Text style={textStyle}>{text}</Text>;
+  }
+
+  // Retourner le texte avec les mentions/canaux stylisés
+  return (
+    <View style={{ 
+      flexDirection: 'row', 
+      flexWrap: 'wrap', 
+      alignItems: 'center',
+      marginVertical: 0,
+    }}>
+      {parts}
+    </View>
+  );
+};
+
+export const stripChannelFormatting = (text) => {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+
+  // Le nouveau format est déjà simple (#nom), donc pas besoin de transformation
+  // Mais on peut nettoyer les anciens formats si nécessaire
+  // Remplacer les anciens formats #[nom](id) par #nom si ils existent encore
+  let result = text.replace(/#\[([^\]]+)\]\(([^)]+)\)/g, '#$1');
+  
+  return result;
+};
