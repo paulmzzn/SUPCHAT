@@ -1,4 +1,4 @@
-# 🚀 SUPCHAT - Plateforme de Communication Temps Réel
+# 🚀 SUPCHAT 
 
 <div align="center">
   <img src="frontend/src/assets/icons/logo_supchat.svg" alt="SUPCHAT Logo" width="120" height="120">
