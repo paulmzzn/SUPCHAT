@@ -121,7 +121,7 @@ function Sidebar() {
   return (
     <div className="sidebar">
       <div className="sidebar-content">
-        <Link to="/" className="sidebar-logo">
+        <Link to="/workspaces" className="sidebar-logo">
           <img src={logoSupchat} alt="Supchat Logo" className="logo-image" />
         </Link>
         <div className="sidebar-nav">
