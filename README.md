@@ -1,5 +1,7 @@
 # 🚀 SUPCHAT - Plateforme de Communication Temps Réel
 
+# Accessible dès maintenant via `https://supchat.fr/about.html`
+
 <div align="center">
   <img src="frontend/src/assets/icons/logo_supchat.svg" alt="SUPCHAT Logo" width="120" height="120">
   
@@ -37,7 +39,6 @@
 - [🚀 Infrastructure de Déploiement](#-infrastructure-de-déploiement)
 - [📈 Performance](#-performance)
 - [🤝 Contribution](#-contribution)
-- [📄 Licence](#-licence)
 
 ---
 
@@ -1827,12 +1828,6 @@ healthcheck:
 ![Diagramme Docker](documentation/diagramme docker.png)
 
 Ce diagramme illustre l'orchestration des services principaux (Postgres, Backend Node.js, Frontend React/Nginx) via Docker Compose, l'utilisation des secrets Docker et la sécurisation des échanges.
-
-### 🔄 Diagramme de Séquence - Mention IA Mistral
-
-![Diagramme de Séquence](documentation/diagramme_sequence.png)
-
-Ce diagramme montre le flux complet lorsqu'un utilisateur mentionne @mistral dans un message, depuis le client jusqu'à la réponse IA, en passant par le backend, SocketIO, la base de données et MistralAI.
 
 ### 🗃️ Modélisation de la Base de Données
 
