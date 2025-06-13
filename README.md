@@ -162,7 +162,7 @@ SUPCHAT/
 - **Framework** : React 18.3.1
 - **Router** : React Router DOM 6.18.0
 - **Build** : Create React App (Webpack)
-- **UI** : CSS modules + React Icons
+- **UI** : CSS + React Icons
 - **État** : Context API
 - **Temps réel** : Socket.IO Client
 - **Charts** : Chart.js + React ChartJS 2
@@ -181,7 +181,7 @@ SUPCHAT/
 
 - **Conteneurisation** : Docker + Docker Compose
 - **Reverse Proxy** : Nginx
-- **SSL/TLS** : Let's Encrypt (Certbot)
+- **SSL/TLS** : Cloudflare
 - **CI/CD** : Scripts automatisés
 - **Monitoring** : Health checks intégrés
 
@@ -224,7 +224,7 @@ Pour utiliser SUPCHAT sur votre réseau local :
 
 ```yaml
 # docker-compose.yml (par défaut pour local)
-VITE_API_URL: "http://localhost:3000" # Accès depuis le même PC
+API_URL: "http://localhost:3000" # Accès depuis le même PC
 ```
 
 **Pour accès depuis d'autres appareils (mobile, autre PC) :**
@@ -241,7 +241,7 @@ ipconfig | Select-String "IPv4"
 
 ```yaml
 # docker-compose.yml - pour accès réseau local
-VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
+API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
 ```
 
 #### **☁️ Déploiement VPS (Production)**
@@ -250,7 +250,7 @@ VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
 
 ```yaml
 # docker-compose.vps.yml (configuration VPS du projet)
-VITE_API_URL: "http://185.98.137.166:3000" # IP VPS du projet
+API_URL: "http://185.98.137.166:3000" # IP VPS du projet
 ```
 
 **Pour votre propre VPS, adaptez l'IP dans les scripts :**
@@ -1474,7 +1474,7 @@ psql -U postgres -d supchat_new < backup.sql
 - **Docker Secrets** pour données sensibles
 - **CORS** configuré strictement
 - **Rate limiting** sur APIs sensibles
-- **SSL/TLS** en production (Let's Encrypt)
+- **SSL/TLS** en production (CloudFlare)
 - **Nginx** comme reverse proxy sécurisé
 
 ### **Bonnes Pratiques**
