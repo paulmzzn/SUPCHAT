@@ -244,11 +244,11 @@ VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
 
 #### **☁️ Déploiement VPS (Production)**
 
-**Ce projet a été déployé sur un VPS avec l'IP `192.168.1.169`**
+**Ce projet a été déployé sur un VPS avec l'IP `185.98.137.166`**
 
 ```yaml
 # docker-compose.vps.yml (configuration VPS du projet)
-VITE_API_URL: "http://192.168.1.169:3000" # IP VPS du projet
+VITE_API_URL: "http://185.98.137.166:3000" # IP VPS du projet
 ```
 
 **Pour votre propre VPS, adaptez l'IP dans les scripts :**
@@ -283,7 +283,7 @@ EXPO_PUBLIC_ENV=development
 ```javascript
 // mobile/src/config/env.js (pour se connecter au VPS du projet)
 export default {
-  API_URL: "http://192.168.1.169:3000",  # IP VPS du projet
+  API_URL: "http://185.98.137.166:3000",  # IP VPS du projet
   S3_BASE_URL: "https://s3-supchat.s3.fr-par.scw.cloud/",
   ENV: "production"
 };
@@ -677,7 +677,7 @@ backend:
   environment:
     - NODE_ENV=production
     - DB_HOST=postgres
-    - FRONTEND_URL=http://192.168.1.169
+    - FRONTEND_URL=http://185.98.137.166
   secrets: [db_user, db_password, jwt_secret, ...]
   depends_on: [postgres]
   networks: [REDACTED]
@@ -792,13 +792,13 @@ Afin de déployer l'application le plus rapidement possible, nous vous conseillo
 ./copy-to-vps.sh
 
 # 2. Déployer automatiquement
-ssh root@192.168.1.169 "cd /opt/supchat && ./deploy-auto.sh"
+ssh root@185.98.137.166 "cd /opt/supchat && ./deploy-auto.sh"
 
 # 3. En cas de problème
-ssh root@192.168.1.169 "cd /opt/supchat && ./fix-all.sh"
+ssh root@185.98.137.166 "cd /opt/supchat && ./fix-all.sh"
 
 # 4. Reconstruire la base si nécessaire
-ssh root@192.168.1.169 "cd /opt/supchat && ./rebuild-database.sh"
+ssh root@185.98.137.166 "cd /opt/supchat && ./rebuild-database.sh"
 ```
 
 ### **📊 Monitoring et Logs**
@@ -1086,7 +1086,7 @@ expo start --tunnel
 notepad mobile/app.json
 
 # Tester l'API depuis le PC
-curl http://192.168.1.169:3000/api/ping
+curl http://185.98.137.166:3000/api/ping
 
 # Vérifier que Docker expose le port
 docker-compose ps
@@ -1108,7 +1108,7 @@ npm install
 
 ```javascript
 // Dans mobile/src/services/socket.js
-const socket = io("http://192.168.1.169:3000", {
+const socket = io("http://185.98.137.166:3000", {
   transports: ["websocket"], // Forcer WebSocket
   timeout: 20000,
   reconnection: true,
@@ -1229,7 +1229,7 @@ const config = {
 // Remplacez XXX par vos derniers chiffres IP
 ```
 
-### **☁️ Déploiement VPS (IP Projet : 192.168.1.169)**
+### **☁️ Déploiement VPS (IP Projet : 185.98.137.166)**
 
 Pour le VPS spécifique du projet :
 
@@ -1239,13 +1239,13 @@ Pour le VPS spécifique du projet :
 // Configuration pour le VPS du projet
 const config = {
   development: {
-    API_BASE_URL: "http://192.168.1.169:3000",
-    WS_URL: "ws://192.168.1.169:3000",
+    API_BASE_URL: "http://185.98.137.166:3000",
+    WS_URL: "ws://185.98.137.166:3000",
   },
 
   production: {
-    API_BASE_URL: "http://192.168.1.169:3000",
-    WS_URL: "ws://192.168.1.169:3000",
+    API_BASE_URL: "http://185.98.137.166:3000",
+    WS_URL: "ws://185.98.137.166:3000",
   },
 };
 ```
@@ -1254,7 +1254,7 @@ const config = {
 
 Les scripts de déploiement VPS utilisent automatiquement :
 
-- **IP VPS** : `192.168.1.169`
+- **IP VPS** : `185.98.137.166`
 - **Domaine** : Configurable via les scripts de déploiement
 - **Ports** : 80 (frontend), 3000 (backend), 5432 (postgres interne)
 
@@ -1371,8 +1371,8 @@ La configuration mobile est intégrée dans `app.json` :
 {
   "expo": {
     "extra": {
-      "apiUrl": "http://192.168.1.169:3000",
-      "socketUrl": "http://192.168.1.169:3000",
+      "apiUrl": "http://185.98.137.166:3000",
+      "socketUrl": "http://185.98.137.166:3000",
       "s3BaseUrl": "https://s3-supchat.s3.fr-par.scw.cloud/",
       "environment": "development"
     }
@@ -1771,17 +1771,17 @@ const emailConfig = {
 
 #### **🚀 Scripts de Déploiement VPS (Workflow Réel)**
 
-**Configuration VPS : IP `192.168.1.169` | Utilisateur `root` | Répertoire `/opt/supchat`**
+**Configuration VPS : IP `185.98.137.166` | Utilisateur `root` | Répertoire `/opt/supchat`**
 
 ```bash
 # 1. Copier le projet vers le VPS (depuis votre machine locale)
 ./copy-to-vps.sh
 # → Utilise scp pour transférer tous les fichiers vers /opt/supchat
-# → IP VPS configurée : 192.168.1.169
+# → IP VPS configurée : 185.98.137.166
 # → Évite les problèmes d'attributs étendus macOS
 
 # 2. Se connecter au VPS et déployer
-ssh root@192.168.1.169
+ssh root@185.98.137.166
 cd /opt/supchat
 
 # 3. Installation automatique complète
