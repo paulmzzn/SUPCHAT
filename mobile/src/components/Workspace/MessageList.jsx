@@ -19,7 +19,8 @@ const MessageList = memo(({
   onOpenAttachment,
   onStrawpollVote,
   onStrawpollViewResults,
-  onUserPress // Nouvelle prop pour les mentions
+  onUserPress, // Handler pour les clics sur les mentions d'utilisateurs
+  onChannelPress // Handler pour les clics sur les mentions de canaux
 }) => {
   const flatListRef = useRef(null);
 
@@ -87,9 +88,10 @@ const MessageList = memo(({
         onStrawpollVote={onStrawpollVote}
         onStrawpollViewResults={onStrawpollViewResults}
         onUserPress={onUserPress}
+        onChannelPress={onChannelPress}
       />
     );
-  }, [styles, themeColors, currentUserId, messages, onLongPress, onRemoveReaction, onEmojiSelect, onOpenAttachment, onStrawpollVote, onStrawpollViewResults, onUserPress]);
+  }, [styles, themeColors, currentUserId, messages, onLongPress, onRemoveReaction, onEmojiSelect, onOpenAttachment, onStrawpollVote, onStrawpollViewResults, onUserPress, onChannelPress]);
 
   const renderListFooter = useCallback(() => {
     if (!hasMoreMessages && messages.length > 0) {
