@@ -40,6 +40,8 @@
 - [📈 Performance](#-performance)
 - [🤝 Contribution](#-contribution)
 - [📄 Licence](#-licence)
+- [👥 Équipe de Développement](#-équipe-de-développement)
+
 
 ---
 
@@ -162,7 +164,7 @@ SUPCHAT/
 - **Framework** : React 18.3.1
 - **Router** : React Router DOM 6.18.0
 - **Build** : Create React App (Webpack)
-- **UI** : CSS modules + React Icons
+- **UI** : CSS  + React Icons
 - **État** : Context API
 - **Temps réel** : Socket.IO Client
 - **Charts** : Chart.js + React ChartJS 2
@@ -181,7 +183,7 @@ SUPCHAT/
 
 - **Conteneurisation** : Docker + Docker Compose
 - **Reverse Proxy** : Nginx
-- **SSL/TLS** : Let's Encrypt (Certbot)
+- **SSL/TLS** : Cloudflare
 - **CI/CD** : Scripts automatisés
 - **Monitoring** : Health checks intégrés
 
@@ -223,8 +225,8 @@ docker-compose ps
 Pour utiliser SUPCHAT sur votre réseau local :
 
 ```yaml
-# docker-compose.yml (par défaut pour local)
-VITE_API_URL: "http://localhost:3000" # Accès depuis le même PC
+# docker-compose.prod.yml (par défaut pour local)
+API_URL: "http://localhost" # Accès depuis le même PC
 ```
 
 **Pour accès depuis d'autres appareils (mobile, autre PC) :**
@@ -240,8 +242,8 @@ ipconfig | Select-String "IPv4"
 2. **Modifiez la configuration :**
 
 ```yaml
-# docker-compose.yml - pour accès réseau local
-VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
+# docker-compose.prod.yml - pour accès réseau local
+API_URL: "http://192.168.1.XXX" # Remplacer XXX par votre IP
 ```
 
 #### **☁️ Déploiement VPS (Production)**
@@ -250,7 +252,7 @@ VITE_API_URL: "http://192.168.1.XXX:3000" # Remplacer XXX par votre IP
 
 ```yaml
 # docker-compose.vps.yml (configuration VPS du projet)
-VITE_API_URL: "http://185.98.137.166:3000" # IP VPS du projet
+API_URL: "https://supchat.fr" # domaine lié au VPS du projet
 ```
 
 **Pour votre propre VPS, adaptez l'IP dans les scripts :**
@@ -274,7 +276,7 @@ export default {
 ```
 
 ```bash
-# mobile/.env
+# mobile/src/config/env.js
 EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000  # VOTRE IP locale
 EXPO_PUBLIC_S3_BASE_URL=https://s3-supchat.s3.fr-par.scw.cloud/
 EXPO_PUBLIC_ENV=development
@@ -330,7 +332,7 @@ npm start
 npm run build
 ```
 
-#### **4. Mobile (Optionnel)**
+#### **4. Mobile **
 
 ```powershell
 cd mobile
@@ -764,11 +766,8 @@ cat backup.sql | docker-compose exec -T postgres psql -U supchat_user supchat
 
 ```powershell
 # Scripts PowerShell/Batch disponibles
-./start-quick.bat           # Démarrage rapide
-./stop.bat                  # Arrêt propre
-./rebuild-and-restart.bat   # Reconstruction complète
-./fix-and-restart.bat       # Réparation + redémarrage
-./update-and-start.bat      # Mise à jour + démarrage
+./update-and-start.bat      # Initialisation, Mise à jour + démarrage environement Windows
+./update-and-start.sh      # Initialisation, Mise à jour + démarrage environement Linux
 ```
 
 Afin de déployer l'application le plus rapidement possible, nous vous conseillons de mettre à jours tous les secret, de mettre à jours toutes les id en les remplacant par la vôtre et d'executer le script `./update-and-start.bat`
@@ -777,14 +776,8 @@ Afin de déployer l'application le plus rapidement possible, nous vous conseillo
 
 ```powershell
 # Scripts de déploiement VPS
-./copy-to-vps.sh              # Copie des fichiers vers VPS
-./deploy-auto.sh              # Déploiement automatique
-./fix-all.sh                  # Correction et redémarrage
-./rebuild-database.sh         # Reconstruction base de données
-
-# Scripts de maintenance
-./rebuild-and-restart.bat     # Windows - reconstruction complète
 ./update-and-start.bat        # Windows - mise à jour et démarrage
+./update-and-start.sh        # Windows - mise à jour et démarrage
 ```
 
 #### **Workflow de Déploiement VPS**
@@ -834,7 +827,19 @@ docker-compose logs backend | Select-String "Socket.IO"
 
 L'application mobile SUPCHAT n'est **pas dockerisée** et nécessite un environnement de développement React Native spécifique.
 
-Il est néanmoins possible d'utiliser **Expo** afin de lancer cette dernière.
+Il est néanmoins possible d'utiliser **Expo** afin de lancer cette dernière pour le développement.
+
+### **📦 Distribution et Packaging**
+
+Pour packager et distribuer l'application mobile :
+
+- **Build Production** : Référez-vous à la [documentation officielle Expo EAS Build](https://docs.expo.dev/build/introduction/)
+- **Publication Google Play Store** : Consultez le [guide Expo submission Android](https://docs.expo.dev/submit/android/)
+- **Publication Apple App Store** : Consultez le [guide Expo submission iOS](https://docs.expo.dev/submit/ios/)
+
+Ces processus nécessitent des comptes développeur sur les stores respectifs et des certificats de signing appropriés.
+
+
 
 ### **🔧 Prérequis Mobile**
 
@@ -855,6 +860,15 @@ npm install -g yarn
 ```
 
 #### **Environnement Plateforme**
+
+**⚠️ Note importante :** Ces prérequis sont nécessaires uniquement pour **installer l'application finale sur téléphone**. Pour le **développement et test**, vous pouvez utiliser l'**application Expo Go** disponible sur les stores.
+
+**Pour développement rapide (recommandé) :**
+- 📱 **Expo Go** - Application gratuite sur App Store / Google Play
+- 📱 Scanner le QR code généré par `expo start`
+- ⚡ **Pas d'installation** complexe requise
+
+**Pour builds de production (installation sur téléphone) :**
 
 **Pour iOS :**
 
@@ -1146,7 +1160,7 @@ npm install
 
 ### **💻 Progressive Web App (PWA)**
 
-SUPCHAT est une **Progressive Web App** complète qui peut être installée sur tous les appareils :
+SUPCHAT est aussi une **Progressive Web App** complète qui peut être installée sur tous les appareils :
 
 #### **🖥️ Installation Bureau**
 
@@ -1168,28 +1182,14 @@ SUPCHAT est une **Progressive Web App** complète qui peut être installée sur 
 1. Ouvrir `http://votre-ip/`
 2. Menu "Fichier" → "Ajouter au Dock"
 
-#### **📱 Installation Mobile**
-
-**Android :**
-
-1. Ouvrir dans Chrome/Firefox
-2. Menu → "Ajouter à l'écran d'accueil"
-3. L'application fonctionne comme une app native
-
-**iOS :**
-
-1. Ouvrir dans Safari
-2. Bouton Partage → "Sur l'écran d'accueil"
-3. Accès hors-ligne disponible
 
 #### **✨ Fonctionnalités PWA**
 
 - 📱 **Installation native** sur tous appareils
-- 🌐 **Fonctionnement hors-ligne** (cache intelligent)
-- 🔔 **Notifications push** (web et mobile)
+- 🔔 **Notifications push** 
 - ⚡ **Démarrage rapide** (cache service worker)
 - 🖥️ **Interface desktop** optimisée
-- 📲 **Icônes natives** dans menus système
+- 📲 **Icônes** dans menus système
 
 ---
 
@@ -1386,18 +1386,27 @@ Les secrets sensibles sont stockés dans `secrets/` :
 
 ```
 secrets/
-├── db_user.txt
-├── db_password.txt
-├── jwt_secret.txt
-├── google_client_id.txt
-├── google_client_secret.txt
-├── github_client_id.txt
-├── github_client_secret.txt
-├── scw_access_key.txt
-├── scw_secret_key.txt
-├── mistral_api_key.txt
-└── strawpoll_api_key.txt
+
+secrets/
+├── api_key.txt                  # Clé API générique
+├── db_password.txt              # Mot de passe PostgreSQL
+├── db_user.txt                  # Utilisateur PostgreSQL
+├── email_password.txt           # Mot de passe SMTP
+├── email_user.txt               # Adresse email SMTP
+├── github_client_id.txt         # OAuth GitHub Client ID
+├── github_client_secret.txt     # OAuth GitHub Secret
+├── jwt_secret.txt               # Clé secrète JWT (256 bits)
+├── mistral_api_key.txt          # Clé API Mistral AI
+├── pgadmin_password.txt         # Mot de passe PgAdmin
+├── redis_password.txt           # Mot de passe Redis
+├── s3_bucket_name.txt           # Nom du bucket S3
+├── scw_access_key.txt           # Clé d'accès Scaleway
+├── scw_endpoint.txt             # Endpoint S3 Scaleway
+├── scw_region.txt               # Région Scaleway
+├── scw_secret_key.txt           # Clé secrète Scaleway
+└── strawpoll_api_key.txt        # Clé API Strawpoll
 ```
+
 
 ---
 
@@ -1424,7 +1433,7 @@ La base de données PostgreSQL comprend 27 tables optimisées :
 
 #### **Tables Système**
 
-- `statut` - Statuts utilisateur (en ligne, absent, DND)
+- `statut` - Statuts utilisateur (en ligne, absent, ne pas deranger)
 - `role` / `permission` - Système de rôles et permissions
 - `notification` - Notifications utilisateur
 - `reminders` - Système de rappels
@@ -1941,10 +1950,19 @@ Get-Process -Name "node" | Stop-Process -Force
 
 - **Documentation** : Ce README.md
 - **Issues** : [GitHub Issues](https://github.com/paulmzzn/SUPCHAT)
-- **Guides de déploiement** :
-  - `DEPLOY_VPS_GUIDE.md` - Guide détaillé VPS
-  - `GUIDE-RAPIDE.md` - Guide de démarrage rapide
-  - `README-DEPLOY.md` - Instructions de déploiement
+
+---
+
+## 👥 **Équipe de Développement**
+
+SUPCHAT a été développé par une équipe d'étudiants passionnés :
+
+- **Paul MAZZON** - [paulmzzn](https://github.com/paulmzzn) - Étudiant en B3 à SUPINFO
+- **Mathis MALZAC** - [xSupr3me](https://github.com/xSupr3me) - Étudiant en B3 à SUPINFO
+- **Rudy GAULT** - [ECG-Rudy-Glt](https://github.com/ECG-Rudy-Glt) - Étudiant en B3 à SUPINFO
+
+*Chaque membre de l'équipe a contribué à tous les aspects du projet : frontend, backend, mobile et infrastructure.*
+
 
 ---
 
@@ -1953,4 +1971,3 @@ Get-Process -Name "node" | Stop-Process -Force
   <br>
   <em>Développé avec ❤️ pour des équipes performantes</em>
 </div>
-````
