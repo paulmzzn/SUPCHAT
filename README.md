@@ -58,6 +58,7 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 - 🔐 **Authentification OAuth** (Google, GitHub)
 - 🌙 **Mode sombre/clair**
 - 📊 **Notifications push** intelligentes
+- 🐓 **Plateforme Française**
 
 ---
 
@@ -69,13 +70,12 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 - [x] Réactions avec emojis personnalisés
 - [x] Réponses imbriquées (threading)
 - [x] Mentions utilisateur (@username)
-- [x] Indicateurs de frappe en temps réel
-- [x] Statuts utilisateur (en ligne, absent, ne pas déranger)
+- [x] Statuts utilisateur (en ligne, absent, ne pas déranger, hors ligne)
 - [x] Compteurs de messages non lus
 
 ### 🏢 **Gestion des Espaces**
 
-- [x] Workspaces publics et privés
+- [x] Workspaces publics et privés (avec demande d'ajout)
 - [x] Canaux avec permissions granulaires
 - [x] Système de rôles (owner, admin, member)
 - [x] Invitations par email avec tokens
@@ -84,8 +84,8 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 
 ### 📁 **Média & Fichiers**
 
-- [x] Upload de fichiers (images, documents, vidéos)
-- [x] Visionneuse intégrée (images, PDFs)
+- [x] Upload de fichiers (images, gifs, documents, vidéos)
+- [x] Visionneuse intégrée (images, gifs, PDFs)
 - [x] Intégration Google Drive
 - [x] Stockage cloud sécurisé (Scaleway S3)
 - [x] Preview de liens automatique
@@ -95,16 +95,17 @@ SUPCHAT est une plateforme de communication temps réel moderne qui combine les 
 - [x] Assistant IA Mistral intégré
 - [x] Analyse contextuelle des conversations
 - [x] Réponses intelligentes en temps réel
-- [x] Gestion des erreurs et timeouts
 
 ### 🔧 **Fonctionnalités Avancées**
 
 - [x] Sondages intégrés (Strawpoll)
-- [x] Système de rappels avec notifications email
+- [x] Système de rappels
 - [x] Recherche globale (messages, fichiers, utilisateurs)
 - [x] Notifications push (web + mobile)
 - [x] Mode hors ligne avec synchronisation
 - [x] Export de conversations
+- [x] Gestion des erreurs et timeouts
+
 
 ---
 
@@ -190,16 +191,15 @@ SUPCHAT/
 
 ### **Prérequis**
 
-- Node.js 18+
-- PostgreSQL 16+
-- Docker & Docker Compose (recommandé)
+- Docker
+- WSL
 - Git
 
 ### **Installation Rapide avec Docker**
 
 ```powershell
 # Cloner le repository
-git clone https://github.com/votre-username/supchat.git
+git clone https://github.com/paulmzzn/SUPCHAT
 cd supchat
 
 # 1. Configurer les secrets Docker (obligatoire)
@@ -811,10 +811,6 @@ ssh root@185.98.137.166 "cd /opt/supchat && ./rebuild-database.sh"
 # Vérifier la santé de tous les services
 docker-compose exec backend curl http://localhost:3000/health
 docker-compose exec postgres pg_isready -U supchat_user
-
-# Test de connectivité complète
-curl http://localhost/api/ping
-curl http://localhost/socket.io/
 ```
 
 #### **Surveillance des Logs**
@@ -837,6 +833,8 @@ docker-compose logs backend | Select-String "Socket.IO"
 ## 📱 **Application Mobile (React Native)**
 
 L'application mobile SUPCHAT n'est **pas dockerisée** et nécessite un environnement de développement React Native spécifique.
+
+Il est néanmoins possible d'utiliser **Expo** afin de lancer cette dernière.
 
 ### **🔧 Prérequis Mobile**
 
@@ -1407,7 +1405,7 @@ secrets/
 
 ### **Schéma Principal**
 
-La base de données PostgreSQL comprend 15+ tables optimisées :
+La base de données PostgreSQL comprend 27 tables optimisées :
 
 #### **Tables Core**
 
@@ -1496,7 +1494,6 @@ psql -U postgres -d supchat_new < backup.sql
 - **Assistant conversationnel** intégré dans les canaux
 - **Analyse contextuelle** des 100 derniers messages
 - **Réponses intelligentes** basées sur l'historique
-- **Gestion timeout** et récupération d'erreurs
 
 ### **Configuration**
 
@@ -1943,7 +1940,7 @@ Get-Process -Name "node" | Stop-Process -Force
 ## 📞 **Support**
 
 - **Documentation** : Ce README.md
-- **Issues** : [GitHub Issues](https://github.com/votre-username/supchat/issues)
+- **Issues** : [GitHub Issues](https://github.com/paulmzzn/SUPCHAT)
 - **Guides de déploiement** :
   - `DEPLOY_VPS_GUIDE.md` - Guide détaillé VPS
   - `GUIDE-RAPIDE.md` - Guide de démarrage rapide
