@@ -1483,7 +1483,7 @@ psql -U postgres -d supchat_new < backup.sql
 - **Docker Secrets** pour données sensibles
 - **CORS** configuré strictement
 - **Rate limiting** sur APIs sensibles
-- **SSL/TLS** en production (Let's Encrypt)
+- **SSL/TLS** en production (CloudFlare)
 - **Nginx** comme reverse proxy sécurisé
 
 ### **Bonnes Pratiques**

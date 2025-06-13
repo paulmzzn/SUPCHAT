@@ -6,11 +6,113 @@ import {
   updatePrivateMessage,
   deletePrivateMessage,
   markPrivateMessageAsRead,
-  getUnreadCounts, // <-- Ajout ici
-  deleteConversation, // <-- Ajout ici
-  markAllMessagesAsRead, // <-- Ajout ici
-  uploadGoogleDriveFile, // <-- Nouveau import
+  getUnreadCounts,
+  deleteConversation,
+  markAllMessagesAsRead,
+  uploadGoogleDriveFile,
 } from "../controllers/privateMessageController.js";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     PrivateMessage:
+ *       type: object
+ *       properties:
+ *         id_message_prive:
+ *           type: integer
+ *         contenu:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_utilisateur_expediteur:
+ *           type: integer
+ *         fk_utilisateur_destinataire:
+ *           type: integer
+ *         lu:
+ *           type: boolean
+ *     PrivateMessageInput:
+ *       type: object
+ *       properties:
+ *         contenu:
+ *           type: string
+ *         destinataire_id:
+ *           type: integer
+ *
+ * /private-messages:
+ *   post:
+ *     summary: Envoie un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PrivateMessageInput'
+ *     responses:
+ *       201:
+ *         description: Message privé envoyé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PrivateMessage'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/{userId}:
+ *   get:
+ *     summary: Récupère la conversation avec un utilisateur
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       200:
+ *         description: Messages de la conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/PrivateMessage'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/upload:
+ *   post:
+ *     summary: Upload un fichier avec un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               destinataire_id:
+ *                 type: integer
+ *               contenu:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Fichier uploadé et message envoyé
+ *       401:
+ *         description: Non autorisé
+ */
 import { getPrivateMessageAttachments } from "../controllers/attachmentController.js";
 import MessagePrive from "../models/MessagePrive.js";
 import multer from "multer";
@@ -19,6 +121,304 @@ import Fichier from "../models/Fichier.js";
 import pool from "../config/dbConnection.js";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     PrivateMessage:
+ *       type: object
+ *       properties:
+ *         id_message_prive:
+ *           type: integer
+ *         contenu:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_utilisateur_expediteur:
+ *           type: integer
+ *         fk_utilisateur_destinataire:
+ *           type: integer
+ *         lu:
+ *           type: boolean
+ *     PrivateMessageInput:
+ *       type: object
+ *       properties:
+ *         contenu:
+ *           type: string
+ *         destinataire_id:
+ *           type: integer
+ *
+ * /private-messages:
+ *   post:
+ *     summary: Envoie un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PrivateMessageInput'
+ *     responses:
+ *       201:
+ *         description: Message privé envoyé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PrivateMessage'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/{userId}:
+ *   get:
+ *     summary: Récupère la conversation avec un utilisateur
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Nombre de messages à récupérer
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Décalage pour la pagination
+ *     responses:
+ *       200:
+ *         description: Messages de la conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/PrivateMessage'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/{messageId}:
+ *   put:
+ *     summary: Met à jour un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du message
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               contenu:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Message mis à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PrivateMessage'
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Message non trouvé
+ *
+ *   delete:
+ *     summary: Supprime un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du message
+ *     responses:
+ *       204:
+ *         description: Message supprimé
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Message non trouvé
+ *
+ * /private-messages/mark-read:
+ *   post:
+ *     summary: Marque les messages comme lus
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               otherUserId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Messages marqués comme lus
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/unread-counts:
+ *   get:
+ *     summary: Récupère le nombre de messages non lus
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Nombre de messages non lus par conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalUnread:
+ *                   type: integer
+ *                 conversations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/conversation/{userId}:
+ *   delete:
+ *     summary: Supprime une conversation
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       204:
+ *         description: Conversation supprimée
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/mark-all-read/{userId}:
+ *   post:
+ *     summary: Marque tous les messages d'une conversation comme lus
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID de l'utilisateur
+ *     responses:
+ *       200:
+ *         description: Messages marqués comme lus
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/upload:
+ *   post:
+ *     summary: Upload un fichier avec un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               destinataire_id:
+ *                 type: integer
+ *               contenu:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Fichier uploadé et message envoyé
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/{messageId}/attachments:
+ *   get:
+ *     summary: Récupère les pièces jointes d'un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du message
+ *     responses:
+ *       200:
+ *         description: Liste des pièces jointes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       401:
+ *         description: Non autorisé
+ *
+ * /private-messages/google-drive/upload:
+ *   post:
+ *     summary: Upload un fichier Google Drive avec un message privé
+ *     tags: [Private Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: object
+ *               destinataire_id:
+ *                 type: integer
+ *               contenu:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Fichier Google Drive uploadé et message envoyé
+ *       401:
+ *         description: Non autorisé
+ */
 
 const router = express.Router();
 

@@ -7,6 +7,136 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     GoogleDriveFile:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         size:
+ *           type: string
+ *         mimeType:
+ *           type: string
+ *         downloadUrl:
+ *           type: string
+ *
+ * /google-drive/auth:
+ *   get:
+ *     summary: Démarre l'authentification Google Drive
+ *     tags: [Google Drive]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: URL d'authentification
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 authUrl:
+ *                   type: string
+ *       401:
+ *         description: Non autorisé
+ *
+ * /google-drive/callback:
+ *   post:
+ *     summary: Traite le callback d'authentification Google Drive
+ *     tags: [Google Drive]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Authentification réussie
+ *       401:
+ *         description: Non autorisé
+ *       400:
+ *         description: Code d'autorisation invalide
+ *
+ * /google-drive/files:
+ *   get:
+ *     summary: Liste les fichiers Google Drive de l'utilisateur
+ *     tags: [Google Drive]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Token pour la pagination
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Requête de recherche
+ *     responses:
+ *       200:
+ *         description: Liste des fichiers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 files:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/GoogleDriveFile'
+ *                 nextPageToken:
+ *                   type: string
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès Google Drive non configuré
+ *
+ * /google-drive/upload:
+ *   post:
+ *     summary: Upload un fichier Google Drive dans SUPCHAT
+ *     tags: [Google Drive]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fileId:
+ *                 type: string
+ *               fileName:
+ *                 type: string
+ *               canalId:
+ *                 type: integer
+ *               workspaceId:
+ *                 type: integer
+ *               contenu:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Fichier uploadé avec succès
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès Google Drive non configuré
+ *       500:
+ *         description: Erreur lors de l'upload
+ */
+
 // Récupération du chemin du répertoire actuel
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

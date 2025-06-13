@@ -14,7 +14,240 @@ import {
 } from "../middleware/authMiddleware.js";
 import Fichier from "../models/Fichier.js";
 import path from "path";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Fichier:
+ *       type: object
+ *       properties:
+ *         id_fichier:
+ *           type: integer
+ *         nom_fichier:
+ *           type: string
+ *         taille:
+ *           type: integer
+ *         type_mime:
+ *           type: string
+ *         url_s3:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_utilisateur:
+ *           type: integer
+ *         fk_workspace:
+ *           type: integer
+ *
+ * /fichiers/upload:
+ *   post:
+ *     summary: Upload un fichier vers S3
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               workspaceId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Fichier uploadé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Fichier'
+ *       401:
+ *         description: Non autorisé
+ *       500:
+ *         description: Erreur lors de l'upload
+ */
 import { getS3Config } from "../config/secrets.js";
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Fichier:
+ *       type: object
+ *       properties:
+ *         id_fichier:
+ *           type: integer
+ *         nom_fichier:
+ *           type: string
+ *         taille:
+ *           type: integer
+ *         type_mime:
+ *           type: string
+ *         url_s3:
+ *           type: string
+ *         date_creation:
+ *           type: string
+ *           format: date-time
+ *         fk_utilisateur:
+ *           type: integer
+ *         fk_workspace:
+ *           type: integer
+ *
+ * /fichiers/upload:
+ *   post:
+ *     summary: Upload un fichier vers S3
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               workspaceId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Fichier uploadé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Fichier'
+ *       401:
+ *         description: Non autorisé
+ *       500:
+ *         description: Erreur lors de l'upload
+ *
+ * /fichiers/{fileId}:
+ *   get:
+ *     summary: Récupère un fichier par son ID
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du fichier
+ *     responses:
+ *       200:
+ *         description: Informations du fichier
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Fichier'
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ *
+ *   delete:
+ *     summary: Supprime un fichier
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du fichier
+ *     responses:
+ *       204:
+ *         description: Fichier supprimé
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ *
+ * /fichiers/user:
+ *   get:
+ *     summary: Récupère les fichiers de l'utilisateur connecté
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des fichiers de l'utilisateur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Fichier'
+ *       401:
+ *         description: Non autorisé
+ *
+ * /fichiers/workspace/{workspaceId}:
+ *   get:
+ *     summary: Récupère les fichiers d'un workspace
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du workspace
+ *     responses:
+ *       200:
+ *         description: Liste des fichiers du workspace
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Fichier'
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès refusé au workspace
+ *
+ * /fichiers/{fileId}/download:
+ *   get:
+ *     summary: Génère une URL de téléchargement sécurisée pour un fichier
+ *     tags: [Fichiers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID du fichier
+ *     responses:
+ *       200:
+ *         description: URL de téléchargement
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 downloadUrl:
+ *                   type: string
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Fichier non trouvé
+ */
 
 const router = express.Router();
 

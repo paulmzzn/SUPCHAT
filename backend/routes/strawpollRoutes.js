@@ -2,6 +2,87 @@ import express from "express";
 import axios from "axios";
 import { getStrawpollApiKey } from "../config/secrets.js";
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     StrawpollCreate:
+ *       type: object
+ *       properties:
+ *         title:
+ *           type: string
+ *         options:
+ *           type: array
+ *           items:
+ *             type: string
+ *         allowMultipleVotes:
+ *           type: boolean
+ *         isPrivate:
+ *           type: boolean
+ *     StrawpollResponse:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         url:
+ *           type: string
+ *         title:
+ *           type: string
+ *         options:
+ *           type: array
+ *           items:
+ *             type: object
+ *         votes:
+ *           type: array
+ *           items:
+ *             type: integer
+ *
+ * /strawpoll:
+ *   post:
+ *     summary: Crée un nouveau sondage Strawpoll
+ *     tags: [Strawpoll]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/StrawpollCreate'
+ *     responses:
+ *       201:
+ *         description: Sondage créé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/StrawpollResponse'
+ *       400:
+ *         description: Données invalides
+ *       500:
+ *         description: Erreur lors de la création
+ *
+ * /strawpoll/{pollId}:
+ *   get:
+ *     summary: Récupère les résultats d'un sondage Strawpoll
+ *     tags: [Strawpoll]
+ *     parameters:
+ *       - in: path
+ *         name: pollId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID du sondage
+ *     responses:
+ *       200:
+ *         description: Résultats du sondage
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/StrawpollResponse'
+ *       404:
+ *         description: Sondage non trouvé
+ *       500:
+ *         description: Erreur lors de la récupération
+ */
+
 const router = express.Router();
 
 // Configuration sécurisée
