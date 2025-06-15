@@ -284,14 +284,16 @@ class UserModel {
     try {
       const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
       const expiryTime = new Date(Date.now() + 30 * 60000); // 30 minutes from now
-      
+      const bcrypt = await import('bcryptjs');
+      const hashedCode = await bcrypt.default.hash(resetCode, 10);
       const result = await pool.query(
         `UPDATE utilisateur 
          SET reset_password_code = $1, reset_password_expires = $2
          WHERE email = $3 RETURNING *`,
-        [resetCode, expiryTime, email]
+        [hashedCode, expiryTime, email]
       );
-      return result.rows[0];
+      // On retourne le code en clair pour l'email, mais jamais en base
+      return { ...result.rows[0], reset_password_code_plain: resetCode };
     } catch (error) {
       throw error;
     }
@@ -299,14 +301,23 @@ class UserModel {
 
   static async resetPassword(email, resetCode, newPassword) {
     try {
+      // Récupérer le hash du code de reset
+      const userResult = await pool.query(
+        `SELECT reset_password_code, reset_password_expires FROM utilisateur WHERE email = $1`,
+        [email]
+      );
+      if (userResult.rows.length === 0) return null;
+      const { reset_password_code: hash, reset_password_expires } = userResult.rows[0];
+      if (!hash || !reset_password_expires || new Date(reset_password_expires) < new Date()) return null;
+      const bcrypt = await import('bcryptjs');
+      const isMatch = await bcrypt.default.compare(resetCode, hash);
+      if (!isMatch) return null;
+      // Si le code correspond, on met à jour le mot de passe et on efface le code
       const result = await pool.query(
         `UPDATE utilisateur 
          SET mot_de_passe = $1, reset_password_code = NULL, reset_password_expires = NULL
-         WHERE email = $2 
-         AND reset_password_code = $3 
-         AND reset_password_expires > NOW()
-         RETURNING *`,
-        [newPassword, email, resetCode]
+         WHERE email = $2 RETURNING *`,
+        [newPassword, email]
       );
       return result.rows[0];
     } catch (error) {

@@ -366,7 +366,7 @@ const requestPasswordReset = async (req, res) => {
     }
 
     const updatedUser = await UserModel.setResetPasswordCode(email);
-    await sendResetPasswordEmail(email, updatedUser.reset_password_code);
+    await sendResetPasswordEmail(email, updatedUser.reset_password_code_plain);
 
     res.json({
       message: "Instructions de réinitialisation envoyées par email.",

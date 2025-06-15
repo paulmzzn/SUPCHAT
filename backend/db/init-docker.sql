@@ -84,7 +84,7 @@ CREATE TABLE public.utilisateur (
     google_id character varying(255),
     is_activated boolean DEFAULT false,
     validation_code character varying(6),
-    reset_password_code character varying(6),
+    reset_password_code text,
     reset_password_expires timestamp without time zone,
     date_naissance date,
     bio text,
