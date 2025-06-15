@@ -61,10 +61,7 @@ class UserModel {
           fk_statut, 
           date_creation,
           date_naissance,
-          bio,
-          theme_sombre,
-          notifications_push,
-          notifications_email
+          bio
         FROM utilisateur 
         WHERE id_utilisateur = $1
       `, [id_utilisateur]);
@@ -87,10 +84,7 @@ class UserModel {
           fk_statut, 
           date_creation,
           date_naissance,
-          bio,
-          theme_sombre,
-          notifications_push,
-          notifications_email
+          bio
         FROM utilisateur
       `);
       return result.rows;

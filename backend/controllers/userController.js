@@ -926,9 +926,6 @@ const filterSensitiveUserData = (user) => {
     fk_statut: user.fk_statut,
     date_creation: user.date_creation,
     date_naissance: user.date_naissance,
-    theme_sombre: user.theme_sombre,
-    notifications_push: user.notifications_push,
-    notifications_email: user.notifications_email
     // ATTENTION: Ne jamais inclure validation_code, reset_password_code, reset_password_expires, mot_de_passe
   };
 };
