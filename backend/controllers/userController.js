@@ -276,9 +276,12 @@ const updateUser = async (req, res) => {
 
     const updatedUser = await UserModel.updateUser(updatedFields, id);
 
+    // Utiliser la fonction utilitaire pour filtrer les données sensibles
+    const safeUserData = filterSensitiveUserData(updatedUser);
+
     res.status(200).json({
       message: "Utilisateur mis à jour avec succès.",
-      user: updatedUser,
+      user: safeUserData,
     });
   } catch (error) {
     res.status(500).json({
@@ -347,7 +350,10 @@ const validateUser = async (req, res) => {
       return res.status(400).json({ error: "Code de validation invalide" });
     }
 
-    res.json({ message: "Compte validé avec succès", user });
+    // Utiliser la fonction utilitaire pour filtrer les données sensibles
+    const safeUserData = filterSensitiveUserData(user);
+
+    res.json({ message: "Compte validé avec succès", user: safeUserData });
   } catch (error) {
     console.error("Erreur lors de la validation:", error);
     res.status(500).json({ error: "Erreur lors de la validation du compte" });
@@ -898,6 +904,33 @@ export const getUserActivityStats = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+/**
+ * Fonction utilitaire pour filtrer les données sensibles d'un utilisateur
+ * Retourne uniquement les données sûres à exposer via l'API
+ * @param {Object} user - Objet utilisateur complet depuis la base de données
+ * @returns {Object} Objet utilisateur filtré sans données sensibles
+ */
+const filterSensitiveUserData = (user) => {
+  if (!user) return null;
+  
+  return {
+    id_utilisateur: user.id_utilisateur,
+    nom: user.nom,
+    email: user.email,
+    photo_de_profil: formatPhotoUrl(user.photo_de_profil),
+    avatar: formatPhotoUrl(user.photo_de_profil), // Compatibilité frontend
+    bio: user.bio || "",
+    is_activated: user.is_activated,
+    fk_statut: user.fk_statut,
+    date_creation: user.date_creation,
+    date_naissance: user.date_naissance,
+    theme_sombre: user.theme_sombre,
+    notifications_push: user.notifications_push,
+    notifications_email: user.notifications_email
+    // ATTENTION: Ne jamais inclure validation_code, reset_password_code, reset_password_expires, mot_de_passe
+  };
 };
 
 export {

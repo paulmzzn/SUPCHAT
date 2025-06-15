@@ -35,7 +35,7 @@ class UserModel {
     }
   }
 
-  // Obtenir un utilisateur par ID
+  // Obtenir un utilisateur par ID (TOUTES les données - usage interne uniquement)
   static async getUserById(id_utilisateur) {
     try {
       const result = await pool.query(
@@ -48,10 +48,51 @@ class UserModel {
     }
   }
 
-  // Lister tous les utilisateurs
+  // Obtenir un utilisateur par ID (données publiques uniquement)
+  static async getUserByIdPublic(id_utilisateur) {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          id_utilisateur, 
+          nom, 
+          email, 
+          photo_de_profil, 
+          is_activated, 
+          fk_statut, 
+          date_creation,
+          date_naissance,
+          bio,
+          theme_sombre,
+          notifications_push,
+          notifications_email
+        FROM utilisateur 
+        WHERE id_utilisateur = $1
+      `, [id_utilisateur]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Lister tous les utilisateurs (données publiques uniquement)
   static async getAllUsers() {
     try {
-      const result = await pool.query('SELECT * FROM utilisateur');
+      const result = await pool.query(`
+        SELECT 
+          id_utilisateur, 
+          nom, 
+          email, 
+          photo_de_profil, 
+          is_activated, 
+          fk_statut, 
+          date_creation,
+          date_naissance,
+          bio,
+          theme_sombre,
+          notifications_push,
+          notifications_email
+        FROM utilisateur
+      `);
       return result.rows;
     } catch (error) {
       throw error;

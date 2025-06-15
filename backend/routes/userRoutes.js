@@ -492,7 +492,8 @@ const router = express.Router();
 const SECRET_KEY = getJwtSecret();
 
 router.post("/register", registerUser);
-router.get("/", getAllUsers);
+// SÉCURITÉ: Route protégée par authentification pour éviter l'exposition des données sensibles
+router.get("/", verifyToken, getAllUsers);
 router.post("/login", loginUser);
 router.put("/update/:id", updateUser);
 router.delete("/delete/:id", deleteUser);
