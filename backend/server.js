@@ -34,6 +34,7 @@ import setupSwagger from "./swagger.js";
 
 // Système de logging simple
 // Niveaux: error, warn, info, debug
+import { getSecret, getJwtSecret } from "./config/secrets.js";
 const LOG_LEVELS = {
   ERROR: 0,
   WARN: 1,
@@ -125,7 +126,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    secret: "REDACTED",
+    secret: getSecret("session_secret", "SESSION_SECRET") || getJwtSecret(),
     resave: false,
     saveUninitialized: true,
   })
